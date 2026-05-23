@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { ShieldAlert, Key, LogOut } from "lucide-react";
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
-  const { user, signInWithGoogle, logout, loading: authLoading } = useAuth();
+  const { user, openAuthModal, logout, loading: authLoading } = useAuth();
   const { isAdmin, checking: adminChecking } = useIsAdmin();
   const navigate = useNavigate();
 
@@ -33,10 +33,10 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
           </p>
           <Button 
             variant="primary" 
-            onClick={signInWithGoogle}
+            onClick={() => openAuthModal("signin")}
             className="w-full justify-center gap-2 h-11"
           >
-            Authenticate with Google
+            Sign In
           </Button>
           <button 
             type="button"

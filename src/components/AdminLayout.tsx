@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Wordmark } from "./branding/Wordmark";
-import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity } from "lucide-react";
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
@@ -16,6 +16,7 @@ export function AdminLayout() {
     { label: "Questions Catalog", path: "/admin/questions", icon: HelpCircle },
     { label: "Bulk Importer", path: "/admin/import", icon: UploadCloud },
     { label: "Student cohorts", path: "/admin/users", icon: Users },
+    { label: "Admin Activity", path: "/admin/activity", icon: Activity },
     { label: "Admin Settings", path: "/admin/settings", icon: Settings },
   ];
 

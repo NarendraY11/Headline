@@ -6,7 +6,7 @@ import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw } from 
 import { supabase } from "../lib/supabase";
 
 export default function ProfileView() {
-  const { user, userData, logout, resetAccount, loading, signInWithGoogle, updateUserData } = useAuth();
+  const { user, userData, logout, resetAccount, loading, openAuthModal, updateUserData } = useAuth();
   const navigate = useNavigate();
 
   const [isUploading, setIsUploading] = useState(false);
@@ -45,7 +45,7 @@ export default function ProfileView() {
             <Button 
               variant="primary" 
               className="w-full h-12 rounded-full shadow-sm"
-              onClick={() => signInWithGoogle()}
+              onClick={() => openAuthModal("signin")}
             >
               Sign In →
             </Button>

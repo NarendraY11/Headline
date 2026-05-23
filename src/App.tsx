@@ -42,6 +42,7 @@ const BookmarksView = lazy(() => import("./views/BookmarksView"));
 const ProfileView = lazy(() => import("./views/ProfileView"));
 const NotFoundView = lazy(() => import("./views/NotFoundView"));
 const TodayView = lazy(() => import("./views/TodayView"));
+const ResetPasswordView = lazy(() => import("./views/ResetPasswordView"));
 
 import { AdminGuard } from "./components/AdminGuard";
 import { AdminLayout } from "./components/AdminLayout";
@@ -52,13 +53,14 @@ const SubcategoriesManager = lazy(() => import("./views/admin/SubcategoriesManag
 const QuestionsManager = lazy(() => import("./views/admin/QuestionsManager"));
 const BulkImport = lazy(() => import("./views/admin/BulkImport"));
 const UsersAnalytics = lazy(() => import("./views/admin/UsersAnalytics"));
+const AdminActivity = lazy(() => import("./views/admin/AdminActivity"));
 const AdminSettings = lazy(() => import("./views/admin/AdminSettings"));
 
 import SearchOverlay from "./views/SearchOverlay";
 import PricingView from "./views/PricingView";
 
 function HeaderAuth() {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, openAuthModal } = useAuth();
   
   if (loading) return <div className="w-8 h-8 rounded-full bg-rule animate-pulse hidden sm:block md:hidden" />;
   
@@ -77,14 +79,14 @@ function HeaderAuth() {
   }
   
   return (
-    <Button variant="ghost" onClick={signInWithGoogle} className="text-sm px-3 hidden sm:flex md:hidden">
+    <Button variant="ghost" onClick={() => openAuthModal("signin")} className="text-sm px-3 hidden sm:flex md:hidden">
       Sign In
     </Button>
   );
 }
 
 function SidebarAuth({ isExpanded }: { isExpanded: boolean }) {
-  const { user, loading, signInWithGoogle } = useAuth();
+  const { user, loading, openAuthModal } = useAuth();
   
   if (loading) return (
     <div className={`flex items-center gap-3 px-3 py-2.5 ${!isExpanded ? 'justify-center' : ''}`}>
@@ -117,7 +119,7 @@ function SidebarAuth({ isExpanded }: { isExpanded: boolean }) {
   
   return (
     <button 
-      onClick={signInWithGoogle} 
+      onClick={() => openAuthModal("signin")} 
       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 bg-transparent text-muted hover:text-ink hover:bg-panel/40 border-transparent w-full`}
       title={!isExpanded ? "Sign In" : undefined}
     >
@@ -555,7 +557,7 @@ function PublicLayout() {
   const location = useLocation();
   const outlet = useOutlet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { signInWithGoogle } = useAuth();
+  const { openAuthModal } = useAuth();
 
   // Close menu when route changes
   useEffect(() => {
@@ -572,7 +574,7 @@ function PublicLayout() {
         </Link>
         <div className="flex items-center gap-4">
           <Link to="/about" className="text-sm font-sans text-muted hover:text-ink hidden md:block">Mission Specs</Link>
-          <button onClick={signInWithGoogle} className="text-sm font-sans text-muted hover:text-ink hidden md:block cursor-pointer">Sign in</button>
+          <button onClick={() => openAuthModal("signin")} className="text-sm font-sans text-muted hover:text-ink hidden md:block cursor-pointer">Sign in</button>
           <Link to="/modules" className="hidden md:block">
             <Button variant="primary" className="h-[34px] px-3.5 text-xs font-sans font-semibold border-0">Start studying</Button>
           </Link>
@@ -1520,10 +1522,20 @@ function RouteMetaHelper() {
   return null;
 }
 
+import AuthModal from "./components/AuthModal";
+
+function AuthModalTrigger() {
+  const { authModalOpen, authModalTab, closeAuthModal } = useAuth();
+  return (
+    <AuthModal isOpen={authModalOpen} onClose={closeAuthModal} defaultTab={authModalTab} />
+  );
+}
+
 export default function App() {
   return (
     <Router>
       <RouteMetaHelper />
+      <AuthModalTrigger />
       <ErrorBoundary>
         <Routes>
           {/* PUBLIC ROUTES (No App Shell) */}
@@ -1531,6 +1543,7 @@ export default function App() {
             <Route path="/" element={<HomeView />} />
             <Route path="/about" element={<AboutView />} />
             <Route path="/pricing" element={<PricingView />} />
+            <Route path="/reset-password" element={<ResetPasswordView />} />
           </Route>
 
           {/* NEW BASIC ROUTING AS REQUESTED */}
@@ -1551,6 +1564,7 @@ export default function App() {
             <Route path="/admin/questions" element={<QuestionsManager />} />
             <Route path="/admin/import" element={<BulkImport />} />
             <Route path="/admin/users" element={<UsersAnalytics />} />
+            <Route path="/admin/activity" element={<AdminActivity />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
 

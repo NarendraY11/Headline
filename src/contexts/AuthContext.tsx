@@ -38,6 +38,10 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUserData: (data: Partial<UserData>) => Promise<void>;
   resetAccount: () => Promise<void>;
+  authModalOpen: boolean;
+  authModalTab: 'signin' | 'signup' | 'forgot';
+  openAuthModal: (defaultTab?: 'signin' | 'signup' | 'forgot') => void;
+  closeAuthModal: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -59,6 +63,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CompatUser | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup' | 'forgot'>('signin');
+
+  const openAuthModal = (defaultTab: 'signin' | 'signup' | 'forgot' = 'signin') => {
+    setAuthModalTab(defaultTab);
+    setAuthModalOpen(true);
+  };
+
+  const closeAuthModal = () => {
+    setAuthModalOpen(false);
+  };
 
   const fetchUserData = async (uid: string, mappedUser: any) => {
     try {
@@ -448,7 +464,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, userData, loading, signInWithGoogle, logout, updateUserData, resetAccount }}>
+    <AuthContext.Provider value={{
+      user,
+      userData,
+      loading,
+      signInWithGoogle,
+      logout,
+      updateUserData,
+      resetAccount,
+      authModalOpen,
+      authModalTab,
+      openAuthModal,
+      closeAuthModal
+    }}>
       {children}
     </AuthContext.Provider>
   );

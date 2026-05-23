@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../../components/Atoms";
 import { ShieldCheck, UserPlus, Trash2, Mail, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { trackEvent } from "../../lib/track";
 
 interface AdminRecord {
   email: string;
@@ -68,6 +69,13 @@ export default function AdminSettings() {
 
       if (error) throw error;
 
+      trackEvent("admin_enroll_admin", {
+        metadata: {
+          enrolled_email: emailToRegister,
+          details: `Enrolled administrative candidate: ${emailToRegister}`,
+        },
+      });
+
       setSuccessStatus(`Successfully added '${emailToRegister}' to the administration log.`);
       setNewAdminEmail("");
       fetchAdmins();
@@ -99,6 +107,13 @@ export default function AdminSettings() {
         .eq("email", emailToDelete);
 
       if (error) throw error;
+
+      trackEvent("admin_revoke_admin", {
+        metadata: {
+          revoked_email: emailToDelete,
+          details: `Revoked administrative credentials for account: ${emailToDelete}`,
+        },
+      });
 
       setSuccessStatus(`Access revoked safely for '${emailToDelete}'.`);
       fetchAdmins();

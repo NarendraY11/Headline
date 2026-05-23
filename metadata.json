@@ -1,7 +1,7 @@
 {
   "name": "heading pre audit",
   "description": "A premium editorial aviation exam-prep platform for pilots.",
-  "requestFramePermissions": ["camera"],
+  "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]

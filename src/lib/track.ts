@@ -31,6 +31,8 @@ export function trackEvent(
       // Fetch current session (retrieved from local state/cookie or network)
       const { data: { session } } = await supabase.auth.getSession();
       const userId = session?.user?.id || null;
+      const userEmail = session?.user?.email || null;
+      const userName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || null;
 
       const row = {
         user_id: userId,
@@ -38,7 +40,11 @@ export function trackEvent(
         subject_id: payload?.subjectId || null,
         subcategory_id: payload?.subcategoryId || null,
         question_id: payload?.questionId || null,
-        metadata: payload?.metadata || {},
+        metadata: {
+          ...payload?.metadata,
+          user_email: userEmail,
+          user_name: userName,
+        },
       };
 
       await supabase.from("events").insert(row);

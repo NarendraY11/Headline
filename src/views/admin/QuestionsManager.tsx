@@ -6,6 +6,7 @@ import {
   CheckCircle2, ChevronLeft, ChevronRight, Search, Sparkles 
 } from "lucide-react";
 import { FlightControlsDiagram } from "../../components/SystemDiagram";
+import { trackEvent } from "../../lib/track";
 
 interface Subject {
   id: string;
@@ -288,6 +289,20 @@ export default function QuestionsManager() {
       const { error } = await supabase.from("questions").upsert(payload);
       if (error) throw error;
 
+      trackEvent(isNew ? "admin_create_question" : "admin_update_question", {
+        subjectId: payload.subject_id || undefined,
+        subcategoryId: payload.subcategory_id || undefined,
+        questionId: payload.id,
+        metadata: {
+          prompt: payload.prompt.slice(0, 100) + (payload.prompt.length > 100 ? "..." : ""),
+          difficulty: payload.difficulty,
+          status: payload.status,
+          details: isNew
+            ? `Successfully created exam question: #${payload.id}`
+            : `Updated settings of exam question: #${payload.id}`,
+        },
+      });
+
       setSuccessStatus(`Successfully committed and stored question ID: ${payload.id}`);
       setIsEditing(false);
       fetchData();
@@ -306,6 +321,14 @@ export default function QuestionsManager() {
     try {
       const { error } = await supabase.from("questions").delete().eq("id", id);
       if (error) throw error;
+
+      trackEvent("admin_delete_question", {
+        questionId: id,
+        metadata: {
+          details: `Deleted exam question: #${id}`,
+        },
+      });
+
       setSuccessStatus(`Deleted question '${id}' successfully.`);
       fetchData();
     } catch (err: any) {
@@ -323,6 +346,18 @@ export default function QuestionsManager() {
         .eq("id", q.id);
 
       if (error) throw error;
+
+      trackEvent("admin_update_question", {
+        subjectId: q.subject_id || undefined,
+        subcategoryId: q.subcategory_id || undefined,
+        questionId: q.id,
+        metadata: {
+          prompt: q.prompt.slice(0, 100) + (q.prompt.length > 100 ? "..." : ""),
+          status: nextStatus,
+          details: `Set exam question: #${q.id} state to: ${nextStatus.toUpperCase()}`,
+        },
+      });
+
       fetchData();
     } catch (err: any) {
       console.error("Status state change failure:", err);

@@ -1,0 +1,412 @@
+import React, { useState, useEffect } from "react";
+import { supabase } from "../../lib/supabase";
+import { Card } from "../../components/Atoms";
+import { 
+  Activity, 
+  RefreshCw, 
+  AlertCircle, 
+  Search, 
+  Calendar, 
+  Trash2, 
+  Edit2, 
+  Plus, 
+  UserPlus, 
+  FileText, 
+  ChevronLeft, 
+  ChevronRight, 
+  SlidersHorizontal
+} from "lucide-react";
+
+interface EventRecord {
+  id: number;
+  user_id: string | null;
+  event_type: string;
+  subject_id: string | null;
+  subcategory_id: string | null;
+  question_id: string | null;
+  metadata: Record<string, any>;
+  created_at: string;
+}
+
+interface ProfileRecord {
+  id: string;
+  email: string | null;
+  display_name: string | null;
+}
+
+export default function AdminActivity() {
+  const [loading, setLoading] = useState(true);
+  const [errorStatus, setErrorStatus] = useState("");
+  const [events, setEvents] = useState<EventRecord[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, ProfileRecord>>({});
+
+  // Filtering Options
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "admin_only" | "create" | "update" | "delete" | "auth">("all");
+  const [datePageLimit, setDatePageLimit] = useState<"all" | "today" | "week" | "month">("all");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 30;
+
+  const fetchActivityData = async () => {
+    setLoading(true);
+    setErrorStatus("");
+    try {
+      // 1. Fetch Events
+      let query = supabase
+        .from("events")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      // Apply date constraint helper
+      if (datePageLimit !== "all") {
+        const dateLimit = new Date();
+        if (datePageLimit === "today") {
+          dateLimit.setHours(0, 0, 0, 0);
+        } else if (datePageLimit === "week") {
+          dateLimit.setDate(dateLimit.getDate() - 7);
+        } else if (datePageLimit === "month") {
+          dateLimit.setMonth(dateLimit.getMonth() - 1);
+        }
+        query = query.gte("created_at", dateLimit.toISOString());
+      }
+
+      const { data: eventsData, error: eventsErr } = await query;
+      if (eventsErr) throw eventsErr;
+
+      setEvents(eventsData || []);
+
+      // 2. Fetch User profiles to easily correlate user_ids to human-readable names and emails
+      const { data: profilesData, error: profilesErr } = await supabase
+        .from("profiles")
+        .select("id, email, display_name");
+      
+      if (!profilesErr && profilesData) {
+        const profMap: Record<string, ProfileRecord> = {};
+        profilesData.forEach((p) => {
+          profMap[p.id] = p;
+        });
+        setProfiles(profMap);
+      }
+    } catch (err: any) {
+      console.error("Failed loading activity logs:", err);
+      setErrorStatus(err.message || "Failed to retrieve system administrative logs.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchActivityData();
+  }, [datePageLimit]);
+
+  // Client-side filtration for quick and reliable search
+  const filteredEvents = events.filter((ev) => {
+    // 1. Filter by category
+    const isCoreAdmin = ev.event_type.startsWith("admin_");
+    
+    if (categoryFilter === "admin_only" && !isCoreAdmin) return false;
+    if (categoryFilter === "create" && !ev.event_type.includes("create")) return false;
+    if (categoryFilter === "update" && !ev.event_type.includes("update")) return false;
+    if (categoryFilter === "delete" && !ev.event_type.includes("delete")) return false;
+    if (categoryFilter === "auth" && !(ev.event_type.includes("admin") && (ev.event_type.includes("enroll") || ev.event_type.includes("revoke")))) return false;
+
+    // 2. Filter by search query (ID, email, name, details, paths, category)
+    const userProfile = ev.user_id ? profiles[ev.user_id] : null;
+    const emailMeta = ev.metadata?.user_email || userProfile?.email || "";
+    const nameMeta = ev.metadata?.user_name || userProfile?.display_name || "";
+    const details = ev.metadata?.details || "";
+    const actionType = ev.event_type || "";
+    
+    const token = searchQuery.toLowerCase().trim();
+    if (!token) return true;
+
+    return (
+      actionType.toLowerCase().includes(token) ||
+      details.toLowerCase().includes(token) ||
+      emailMeta.toLowerCase().includes(token) ||
+      nameMeta.toLowerCase().includes(token) ||
+      (ev.subject_id && ev.subject_id.toLowerCase().includes(token)) ||
+      (ev.subcategory_id && ev.subcategory_id.toLowerCase().includes(token)) ||
+      (ev.question_id && ev.question_id.toLowerCase().includes(token)) ||
+      ev.id.toString().includes(token)
+    );
+  });
+
+  // Pagination calculation
+  const totalItems = filteredEvents.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
+  const displayedEvents = filteredEvents.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  // Helper to identify type & style of events
+  const getEventBadgeClass = (type: string) => {
+    if (type.includes("delete")) {
+      return "bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20";
+    }
+    if (type.includes("create")) {
+      return "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20";
+    }
+    if (type.includes("update")) {
+      return "bg-amber-50 text-amber-700 border-amber-205 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20";
+    }
+    if (type.includes("enroll") || type.includes("revoke")) {
+      return "bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20";
+    }
+    return "bg-bg text-muted border-rule dark:bg-bg-2 dark:text-ink-2";
+  };
+
+  const getEventIcon = (type: string) => {
+    if (type.includes("delete")) return <Trash2 size={13} className="text-rose-600 dark:text-rose-400" />;
+    if (type.includes("create")) return <Plus size={13} className="text-emerald-600 dark:text-emerald-400" />;
+    if (type.includes("update")) return <Edit2 size={13} className="text-amber-600 dark:text-amber-400" />;
+    if (type.includes("enroll") || type.includes("revoke")) return <UserPlus size={13} className="text-indigo-600 dark:text-indigo-400" />;
+    return <FileText size={13} className="text-muted" />;
+  };
+
+  const cleanEventName = (type: string) => {
+    return type
+      .replace("admin_", "")
+      .replace("_", " ")
+      .toUpperCase();
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  return (
+    <div className="space-y-6 w-full max-w-7xl mx-auto py-2 font-sans text-ink">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-rule pb-6">
+        <div>
+          <div className="font-mono text-[9px] tracking-widest text-muted uppercase mb-1">Audit Logs ledger</div>
+          <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">Administrative Activity</h1>
+        </div>
+        <button
+          onClick={fetchActivityData}
+          disabled={loading}
+          className="flex items-center gap-1.5 px-4 py-2 border border-rule hover:bg-bg-2 rounded-full font-sans text-xs text-ink transition-colors disabled:opacity-50 cursor-pointer h-10 shrink-0"
+        >
+          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+          <span>Sync Audit Ledger</span>
+        </button>
+      </div>
+
+      {errorStatus && (
+        <div className="p-4 bg-rose-500/10 border border-rose-500/30 text-rose-800 rounded-lg text-xs flex items-center gap-3">
+          <AlertCircle size={16} className="shrink-0" />
+          <span>{errorStatus}</span>
+        </div>
+      )}
+
+      {/* Control panel / Filters */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Search input */}
+        <div className="relative lg:col-span-2">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2" size={14} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            placeholder="Search by catalog ID, administrator, details, action..."
+            className="w-full text-xs p-3 pl-10 bg-white border border-rule rounded-xl focus:outline-none focus:border-rule-strong text-ink font-semibold"
+          />
+        </div>
+
+        {/* Category filters */}
+        <div className="relative">
+          <SlidersHorizontal className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2" size={14} />
+          <select
+            value={categoryFilter}
+            onChange={(e) => {
+              setCategoryFilter(e.target.value as any);
+              setCurrentPage(1);
+            }}
+            className="w-full text-xs p-3 pl-10 bg-white border border-rule rounded-xl focus:outline-none focus:border-rule-strong text-ink font-semibold h-[42px] appearance-none cursor-pointer"
+          >
+            <option value="all">All Operations</option>
+            <option value="admin_only">Admin Actions Only</option>
+            <option value="create">Creations Only (New)</option>
+            <option value="update">Updates (Edits)</option>
+            <option value="delete">Deletions Only (Danger)</option>
+            <option value="auth">Enroll & Revoke Logs</option>
+          </select>
+        </div>
+
+        {/* Date scope */}
+        <div className="relative">
+          <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2" size={14} />
+          <select
+            value={datePageLimit}
+            onChange={(e) => {
+              setDatePageLimit(e.target.value as any);
+              setCurrentPage(1);
+            }}
+            className="w-full text-xs p-3 pl-10 bg-white border border-rule rounded-xl focus:outline-none focus:border-rule-strong text-ink font-semibold h-[42px] appearance-none cursor-pointer"
+          >
+            <option value="all">Total Cumulative Logs</option>
+            <option value="today">Today Only</option>
+            <option value="week">Past 7 days</option>
+            <option value="month">Past 30 days</option>
+          </select>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="h-[300px] flex flex-col items-center justify-center bg-white border border-rule rounded-2xl">
+          <div className="w-10 h-10 border-4 border-ink border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="font-mono text-xs text-muted tracking-widest uppercase">Fetching audit trail registers...</p>
+        </div>
+      ) : events.length === 0 ? (
+        <Card className="p-12 text-center flex flex-col items-center justify-center">
+          <Activity className="text-muted-2 mb-3" size={36} />
+          <h3 className="font-serif text-lg font-medium text-ink">No System Events Recorded</h3>
+          <p className="text-xs text-muted max-w-sm mx-auto mt-1 leading-relaxed">
+            The supabase ledger does not contain any audit occurrences within this selected scope parameters.
+          </p>
+        </Card>
+      ) : displayedEvents.length === 0 ? (
+        <Card className="p-12 text-center flex flex-col items-center justify-center">
+          <Search className="text-muted-2 mb-3" size={36} />
+          <h3 className="font-serif text-lg font-medium text-ink">No Matching Entries</h3>
+          <p className="text-xs text-muted max-w-sm mx-auto mt-1 leading-relaxed">
+            We found zero matching events align with your search string: "{searchQuery}". Try auditing with broader criteria.
+          </p>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          <div className="bg-white border border-rule rounded-2xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse font-sans text-xs">
+                <thead>
+                  <tr className="border-b border-rule font-mono uppercase tracking-wide text-muted text-[10px] bg-bg-2/50">
+                    <th className="py-3.5 px-6 font-semibold w-24">Trace ID</th>
+                    <th className="py-3.5 px-4 font-semibold w-56">Administrator Profile</th>
+                    <th className="py-3.5 px-4 font-semibold w-40">Action Category</th>
+                    <th className="py-3.5 px-4 font-semibold">Incident/Operations Log Description</th>
+                    <th className="py-3.5 px-4 font-semibold w-44">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-rule/50">
+                  {displayedEvents.map((ev) => {
+                    const userProfile = ev.user_id ? profiles[ev.user_id] : null;
+                    const email = ev.metadata?.user_email || userProfile?.email || "Unknown Agent";
+                    const name = ev.metadata?.user_name || userProfile?.display_name || "Anonymous Pilot";
+                    const formattedDate = new Date(ev.created_at).toLocaleString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      hour12: false
+                    });
+
+                    const icon = getEventIcon(ev.event_type);
+                    const label = cleanEventName(ev.event_type);
+                    const detailsStr = ev.metadata?.details || `Operation on hierarchy type.`;
+
+                    return (
+                      <tr key={ev.id} className="hover:bg-bg-2/20 transition-colors">
+                        <td className="py-4 px-6 font-mono text-[10px] text-muted-2">
+                          #{ev.id}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex flex-col">
+                            <span className="font-sans font-semibold text-ink text-xs truncate max-w-[200px]">
+                              {name}
+                            </span>
+                            <span className="font-mono text-[9px] text-muted truncate max-w-[200px]" title={email}>
+                              {email}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-[9px] font-mono font-bold uppercase tracking-wider ${getEventBadgeClass(ev.event_type)}`}>
+                            {icon}
+                            {label}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 pr-6">
+                          <div className="flex flex-col gap-1">
+                            <p className="font-medium text-ink-2 text-xs leading-relaxed max-w-[500px] break-words">
+                              {detailsStr}
+                            </p>
+                            
+                            {/* Associated Catalog References */}
+                            {(ev.subject_id || ev.subcategory_id || ev.question_id) && (
+                              <div className="flex flex-wrap gap-1.5 mt-0.5 select-none">
+                                {ev.subject_id && (
+                                  <span className="font-mono text-[8px] px-1.5 bg-bg-2 border border-rule text-muted rounded uppercase font-bold">
+                                    Subject: {ev.subject_id}
+                                  </span>
+                                )}
+                                {ev.subcategory_id && (
+                                  <span className="font-mono text-[8px] px-1.5 bg-bg-2 border border-rule text-muted rounded uppercase font-bold">
+                                    Subcat: {ev.subcategory_id}
+                                  </span>
+                                )}
+                                {ev.question_id && (
+                                  <span className="font-mono text-[8px] px-1.5 bg-bg-2 border border-rule text-muted rounded uppercase font-bold">
+                                    QID: {ev.question_id}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 font-mono text-[10px] text-muted whitespace-nowrap">
+                          {formattedDate}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagination Footer */}
+          <div className="flex items-center justify-between border-t border-rule/60 pt-4 px-1">
+            <span className="font-mono text-[10px] text-muted uppercase tracking-wider">
+              Showing <strong>{displayedEvents.length}</strong> of <strong>{totalItems}</strong> traces
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="p-1 px-3 border border-rule hover:bg-bg-2 rounded text-xs text-ink transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1 font-mono uppercase font-bold"
+              >
+                <ChevronLeft size={12} />
+                <span>Prev</span>
+              </button>
+
+              <span className="font-mono text-[10px] text-muted uppercase tracking-widest px-2">
+                Page {currentPage} of {totalPages}
+              </span>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="p-1 px-3 border border-rule hover:bg-bg-2 rounded text-xs text-ink transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1 font-mono uppercase font-bold"
+              >
+                <span>Next</span>
+                <ChevronRight size={12} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

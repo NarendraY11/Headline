@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/Atoms";
 import { Plus, Edit2, Trash2, Save, X, RefreshCw, AlertCircle, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { trackEvent } from "../../lib/track";
 
 interface Subject {
   id: string;
@@ -151,6 +152,19 @@ export default function SubcategoriesManager() {
       const { error } = await supabase.from("subcategories").upsert(payload);
       if (error) throw error;
 
+      trackEvent(isNew ? "admin_create_subcategory" : "admin_update_subcategory", {
+        subjectId: payload.subject_id,
+        subcategoryId: payload.id,
+        metadata: {
+          title: payload.title,
+          code: payload.code,
+          status: payload.status,
+          details: isNew
+            ? `Successfully created subcategory: ${payload.title} (${payload.id})`
+            : `Updated settings of subcategory: ${payload.title} (${payload.id})`,
+        },
+      });
+
       setSuccessStatus(`Subcategory '${payload.title}' successfully stored and indexed.`);
       setIsEditing(false);
       fetchData();
@@ -178,6 +192,15 @@ export default function SubcategoriesManager() {
     try {
       const { error } = await supabase.from("subcategories").delete().eq("id", id);
       if (error) throw error;
+
+      trackEvent("admin_delete_subcategory", {
+        subcategoryId: id,
+        metadata: {
+          title: title,
+          details: `Deleted subcategory: ${title} (${id}) along with ${qCount} nested questions.`,
+        },
+      });
+
       setSuccessStatus(`Subcategory '${title}' and its dependent questions were deleted.`);
       fetchData();
     } catch (err: any) {
@@ -196,6 +219,17 @@ export default function SubcategoriesManager() {
         .eq("id", sub.id);
 
       if (error) throw error;
+
+      trackEvent("admin_update_subcategory", {
+        subjectId: sub.subject_id,
+        subcategoryId: sub.id,
+        metadata: {
+          title: sub.title,
+          status: nextStatus,
+          details: `Set subcategory: '${sub.title}' state to: ${nextStatus.toUpperCase()}`,
+        },
+      });
+
       fetchData();
     } catch (err: any) {
       console.error("Toggle subcategory status error:", err);

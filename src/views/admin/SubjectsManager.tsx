@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/Atoms";
 import { Plus, Edit2, Trash2, Save, X, RefreshCw, AlertCircle, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { trackEvent } from "../../lib/track";
 
 interface Subject {
   id: string;
@@ -145,6 +146,18 @@ export default function SubjectsManager() {
       const { error } = await supabase.from("subjects").upsert(payload);
       if (error) throw error;
 
+      trackEvent(isNew ? "admin_create_subject" : "admin_update_subject", {
+        subjectId: payload.id,
+        metadata: {
+          title: payload.title,
+          exam_authority: payload.exam_authority,
+          status: payload.status,
+          details: isNew 
+            ? `Successfully created syllabus subject: ${payload.title} (${payload.id})`
+            : `Updated syllabus subject settings: ${payload.title} (${payload.id})`,
+        },
+      });
+
       setSuccessStatus(`Subject '${payload.title}' successfully processed and indexed.`);
       setIsEditing(false);
       fetchData();
@@ -173,6 +186,15 @@ export default function SubjectsManager() {
     try {
       const { error } = await supabase.from("subjects").delete().eq("id", id);
       if (error) throw error;
+
+      trackEvent("admin_delete_subject", {
+        subjectId: id,
+        metadata: {
+          title: title,
+          details: `Deleted subject: ${title} (${id}) along with ${subCount} subcategories and ${qCount} questions.`,
+        },
+      });
+
       setSuccessStatus(`Subject '${title}' and its associated hierarchical trees have been cascade deleted.`);
       fetchData();
     } catch (err: any) {
@@ -191,6 +213,16 @@ export default function SubjectsManager() {
         .eq("id", subject.id);
 
       if (error) throw error;
+
+      trackEvent("admin_update_subject", {
+        subjectId: subject.id,
+        metadata: {
+          title: subject.title,
+          status: nextStatus,
+          details: `Set subject: '${subject.title}' state to: ${nextStatus.toUpperCase()}`,
+        },
+      });
+
       fetchData();
     } catch (err: any) {
       console.error("Toggle subject published status status error:", err);
