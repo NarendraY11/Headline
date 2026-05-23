@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a1523" />
+      <stop offset="40%" stop-color="#112745" />
+      <stop offset="100%" stop-color="#1b3c66" />
+    </linearGradient>
+
+    <!-- Compass Gold Gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#ffd580" stop-opacity="0.8" />
+    </linearGradient>
+    
+    <!-- Accent line gradient -->
+    <linearGradient id="lineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff4d4d" />
+      <stop offset="50%" stop-color="#ffd580" />
+      <stop offset="100%" stop-color="#ffd580" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Deep space aviation backdrop -->
+  <rect width="1200" height="630" fill="url(#bgGrad)" />
+
+  <!-- Subtle grid lines to resemble instrument panels -->
+  <g stroke="#ffffff" stroke-width="1" opacity="0.04">
+    <line x1="100" y1="0" x2="100" y2="630" />
+    <line x1="200" y1="0" x2="200" y2="630" />
+    <line x1="300" y1="0" x2="300" y2="630" />
+    <line x1="400" y1="0" x2="400" y2="630" />
+    <line x1="500" y1="0" x2="500" y2="630" />
+    <line x1="600" y1="0" x2="600" y2="630" />
+    <line x1="700" y1="0" x2="700" y2="630" />
+    <line x1="800" y1="0" x2="800" y2="630" />
+    <line x1="900" y1="0" x2="900" y2="630" />
+    <line x1="1000" y1="0" x2="1000" y2="630" />
+    <line x1="1100" y1="0" x2="1100" y2="630" />
+
+    <line x1="0" y1="100" x2="1200" y2="100" />
+    <line x1="0" y1="200" x2="1200" y2="200" />
+    <line x1="0" y1="300" x2="1200" y2="300" />
+    <line x1="0" y1="400" x2="1200" y2="400" />
+    <line x1="0" y1="500" x2="1200" y2="500" />
+    <line x1="0" y1="600" x2="1200" y2="600" />
+  </g>
+
+  <!-- Giant faint background compass dial for atmosphere -->
+  <circle cx="950" cy="315" r="420" fill="none" stroke="#ffffff" stroke-width="2" opacity="0.03" />
+  <circle cx="950" cy="315" r="300" fill="none" stroke="#ffffff" stroke-width="4" stroke-dasharray="2 12" opacity="0.05" />
+
+  <!-- Branding and Text Content Left side -->
+  <g transform="translate(100, 120)">
+    <!-- Eyebrow/System Tag -->
+    <text x="0" y="0" font-family="'Inter', system-ui, sans-serif" font-size="14" font-weight="800" letter-spacing="4" fill="#ff4d4d" opacity="0.9">SYSTEM STATUS: READY FOR SIMULATION</text>
+    
+    <!-- Large Branding Title "Heading" -->
+    <text x="0" y="70" font-family="'Space Grotesk', 'Inter', sans-serif" font-size="72" font-weight="900" fill="#f5f2ea" letter-spacing="-1">Heading</text>
+    
+    <path d="M0,95 L400,95" stroke="url(#lineGrad)" stroke-width="4" stroke-linecap="round" />
+
+    <!-- Subtitle / Main Pitch -->
+    <text x="0" y="150" font-family="'Inter', system-ui, sans-serif" font-size="32" font-weight="700" fill="#ffffff" opacity="0.95">DGCA, EASA &amp; A320 Exam Prep</text>
+    
+    <!-- Multi-paragraph Description -->
+    <text x="0" y="200" font-family="'Inter', system-ui, sans-serif" font-size="18" font-style="italic" font-weight="400" fill="#8a94a6" opacity="0.8">
+      Premium syllabus-aligned mock trials and stress-based aviation cabin simulator.
+    </text>
+    <text x="0" y="230" font-family="'Inter', system-ui, sans-serif" font-size="18" font-style="italic" font-weight="400" fill="#8a94a6" opacity="0.8">
+      Train like standard commercial pilots. Dominate your license exams on the first run.
+    </text>
+
+    <!-- Interactive Badges -->
+    <g transform="translate(0, 280)">
+      <!-- Badge 1: FLIGHT CABIN SIM -->
+      <rect x="0" y="0" width="168" height="34" rx="17" fill="#14305a" stroke="#ffd580" stroke-opacity="0.3" stroke-width="1.5" />
+      <text x="84" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#ffd580" text-anchor="middle" letter-spacing="1">SIMULATOR ACTIVE</text>
+
+      <!-- Badge 2: NEGATIVE MARKING -->
+      <rect x="180" y="0" width="160" height="34" rx="17" fill="#14305a" stroke="#ff4d4d" stroke-opacity="0.3" stroke-width="1.5" />
+      <text x="260" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#ff4d4d" text-anchor="middle" letter-spacing="1">EASA &amp; DGCA CUTOFFS</text>
+
+      <!-- Badge 3: SECURED PROFILE -->
+      <rect x="352" y="0" width="136" height="34" rx="17" fill="#14305a" stroke="#ffffff" stroke-opacity="0.2" stroke-width="1.5" />
+      <text x="420" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#f5f2ea" text-anchor="middle" letter-spacing="1">ATA CLASSIFIED</text>
+    </g>
+  </g>
+
+  <!-- Beautiful High-Fidelity Compass Instrument on the Right Side -->
+  <g transform="translate(870, 315)">
+    <!-- Outer Rim/Case -->
+    <circle cx="0" cy="0" r="190" fill="#08101a" stroke="#1f3c63" stroke-width="8" filter="drop-shadow(0 0 30px rgba(0,0,0,0.5))" />
+    <circle cx="0" cy="0" r="176" fill="#0d1b2d" />
+    
+    <!-- Dynamic Glowing Backdrop Radar Loop -->
+    <circle cx="0" cy="0" r="150" fill="none" stroke="#ff4d4d" stroke-width="1" stroke-dasharray="5 15" opacity="0.15" />
+    <circle cx="0" cy="0" r="120" fill="none" stroke="#f5f2ea" stroke-width="1" opacity="0.08" />
+
+    <!-- Ticks & Divisions (30 deg segments) -->
+    <g stroke="url(#goldGrad)" stroke-width="2" stroke-linecap="round">
+      <line x1="0" y1="-170" x2="0" y2="-155" stroke-width="4" />
+      <line x1="85" y1="-147" x2="77" y2="-134" />
+      <line x1="147" y1="-85" x2="134" y2="-77" />
+      <line x1="170" y1="0" x2="155" y2="0" stroke-width="4" />
+      <line x1="147" y1="85" x2="134" y2="77" />
+      <line x1="85" y1="147" x2="77" y2="134" />
+      <line x1="0" y1="170" x2="0" y2="155" stroke-width="4" />
+      <line x1="-85" y1="147" x2="-77" y2="134" />
+      <line x1="-147" y1="85" x2="-134" y2="77" />
+      <line x1="-170" y1="0" x2="-155" y2="0" stroke-width="4" />
+      <line x1="-147" y1="-85" x2="-134" y2="-77" />
+      <line x1="-85" y1="-147" x2="-77" y2="-134" />
+    </g>
+
+    <!-- Degree numbers (000, 090, 180, 270) -->
+    <text x="0" y="-136" font-family="'JetBrains Mono', monospace" font-size="12" fill="#ffd580" text-anchor="middle" font-weight="700">000°</text>
+    <text x="134" y="4" font-family="'JetBrains Mono', monospace" font-size="12" fill="#ffd580" text-anchor="start" font-weight="700">090°</text>
+    <text x="0" y="144" font-family="'JetBrains Mono', monospace" font-size="12" fill="#ffd580" text-anchor="middle" font-weight="700">180°</text>
+    <text x="-134" y="4" font-family="'JetBrains Mono', monospace" font-size="12" fill="#ffd580" text-anchor="end" font-weight="700">270°</text>
+
+    <!-- Cardinal Directions -->
+    <text x="0" y="-110" font-family="'Space Grotesk', sans-serif" font-size="28" font-weight="900" fill="#f5f2ea" text-anchor="middle">N</text>
+    <text x="0" y="122" font-family="'Space Grotesk', sans-serif" font-size="22" font-weight="700" fill="#ffd580" opacity="0.6" text-anchor="middle">S</text>
+    <text x="114" y="8" font-family="'Space Grotesk', sans-serif" font-size="22" font-weight="700" fill="#ffd580" opacity="0.6" text-anchor="middle">E</text>
+    <text x="-114" y="8" font-family="'Space Grotesk', sans-serif" font-size="22" font-weight="700" fill="#ffd580" opacity="0.6" text-anchor="middle">W</text>
+
+    <!-- Shadow under Needle -->
+    <polygon points="0,-100 24,0 0,20" fill="#050a12" opacity="0.7" transform="rotate(35)" />
+    <polygon points="0,100 24,0 0,20" fill="#050a12" opacity="0.5" transform="rotate(35)" />
+
+    <!-- Highly stylized dual-colored Compass Needle (Rotated 35 deg for kinetic energy) -->
+    <g transform="rotate(35)">
+      <!-- North Pointer (Aviation Orange/Red with high specularity) -->
+      <polygon points="0,-105 0,0 -20,0" fill="#e03e3e" />
+      <polygon points="0,-105 20,0 0,0" fill="#ff4d4d" />
+      
+      <!-- South Pointer (Silver/Paper white) -->
+      <polygon points="0,105 0,0 -20,0" fill="#a0aab8" />
+      <polygon points="0,105 20,0 0,0" fill="#f5f2ea" />
+    </g>
+
+    <!-- Center Brass PIN -->
+    <circle cx="0" cy="0" r="14" fill="#0d1b2d" stroke="#f5f2ea" stroke-width="3" />
+    <circle cx="0" cy="0" r="5" fill="#ff4d4d" />
+  </g>
+</svg>

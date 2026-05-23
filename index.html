@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+      (function() {
+        try {
+          var originalFetch = window.fetch;
+          var currentFetch = originalFetch;
+          
+          // Define a custom property on window for fetch with both getter and setter
+          // This prevents errors when standard libraries/polyfills try to assign to window.fetch or globalThis.fetch
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return currentFetch;
+            },
+            set: function(val) {
+              currentFetch = val;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          console.warn("Could not define fetch property on window, attempting prototype patch...", e);
+          try {
+            var proto = Object.getPrototypeOf(window);
+            if (proto) {
+              Object.defineProperty(proto, 'fetch', {
+                get: function() {
+                  return currentFetch;
+                },
+                set: function(val) {
+                  currentFetch = val;
+                },
+                configurable: true,
+                enumerable: true
+              });
+            }
+          } catch (e2) {
+            console.error("Critical error: Failed to patch fetch setter", e2);
+          }
+        }
+      })();
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="Premium pilot exam preparation system. Realistic mock exams with negative marking, exam cutoffs, study diagnostics, and simulated cockpit stressful training for EASA &amp; DGCA licenses." />
+    <meta name="theme-color" content="#14305a" />
+    
+    <!-- Favicon and Icon Configuration -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    
+    <!-- Open Graph Protocol (Facebook, LinkedIn, Discord) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Heading — DGCA, EASA &amp; A320 Exam Prep for Pilots" />
+    <meta property="og:description" content="Premium pilot exam preparation system. Realistic mock exams with negative marking, exam cutoffs, study diagnostics, and simulated cockpit stressful training for EASA &amp; DGCA licenses." />
+    <meta property="og:image" content="/og-image.svg" />
+    <meta property="og:url" content="https://ais-dev-x555og22x5d5vkbxa7t3qw-568029846218.asia-southeast1.run.app" />
+    
+    <!-- Twitter Cards metadata (X, Slack) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Heading — DGCA, EASA &amp; A320 Exam Prep for Pilots" />
+    <meta name="twitter:description" content="Premium pilot exam preparation system. Realistic mock exams with negative marking, exam cutoffs, study diagnostics, and simulated cockpit stressful training for EASA &amp; DGCA licenses." />
+    <meta name="twitter:image" content="/og-image.svg" />
+
+    <title>Heading — DGCA, EASA &amp; A320 Exam Prep for Pilots</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

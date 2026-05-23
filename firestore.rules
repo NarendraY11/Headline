@@ -1,0 +1,109 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      // In this environment, sometimes email is not verified? We will allow unverified for now since it's a test environment but following Firebase Skill STRICT:
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['targetExam', 'createdAt', 'updatedAt']) 
+        && data.targetExam is string && data.targetExam.size() <= 50
+        && (!('streaks' in data.keys()) || (data.streaks is number))
+        && (!('bookmarks' in data.keys()) || (data.bookmarks is list && data.bookmarks.size() <= 1000))
+        && (!('logbook' in data.keys()) || (data.logbook is list && data.logbook.size() <= 1000))
+        && (!('settings' in data.keys()) || (data.settings is map))
+        && (!('photoURL' in data.keys()) || (data.photoURL is string && data.photoURL.size() <= 2048))
+        && (!('nextExam' in data.keys()) || (data.nextExam is string && data.nextExam.size() <= 100))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() 
+        && request.auth.uid == userId
+        && isValidId(userId);
+
+      allow list: if false; // Users shouldn't list other users
+      
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().keys().size() <= 10
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+        
+      allow update: if isSignedIn()
+        && request.auth.uid == userId
+        && isValidId(userId)
+        && isValidUser(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['targetExam', 'nextExam', 'photoURL', 'bookmarks', 'logbook', 'streaks', 'settings', 'updatedAt'])
+        );
+      
+      allow delete: if false;
+
+      match /attempts/{attemptId} {
+        function isValidAttempt(data) {
+          return data.keys().hasAll(['userId', 'topicId', 'data', 'createdAt', 'updatedAt'])
+            && data.userId == userId
+            && data.topicId == attemptId
+            && data.data is map 
+            && data.createdAt is timestamp
+            && data.updatedAt is timestamp;
+        }
+
+        allow get: if isSignedIn() 
+          && request.auth.uid == userId
+          && isValidId(userId)
+          && isValidId(attemptId);
+          
+        allow list: if isSignedIn()
+          && request.auth.uid == userId
+          && isValidId(userId);
+          
+        allow create: if isSignedIn()
+          && request.auth.uid == userId
+          && isValidId(userId)
+          && isValidId(attemptId)
+          && isValidAttempt(incoming())
+          && incoming().keys().size() == 5
+          && exists(/databases/$(database)/documents/users/$(userId))
+          && incoming().createdAt == request.time
+          && incoming().updatedAt == request.time;
+          
+        allow update: if isSignedIn()
+          && request.auth.uid == userId
+          && isValidId(userId)
+          && isValidId(attemptId)
+          && isValidAttempt(incoming())
+          && incoming().createdAt == existing().createdAt
+          && incoming().updatedAt == request.time
+          && incoming().userId == existing().userId
+          && incoming().topicId == existing().topicId
+          && (
+             incoming().diff(existing()).affectedKeys().hasOnly(['data', 'updatedAt'])
+          );
+          
+        allow delete: if isSignedIn()
+          && request.auth.uid == userId
+          && isValidId(userId)
+          && isValidId(attemptId);
+      }
+    }
+  }
+}
