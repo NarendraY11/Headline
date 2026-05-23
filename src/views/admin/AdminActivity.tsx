@@ -14,7 +14,8 @@ import {
   FileText, 
   ChevronLeft, 
   ChevronRight, 
-  SlidersHorizontal
+  SlidersHorizontal,
+  Download
 } from "lucide-react";
 
 interface EventRecord {
@@ -32,6 +33,175 @@ interface ProfileRecord {
   id: string;
   email: string | null;
   display_name: string | null;
+}
+
+// DEDICATED TABLE COMPONENT
+// Fetches & displays the last 50 events showing email, action, affected entity id, and timestamp with type filtering.
+interface RecentEventsAuditTableProps {
+  profiles: Record<string, ProfileRecord>;
+}
+
+export function RecentEventsAuditTable({ profiles }: RecentEventsAuditTableProps) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [events, setEvents] = useState<EventRecord[]>([]);
+  const [filterType, setFilterType] = useState<string>("all");
+
+  const fetchRecentEvents = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const { data, error: fetchErr } = await supabase
+        .from("events")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (fetchErr) throw fetchErr;
+      setEvents(data || []);
+    } catch (err: any) {
+      console.error("Error fetching last 50 events:", err);
+      setError(err.message || "Failed to load recent events.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecentEvents();
+  }, []);
+
+  const uniqueEventTypes: string[] = Array.from(new Set(events.map(e => e.event_type)));
+
+  const filteredEvents = filterType === "all" 
+    ? events 
+    : events.filter(e => e.event_type === filterType);
+
+  const getBadgeClass = (type: string) => {
+    const t = type.toLowerCase();
+    if (t.includes("delete") || t.includes("revoke")) {
+      return "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20";
+    }
+    if (t.includes("create") || t.includes("enroll")) {
+      return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20";
+    }
+    if (t.includes("update") || t.includes("edit")) {
+      return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20";
+    }
+    return "bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20";
+  };
+
+  const cleanName = (type: string) => {
+    return type.replace("admin_", "").replace("_", " ").toUpperCase();
+  };
+
+  return (
+    <Card className="p-5 bg-white border border-rule shadow-sm space-y-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-rule pb-4">
+        <div>
+          <h2 className="font-serif text-lg font-medium tracking-tight text-ink flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Real-time Systems Activity Table (Last 50 events)
+          </h2>
+          <p className="text-[11px] text-muted-2 mt-0.5">
+            Synchronized system pipeline tracking the latest administrative activity updates instantly.
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <select
+            value={filterType}
+            onChange={(e) => setFilterType(e.target.value)}
+            className="text-xs p-2 bg-bg border border-rule rounded-lg focus:outline-none focus:border-rule-strong font-mono font-bold text-ink-2 appearance-none pr-8 relative cursor-pointer min-w-[170px]"
+          >
+            <option value="all">⚡ All event types</option>
+            {uniqueEventTypes.map((t) => (
+              <option key={t} value={t}>
+                {cleanName(t)}
+              </option>
+            ))}
+          </select>
+          
+          <button
+            onClick={fetchRecentEvents}
+            disabled={loading}
+            className="p-2 border border-rule hover:bg-bg-2 rounded-lg text-ink hover:text-ink-2 transition-colors disabled:opacity-50 cursor-pointer h-9 w-9 flex items-center justify-center shrink-0"
+            title="Reload last 50 events"
+          >
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+          </button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="py-8 flex flex-col items-center justify-center">
+          <div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin mb-2"></div>
+          <span className="font-mono text-[9px] text-muted tracking-widest uppercase">Syncing Live Ledger...</span>
+        </div>
+      ) : error ? (
+        <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-800 rounded-lg text-xs">
+          {error}
+        </div>
+      ) : filteredEvents.length === 0 ? (
+        <p className="text-center text-xs text-muted-2 py-6">No recent events match this filter category.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse font-sans text-xs">
+            <thead>
+              <tr className="border-b border-rule font-mono uppercase tracking-wide text-muted text-[10px] bg-bg-2/30">
+                <th className="py-2.5 px-3 font-semibold w-[220px]">Admin Email</th>
+                <th className="py-2.5 px-3 font-semibold w-[140px]">Action Type</th>
+                <th className="py-2.5 px-3 font-semibold w-[120px]">Affected Entity ID</th>
+                <th className="py-2.5 px-3 font-semibold">Incident Details</th>
+                <th className="py-2.5 px-3 font-semibold w-[160px]">Timestamp</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-rule/30">
+              {filteredEvents.map((ev) => {
+                const userProfile = ev.user_id ? profiles[ev.user_id] : null;
+                const email = ev.metadata?.user_email || userProfile?.email || "Unknown Agent";
+                const createdTime = new Date(ev.created_at).toLocaleString("en-GB", {
+                  day: "2-digit",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  hour12: false
+                });
+
+                const affectedEntityId = ev.question_id || ev.subcategory_id || ev.subject_id || "None";
+                const detailsStr = ev.metadata?.details || `Performed administrative action type configuration.`;
+
+                return (
+                  <tr key={ev.id} className="hover:bg-bg-2/10 transition-colors">
+                    <td className="py-2.5 px-3 font-mono text-[11px] text-ink truncate max-w-[200px]" title={email}>
+                      {email}
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider ${getBadgeClass(ev.event_type)}`}>
+                        {cleanName(ev.event_type)}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span className="font-mono text-[10px] font-semibold text-muted bg-bg-2 border border-rule px-1.5 py-0.5 rounded select-all whitespace-nowrap">
+                        {affectedEntityId}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-ink-2 max-w-[300px] truncate" title={detailsStr}>
+                      {detailsStr}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-[10px] text-muted whitespace-nowrap">
+                      {createdTime}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
 }
 
 export default function AdminActivity() {
@@ -134,6 +304,67 @@ export default function AdminActivity() {
     );
   });
 
+  // FUNCTION TO EXPORT CURRENTLY FILTERED EVENT LOG INTO A CSV FILE
+  const handleExportToCSV = () => {
+    if (filteredEvents.length === 0) return;
+
+    // Headers with administrative correlations
+    const headers = [
+      "Trace ID",
+      "Administrator Email",
+      "Administrator Name",
+      "Action Type",
+      "Incident Description",
+      "Subject ID",
+      "Subcategory ID",
+      "Question ID",
+      "Timestamp"
+    ];
+
+    // Map through visible rows and ensure double-quote escaping for full CSV standard compatibility
+    const csvRows = filteredEvents.map((ev) => {
+      const userProfile = ev.user_id ? profiles[ev.user_id] : null;
+      const email = ev.metadata?.user_email || userProfile?.email || "Unknown Agent";
+      const name = ev.metadata?.user_name || userProfile?.display_name || "Anonymous Pilot";
+      const details = ev.metadata?.details || "Operation on hierarchy tree.";
+
+      return [
+        ev.id,
+        email,
+        name,
+        ev.event_type,
+        details,
+        ev.subject_id || "",
+        ev.subcategory_id || "",
+        ev.question_id || "",
+        ev.created_at
+      ].map((cellValue) => {
+        const cleanedVal = cellValue === null || cellValue === undefined ? "" : String(cellValue);
+        // Escape quotes to preserve cell breaks
+        const escaped = cleanedVal.replace(/"/g, '""');
+        // Wrap in quotes if it contains commas, quotes, or newlines
+        if (escaped.includes(",") || escaped.includes("\n") || escaped.includes('"')) {
+          return `"${escaped}"`;
+        }
+        return escaped;
+      });
+    });
+
+    const outputCSV = [headers.join(","), ...csvRows.map((r) => r.join(","))].join("\r\n");
+    const blob = new Blob([outputCSV], { type: "text/csv;charset=utf-8;" });
+    const blobURL = URL.createObjectURL(blob);
+    
+    // Create link tag dynamically to force trigger direct download channel
+    const downloadAnchor = document.createElement("a");
+    downloadAnchor.setAttribute("href", blobURL);
+    downloadAnchor.setAttribute("download", `heading_audit_activity_${new Date().toISOString().split("T")[0]}.csv`);
+    downloadAnchor.style.visibility = "hidden";
+    
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    document.body.removeChild(downloadAnchor);
+  };
+
   // Pagination calculation
   const totalItems = filteredEvents.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
@@ -144,19 +375,17 @@ export default function AdminActivity() {
 
   // Helper to identify type & style of events
   const getEventBadgeClass = (type: string) => {
-    if (type.includes("delete")) {
-      return "bg-rose-50 text-rose-700 border-rose-100 dark:bg-rose-500/10 dark:text-rose-400 dark:border-rose-500/20";
+    const t = type.toLowerCase();
+    if (t.includes("delete") || t.includes("revoke")) {
+      return "bg-rose-500/10 text-rose-600 border border-rose-500/20 dark:bg-rose-500/20 dark:text-rose-400";
     }
-    if (type.includes("create")) {
-      return "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20";
+    if (t.includes("create") || t.includes("enroll")) {
+      return "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400";
     }
-    if (type.includes("update")) {
-      return "bg-amber-50 text-amber-700 border-amber-205 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20";
+    if (t.includes("update") || t.includes("edit")) {
+      return "bg-amber-500/10 text-amber-600 border border-amber-500/20 dark:bg-amber-500/20 dark:text-amber-400";
     }
-    if (type.includes("enroll") || type.includes("revoke")) {
-      return "bg-indigo-50 text-indigo-700 border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20";
-    }
-    return "bg-bg text-muted border-rule dark:bg-bg-2 dark:text-ink-2";
+    return "bg-slate-500/10 text-slate-600 border border-slate-500/20 dark:bg-slate-500/20 dark:text-slate-400";
   };
 
   const getEventIcon = (type: string) => {
@@ -188,14 +417,28 @@ export default function AdminActivity() {
           <div className="font-mono text-[9px] tracking-widest text-muted uppercase mb-1">Audit Logs ledger</div>
           <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">Administrative Activity</h1>
         </div>
-        <button
-          onClick={fetchActivityData}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-4 py-2 border border-rule hover:bg-bg-2 rounded-full font-sans text-xs text-ink transition-colors disabled:opacity-50 cursor-pointer h-10 shrink-0"
-        >
-          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-          <span>Sync Audit Ledger</span>
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {/* EXPORT TO CSV TRIGGER */}
+          <button
+            onClick={handleExportToCSV}
+            disabled={filteredEvents.length === 0}
+            className="flex items-center gap-1.5 px-4 py-2 border border-rule hover:bg-bg-2 rounded-full font-sans text-xs text-ink transition-colors disabled:opacity-40 cursor-pointer h-10 shrink-0 font-semibold bg-emerald-500/5 hover:bg-emerald-500/15 border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+            title="Export currently filtered audit logs to CSV format"
+          >
+            <Download size={13} />
+            <span>Export CSV</span>
+          </button>
+
+          <button
+            onClick={fetchActivityData}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-4 py-2 border border-rule hover:bg-bg-2 rounded-full font-sans text-xs text-ink transition-colors disabled:opacity-50 cursor-pointer h-10 shrink-0"
+          >
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+            <span>Sync Audit Ledger</span>
+          </button>
+        </div>
       </div>
 
       {errorStatus && (
@@ -205,8 +448,11 @@ export default function AdminActivity() {
         </div>
       )}
 
+      {/* DEDICATED REAL-TIME LAST 50 EVENTS TABLE COMPONENT VIEW */}
+      <RecentEventsAuditTable profiles={profiles} />
+
       {/* Control panel / Filters */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mt-8">
         {/* Search input */}
         <div className="relative lg:col-span-2">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2" size={14} />

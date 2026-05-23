@@ -1,27 +1,94 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, Chip, Button } from "../components/Atoms";
 import { Timer, Clipboard, PlaneTakeoff, ArrowUpRight } from "lucide-react";
 import { mockExams } from "../data/topics";
-import { questionBank } from "../data/questions";
-
-const examQuestionsCount = (exam: any) =>
-  questionBank.filter(q => 
-    q.topicId === exam.id || 
-    (q.ata && q.ata.toLowerCase().includes(exam.subject.toLowerCase().split(' ')[0]))
-  ).length;
-
-const examHasQuestions = (exam: any) => {
-  const count = examQuestionsCount(exam);
-  return count >= exam.questions;
-};
+import { Question } from "../data/questions";
+import { fetchPublishedQuestions } from "../lib/content";
 
 export default function MockExamsView() {
+  const navigate = useNavigate();
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadQuestions() {
+      try {
+        const pub = await fetchPublishedQuestions();
+        setQuestions(pub);
+      } catch (err) {
+        console.error("Error loading mock exam questions:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadQuestions();
+  }, []);
+
+  const getExamQuestions = (exam: any) => {
+    if (exam.id === "nav-cpl-01") {
+      return questions.filter(q => 
+        q.topicId === "air-navigation" || 
+        q.topicId === "nav-gen" || 
+        q.topicId === "nav-rad" || 
+        q.topicId === "nav-inst" ||
+        q.topicId.startsWith("nav-")
+      );
+    }
+    if (exam.id === "met-atpl-01") {
+      return questions.filter(q => 
+        q.topicId === "meteorology" || 
+        q.topicId === "met-1" || 
+        q.topicId === "met-2" ||
+        q.topicId.startsWith("met-")
+      );
+    }
+    if (exam.id === "ops-cpl-02") {
+      return questions.filter(q => 
+        q.topicId === "air-regulation" || 
+        q.topicId === "reg-1" ||
+        q.topicId.startsWith("reg-")
+      );
+    }
+    if (exam.id === "agk-atpl-03") {
+      return questions.filter(q => 
+        q.topicId === "atg" || 
+        q.topicId === "ata-70" || 
+        q.topicId === "ata-73" ||
+        q.topicId.startsWith("ata-") ||
+        (q.ata && q.ata.toLowerCase().includes("engine"))
+      );
+    }
+    return questions.filter(q => q.topicId === exam.id);
+  };
+
+  const handleStartExam = (exam: any, examQuests: Question[]) => {
+    const sessionKey = `heading_mock_exam_${exam.id}_quests`;
+    const sessionData = {
+      expiresAt: Date.now() + 2 * 60 * 60 * 1000, // 2 hours
+      questions: examQuests,
+    };
+    sessionStorage.setItem(sessionKey, JSON.stringify(sessionData));
+    
+    navigate(`/quiz/${exam.id}`, {
+      state: {
+        sessionStorageKey: sessionKey,
+      }
+    });
+  };
 
   const filteredExams = selectedDifficulty === "all" 
     ? mockExams 
     : mockExams.filter(exam => exam.difficulty === selectedDifficulty);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg relative">
+        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen">
@@ -80,12 +147,13 @@ export default function MockExamsView() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {filteredExams.map((exam) => {
             const hasSavedState = !!localStorage.getItem(`heading_quiz_state_${exam.id}`);
-            const hasQuestions = examHasQuestions(exam);
+            const examQuests = getExamQuestions(exam);
+            const hasQuestions = examQuests.length >= 10;
             
             return (
             <Card key={exam.id} className={`relative hover:shadow-[0_12px_36px_rgba(13,26,45,0.06)] transition-all ${
               !hasQuestions ? "opacity-60 grayscale-[30%]" : ""
-            }`}>
+            }`} id={`mock-exam-card-${exam.id}`}>
               {/* Corner Accent indicator */}
               <div className="absolute top-0 right-0 h-10 w-10 flex items-center justify-center">
                 <div className={`h-2.5 w-2.5 rounded-full ${
@@ -128,7 +196,7 @@ export default function MockExamsView() {
                 <div className="text-center md:text-left border-x border-rule px-4">
                   <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wide">PAYLOAD</span>
                   <span className="text-sm font-sans font-medium text-ink flex items-center justify-center md:justify-start gap-1 mt-1">
-                    <Clipboard size={14} className="text-amber" /> {exam.questions} items
+                    <Clipboard size={14} className="text-amber" /> {examQuests.length} items
                   </span>
                 </div>
 
@@ -142,16 +210,18 @@ export default function MockExamsView() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-4 border-t border-rule">
+              <div className="flex items-center justify-between pt-4 border-t border-rule" id={`exam-actions-${exam.id}`}>
                 <span className="font-mono text-[10px] text-muted-2">
                   ANNEXED METRICS ONBOARD
                 </span>
                 {hasQuestions ? (
-                  <Link to={`/quiz/${exam.id}`}>
-                    <Button variant="primary" className="h-[38px] px-5 text-xs">
-                      {hasSavedState ? 'Resume Cabin' : 'Launch Instrument Cabin'} <ArrowUpRight size={14} className="ml-0.5" />
-                    </Button>
-                  </Link>
+                  <Button 
+                    variant="primary" 
+                    className="h-[38px] px-5 text-xs"
+                    onClick={() => handleStartExam(exam, examQuests)}
+                  >
+                    {hasSavedState ? 'Resume Cabin' : 'Launch Instrument Cabin'} <ArrowUpRight size={14} className="ml-0.5" />
+                  </Button>
                 ) : (
                   <Button variant="ghost" disabled className="h-[38px] px-5 text-xs border border-rule text-muted cursor-not-allowed">
                     Coming Soon <ArrowUpRight size={14} className="ml-0.5" />

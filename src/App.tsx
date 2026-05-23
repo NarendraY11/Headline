@@ -179,26 +179,55 @@ function DarkModeToggle() {
 function CustomDropdown({ value, options, onChange }: { value: string, options: { value: string, label: string }[], onChange: (val: string) => void }) {
   const [isOpen, setIsOpen] = useState(false);
   const selectedLabel = options.find(o => o.value === value)?.label || value;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+      e.preventDefault();
+      setIsOpen(true);
+    } else if (e.key === "Escape") {
+      setIsOpen(false);
+    }
+  };
+
   return (
-    <div className="relative w-36" tabIndex={0} onBlur={(e) => {
+    <div className="relative w-36" onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) {
             setIsOpen(false);
         }
     }}>
       <div 
+        role="combobox"
+        aria-expanded={isOpen}
+        aria-haspopup="listbox"
+        tabIndex={0}
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between bg-bg border border-rule rounded-md text-ink px-4 py-3 cursor-pointer select-none font-mono text-xs shadow-sm hover:bg-rule/30 transition-colors"
+        onKeyDown={handleKeyDown}
+        className="flex items-center justify-between bg-bg border border-rule rounded-md text-ink px-4 py-3 cursor-pointer select-none font-mono text-xs shadow-sm hover:bg-rule/30 transition-all focus:outline-none focus:ring-2 focus:ring-navy/40 focus:border-navy"
+        aria-label={`Select option, current is ${selectedLabel}`}
       >
         <span className="uppercase tracking-wider">{selectedLabel}</span>
         <ChevronDown size={14} className="text-muted ml-3" />
       </div>
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1.5 bg-paper border border-rule rounded-md shadow-md z-10 w-full overflow-hidden">
+        <div 
+          role="listbox"
+          className="absolute top-full right-0 mt-1.5 bg-paper border border-rule rounded-md shadow-md z-10 w-full overflow-hidden"
+        >
           {options.map((opt) => (
             <div
               key={opt.value}
+              role="option"
+              aria-selected={value === opt.value}
+              tabIndex={0}
               onClick={() => { onChange(opt.value); setIsOpen(false); }}
-              className="px-4 py-2.5 text-sm font-sans flex items-center justify-between cursor-pointer hover:bg-[#FDFCF8] dark:hover:bg-bg-2 text-ink transition-colors"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onChange(opt.value);
+                  setIsOpen(false);
+                }
+              }}
+              className="px-4 py-2.5 text-sm font-sans flex items-center justify-between cursor-pointer hover:bg-[#FDFCF8] dark:hover:bg-bg-2 text-ink transition-colors focus:bg-[#FDFCF8] dark:focus:bg-bg-2 focus:outline-none"
             >
               <span className="capitalize">{opt.label}</span>
               {value === opt.value && <Check size={14} className="text-ink ml-4" />}
@@ -213,8 +242,11 @@ function CustomDropdown({ value, options, onChange }: { value: string, options: 
 function CustomToggle({ isOn, onToggle }: { isOn: boolean, onToggle: () => void }) {
   return (
     <button 
+      role="switch"
+      aria-checked={isOn}
       onClick={onToggle}
-      className={`w-[44px] h-[24px] rounded-[12px] relative transition-colors duration-200 ${isOn ? 'bg-[#0F1E3C] dark:bg-[#4A7FA5]' : 'bg-[#E5E0D5] dark:bg-[#3A3F4B]'}`}
+      className={`w-[44px] h-[24px] rounded-[12px] relative transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none focus:outline-none focus:ring-2 focus:ring-navy/50 ${isOn ? 'bg-[#0F1E3C] dark:bg-[#4A7FA5]' : 'bg-[#E5E0D5] dark:bg-[#3A3F4B]'}`}
+      aria-label="Toggle setting"
     >
       <div className={`w-[20px] h-[20px] bg-white rounded-full absolute top-[2px] transition-all duration-200 shadow-sm ${isOn ? 'left-[22px]' : 'left-[2px]'}`} />
     </button>

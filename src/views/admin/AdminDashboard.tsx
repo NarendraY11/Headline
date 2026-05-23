@@ -646,7 +646,7 @@ export default function AdminDashboard() {
                 <h3 className="font-serif text-lg font-medium text-ink">New Signups Timeline</h3>
                 <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Cohort growth trajectory over selected range</p>
               </div>
-              <div className="flex-1 w-full min-h-0">
+              <div className="flex-1 w-full min-h-0" role="img" aria-label="Line chart showing new user registrations timeline">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={signupsOverTime} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
                     <XAxis dataKey="day" stroke="var(--muted)" fontSize={9} strokeWidth={1} tickLine={false} />
@@ -666,7 +666,7 @@ export default function AdminDashboard() {
                 <h3 className="font-serif text-lg font-medium text-teal-850">Paid License Acquisitions</h3>
                 <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Success of upgrade_pro upgrade cycles</p>
               </div>
-              <div className="flex-1 w-full min-h-0">
+              <div className="flex-1 w-full min-h-0" role="img" aria-label="Area chart showing paid license acquisitions timeline">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={conversionsOverTime} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
                     <defs>
@@ -692,7 +692,7 @@ export default function AdminDashboard() {
                 <h3 className="font-serif text-lg font-medium text-ink">Active User Frequency</h3>
                 <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Daily distinct active pilots (DAU timeline)</p>
               </div>
-              <div className="flex-1 w-full min-h-0">
+              <div className="flex-1 w-full min-h-0" role="img" aria-label="Bar chart showing daily active user frequency over time">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={activeUsersOverTime} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
                     <XAxis dataKey="day" stroke="var(--muted)" fontSize={9} strokeWidth={1} tickLine={false} />
@@ -718,7 +718,7 @@ export default function AdminDashboard() {
                 <h3 className="font-serif text-lg font-medium text-ink">Most Popular Subjects</h3>
                 <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Total quiz simulation requests (top 10 subjects)</p>
               </div>
-              <div className="flex-1 w-full min-h-0">
+              <div className="flex-1 w-full min-h-0" role="img" aria-label="Vertical bar chart displaying quiz simulation usage count across subjects">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     layout="vertical"
@@ -825,7 +825,7 @@ export default function AdminDashboard() {
                 </h3>
                 <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Metrics representing smart service execution rates</p>
               </div>
-              <div className="flex-1 w-full min-h-0 py-2">
+              <div className="flex-1 w-full min-h-0 py-2" role="img" aria-label="Donut pie chart showing AI Copilot diagnostics usage rates">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie

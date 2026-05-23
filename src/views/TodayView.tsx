@@ -22,7 +22,9 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useLogbook } from "../hooks/useLogbook";
 import { useGlobalLoading } from "../contexts/LoadingContext";
-import { subjects } from "../data/topics";
+import { SubjectItem } from "../data/topics";
+import { fetchMergedSubjects } from "../lib/content";
+import { apiFetch } from "../lib/api";
 import {
   Radar,
   RadarChart,
@@ -86,23 +88,21 @@ function WeatherWidget() {
     setLoading(true);
     setGlobalLoading(true);
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-
     try {
-      const token = await user.getIdToken();
-      const response = await fetch("/api/weather", {
+      const response = await apiFetch("/api/weather", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ location: "London Heathrow (LHR)" }),
-        signal: controller.signal,
       });
 
-      if (!response.ok) {
-        setWeatherData((prev) => ({ ...prev, unavailable: true }) as any);
+      if (!response) {
+        setWeatherData((prev) => ({ 
+          briefing: "Weather briefing is currently offline", 
+          condition: "CLOUDY", 
+          unavailable: true 
+        }) as any);
         return;
       }
 
@@ -117,18 +117,33 @@ function WeatherWidget() {
               forecast: Array.isArray(d.forecast) ? d.forecast : [],
             });
           } else {
-            setWeatherData((prev) => ({ ...prev, unavailable: true }) as any);
+            setWeatherData((prev) => ({ 
+              briefing: "Weather briefing is currently offline", 
+              condition: "CLOUDY", 
+              unavailable: true 
+            }) as any);
           }
         } catch (jsonError) {
-          setWeatherData((prev) => ({ ...prev, unavailable: true }) as any);
+          setWeatherData((prev) => ({ 
+            briefing: "Weather briefing is currently offline", 
+            condition: "CLOUDY", 
+            unavailable: true 
+          }) as any);
         }
       } else {
-        setWeatherData((prev) => ({ ...prev, unavailable: true }) as any);
+        setWeatherData((prev) => ({ 
+          briefing: "Weather briefing is currently offline", 
+          condition: "CLOUDY", 
+          unavailable: true 
+        }) as any);
       }
     } catch (error) {
-      setWeatherData((prev) => ({ ...prev, unavailable: true }) as any);
+      setWeatherData((prev) => ({ 
+        briefing: "Weather briefing is currently offline", 
+        condition: "CLOUDY", 
+        unavailable: true 
+      }) as any);
     } finally {
-      clearTimeout(timeoutId);
       setLoading(false);
       setGlobalLoading(false);
     }
@@ -270,6 +285,22 @@ export default function TodayView() {
     NotificationPermission | "unsupported"
   >("default");
   const { logbook, loading: logbookLoading } = useLogbook();
+  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
+
+  useEffect(() => {
+    async function loadSubjects() {
+      try {
+        const merged = await fetchMergedSubjects();
+        setSubjectsList(merged);
+      } catch (err) {
+        console.error("Failed loading subjects in TodayView:", err);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    }
+    loadSubjects();
+  }, []);
 
   // User configurable tiles
   const [tileOrder, setTileOrder] = useState<string[]>(() => {
@@ -382,7 +413,7 @@ export default function TodayView() {
 
   const displayName = userData?.displayName || "Captain";
 
-  if (loading || logbookLoading) {
+  if (loading || logbookLoading || loadingSubjects) {
     return (
       <div className="relative min-h-[70vh] flex flex-col items-center justify-center p-4">
         <div className="absolute inset-0 blueprint pointer-events-none opacity-20 z-0" />
@@ -462,7 +493,7 @@ export default function TodayView() {
     }
   });
 
-  const masteries = subjects.map((sub: any) => {
+  const masteries = subjectsList.map((sub: any) => {
     const stats = topicAgg[sub.title];
     const mappings: Record<string, string> = {
       "Air Regulation": "Air Reg.",
@@ -841,44 +872,52 @@ export default function TodayView() {
                 Telemetry Active
               </span>
             </div>
-            <div className="flex-1 w-full pt-[30px] md:pt-[50px] pb-4 px-2 md:px-4 bg-bg-2/30">
+            <div className="flex-1 w-full pt-[30px] md:pt-[50px] pb-4 px-2 md:px-4 bg-bg-2/30" role="img" aria-label="Radar chart showing aviation topic mastery percentage telemetry">
               <div style={{ width: "100%", minHeight: 320, height: "100%" }}>
-                <ResponsiveContainer width="100%" height={320}>
-                  <RadarChart
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={isMobile ? "55%" : "75%"}
-                    data={masteries}
-                  >
-                    <PolarGrid stroke="#e5e5e5" />
-                    <PolarAngleAxis
-                      dataKey="subject"
-                      tick={{
-                        fill: "#737373",
-                        fontSize: isMobile ? 8 : 10,
-                        fontFamily: "JetBrains Mono",
-                      }}
-                    />
-                    <PolarRadiusAxis
-                      angle={30}
-                      domain={[0, 100]}
-                      tick={{ fill: "#a3a3a3", fontSize: 9 }}
-                      tickCount={5}
-                    />
-                    <RechartsTooltip
-                      content={<CustomTooltip />}
-                      cursor={{ fill: "rgba(0,43,91,0.05)" }}
-                    />
-                    <Radar
-                      name="Mastery %"
-                      dataKey="score"
-                      stroke="#002B5B"
-                      fill="#002B5B"
-                      fillOpacity={0.15}
-                      activeDot={{ r: 4, fill: "#002B5B" }}
-                    />
-                  </RadarChart>
-                </ResponsiveContainer>
+                {logbook.length > 0 ? (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <RadarChart
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={isMobile ? "55%" : "75%"}
+                      data={masteries}
+                    >
+                      <PolarGrid stroke="#e5e5e5" />
+                      <PolarAngleAxis
+                        dataKey="subject"
+                        tick={{
+                          fill: "#737373",
+                          fontSize: isMobile ? 8 : 10,
+                          fontFamily: "JetBrains Mono",
+                        }}
+                      />
+                      <PolarRadiusAxis
+                        angle={30}
+                        domain={[0, 100]}
+                        tick={{ fill: "#a3a3a3", fontSize: 9 }}
+                        tickCount={5}
+                      />
+                      <RechartsTooltip
+                        content={<CustomTooltip />}
+                        cursor={{ fill: "rgba(0,43,91,0.05)" }}
+                      />
+                      <Radar
+                        name="Mastery %"
+                        dataKey="score"
+                        stroke="#002B5B"
+                        fill="#002B5B"
+                        fillOpacity={0.15}
+                        activeDot={{ r: 4, fill: "#002B5B" }}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center p-6 border border-dashed border-rule rounded-xl bg-white/40">
+                    <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest mb-1.5 font-bold"> telemetry outline </span>
+                    <p className="font-serif text-lg text-ink">Complete your first session to see analytics</p>
+                    <p className="font-sans text-[11px] text-muted-2 max-w-sm mt-1">Navigate to modules or exams to build radar coverage stats.</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -937,56 +976,64 @@ export default function TodayView() {
               </div>
             </div>
 
-            <div style={{ width: "100%", height: 260 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={pacingData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#002B5B" stopOpacity={0.15}/>
-                      <stop offset="95%" stopColor="#002B5B" stopOpacity={0.0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                  <XAxis 
-                    dataKey="day" 
-                    tick={{ fill: "#737373", fontSize: 9, fontFamily: "JetBrains Mono" }}
-                    axisLine={{ stroke: "#e5e5e5" }}
-                  />
-                  <YAxis 
-                    tick={{ fill: "#a3a3a3", fontSize: 9, fontFamily: "JetBrains Mono" }}
-                    axisLine={{ stroke: "#e5e5e5" }}
-                  />
-                  <RechartsTooltip 
-                    contentStyle={{ 
-                      backgroundColor: "#002b5b", 
-                      borderRadius: "8px", 
-                      color: "#fff", 
-                      fontFamily: "Space Grotesk",
-                      fontSize: "12px",
-                      border: "none",
-                      padding: "8px 12px"
-                    }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="actual" 
-                    name="Logged Hours"
-                    stroke="#002B5B" 
-                    strokeWidth={2}
-                    fillOpacity={1} 
-                    fill="url(#colorActual)" 
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="target" 
-                    name="Target Pace"
-                    stroke="#ff4d4d" 
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    dot={false}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+            <div style={{ width: "100%", height: 260 }} role="img" aria-label="Study pacing timeline chart comparing weekly logged hours against target exam pace">
+              {logbook.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={pacingData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#002B5B" stopOpacity={0.15}/>
+                        <stop offset="95%" stopColor="#002B5B" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+                    <XAxis 
+                      dataKey="day" 
+                      tick={{ fill: "#737373", fontSize: 9, fontFamily: "JetBrains Mono" }}
+                      axisLine={{ stroke: "#e5e5e5" }}
+                    />
+                    <YAxis 
+                      tick={{ fill: "#a3a3a3", fontSize: 9, fontFamily: "JetBrains Mono" }}
+                      axisLine={{ stroke: "#e5e5e5" }}
+                    />
+                    <RechartsTooltip 
+                      contentStyle={{ 
+                        backgroundColor: "#002b5b", 
+                        borderRadius: "8px", 
+                        color: "#fff", 
+                        fontFamily: "Space Grotesk",
+                        fontSize: "12px",
+                        border: "none",
+                        padding: "8px 12px"
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="actual" 
+                      name="Logged Hours"
+                      stroke="#002B5B" 
+                      strokeWidth={2}
+                      fillOpacity={1} 
+                      fill="url(#colorActual)" 
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="target" 
+                      name="Target Pace"
+                      stroke="#ff4d4d" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                    />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full min-h-[220px] text-center p-6 rounded-xl border border-dashed border-rule bg-white/40">
+                  <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest mb-1.5 font-bold"> timeline blank </span>
+                  <p className="font-serif text-base text-ink">Complete your first session to see analytics</p>
+                  <p className="font-sans text-[11px] text-muted-2 max-w-sm mt-1">A target timeline against actual study hours will populate here.</p>
+                </div>
+              )}
             </div>
           </div>
         </div>

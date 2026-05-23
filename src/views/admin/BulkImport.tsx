@@ -430,7 +430,7 @@ export default function BulkImport() {
                 </p>
               </div>
             ) : (
-              <div className="bg-white border border-rule rounded-xl overflow-hidden shadow-sm max-h-[500px] overflow-y-auto">
+              <div className="bg-white border border-rule rounded-xl overflow-auto shadow-sm max-h-[500px]">
                 <table className="w-full text-left border-collapse font-sans text-xs">
                   <thead>
                     <tr className="border-b border-rule font-mono uppercase tracking-wide text-muted text-[9px] bg-bg-2/50 sticky top-0">

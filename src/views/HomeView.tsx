@@ -5,9 +5,9 @@ import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts
 import { Button, Card, Chip, CompassLogomark, Wordmark } from "../components/Atoms";
 import { MoveRight, ChevronDown, CheckCircle2, Clock, User, ArrowUpRight, X } from "lucide-react";
 import { FlightControlsDiagram } from "../components/SystemDiagram";
-import { questionBank } from "../data/questions";
-import { subjects } from "../data/topics";
+import { Question } from "../data/questions";
 import { supabase } from "../lib/supabase";
+import { fetchPublishedQuestions, fetchMergedSubjects } from "../lib/content";
 
 // Scroll reveal helper
 const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: string }> = ({ children, delay = 0, className = "" }) => {
@@ -39,7 +39,7 @@ function FAQItem({ question, answer }: { question: string, answer: string }) {
   );
 }
 
-function InteractiveSampleQuestion() {
+function InteractiveSampleQuestion({ questions }: { questions: Question[] }) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -47,7 +47,15 @@ function InteractiveSampleQuestion() {
   const [showTooltip, setShowTooltip] = useState(false);
   const [tooltipMessage, setTooltipMessage] = useState("");
   
-  if (currentIndex >= 5) {
+  if (questions.length === 0) {
+    return (
+      <div className="bg-paper border border-rule rounded-2xl p-5 sm:p-6 md:p-8 shadow-sm text-center relative overflow-hidden w-full max-w-[90vw] sm:max-w-sm md:max-w-md mx-auto md:mx-0 shrink-0 h-[430px] flex flex-col justify-center items-center">
+        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (currentIndex >= questions.length || currentIndex >= 5) {
     return (
       <div className="bg-paper border border-rule rounded-2xl p-5 sm:p-6 md:p-8 shadow-sm text-center relative overflow-hidden w-full max-w-[90vw] sm:max-w-sm md:max-w-md mx-auto md:mx-0 shrink-0 h-[430px] flex flex-col justify-center items-center">
         <CompassLogomark size={48} className="text-ink mb-6" />
@@ -62,7 +70,7 @@ function InteractiveSampleQuestion() {
     );
   }
 
-  const currentQ = questionBank[currentIndex];
+  const currentQ = questions[currentIndex];
   
   const handleSelect = (id: string) => {
     if (submitted) return;
@@ -217,44 +225,42 @@ function InteractiveSampleQuestion() {
 }
 
 export default function HomeView() {
-  const [liveQuestionsCount, setLiveQuestionsCount] = useState<number>(questionBank.length);
-  const [liveSubjectsCount, setLiveSubjectsCount] = useState<number>(subjects.length);
-  const [livePassRate, setLivePassRate] = useState<number>(75);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [liveQuestionsCount, setLiveQuestionsCount] = useState<number>(0);
+  const [liveSubjectsCount, setLiveSubjectsCount] = useState<number>(0);
+  const [livePassRate, setLivePassRate] = useState<number>(0);
+  const [hasAttempts, setHasAttempts] = useState<boolean>(false);
 
   useEffect(() => {
-    async function loadStats() {
+    async function loadStatsAndContent() {
       try {
-        const { count: qCount } = await supabase
-          .from("questions")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "published");
+        const [pubQuestions, mergedSubjects] = await Promise.all([
+          fetchPublishedQuestions(),
+          fetchMergedSubjects()
+        ]);
 
-        const { count: sCount } = await supabase
-          .from("subjects")
-          .select("*", { count: "exact", head: true })
-          .eq("status", "published");
+        setQuestions(pubQuestions);
+        setLiveQuestionsCount(pubQuestions.length);
+        setLiveSubjectsCount(mergedSubjects.length);
 
         const { data: attemptsData } = await supabase
           .from("attempts")
           .select("percentage");
 
-        const qVal = (qCount !== null && qCount !== undefined) ? qCount : questionBank.length;
-        const sVal = (sCount !== null && sCount !== undefined) ? sCount : subjects.length;
-
-        let pRate = 78; // baseline fallback
         if (attemptsData && attemptsData.length > 0) {
           const passing = attemptsData.filter(a => (a.percentage || 0) >= 70).length;
-          pRate = Math.round((passing / attemptsData.length) * 100);
+          const pRate = Math.round((passing / attemptsData.length) * 100);
+          setLivePassRate(pRate);
+          setHasAttempts(true);
+        } else {
+          setHasAttempts(false);
         }
-
-        setLiveQuestionsCount(qVal);
-        setLiveSubjectsCount(sVal);
-        setLivePassRate(pRate);
+        setLivePassRate(pRate => pRate); // keep state intact if needed
       } catch (e) {
-        console.warn("Error loading home stats:", e);
+        console.warn("Error loading home stats and content:", e);
       }
     }
-    loadStats();
+    loadStatsAndContent();
   }, []);
 
   return (
@@ -282,21 +288,10 @@ export default function HomeView() {
 
       {/* 1. SEC: HERO */}
       <section className="relative pt-10 pb-12 md:pt-20 md:pb-20 w-full flex justify-center overflow-hidden">
-        {/* BIG BACKGROUND VIDEO */}
-        <video 
-          src="/hero-bg.webm" 
-          autoPlay 
-          loop 
-          muted 
-          playsInline 
-          className="absolute top-0 left-0 w-full h-full object-cover" 
-          style={{ zIndex: 0 }}
-        />
-        {/* CREAM OVERLAY */}
-        <div 
-          className="absolute top-0 left-0 w-full h-full" 
-          style={{ background: 'rgba(242, 238, 228, 0.42)', zIndex: 1 }}
-        />
+        {/* REPLACED WATERMARKED VIDEO WITH ELEGANT BLUEPRINT AND AMBIENT GRADIENT */}
+        <div className="absolute inset-0 bg-gradient-to-tr from-[#f3eee0] via-[#f8f5ed] to-[#ede8dc] z-0" />
+        <div className="absolute inset-0 blueprint pointer-events-none opacity-[0.25] z-[1]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,transparent_30%,#f2ede0_90%)] opacity-60 z-[1]" />
 
         {/* BIG BACKGROUND COMPASS */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] md:w-[300px] xl:w-[560px] aspect-square pointer-events-none" style={{ zIndex: 2 }}>
@@ -353,10 +348,17 @@ export default function HomeView() {
                 <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{liveSubjectsCount}</span>
                 <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">SUBJECTS</span>
               </div>
-              <div className="flex flex-col gap-1">
-                <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none text-navy">{livePassRate}%</span>
-                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">SIMULATION PASS RATE</span>
-              </div>
+              {hasAttempts ? (
+                <div className="flex flex-col gap-1">
+                  <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none text-navy">{livePassRate}%</span>
+                  <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">SIMULATION PASS RATE</span>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-1">
+                  <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none text-navy">FREE</span>
+                  <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">TO START</span>
+                </div>
+              )}
             </div>
           </FadeUp>
         </div>
@@ -364,7 +366,7 @@ export default function HomeView() {
         {/* RIGHT COLUMN */}
         <div className="flex-1 w-full flex justify-center md:justify-end shrink-0 relative min-w-0">
            <FadeUp delay={100} className="w-full flex justify-center md:block md:w-auto overflow-hidden sm:overflow-visible">
-             <InteractiveSampleQuestion />
+             <InteractiveSampleQuestion questions={questions} />
            </FadeUp>
         </div>
         
@@ -602,7 +604,7 @@ export default function HomeView() {
                  <div className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase mb-8">PROGRESS · LAST 7 SESSIONS</div>
                  <h3 className="font-serif text-[32px] text-ink mb-12 tracking-tight">Consistent upward trend.</h3>
                  
-                 <div className="w-full relative flex-1" style={{ minHeight: '200px' }}>
+                 <div className="w-full relative flex-1" style={{ minHeight: '200px' }} role="img" aria-label="A bar chart showing student scores across the last 7 learning sessions, indicating an improvement trend from 62% to 88% accuracy">
                     <ResponsiveContainer width="100%" height={200}>
                       <BarChart data={[
                         { name: 'S1', score: 62 },

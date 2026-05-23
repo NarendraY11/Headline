@@ -8,7 +8,9 @@ import { supabase } from "../lib/supabase";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { motion, AnimatePresence } from "motion/react";
 import { Wordmark, Chip, Button, CompassLogomark } from "../components/Atoms";
-import { questionBank, Question } from "../data/questions";
+import { Question } from "../data/questions";
+import { fetchPublishedQuestions } from "../lib/content";
+import { apiFetch } from "../lib/api";
 import { mockExams } from "../data/topics";
 import { getDailyReviewItems } from "../lib/logbook";
 import { X, ArrowRight, Settings2, Sparkles, CheckCircle2 } from "lucide-react";
@@ -45,59 +47,72 @@ export default function QuizView() {
     | undefined;
   const customTopic = location.state?.generatedTopic as string | undefined;
 
-  const getQuestions = () => {
-    if (customQuestions) return customQuestions;
-
-    if (location.state?.sessionStorageKey) {
-      try {
-        const saved = sessionStorage.getItem(location.state.sessionStorageKey);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (
-            parsed.expiresAt > Date.now() &&
-            Array.isArray(parsed.questions)
-          ) {
-            return parsed.questions;
-          }
-        }
-      } catch (e) {}
-    }
-
-    if (topicId?.startsWith("ai-generated-")) {
-      return []; // triggers empty state below
-    }
-
-    if (topicId === "review") {
-      const ids = getDailyReviewItems(logbook);
-      // Find questions by ID. If not found in bank, well we try
-      return questionBank.filter((q) => ids.includes(q.id));
-    }
-    if (topicId && topicId !== "all") {
-      const normalize = (s: string) =>
-        s.replace(/[^a-z0-9]/gi, "").toLowerCase();
-      const normalizedTopicId = normalize(topicId);
-
-      const filtered = questionBank.filter(
-        (q) => normalize(q.topicId) === normalizedTopicId,
-      );
-      if (filtered.length > 0) return filtered;
-
-      const subjectFiltered = questionBank.filter((q) =>
-        normalize(q.topicId).startsWith(normalizedTopicId),
-      );
-      if (subjectFiltered.length > 0) return subjectFiltered;
-    }
-    return questionBank;
-  };
-
-  const [questions, setQuestions] = useState<Question[]>(getQuestions());
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [loadingContent, setLoadingContent] = useState(true);
 
   useEffect(() => {
-    if (topicId === "review" && logbook.length > 0) {
-      const ids = getDailyReviewItems(logbook);
-      setQuestions(questionBank.filter((q) => ids.includes(q.id)));
+    async function loadQuizQuestions() {
+      try {
+        if (customQuestions) {
+          setQuestions(customQuestions);
+          return;
+        }
+
+        if (location.state?.sessionStorageKey) {
+          try {
+            const saved = sessionStorage.getItem(location.state.sessionStorageKey);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              if (
+                parsed.expiresAt > Date.now() &&
+                Array.isArray(parsed.questions)
+              ) {
+                setQuestions(parsed.questions);
+                return;
+              }
+            }
+          } catch (e) {}
+        }
+
+        const pubQuestions = await fetchPublishedQuestions();
+
+        if (topicId?.startsWith("ai-generated-")) {
+          setQuestions([]);
+        } else if (topicId === "review") {
+          const ids = getDailyReviewItems(logbook);
+          setQuestions(pubQuestions.filter((q) => ids.includes(q.id)));
+        } else if (topicId && topicId !== "all") {
+          const normalize = (s: string) =>
+            s.replace(/[^a-z0-9]/gi, "").toLowerCase();
+          const normalizedTopicId = normalize(topicId);
+
+          const filtered = pubQuestions.filter(
+            (q) => normalize(q.topicId) === normalizedTopicId,
+          );
+          if (filtered.length > 0) {
+            setQuestions(filtered);
+          } else {
+            const subjectFiltered = pubQuestions.filter((q) =>
+              normalize(q.topicId).startsWith(normalizedTopicId),
+            );
+            if (subjectFiltered.length > 0) {
+              setQuestions(subjectFiltered);
+            } else {
+              setQuestions(pubQuestions);
+            }
+          }
+        } else {
+          setQuestions(pubQuestions);
+        }
+      } catch (err) {
+        console.error("Error loading quiz questions:", err);
+      } finally {
+        setLoadingContent(false);
+      }
     }
-  }, [logbook, topicId]);
+
+    loadQuizQuestions();
+  }, [topicId, logbook, customQuestions, location.state?.sessionStorageKey]);
 
   const totalQuestions = questions.length;
 
@@ -681,12 +696,10 @@ export default function QuizView() {
 
     try {
       trackEvent("ai_used", { metadata: { feature: "explain" } });
-      const token = await user.getIdToken();
-      const response = await fetch("/api/instructor/explain", {
+      const response = await apiFetch("/api/instructor/explain", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           prompt: currentQ.prompt,
@@ -695,22 +708,20 @@ export default function QuizView() {
         }),
       });
 
-      if (response.status === 429) {
-        const errData = await response.json().catch(() => ({}));
+      if (!response) {
         showToast({
           type: "error",
-          title: "Rate Limit Reached",
-          message: errData.error || "Rate limit reached. Try again later.",
+          title: "Service Offline",
+          message: "AI features are temporarily unavailable",
           duration: 5000,
         });
         setAiExplanations((prev) => ({
           ...prev,
-          [currentQ.id]: "Rate limit reached. Try again later.",
+          [currentQ.id]: "AI features are temporarily unavailable.",
         }));
         return;
       }
 
-      if (!response.ok) throw new Error("Server Error");
       if (!response.body) throw new Error("No body in response");
 
       const reader = response.body.getReader();
@@ -762,29 +773,25 @@ export default function QuizView() {
         if (answers[q.id] === q.correct) scores[q.ata].correct++;
       });
 
-      const token = await user.getIdToken();
-      const response = await fetch("/api/instructor/coach", {
+      const response = await apiFetch("/api/instructor/coach", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ scores }),
       });
 
-      if (response.status === 429) {
-        const errData = await response.json().catch(() => ({}));
+      if (!response) {
         showToast({
           type: "error",
-          title: "Rate Limit Reached",
-          message: errData.error || "Rate limit reached. Try again later.",
+          title: "Service Offline",
+          message: "AI features are temporarily unavailable",
           duration: 5000,
         });
-        setStudyPlan("Rate limit reached. Please try again later.");
+        setStudyPlan("AI features are temporarily unavailable.");
         return;
       }
 
-      if (!response.ok) throw new Error("Server Error");
       const data = await response.json();
       setStudyPlan(data.text);
     } catch (error) {
@@ -845,6 +852,14 @@ export default function QuizView() {
   };
 
   // --- RENDER HELPERS ---
+  if (loadingContent) {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center bg-bg relative">
+        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   const currentQ = questions[currentIndex];
 
   if (totalQuestions === 0) {

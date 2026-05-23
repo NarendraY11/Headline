@@ -40,8 +40,18 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
       setPassword("");
       setConfirmPassword("");
       setDisplayName("");
+
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && !loading) {
+          onClose();
+        }
+      };
+      window.addEventListener("keydown", handleEscape);
+      return () => {
+        window.removeEventListener("keydown", handleEscape);
+      };
     }
-  }, [isOpen, defaultTab]);
+  }, [isOpen, defaultTab, loading, onClose]);
 
   if (!isOpen) return null;
 
@@ -204,6 +214,9 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
           exit={{ opacity: 0, scale: 0.96, y: 15 }}
           transition={{ duration: 0.23, ease: "easeOut" }}
           className="relative w-full max-w-md z-10"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
         >
           <Card className="p-6 md:p-8 bg-paper border border-rule-strong shadow-2xl relative">
             {/* Close button */}
@@ -221,7 +234,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
               <span className="font-mono text-[9px] text-muted-2 tracking-widest uppercase border border-rule px-2 py-0.5 rounded-sm">
                 HEADING AV-SYS
               </span>
-              <h2 className="font-serif text-2xl text-ink tracking-tight mt-3">
+              <h2 id="modal-title" className="font-serif text-2xl text-ink tracking-tight mt-3">
                 {activeTab === "signin" && "Welcome Aviator"}
                 {activeTab === "signup" && "Enlist New Candidate"}
                 {activeTab === "forgot" && "Reset Cockpit Authorization"}

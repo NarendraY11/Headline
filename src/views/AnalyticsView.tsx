@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { trackEvent } from "../lib/track";
 import { Card, Chip, Button } from "../components/Atoms";
@@ -12,7 +12,9 @@ import {
   CartesianGrid,
   XAxis,
 } from "recharts";
-import { subjects } from "../data/topics";
+import { SubjectItem } from "../data/topics";
+import { fetchMergedSubjects } from "../lib/content";
+import { apiFetch } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useLogbook } from "../hooks/useLogbook";
 import { useGlobalLoading } from "../contexts/LoadingContext";
@@ -25,9 +27,25 @@ export default function AnalyticsView() {
   const [isInsightLoading, setIsInsightLoading] = useState(false);
 
   const { logbook, loading: logbookLoading } = useLogbook();
+  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
+
+  useEffect(() => {
+    async function loadSubjects() {
+      try {
+        const merged = await fetchMergedSubjects();
+        setSubjectsList(merged);
+      } catch (err) {
+        console.error("Failed loading subjects in AnalyticsView:", err);
+      } finally {
+        setLoadingSubjects(false);
+      }
+    }
+    loadSubjects();
+  }, []);
 
   // Loading state
-  if (loading || logbookLoading) {
+  if (loading || logbookLoading || loadingSubjects) {
     return (
       <div className="relative min-h-[70vh] flex flex-col items-center justify-center p-4">
         <div className="absolute inset-0 blueprint pointer-events-none opacity-20 z-0" />
@@ -129,7 +147,7 @@ export default function AnalyticsView() {
     }
   });
 
-  const masteries = subjects
+  const masteries = subjectsList
     .map((sub) => {
       const stats = topicAgg[sub.title];
       return {
@@ -193,29 +211,25 @@ export default function AnalyticsView() {
 
     try {
       trackEvent("ai_used", { metadata: { feature: "diagnosis" } });
-      const token = await user.getIdToken();
-      const response = await fetch("/api/instructor/diagnosis", {
+      const response = await apiFetch("/api/instructor/diagnosis", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ summary: JSON.stringify(summaryData) }),
       });
 
-      if (response.status === 429) {
-        const errData = await response.json().catch(() => ({}));
+      if (!response) {
         showToast({
-          type: 'error',
-          title: 'Rate Limit Reached',
-          message: errData.error || 'Rate limit reached. Try again later.',
-          duration: 5000
+          type: "error",
+          title: "Service Offline",
+          message: "AI features are temporarily unavailable",
+          duration: 5000,
         });
-        setInsight("Rate limit reached. Please try again later.");
+        setInsight("AI features are temporarily unavailable.");
         return;
       }
 
-      if (!response.ok) throw new Error("Server Error");
       if (!response.body) throw new Error("No body in response");
 
       const reader = response.body.getReader();
@@ -475,7 +489,7 @@ export default function AnalyticsView() {
             </h2>
             <Card className="bg-paper border border-rule py-6 px-4 h-[300px]">
               {mockChartData.length > 0 ? (
-                <div style={{ width: "100%", minHeight: 250, height: "100%" }}>
+                <div style={{ width: "100%", minHeight: 250, height: "100%" }} role="img" aria-label="Mock exam trends chart tracing score progress over time">
                   <ResponsiveContainer width="100%" height={250}>
                     <LineChart
                       data={mockChartData}

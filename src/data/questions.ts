@@ -17,7 +17,7 @@ export interface Question {
   isAiGenerated?: boolean;
 }
 
-const staticQuestionBank: Question[] = [
+export const staticQuestionBank: Question[] = [
   {
     id: "q-ata27-01",
     topicId: "ata-27",

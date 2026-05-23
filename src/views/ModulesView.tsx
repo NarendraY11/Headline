@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../components/Atoms";
 import { ArrowUpRight, Lock, Target, ChevronDown, Plus, Search } from "lucide-react";
-import { subjects, SubjectItem } from "../data/topics";
+import { SubjectItem } from "../data/topics";
+import { fetchMergedSubjects } from "../lib/content";
 import { useLogbook } from "../hooks/useLogbook";
 import { getSubjectMastery, getDailyReviewItems } from "../lib/logbook";
 
@@ -12,8 +13,25 @@ export default function ModulesView() {
 
   const { logbook } = useLogbook();
 
-  const totalSubjectsCount = subjects.length;
-  const totalQuestions = subjects.reduce((sum, s) => sum + s.questionCount, 0);
+  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadSubjects() {
+      try {
+        const merged = await fetchMergedSubjects();
+        setSubjectsList(merged);
+      } catch (err) {
+        console.error("Failed loading subjects in ModulesView:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSubjects();
+  }, []);
+
+  const totalSubjectsCount = subjectsList.length;
+  const totalQuestions = subjectsList.reduce((sum, s) => sum + s.questionCount, 0);
 
   const dailyReviewItems = getDailyReviewItems(logbook);
 
@@ -23,7 +41,7 @@ export default function ModulesView() {
   const [showMasteryOverlay, setShowMasteryOverlay] = useState(false);
 
   const uniqueCategoriesFromTopics = Array.from(new Set(
-    subjects.map(s => ((s as any).category || s.title || "").trim())
+    subjectsList.map(s => ((s as any).category || s.title || "").trim())
   )).filter(Boolean);
   const filterTabs = ["All", ...uniqueCategoriesFromTopics];
 
@@ -38,7 +56,15 @@ export default function ModulesView() {
     }
   };
 
-  let displayedSubjects = [...subjects];
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg relative">
+        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  let displayedSubjects = [...subjectsList];
 
   if (activeTab !== "All") {
     displayedSubjects = displayedSubjects.filter(s => {

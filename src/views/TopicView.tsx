@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { trackEvent } from "../lib/track";
-import { subjects } from "../data/topics";
+import { SubjectItem } from "../data/topics";
+import { fetchMergedSubjects } from "../lib/content";
+import { apiFetch } from "../lib/api";
 import { Chip, Card, Button } from "../components/Atoms";
 import {
   ArrowLeft,
@@ -22,7 +24,25 @@ export default function TopicView() {
   const { setLoading: setGlobalLoading } = useGlobalLoading();
   const { showToast } = useToast();
   const { user } = useAuth();
-  const subject = subjects.find((s) => s.id === id);
+
+  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadSubjects() {
+      try {
+        const merged = await fetchMergedSubjects();
+        setSubjectsList(merged);
+      } catch (err) {
+        console.error("Failed loading subjects in TopicView:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadSubjects();
+  }, []);
+
+  const subject = subjectsList.find((s) => s.id === id);
 
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -32,9 +52,21 @@ export default function TopicView() {
     subject?.subTopics?.find((s) => s.id === "ata-27")?.id ||
     subject?.subTopics?.[0]?.id ||
     null;
-  const [selectedSubId, setSelectedSubId] = useState<string | null>(
-    defaultSubTopicId,
-  );
+  const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (subject && !selectedSubId) {
+      setSelectedSubId(defaultSubTopicId);
+    }
+  }, [subject, defaultSubTopicId, selectedSubId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-bg relative">
+        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!subject) {
     return (
@@ -68,28 +100,24 @@ export default function TopicView() {
     setGlobalLoading(true);
     try {
       trackEvent("ai_used", { metadata: { feature: "practice" } });
-      const token = await user.getIdToken();
-      const response = await fetch("/api/instructor/practice", {
+      const response = await apiFetch("/api/instructor/practice", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ topic: subject?.title, code: subject?.num }),
       });
 
-      if (response.status === 429) {
-        const errData = await response.json().catch(() => ({}));
+      if (!response) {
         showToast({
           type: "error",
-          title: "Rate Limit Reached",
-          message: errData.error || "Rate limit reached. Try again later.",
+          title: "Service Offline",
+          message: "AI features are temporarily unavailable",
           duration: 5000,
         });
         return;
       }
 
-      if (!response.ok) throw new Error("Failed to reach generative endpoint.");
       const questions = await response.json();
 
       // Basic validation

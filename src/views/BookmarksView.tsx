@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Chip, Button, Card } from "../components/Atoms";
-import { Question, questionBank } from "../data/questions";
+import { Question } from "../data/questions";
+import { fetchPublishedQuestions } from "../lib/content";
 import { Bookmark, BookmarkMinus, Play } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -9,26 +10,39 @@ export default function BookmarksView() {
   const { userData, updateUserData, loading } = useAuth();
   const navigate = useNavigate();
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Question[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(true);
 
   useEffect(() => {
-    let rawBookmarks: any[] = [];
-    if (userData && userData.bookmarks) {
-      rawBookmarks = userData.bookmarks;
-    } else {
+    async function resolveBookmarks() {
       try {
-        const saved = localStorage.getItem("heading_bookmarks");
-        if (saved) {
-          rawBookmarks = JSON.parse(saved);
+        let rawBookmarks: any[] = [];
+        if (userData && userData.bookmarks) {
+          rawBookmarks = userData.bookmarks;
+        } else {
+          try {
+            const saved = localStorage.getItem("heading_bookmarks");
+            if (saved) {
+              rawBookmarks = JSON.parse(saved);
+            }
+          } catch {}
         }
-      } catch {}
+
+        const pubQuestions = await fetchPublishedQuestions();
+
+        // Resolve string IDs to full objects, migrate existing full objects
+        const resolvedQuestions = rawBookmarks
+          .map(b => typeof b === 'string' ? pubQuestions.find(q => q.id === b) : b)
+          .filter((q): q is Question => Boolean(q));
+
+        setBookmarkedQuestions(resolvedQuestions);
+      } catch (err) {
+        console.error("Failed resolving bookmarks:", err);
+      } finally {
+        setLoadingQuestions(false);
+      }
     }
 
-    // Resolve string IDs to full objects, migrate existing full objects
-    const resolvedQuestions = rawBookmarks
-      .map(b => typeof b === 'string' ? questionBank.find(q => q.id === b) : b)
-      .filter((q): q is Question => Boolean(q));
-
-    setBookmarkedQuestions(resolvedQuestions);
+    resolveBookmarks();
   }, [userData?.bookmarks]);
 
   const removeBookmark = (qId: string) => {
@@ -53,7 +67,7 @@ export default function BookmarksView() {
   };
 
   // Loading state
-  if (loading) {
+  if (loading || loadingQuestions) {
     return (
       <div className="relative min-h-[70vh] flex flex-col items-center justify-center p-4">
         <div className="absolute inset-0 blueprint pointer-events-none opacity-20 z-0" />

@@ -74,7 +74,7 @@ export interface SubjectItem {
   subTopics?: SubTopic[];
 }
 
-const rawSubjects: SubjectItem[] = [
+export const rawSubjects: SubjectItem[] = [
   {
     id: "a320-systems",
     num: "01",

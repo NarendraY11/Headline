@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
 import { Search, BookOpen, Clock } from "lucide-react";
-import { subjects, mockExams } from "../data/topics";
+import { mockExams, SubjectItem } from "../data/topics";
+import { fetchMergedSubjects } from "../lib/content";
 
 export default function SearchOverlay({ onClose }: { onClose: () => void }) {
   const [query, setQuery] = useState("");
@@ -11,11 +12,25 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
   const searchContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
+  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
+
+  useEffect(() => {
+    async function loadSubjects() {
+      try {
+        const merged = await fetchMergedSubjects();
+        setSubjectsList(merged);
+      } catch (err) {
+        console.error("Failed loading subjects in SearchOverlay:", err);
+      }
+    }
+    loadSubjects();
+  }, []);
+
   const searchLower = query.toLowerCase();
 
   const results = [
     // Modules
-    ...subjects.filter(s => s.title.toLowerCase().includes(searchLower) || s.id.toLowerCase().includes(searchLower)).map(s => ({
+    ...subjectsList.filter(s => s.title.toLowerCase().includes(searchLower) || s.id.toLowerCase().includes(searchLower)).map(s => ({
       id: s.id,
       title: s.title,
       type: "Module",

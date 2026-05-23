@@ -306,7 +306,7 @@ export default function SubcategoriesManager() {
           <Button variant="primary" onClick={openNewModal}>Add Subcategory</Button>
         </div>
       ) : (
-        <div className="bg-white border border-rule rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-white border border-rule rounded-xl overflow-x-auto shadow-sm">
           <table className="w-full text-left border-collapse font-sans text-xs">
             <thead>
               <tr className="border-b border-rule font-mono uppercase tracking-wide text-muted text-[10px] bg-bg-2/50">
