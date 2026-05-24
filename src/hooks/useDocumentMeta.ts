@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { blogPosts } from "../data/blog";
 
 export function useDocumentMeta() {
   const location = useLocation();
@@ -7,8 +8,10 @@ export function useDocumentMeta() {
   useEffect(() => {
     let title = "Heading — Premium Aviation Exam Prep";
     let description = "Premium Aviation Exam Preparation System. Simulated flight stress training for EASA/DGCA CPL & ATPL.";
+    let ogImage = "/og-image.png";
 
     const path = location.pathname;
+    const canonicalUrl = `${window.location.origin}${path}`;
 
     if (path === "/") {
       title = "Heading — DGCA, EASA & A320 Exam Prep for Pilots";
@@ -25,38 +28,75 @@ export function useDocumentMeta() {
     } else if (path === "/about") {
       title = "About — Heading";
       description = "Explore standard hardware guidelines, aviation designs, and calibration specs including the classic amber paper theme and cognitive metrics.";
+    } else if (path === "/blog") {
+      title = "Pilot Theory Blog & Syllabus Updates — Heading";
+      description = "Educational articles, DGCA 2026 ground syllabus updates, and professional strategies to pass the EASA and FAA pilot theoretical knowledge tests.";
+    } else if (path.startsWith("/blog/")) {
+      const slug = path.substring(6);
+      const post = blogPosts.find(p => p.slug === slug);
+      if (post) {
+        title = `${post.title} — Heading Blog`;
+        description = post.description;
+        ogImage = `/og-posts/${post.slug}.svg`;
+      } else {
+        title = "Aviation Article — Heading";
+        description = "Read pilot guides and airline ground school theory insights.";
+      }
+    } else if (path.startsWith("/exams/")) {
+      const examId = path.substring(7);
+      if (examId === "dgca-cpl") {
+        title = "DGCA CPL Exam Prep 2026 — Mock Papers & Technical Syllabus";
+        description = "Pass your DGCA CPL theory papers on your first attempt. Free trial mock exams, complete Air Navigation, Meteorology, Regulations, and Technical syllabus.";
+      } else if (examId === "dgca-atpl") {
+        title = "DGCA ATPL Exam Prep 2026 — Mock Papers & Technical Syllabus";
+        description = "Pass your DGCA ATPL theoretical knowledge examinations. High-quality mock papers for General Navigation, Aviation Meteorology, and Air Regulations.";
+      } else if (examId === "easa-atpl") {
+        title = "EASA ATPL Theoretical Knowledge Exam Guide & Practice Trials";
+        description = "Comprehensive study guides and active simulations for EASA 14 ATPL subjects. Realistic mock trials matching actual ECQB criteria and Jeppesen map grids.";
+      } else if (examId === "faa-written") {
+        title = "FAA Knowledge Tests Prep — Private, Instrument & Commercial";
+        description = "Master the FAA Knowledge Tests with Heading guidance. Practice Private Pilot (PAR), Instrument Rating (IRA), and Commercial (CAX) aligned with current ACS rules.";
+      } else if (examId === "a320-type-rating") {
+        title = "Airbus A320 Type Rating Prep — System Systems & FCOM Exams";
+        description = "The ultimate training suite for A320 flight rating exam prep. Study flight control computers (ELAC, SEC, FAC), hydraulics, pneumatic valves, and ECAM abnormal logic.";
+      } else {
+        title = "Aviation Theoretical Exam Prep — Heading";
+        description = "Premium licensing and aircraft-type rating theoretical preparation exams.";
+      }
     }
 
     // Update document title
     document.title = title;
 
-    // Update meta description
-    let metaDescription = document.querySelector('meta[name="description"]');
-    if (!metaDescription) {
-      metaDescription = document.createElement("meta");
-      metaDescription.setAttribute("name", "description");
-      document.head.appendChild(metaDescription);
-    }
-    metaDescription.setAttribute("content", description);
+    // Direct helper to set or create meta/link tags
+    const setElementAttr = (tag: string, selector: string, attrName: string, attrVal: string, contentAttr: string, contentVal: string) => {
+      let elem = document.querySelector(selector);
+      if (!elem) {
+        elem = document.createElement(tag);
+        elem.setAttribute(attrName, attrVal);
+        document.head.appendChild(elem);
+      }
+      elem.setAttribute(contentAttr, contentVal);
+    };
 
-    // Update Open Graph Dynamic Tags
-    const ogTitle = document.querySelector('meta[property="og:title"]');
-    if (ogTitle) {
-      ogTitle.setAttribute("content", title);
-    }
-    const ogDescription = document.querySelector('meta[property="og:description"]');
-    if (ogDescription) {
-      ogDescription.setAttribute("content", description);
-    }
-    
-    // Update Twitter Dynamic Tags
-    const twitterTitle = document.querySelector('meta[name="twitter:title"]');
-    if (twitterTitle) {
-      twitterTitle.setAttribute("content", title);
-    }
-    const twitterDescription = document.querySelector('meta[name="twitter:description"]');
-    if (twitterDescription) {
-      twitterDescription.setAttribute("content", description);
-    }
+    // Update canonical link URL
+    setElementAttr("link", 'link[rel="canonical"]', "rel", "canonical", "href", canonicalUrl);
+
+    // Update Meta Description
+    setElementAttr("meta", 'meta[name="description"]', "name", "description", "content", description);
+
+    // Open Graph dynamic tags
+    setElementAttr("meta", 'meta[property="og:title"]', "property", "og:title", "content", title);
+    setElementAttr("meta", 'meta[property="og:description"]', "property", "og:description", "content", description);
+    setElementAttr("meta", 'meta[property="og:url"]', "property", "og:url", "content", canonicalUrl);
+    setElementAttr("meta", 'meta[property="og:type"]', "property", "og:type", "content", "article");
+    setElementAttr("meta", 'meta[property="og:image"]', "property", "og:image", "content", ogImage.startsWith("http") ? ogImage : `${window.location.origin}${ogImage}`);
+
+    // Twitter card tags
+    setElementAttr("meta", 'meta[name="twitter:card"]', "name", "twitter:card", "content", "summary_large_image");
+    setElementAttr("meta", 'meta[name="twitter:title"]', "name", "twitter:title", "content", title);
+    setElementAttr("meta", 'meta[name="twitter:description"]', "name", "twitter:description", "content", description);
+    setElementAttr("meta", 'meta[name="twitter:image"]', "name", "twitter:image", "content", ogImage.startsWith("http") ? ogImage : `${window.location.origin}${ogImage}`);
+
   }, [location.pathname]);
 }

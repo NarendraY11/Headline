@@ -17,6 +17,7 @@ import { FlightControlsDiagram } from "../components/SystemDiagram";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
+import { ProGate } from "../components/ProGate";
 
 export default function TopicView() {
   const { id } = useParams();
@@ -62,8 +63,43 @@ export default function TopicView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg relative">
-        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      <div className="relative min-h-screen">
+        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
+        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <div className="relative z-10 px-4 py-8 md:py-16 max-w-7xl mx-auto space-y-12 animate-pulse">
+          {/* Header area skeleton */}
+          <div className="max-w-xl space-y-4">
+            <div className="h-4 bg-muted-2/25 w-32 rounded font-mono"></div>
+            <div className="h-10 bg-ink/10 w-2/3 rounded-lg"></div>
+            <div className="h-4 bg-muted/20 w-full rounded"></div>
+          </div>
+          
+          {/* Main layout grid skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 pt-4">
+            {/* Sidebar list skeletal elements */}
+            <div className="lg:col-span-4 space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="h-12 bg-paper border border-rule/40 rounded-xl p-3 flex items-center justify-between">
+                  <div className="h-4 bg-ink/10 w-2/3 rounded"></div>
+                  <div className="h-4 bg-muted-2/20 w-8 rounded"></div>
+                </div>
+              ))}
+            </div>
+            
+            {/* Core details area skeleton */}
+            <div className="lg:col-span-8 bg-paper border border-rule/50 rounded-2xl p-6 md:p-8 h-96 space-y-6">
+              <div className="flex justify-between items-center border-b border-rule/40 pb-4">
+                <div className="h-6 bg-ink/10 w-1/3 rounded"></div>
+                <div className="h-8 bg-ink/10 w-24 rounded-lg"></div>
+              </div>
+              <div className="space-y-3 pt-2">
+                <div className="h-4 bg-muted/20 w-full rounded"></div>
+                <div className="h-4 bg-muted/20 w-4/5 rounded"></div>
+                <div className="h-4 bg-muted/20 w-5/6 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -261,6 +297,8 @@ export default function TopicView() {
     const selectedSub =
       subject.subTopics?.find((s) => s.id === selectedSubId) || null;
 
+    const isSubUnlocked = subject.is_free || (subject.subTopics && selectedSub && selectedSub.id === subject.subTopics[0]?.id);
+
     return (
       <div className="flex flex-col lg:flex-row w-full h-auto min-h-[calc(100vh-64px)] lg:h-[calc(100vh-64px)]">
         {/* LEFT PANE - SubTopic List */}
@@ -444,34 +482,37 @@ export default function TopicView() {
                     // Given the prompt, clicking should start quiz/practice for that chapter. We can pass the section ID or just the sub topic ID.
                     const targetId = selectedSub.id;
                     return (
-                      <Link
-                        to={`/quiz/${targetId}`}
-                        key={idx}
-                        className="block outline-none group"
-                      >
-                        <div className="bg-paper border border-rule rounded-2xl p-6 h-full flex flex-col transition-all duration-300 hover:border-ink/40 hover:shadow-sm">
-                          <div className="font-mono text-[10px] text-muted-2 tracking-widest mb-3">
-                            {sec.id}
+                      <ProGate key={idx} type="chapter" isUnlocked={isSubUnlocked}>
+                        <Link
+                          to={`/quiz/${targetId}`}
+                          className="block outline-none group"
+                        >
+                          <div className="bg-paper border border-rule rounded-2xl p-6 h-full flex flex-col transition-all duration-300 hover:border-ink/40 hover:shadow-sm">
+                            <div className="font-mono text-[10px] text-muted-2 tracking-widest mb-3">
+                              {sec.id}
+                            </div>
+                            <h4 className="font-serif text-2xl text-ink mb-3 group-hover:text-navy transition-colors">
+                              {sec.title}
+                            </h4>
+                            <p className="font-sans font-light text-[13px] text-muted leading-relaxed line-clamp-3">
+                              {sec.description}
+                            </p>
                           </div>
-                          <h4 className="font-serif text-2xl text-ink mb-3 group-hover:text-navy transition-colors">
-                            {sec.title}
-                          </h4>
-                          <p className="font-sans font-light text-[13px] text-muted leading-relaxed line-clamp-3">
-                            {sec.description}
-                          </p>
-                        </div>
-                      </Link>
+                        </Link>
+                      </ProGate>
                     );
                   })}
                 </div>
               ) : (
                 <div className="pb-24">
-                  <Link to={`/quiz/${selectedSub.id}`} className="block">
-                    <Button variant="primary" className="h-12 px-6">
-                      Start Chapter Practice Set
-                      <ArrowUpRight size={16} className="ml-2" />
-                    </Button>
-                  </Link>
+                  <ProGate type="chapter" isUnlocked={isSubUnlocked}>
+                    <Link to={`/quiz/${selectedSub.id}`} className="block">
+                      <Button variant="primary" className="h-12 px-6">
+                        Start Chapter Practice Set
+                        <ArrowUpRight size={16} className="ml-2" />
+                      </Button>
+                    </Link>
+                  </ProGate>
                 </div>
               )}
             </div>
@@ -564,16 +605,17 @@ export default function TopicView() {
           </div>
 
           <div className="p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {subject.subTopics?.map((sub) => {
+            {subject.subTopics?.map((sub, idx) => {
               const hasSavedState = !!localStorage.getItem(
                 `heading_quiz_state_${sub.id}`,
               );
               const isComingSoon = sub.questionCount === 0;
+              const isUnlocked = subject.is_free || sub.free_chapter || idx === 0;
 
               return (
-                <Card
-                  key={sub.id}
-                  className={`transition-all duration-300 group relative ${
+                <ProGate key={sub.id} type="chapter" isUnlocked={isUnlocked}>
+                  <Card
+                    className={`transition-all duration-300 group relative ${
                     isComingSoon
                       ? "opacity-60 bg-bg-2 border-rule border-dashed cursor-not-allowed"
                       : `hover:border-ink hover:-translate-y-1 hover:shadow-md ${hasSavedState ? "border-mint" : "border-rule"}`
@@ -623,7 +665,8 @@ export default function TopicView() {
                     )}
                   </div>
                 </Card>
-              );
+              </ProGate>
+            );
             })}
             {!subject.subTopics?.length && (
               <div className="col-span-full py-12 text-center text-muted font-mono text-sm">

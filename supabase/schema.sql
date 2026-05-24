@@ -64,7 +64,8 @@ create table if not exists public.subjects (
   id text primary key,
   title text not null,
   description text,
-  exam_authority text, -- e.g., 'EASA', 'DGCA'
+  exam_authority text, -- e.g., 'EASA', 'DGCA', 'FAA', 'TYPE_RATING'
+  license text check (license in ('PPL', 'CPL', 'ATPL', 'IR', 'TYPE', 'OTHER')),
   sort_order int default 0 not null,
   status text default 'draft' not null check (status in ('draft', 'published', 'archived')),
   created_at timestamptz default now() not null,
@@ -101,6 +102,37 @@ create table if not exists public.questions (
   updated_at timestamptz default now() not null
 );
 
+create table if not exists public.exams (
+  id text primary key,
+  authority text not null check (authority in ('DGCA', 'EASA', 'FAA', 'TYPE_RATING')),
+  license text not null check (license in ('PPL', 'CPL', 'ATPL', 'IR', 'TYPE', 'OTHER')),
+  title text not null,
+  pass_mark int not null default 70,
+  question_count int not null default 50,
+  duration_min int not null default 60,
+  negative_marking boolean not null default false,
+  subject_ids jsonb not null default '[]'::jsonb,
+  status text default 'draft' not null check (status in ('draft', 'published', 'archived')),
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null
+);
+
+create table if not exists public.blog_posts (
+  slug text primary key,
+  title text not null,
+  description text not null,
+  date text not null,
+  read_time text not null,
+  category text not null,
+  tags jsonb not null default '[]'::jsonb,
+  content text not null,
+  author text not null,
+  author_role text not null,
+  status text default 'published' not null check (status in ('draft', 'published', 'archived')),
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null
+);
+
 
 -- =====================================================================
 -- 3. USER DATA TABLES (Profiles, Attempts, Bookmarks)
@@ -115,6 +147,10 @@ create table if not exists public.profiles (
   plan text default 'free' not null check (plan in ('free', 'pro')),
   plan_started_at timestamptz default now() not null,
   settings jsonb default '{}'::jsonb not null,
+  daily_goal int default 20 not null,
+  streak_count int default 0 not null,
+  last_activity_date text default ''::text not null,
+  questions_answered_today int default 0 not null,
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
 );
@@ -228,6 +264,21 @@ alter table public.profiles enable row level security;
 alter table public.attempts enable row level security;
 alter table public.bookmarks enable row level security;
 alter table public.events enable row level security;
+alter table public.blog_posts enable row level security;
+
+-- ---------------------------------------------------------------------
+-- BLOG POSTS POLICIES
+-- ---------------------------------------------------------------------
+drop policy if exists "Read published blog posts" on public.blog_posts;
+create policy "Read published blog posts"
+  on public.blog_posts for select
+  using (status = 'published' or public.is_admin());
+
+drop policy if exists "Write blog posts restriction" on public.blog_posts;
+create policy "Write blog posts restriction"
+  on public.blog_posts for all
+  using (public.is_admin())
+  with check (public.is_admin());
 
 -- ---------------------------------------------------------------------
 -- SUBJECTS POLICIES
@@ -347,6 +398,247 @@ create policy "Admins view and self-manage admins roster"
   on public.admins for all
   using (public.is_admin())
   with check (public.is_admin());
+
+-- =====================================================================
+-- 8. QUESTION PROGRESS & SPACED REPETITION SCHEDULING
+-- =====================================================================
+
+create table if not exists public.question_progress (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  question_id text not null,
+  topic_id text,
+  correct boolean not null,
+  seen_count int not null default 1,
+  last_seen_at timestamptz not null default now(),
+  next_review_at timestamptz not null default now(),
+  ease double precision not null default 2.5,
+  interval int not null default 0,
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null,
+  primary key (user_id, question_id)
+);
+
+-- Enable RLS on question_progress
+alter table public.question_progress enable row level security;
+
+-- Indexes for performance at scale
+create index if not exists idx_question_progress_user on public.question_progress(user_id);
+create index if not exists idx_question_progress_due on public.question_progress(user_id, next_review_at);
+create index if not exists idx_questions_status_subject on public.questions(status, subject_id);
+create index if not exists idx_questions_status_subcategory on public.questions(status, subcategory_id);
+create index if not exists idx_attempts_user_created on public.attempts(user_id, created_at);
+create index if not exists idx_events_type_created on public.events(event_type, created_at);
+
+-- RLS policies for question_progress
+drop policy if exists "Users view own question progress" on public.question_progress;
+create policy "Users view own question progress"
+  on public.question_progress for select
+  using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "Users insert own question progress" on public.question_progress;
+create policy "Users insert own question progress"
+  on public.question_progress for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users update own question progress" on public.question_progress;
+create policy "Users update own question progress"
+  on public.question_progress for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users delete own question progress" on public.question_progress;
+create policy "Users delete own question progress"
+  on public.question_progress for delete
+  using (auth.uid() = user_id);
+
+-- Daily Goal Reset Server-Side Procedure
+create or replace function public.reset_daily_goals()
+returns void
+language plpgsql
+security definer
+as $$
+begin
+  update public.profiles
+  set questions_answered_today = 0,
+      settings = jsonb_set(coalesce(settings, '{}'::jsonb), '{questionsAnsweredToday}', '0'::jsonb, true)
+  where questions_answered_today > 0;
+end;
+$$;
+
+-- Enable cron extension and schedule the midnight reset robustly
+do $$
+begin
+  -- Ensure pg_cron extension is loaded if possible
+  perform pg_catalog.pg_extension_config_dump('pg_cron', '');
+exception when others then
+  -- Ignore, we'll try to use pg_cron extension if it's already there or load it
+end;
+$$;
+
+create extension if not exists pg_cron;
+
+do $$
+begin
+  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+    perform cron.schedule(
+      'reset-daily-goals-midnight',
+      '0 0 * * *',
+      'select public.reset_daily_goals();'
+    );
+  end if;
+exception when others then
+  raise warning 'Could not schedule daily reset job via pg_cron: %', sqlerrm;
+end;
+$$;
+
+-- =====================================================================
+-- 9. NOTIFICATIONS & QUESTION REPORTS SCHEMAS
+-- =====================================================================
+
+-- Notifications table
+create table if not exists public.notifications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  title text not null,
+  message text not null,
+  type text not null,
+  read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+-- Enable RLS on notifications
+alter table public.notifications enable row level security;
+
+-- Indexes for notifications
+create index if not exists idx_notifications_user_read on public.notifications(user_id, read);
+
+-- RLS policies for notifications
+drop policy if exists "Users view own notifications" on public.notifications;
+create policy "Users view own notifications"
+  on public.notifications for select
+  using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "Users update own notifications" on public.notifications;
+create policy "Users update own notifications"
+  on public.notifications for update
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+drop policy if exists "System insert notifications" on public.notifications;
+create policy "System insert notifications"
+  on public.notifications for insert
+  with check (auth.uid() = user_id or auth.uid() is not null);
+
+
+-- Question Reports table
+create table if not exists public.question_reports (
+  id uuid primary key default gen_random_uuid(),
+  question_id text not null,
+  user_id uuid references auth.users(id) on delete set null,
+  category text not null,
+  comment text not null,
+  status text not null default 'open',
+  created_at timestamptz not null default now()
+);
+
+-- Enable RLS on question_reports
+alter table public.question_reports enable row level security;
+
+-- Indexes for question_reports
+create index if not exists idx_question_reports_question on public.question_reports(question_id);
+create index if not exists idx_question_reports_status on public.question_reports(status);
+
+-- RLS policies for question_reports
+drop policy if exists "Anyone can submit reports" on public.question_reports;
+create policy "Anyone can submit reports"
+  on public.question_reports for insert
+  with check (true);
+
+drop policy if exists "Only admins view reports" on public.question_reports;
+create policy "Only admins view reports"
+  on public.question_reports for select
+  using (public.is_admin());
+
+drop policy if exists "Only admins manage reports" on public.question_reports;
+create policy "Only admins manage reports"
+  on public.question_reports for all
+  using (public.is_admin());
+
+
+-- =====================================================================
+-- 10. GROWTH & MARKETING EXTRA SCHEMAS (Leads, Referrals)
+-- =====================================================================
+
+-- 1. Ensure columns exist on profiles table first
+do $$
+begin
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='referral_code') then
+    alter table public.profiles add column referral_code text unique default upper(substring(md5(random()::text) from 1 for 8));
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='referred_by') then
+    alter table public.profiles add column referred_by text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='profiles' and column_name='newsletter_opt_in') then
+    alter table public.profiles add column newsletter_opt_in boolean default false not null;
+  end if;
+end;
+$$;
+
+-- 2. Leads Table for Lead Magnets & Newsletter Signups
+create table if not exists public.leads (
+  id uuid primary key default gen_random_uuid(),
+  email text not null unique check (email ~* '^[0-9a-zA-Z._%-]+@[0-9a-zA-Z._%-]+\.[a-zA-Z]{2,4}$'),
+  consent boolean default false not null,
+  resource text default 'newsletter' not null,
+  created_at timestamptz default now() not null
+);
+
+-- RLS for leads
+alter table public.leads enable row level security;
+
+drop policy if exists "Anyone can submit lead" on public.leads;
+create policy "Anyone can submit lead"
+  on public.leads for insert
+  with check (true);
+
+drop policy if exists "Only admins view leads" on public.leads;
+create policy "Only admins view leads"
+  on public.leads for select
+  using (public.is_admin());
+
+drop policy if exists "Only admins manage leads" on public.leads;
+create policy "Only admins manage leads"
+  on public.leads for all
+  using (public.is_admin());
+
+-- 4. Referrals Table for Tracking Invited Signups
+create table if not exists public.referrals (
+  id uuid primary key default gen_random_uuid(),
+  referrer_id uuid not null references auth.users(id) on delete cascade,
+  referred_id uuid not null references auth.users(id) on delete cascade unique,
+  status text not null default 'pending' check (status in ('pending', 'completed', 'rewarded')),
+  reward_granted boolean default false not null,
+  created_at timestamptz default now() not null
+);
+
+-- RLS for referrals
+alter table public.referrals enable row level security;
+
+drop policy if exists "Users view own referrals" on public.referrals;
+create policy "Users view own referrals"
+  on public.referrals for select
+  using (auth.uid() = referrer_id or auth.uid() = referred_id or public.is_admin());
+
+drop policy if exists "Users insert own referrals" on public.referrals;
+create policy "Users insert own referrals"
+  on public.referrals for insert
+  with check (auth.uid() = referred_id);
+
+drop policy if exists "Only admins manage referrals" on public.referrals;
+create policy "Only admins manage referrals"
+  on public.referrals for all
+  using (public.is_admin());
+
 
 -- =====================================================================
 -- END OF SCHEMA FILE

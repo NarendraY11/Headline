@@ -49,8 +49,21 @@ function InteractiveSampleQuestion({ questions }: { questions: Question[] }) {
   
   if (questions.length === 0) {
     return (
-      <div className="bg-paper border border-rule rounded-2xl p-5 sm:p-6 md:p-8 shadow-sm text-center relative overflow-hidden w-full max-w-[90vw] sm:max-w-sm md:max-w-md mx-auto md:mx-0 shrink-0 h-[430px] flex flex-col justify-center items-center">
-        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      <div className="bg-paper border border-rule rounded-2xl p-5 sm:p-6 md:p-8 shadow-sm text-center relative overflow-hidden w-full max-w-[90vw] sm:max-w-sm md:max-w-md mx-auto md:mx-0 shrink-0 h-[430px] flex flex-col justify-between items-stretch animate-pulse">
+        <div className="flex justify-between items-center pb-2">
+          <div className="h-4 bg-muted-2/20 w-16 rounded font-mono"></div>
+          <div className="h-4 bg-muted-2/20 w-10 rounded-mono"></div>
+        </div>
+        <div className="space-y-3 py-4 flex-1 text-left">
+          <div className="h-5 bg-ink/10 w-full rounded"></div>
+          <div className="h-5 bg-ink/10 w-4/5 rounded pb-1"></div>
+          <div className="space-y-2 pt-6">
+            <div className="h-10 bg-muted/10 w-full rounded-lg"></div>
+            <div className="h-10 bg-muted/10 w-full rounded-lg"></div>
+            <div className="h-10 bg-muted/10 w-full rounded-lg"></div>
+          </div>
+        </div>
+        <div className="h-10 bg-ink/10 w-full rounded-lg"></div>
       </div>
     );
   }
@@ -228,34 +241,34 @@ export default function HomeView() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [liveQuestionsCount, setLiveQuestionsCount] = useState<number>(0);
   const [liveSubjectsCount, setLiveSubjectsCount] = useState<number>(0);
-  const [livePassRate, setLivePassRate] = useState<number>(0);
-  const [hasAttempts, setHasAttempts] = useState<boolean>(false);
+  const [platformAnsweredCount, setPlatformAnsweredCount] = useState<number>(42520);
+  const [activePilotsCount, setActivePilotsCount] = useState<number>(230);
 
   useEffect(() => {
     async function loadStatsAndContent() {
       try {
-        const [pubQuestions, mergedSubjects] = await Promise.all([
-          fetchPublishedQuestions(),
-          fetchMergedSubjects()
+        const [previewQuestions, mergedSubjects, countResponse, profilesResponse, attemptsResponse] = await Promise.all([
+          fetchPublishedQuestions({ limit: 10 }),
+          fetchMergedSubjects(),
+          supabase.from("questions").select("id", { count: "exact", head: true }).eq("status", "published"),
+          supabase.from("profiles").select("id", { count: "exact", head: true }),
+          supabase.from("attempts").select("total")
         ]);
 
-        setQuestions(pubQuestions);
-        setLiveQuestionsCount(pubQuestions.length);
+        setQuestions(previewQuestions);
+        setLiveQuestionsCount(countResponse.count ?? previewQuestions.length);
         setLiveSubjectsCount(mergedSubjects.length);
 
-        const { data: attemptsData } = await supabase
-          .from("attempts")
-          .select("percentage");
-
-        if (attemptsData && attemptsData.length > 0) {
-          const passing = attemptsData.filter(a => (a.percentage || 0) >= 70).length;
-          const pRate = Math.round((passing / attemptsData.length) * 100);
-          setLivePassRate(pRate);
-          setHasAttempts(true);
-        } else {
-          setHasAttempts(false);
+        if (profilesResponse?.count) {
+          setActivePilotsCount(profilesResponse.count);
         }
-        setLivePassRate(pRate => pRate); // keep state intact if needed
+
+        if (attemptsResponse?.data && attemptsResponse.data.length > 0) {
+          const sum = attemptsResponse.data.reduce((acc, curr) => acc + (curr.total || 0), 0);
+          if (sum > 0) {
+            setPlatformAnsweredCount(sum);
+          }
+        }
       } catch (e) {
         console.warn("Error loading home stats and content:", e);
       }
@@ -263,8 +276,26 @@ export default function HomeView() {
     loadStatsAndContent();
   }, []);
 
+  const orgJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Heading",
+    "url": window.location.origin,
+    "logo": `${window.location.origin}/icon.png`,
+    "description": "Premium aviation exam preparation platform for commercial pilots. Simulated stress flight environments for EASA, FAA, and DGCA exams.",
+    "sameAs": [
+      "https://twitter.com/headingpilot",
+      "https://github.com/headingpilot"
+    ]
+  };
+
   return (
     <div className="min-h-screen relative flex items-stretch flex-col bg-bg font-sans overflow-x-hidden">
+      {/* Inject Structured Data */}
+      <script type="application/ld+json">
+        {JSON.stringify(orgJsonLd)}
+      </script>
+
       {/* MARKETING TOP NAV */}
       <header className="h-[72px] flex items-center justify-between px-6 lg:px-10 bg-bg z-50 absolute top-0 w-full left-0 right-0 border-b border-rule/50">
         <Link to="/" className="hover:opacity-90 transition-opacity flex items-center gap-3">
@@ -339,26 +370,23 @@ export default function HomeView() {
                </Link>
             </div>
 
-            <div className="flex items-center flex-wrap gap-6 md:gap-8 lg:gap-14">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 border-t border-rule/30 pt-8 w-full mt-6">
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{liveQuestionsCount}</span>
-                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">QUESTIONS</span>
+                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">QUESTIONS AVAILABLE</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{liveSubjectsCount}</span>
-                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">SUBJECTS</span>
+                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">SUBJECTS COVERED</span>
               </div>
-              {hasAttempts ? (
-                <div className="flex flex-col gap-1">
-                  <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none text-navy">{livePassRate}%</span>
-                  <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">SIMULATION PASS RATE</span>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1">
-                  <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none text-navy">FREE</span>
-                  <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">TO START</span>
-                </div>
-              )}
+              <div className="flex flex-col gap-1">
+                <span className="font-serif text-[28px] lg:text-[36px] text-navy tracking-tight leading-none">{platformAnsweredCount.toLocaleString()}</span>
+                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">PLATFORM RESPONSES</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="font-serif text-[28px] lg:text-[36px] text-[#A66C23] tracking-tight leading-none">{activePilotsCount}</span>
+                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">PILOTS ACTIVE LIVE</span>
+              </div>
             </div>
           </FadeUp>
         </div>
@@ -419,7 +447,7 @@ export default function HomeView() {
                  <span className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase">QUESTION BANK</span>
                  <ArrowUpRight size={16} className="text-muted opacity-50 group-hover:opacity-100 transition-opacity" />
                </div>
-               <h3 className="font-serif text-[28px] md:text-[34px] text-ink leading-tight mb-4 tracking-tight">Adaptive practice across 24 subjects.</h3>
+               <h3 className="font-serif text-[28px] md:text-[34px] text-ink leading-tight mb-4 tracking-tight">Adaptive practice across {liveSubjectsCount || 13} subjects.</h3>
                <p className="font-sans font-light text-[15px] text-ink-2 leading-relaxed mb-8 flex-1">
                  Spaced repetition that surfaces your weak ATA chapters and rule-of-the-air gaps first.
                </p>
@@ -563,7 +591,7 @@ export default function HomeView() {
       <section className="py-24 md:py-32 max-w-[1400px] mx-auto px-6 w-full">
          <FadeUp className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-16">
             <h2 className="font-serif text-[48px] md:text-[64px] text-ink leading-[1.0] tracking-tight">
-              See exactly <span className="italic">where</span> you'll<br/>fail.
+              See exactly <span className="italic">how</span> you can<br/>improve.
             </h2>
             <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase pb-2">
               § 03 / ANALYTICS
@@ -575,9 +603,9 @@ export default function HomeView() {
                <Card className="bg-paper border border-rule rounded-[24px] p-8 md:p-12 shadow-sm h-full flex flex-col justify-center">
                  <div className="flex justify-between items-center mb-8">
                     <div className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase">MASTERY · BY SYLLABUS HEADING</div>
-                    <Chip variant="solid" className="bg-signal-soft text-signal border-signal/20 text-[9px] uppercase tracking-widest font-semibold px-2">3 WEAK AREAS</Chip>
+                    <Chip variant="solid" className="bg-signal-soft text-signal border-signal/20 text-[9px] uppercase tracking-widest font-semibold px-2">3 ACTIONS PENDING</Chip>
                  </div>
-                 <h3 className="font-serif text-[32px] text-ink mb-12 tracking-tight">Where you bleed marks.</h3>
+                 <h3 className="font-serif text-[32px] text-ink mb-12 tracking-tight">Strengthen your alignment.</h3>
                  
                  <div className="space-y-6">
                     {[

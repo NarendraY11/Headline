@@ -1,0 +1,85 @@
+<svg width="1200" height="630" viewBox="0 0 1200 630" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#040c1a" />
+      <stop offset="50%" stop-color="#081426" />
+      <stop offset="100%" stop-color="#0f243d" />
+    </linearGradient>
+    
+    <!-- Subtle Coordinate Grid Overlay -->
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+      <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#ffffff" stroke-width="1" stroke-opacity="0.04" />
+    </pattern>
+    
+    <!-- Left Accent Gradient -->
+    <linearGradient id="accent" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+  </defs>
+
+  <!-- Core Backgrounds -->
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect width="1200" height="630" fill="url(#grid)" />
+
+  <!-- Diagonal technical reference lines -->
+  <line x1="80" y1="0" x2="80" y2="630" stroke="#f59e0b" stroke-width="0.5" stroke-opacity="0.1" />
+  <line x1="1120" y1="0" x2="1120" y2="630" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.05" />
+
+  <!-- Left Amber Indicator Strip -->
+  <rect x="0" y="0" width="12" height="630" fill="url(#accent)" />
+
+  <!-- Decorative Aircraft Compass/Horizon Grid (Top Right) -->
+  <g transform="translate(1040, 140) scale(0.9)" opacity="0.12">
+    <!-- Outer compass ring -->
+    <circle cx="0" cy="0" r="90" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="4 4" />
+    <circle cx="0" cy="0" r="70" fill="none" stroke="#ffffff" stroke-width="1" />
+    <!-- Crosshairs -->
+    <line x1="-120" y1="0" x2="120" y2="0" stroke="#ffffff" stroke-width="1" />
+    <line x1="0" y1="-120" x2="0" y2="120" stroke="#ffffff" stroke-width="1" />
+    <!-- Wing lines -->
+    <path d="M -50 0 L -20 0 L -10 10 L 0 0 L 10 10 L 20 0 L 50 0" fill="none" stroke="#f59e0b" stroke-width="2.5" />
+  </g>
+
+  <!-- Meta Info Header coordinates -->
+  <text x="1120" y="80" font-family="'JetBrains Mono', 'Fira Code', monospace" fill="#475569" font-size="11" text-anchor="end" letter-spacing="0.05em">SYS_REF: DGCA-CPL-AIR-NAV | FMS-GRID</text>
+  <text x="1120" y="105" font-family="'JetBrains Mono', 'Fira Code', monospace" fill="#94a3b8" font-size="12" text-anchor="end" font-weight="bold" letter-spacing="0.15em">HEADING FLIGHT GROUND SIMULATION</text>
+
+  <!-- Category Tag (Pill Style block) -->
+  <g transform="translate(80, 95)">
+    <!-- Tiny amber pill background -->
+    <rect x="0" y="0" width="180" height="28" rx="4" fill="#f59e0b" fill-opacity="0.1" stroke="#f59e0b" stroke-width="1" stroke-opacity="0.3" />
+    <text x="15" y="18" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="11" font-weight="bold" fill="#f59e0b" letter-spacing="0.15em">SYLLABUS GUIDES</text>
+  </g>
+
+  <!-- Post Title Text Area -->
+  <text x="80" y="210" font-family="'Georgia', 'Playfair Display', serif" font-weight="bold" fill="#ffffff" font-size="48" letter-spacing="-0.02em">
+    <tspan x="80" dy="0">DGCA CPL Air Navigation Syllabus 2026:</tspan>
+    <tspan x="80" dy="66">Complete Preparation Manual</tspan>
+  </text>
+
+  <!-- Secondary Meta Information Grid -->
+  <g transform="translate(80, 460)">
+    <text x="0" y="0" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8" letter-spacing="0.05em">
+      PUBLISHED ON <tspan fill="#f59e0b" font-weight="bold">MAY 18, 2026</tspan>  &middot;  READTIME <tspan fill="#ffffff">8 MIN READ</tspan>
+    </text>
+  </g>
+
+  <!-- Solid Separation Line -->
+  <line x1="80" y1="510" x2="1120" y2="510" stroke="#334155" stroke-width="1.2" stroke-opacity="0.6" />
+
+  <!-- Bottom Brand Showcase (Left) -->
+  <g transform="translate(80, 565)">
+    <!-- Aviation Inspired Logo Icon -->
+    <path d="M0 -15 L12 -5 L32 -5 L15 -17 L30 -17 L44 -5 L55 -5 L45 -22 L10 -22 Z" fill="#ffffff" />
+    <text x="70" y="-5" font-family="'JetBrains Mono', 'Fira Code', monospace" font-weight="bold" font-size="28" fill="#ffffff" letter-spacing="0.12em">HEADING</text>
+    <text x="210" y="-7" font-family="'Inter', sans-serif" font-size="15" fill="#64748b" letter-spacing="0.15em">|  PILOT THEORY LAB</text>
+  </g>
+
+  <!-- Bottom Author Showcase (Right) -->
+  <g transform="translate(1120, 560)">
+    <text x="0" y="0" font-family="'Inter', sans-serif" font-size="15" fill="#e2e8f0" font-weight="600" text-anchor="end">Capt. Rahul Sharma</text>
+    <text x="0" y="18" font-family="'JetBrains Mono', 'Fira Code', monospace" font-size="10" fill="#64748b" text-anchor="end" letter-spacing="0.1em" font-weight="bold">CHIEF THEORY INSTRUCTOR</text>
+  </g>
+</svg>

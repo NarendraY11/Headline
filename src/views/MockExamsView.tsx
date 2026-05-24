@@ -5,6 +5,7 @@ import { Timer, Clipboard, PlaneTakeoff, ArrowUpRight } from "lucide-react";
 import { mockExams } from "../data/topics";
 import { Question } from "../data/questions";
 import { fetchPublishedQuestions } from "../lib/content";
+import { ProGate } from "../components/ProGate";
 
 export default function MockExamsView() {
   const navigate = useNavigate();
@@ -84,8 +85,32 @@ export default function MockExamsView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg relative">
-        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      <div className="relative min-h-screen">
+        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
+        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <div className="relative z-10 px-4 py-8 md:py-16 max-w-7xl mx-auto space-y-12 animate-pulse">
+          <div className="max-w-xl space-y-4">
+            <div className="h-4 bg-muted-2/25 w-40 rounded font-mono"></div>
+            <div className="h-10 bg-ink/10 w-80 rounded-lg"></div>
+            <div className="h-4 bg-muted/20 w-full rounded"></div>
+            <div className="h-4 bg-muted/20 w-4/5 rounded"></div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-paper border border-rule/50 rounded-2xl p-6 h-64 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="h-6 bg-ink/10 w-3/4 rounded"></div>
+                  <div className="h-4 bg-muted/20 w-full rounded"></div>
+                  <div className="h-4 bg-muted/20 w-5/6 rounded"></div>
+                </div>
+                <div className="flex justify-between items-end pt-4">
+                  <div className="h-4 bg-muted-2/20 w-24 rounded"></div>
+                  <div className="h-9 bg-ink/10 w-28 rounded-lg"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -151,6 +176,7 @@ export default function MockExamsView() {
             const hasQuestions = examQuests.length >= 10;
             
             return (
+              <ProGate type="timed-mock" isUnlocked={exam.id === "nav-cpl-01"}>
             <Card key={exam.id} className={`relative hover:shadow-[0_12px_36px_rgba(13,26,45,0.06)] transition-all ${
               !hasQuestions ? "opacity-60 grayscale-[30%]" : ""
             }`} id={`mock-exam-card-${exam.id}`}>
@@ -229,6 +255,7 @@ export default function MockExamsView() {
                 )}
               </div>
             </Card>
+              </ProGate>
           )})}
         </div>
 

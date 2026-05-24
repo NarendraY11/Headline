@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { animate, Reorder } from "motion/react";
+import { animate, Reorder, motion } from "motion/react";
 import { Button } from "../components/Atoms";
 import {
   Compass,
@@ -21,9 +21,11 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useLogbook } from "../hooks/useLogbook";
+import { getSubjectMastery } from "../lib/logbook";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { SubjectItem } from "../data/topics";
 import { fetchMergedSubjects } from "../lib/content";
+import { getDueQuestionIds } from "../lib/spacedRepetition";
 import { apiFetch } from "../lib/api";
 import {
   Radar,
@@ -180,7 +182,7 @@ function WeatherWidget() {
   if (!user) {
     return (
       <div
-        className="bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-2 flex items-center justify-between"
+        className="bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-1 flex items-center justify-between"
         style={{ padding: "14px 20px", minHeight: "52px" }}
       >
         <div className="flex items-center gap-2 md:gap-3 shrink-0 mr-2">
@@ -200,7 +202,7 @@ function WeatherWidget() {
   if (weatherData?.unavailable) {
     return (
       <div
-        className="bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-2 flex items-center justify-between"
+        className="bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-1 flex items-center justify-between"
         style={{ padding: "14px 20px", minHeight: "52px" }}
       >
         <div className="flex items-center gap-2 md:gap-3 shrink-0 mr-2">
@@ -225,7 +227,7 @@ function WeatherWidget() {
   }
 
   return (
-    <div className="bg-paper border border-rule rounded-2xl md:rounded-lg p-5 md:p-4 shadow-sm col-span-2 flex flex-col justify-between transition-all duration-300">
+    <div className="bg-paper border border-rule rounded-2xl md:rounded-lg p-5 md:p-4 shadow-sm col-span-1 flex flex-col justify-between transition-all duration-300">
       <div className="flex justify-between items-center mb-2">
         <div className="font-mono text-[9px] text-muted-2 tracking-widest uppercase flex items-center gap-2">
           <span>WX INFO</span>
@@ -258,14 +260,14 @@ function WeatherWidget() {
               </p>
             </div>
             {expanded && weatherData?.forecast && (
-              <div className="mt-2 pt-4 border-t border-rule grid grid-cols-6 gap-2">
+              <div className="mt-2 pt-4 border-t border-rule grid grid-cols-3 xs:grid-cols-6 sm:grid-cols-6 gap-2.5 sm:gap-2">
                 {weatherData.forecast.map((f: any, i: number) => (
-                  <div key={i} className="flex flex-col items-center gap-1.5">
+                  <div key={i} className="flex flex-col items-center gap-1">
                     <span className="font-mono text-[9px] text-muted-2">
                       {f.hour}
                     </span>
-                    {getWeatherIcon(f.condition, 16)}
-                    <span className="font-sans text-[10px] text-ink">
+                    {getWeatherIcon(f.condition, 14)}
+                    <span className="font-sans text-[10px] text-ink font-semibold">
                       {f.temp}
                     </span>
                   </div>
@@ -287,6 +289,19 @@ export default function TodayView() {
   const { logbook, loading: logbookLoading } = useLogbook();
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [dueCount, setDueCount] = useState<number>(0);
+
+  useEffect(() => {
+    async function fetchDueCount() {
+      try {
+        const ids = await getDueQuestionIds(userData?.id || null);
+        setDueCount(ids.length);
+      } catch (err) {
+        console.error("Failed loading due count in TodayView:", err);
+      }
+    }
+    fetchDueCount();
+  }, [userData?.id]);
 
   useEffect(() => {
     async function loadSubjects() {
@@ -415,9 +430,53 @@ export default function TodayView() {
 
   if (loading || logbookLoading || loadingSubjects) {
     return (
-      <div className="relative min-h-[70vh] flex flex-col items-center justify-center p-4">
-        <div className="absolute inset-0 blueprint pointer-events-none opacity-20 z-0" />
-        <div className="w-12 h-12 rounded-full border-t-2 border-navy animate-spin" />
+      <div className="relative min-h-screen">
+        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
+        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <div className="relative z-10 px-4 py-8 md:py-16 max-w-7xl mx-auto space-y-12 animate-pulse">
+          {/* Dashboard Header skeleton */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+            <div className="space-y-3 max-w-md">
+              <div className="h-4 bg-muted-2/25 w-24 rounded font-mono"></div>
+              <div className="h-10 bg-ink/10 w-64 rounded-lg"></div>
+              <div className="h-4 bg-muted/20 w-80 rounded"></div>
+            </div>
+            <div className="h-10 bg-muted/15 w-40 rounded-full"></div>
+          </div>
+          
+          {/* Key Metric cards skeleton */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-paper border border-rule/50 rounded-2xl p-5 h-28 flex flex-col justify-between">
+                <div className="h-4 bg-muted-2/20 w-16 rounded font-mono"></div>
+                <div className="h-8 bg-ink/10 w-20 rounded"></div>
+              </div>
+            ))}
+          </div>
+
+          {/* Daily study sequence cards skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 bg-paper border border-rule/50 rounded-2xl p-6 h-96 space-y-6">
+              <div className="flex justify-between items-center border-b border-rule/35 pb-4">
+                <div className="h-5 bg-ink/10 w-32 rounded"></div>
+                <div className="h-4 bg-muted-2/20 w-16 rounded"></div>
+              </div>
+              <div className="space-y-4">
+                <div className="h-4 bg-muted/20 w-full rounded"></div>
+                <div className="h-4 bg-muted/20 w-5/6 rounded"></div>
+                <div className="h-4 bg-muted/20 w-4/5 rounded"></div>
+              </div>
+            </div>
+            <div className="bg-paper border border-rule/50 rounded-2xl p-6 h-96 space-y-6">
+              <div className="h-5 bg-ink/10 w-2/3 rounded border-b border-rule/35 pb-4"></div>
+              <div className="space-y-3">
+                <div className="h-10 bg-muted/10 w-full rounded-lg"></div>
+                <div className="h-10 bg-muted/10 w-full rounded-lg"></div>
+                <div className="h-10 bg-muted/10 w-full rounded-lg"></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -465,6 +524,8 @@ export default function TodayView() {
       }
     }
   }
+
+  const displayedStreak = (userData?.streakCount ?? parseInt(localStorage.getItem("heading_streak_count") || "0")) || currentStreak;
 
   const streakWeek = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
@@ -514,6 +575,16 @@ export default function TodayView() {
       total: stats ? stats.total : 0,
     };
   });
+
+  const subjectMasteries = subjectsList.map((sub) => {
+    return getSubjectMastery(logbook, sub);
+  });
+
+  const passedCount = subjectMasteries.filter((m) => m >= 0.8).length;
+  const isReadyForExam = subjectMasteries.length > 0 && passedCount === subjectMasteries.length;
+  const readinessPercentage = subjectMasteries.length > 0 
+    ? Math.round((passedCount / subjectMasteries.length) * 100) 
+    : 0;
 
   // Calculate study pacing target timeline vs logged hours
   const getPacingData = () => {
@@ -621,7 +692,7 @@ export default function TodayView() {
 
   const renderTile = (tile: string) => {
     const tileBaseClasses =
-      "bg-paper border border-rule rounded-xl p-4 shadow-sm col-span-1 flex flex-col justify-between cursor-grab active:cursor-grabbing";
+      "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between cursor-grab active:cursor-grabbing";
     switch (tile) {
       case "streak":
         return (
@@ -638,7 +709,7 @@ export default function TodayView() {
               </span>
             </div>
             <div className="font-serif text-3xl text-ink leading-none mt-2">
-              <AnimatedCounter value={currentStreak} />
+              <AnimatedCounter value={displayedStreak} />
               <span className="font-sans text-xl font-normal lowercase text-muted tracking-normal">
                 d
               </span>
@@ -664,6 +735,10 @@ export default function TodayView() {
           </Reorder.Item>
         );
       case "answered":
+        const dailyGoal = userData?.dailyGoal ?? 15;
+        const answeredToday = userData?.questionsAnsweredToday ?? parseInt(localStorage.getItem("heading_questions_answered_today") || "0");
+        const remainingToGoal = Math.max(0, dailyGoal - answeredToday);
+
         return (
           <Reorder.Item
             key="answered"
@@ -678,8 +753,33 @@ export default function TodayView() {
                   Q'S ANSWERED
                 </span>
               </div>
-              <div className="font-serif text-3xl text-ink leading-none mt-2">
-                <AnimatedCounter value={totalQuestions} />
+              <div className="font-serif text-3xl text-ink leading-none mt-2 flex items-baseline justify-between overflow-hidden">
+                <div>
+                  <AnimatedCounter value={answeredToday} />
+                  <span className="font-sans text-xs text-muted-2 ml-1">
+                    /{dailyGoal}
+                  </span>
+                </div>
+                {answeredToday >= dailyGoal ? (
+                  <span className="font-mono text-[9px] font-bold text-mint uppercase tracking-wider bg-mint/10 border border-mint/20 px-1.5 py-0.5 rounded">
+                    Goal Met
+                  </span>
+                ) : (
+                  <span className="font-mono text-[9px] text-amber uppercase tracking-wider">
+                    {remainingToGoal} to go
+                  </span>
+                )}
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-bg h-1.5 rounded-full mt-3 overflow-hidden border border-rule/50">
+                <div 
+                  className="bg-mint h-full transition-all duration-500 ease-out" 
+                  style={{ width: `${Math.min(100, (answeredToday / dailyGoal) * 100)}%` }}
+                />
+              </div>
+              <div className="mt-2 text-[9px] font-mono text-muted-2">
+                Lifetime Total: {totalQuestions} answered
               </div>
             </div>
           </Reorder.Item>
@@ -787,6 +887,37 @@ export default function TodayView() {
           </h1>
         </div>
 
+        {/* Due For Review Alert CTA Banner */}
+        {dueCount > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-signal-soft border border-signal/20 rounded-[14px] p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative overflow-hidden"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-signal/15 flex items-center justify-center text-signal">
+                <Flame size={16} />
+              </div>
+              <div>
+                <h3 className="font-serif text-base text-ink font-bold leading-tight">
+                  Spaced Repetition Review Ready
+                </h3>
+                <p className="font-mono text-[11px] text-muted-2 tracking-normal uppercase">
+                  {dueCount} {dueCount === 1 ? "question is" : "questions are"} due for spaced review
+                </p>
+              </div>
+            </div>
+            <Link to="/quiz/review" className="w-full sm:w-auto">
+              <Button
+                variant="primary"
+                className="w-full sm:w-auto bg-signal text-bg hover:bg-signal/80 px-4 py-2 h-9 rounded-lg font-mono text-[11px] font-bold tracking-wider uppercase flex items-center justify-center gap-1 border-0 shadow-none"
+              >
+                Start Review ({dueCount}) →
+              </Button>
+            </Link>
+          </motion.div>
+        )}
+
         {/* Readiness Card */}
         <div className="bg-ink rounded-[20px] p-5 md:p-8 w-full mb-8 relative overflow-hidden text-bg shadow-lg">
           <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
@@ -831,6 +962,27 @@ export default function TodayView() {
                 SET EXAM →
               </button>
             ) : null}
+          </div>
+
+          {/* Readiness Gauge */}
+          <div className="mt-4 mb-6 relative z-10 border-t border-bg/15 pt-5">
+            <div className="flex justify-between items-center text-[10px] uppercase tracking-wider font-mono text-bg/60 mb-2">
+              <span>Exam Readiness Track</span>
+              <span className="text-mint font-bold">{readinessPercentage}% ({passedCount}/{subjectsList.length} subjects &ge; 80%)</span>
+            </div>
+            <div className="w-full bg-bg/20 h-2.5 rounded-full relative overflow-hidden">
+              <div 
+                className="bg-mint h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(34,197,94,0.5)]" 
+                style={{ width: `${readinessPercentage}%` }}
+              />
+            </div>
+            <p className="text-[11px] font-mono text-bg/60 tracking-normal leading-normal mt-2">
+              {isReadyForExam 
+                ? (daysDiff !== null && daysDiff <= 7 
+                  ? `✓ Optimal readiness achieved. Your exam is in ${daysDiff} days. You are well prepared — go rest, relax, and trust your training before you fly!` 
+                  : "✓ Exceeds flight preparation standards. Fully certified and ready for scheduling.")
+                : `Ready-for-exam threshold: 80% mastery across all subjects. Keep studying to clear ${subjectsList.length - passedCount} more subjects.`}
+            </p>
           </div>
 
           <Link to="/modules" className="block w-full relative z-10">
@@ -947,14 +1099,14 @@ export default function TodayView() {
           </div>
           
           <div className="pt-16 pb-2">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 px-2">
-              <div className="border-r border-rule/50 pr-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8 px-2">
+              <div className="border-b sm:border-b-0 sm:border-r border-rule/30 pb-4 sm:pb-0 sm:pr-4">
                 <div className="font-mono text-[9px] text-muted-2 uppercase tracking-wide">Actual Study Depth</div>
                 <div className="font-serif text-2xl text-ink mt-1 flex items-baseline gap-1">
                   {hoursStudied} <span className="font-sans text-xs text-muted font-normal lowercase">hrs</span>
                 </div>
               </div>
-              <div className="border-r border-rule/50 pr-4">
+              <div className="border-b sm:border-b-0 sm:border-r border-rule/30 pb-4 sm:pb-0 sm:pr-4">
                 <div className="font-mono text-[9px] text-muted-2 uppercase tracking-wide">Target Pace Rate</div>
                 <div className="font-serif text-2xl text-ink mt-1 flex items-baseline gap-1">
                   {pacingData[pacingData.length - 1]?.target || 50} <span className="font-sans text-xs text-muted font-normal lowercase">hrs</span>

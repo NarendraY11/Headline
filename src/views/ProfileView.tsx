@@ -311,6 +311,36 @@ export default function ProfileView() {
         </Card>
       </div>
 
+      <Card className="bg-panel border-rule p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+        <div className="space-y-1 max-w-lg text-center md:text-left">
+          <span className="block font-mono text-[9px] uppercase tracking-widest text-mint font-bold">RE-ENGAGEMENT</span>
+          <h3 className="font-serif text-xl font-bold text-ink">Spaced Review Reminder Emails</h3>
+          <p className="font-sans text-xs text-muted leading-relaxed font-light">
+            Receive precise, gentle alert digests when review questions inside your spaced telemetry are due for optimal recall. Zero marketing, zero spam, zero guilt triggers.
+          </p>
+        </div>
+        <div className="shrink-0 flex items-center gap-3 bg-bg border border-rule px-4 py-2.5 rounded-xl self-stretch md:self-auto justify-between md:justify-start">
+          <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-muted-2">
+            {userData?.settings?.remindersEnabled ? "OPTED IN" : "MUTED"}
+          </span>
+          <button
+            onClick={() => {
+              const currentSettings = userData?.settings || {};
+              const currentStatus = !!currentSettings.remindersEnabled;
+              updateUserData({
+                settings: {
+                  ...currentSettings,
+                  remindersEnabled: !currentStatus
+                }
+              });
+            }}
+            className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none cursor-pointer ${userData?.settings?.remindersEnabled ? 'bg-mint' : 'bg-rule'}`}
+          >
+            <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.settings?.remindersEnabled ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+          </button>
+        </div>
+      </Card>
+
       <div className="space-y-8">
         <div className="border border-signal-soft rounded-xl bg-bg p-8 flex flex-col items-start gap-4">
           <div className="flex items-center gap-3 text-signal">

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Wordmark } from "./branding/Wordmark";
-import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity } from "lucide-react";
+import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity, ShieldCheck, FileText } from "lucide-react";
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
@@ -12,6 +12,8 @@ export function AdminLayout() {
   const navItems = [
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
     { label: "Subjects Manager", path: "/admin/subjects", icon: BookOpen },
+    { label: "Exams Manager", path: "/admin/exams", icon: ShieldCheck },
+    { label: "Blog Publisher", path: "/admin/blog", icon: FileText },
     { label: "Subcategories", path: "/admin/subcategories", icon: Layers },
     { label: "Questions Catalog", path: "/admin/questions", icon: HelpCircle },
     { label: "Bulk Importer", path: "/admin/import", icon: UploadCloud },
@@ -30,9 +32,9 @@ export function AdminLayout() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[#fbfaf6] text-ink font-sans">
+    <div className="min-h-screen flex bg-bg text-ink font-sans">
       {/* Sidebar for Desktop / Large displays */}
-      <aside className="hidden lg:flex flex-col w-[260px] bg-white border-r border-rule shrink-0 relative z-10 select-none">
+      <aside className="hidden lg:flex flex-col w-[260px] bg-paper border-r border-rule shrink-0 relative z-10 select-none">
         {/* Brand Header */}
         <div className="h-[64px] border-b border-rule flex items-center px-6 shrink-0 justify-between">
           <Wordmark />
@@ -40,7 +42,7 @@ export function AdminLayout() {
 
         {/* Navigation list */}
         <nav className="flex-1 p-4 space-y-1.5 overflow-y-auto">
-          <div className="font-mono text-[8.5px] text-muted uppercase tracking-widest px-3 mb-2 font-bold">
+          <div className="font-mono text-[8.5px] text-muted-2 uppercase tracking-widest px-3 mb-2 font-bold">
             Administrative Deck
           </div>
           {navItems.map((item) => {
@@ -53,7 +55,7 @@ export function AdminLayout() {
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider transition-colors select-none ${
                     isActive
-                      ? "bg-ink text-bg font-semibold"
+                      ? "bg-ink text-paper font-semibold shadow-sm"
                       : "text-muted hover:text-ink hover:bg-bg-2"
                   }`
                 }
@@ -67,7 +69,7 @@ export function AdminLayout() {
 
         {/* Footer actions */}
         <div className="p-4 border-t border-rule space-y-2 bg-bg-2/30">
-          <div className="px-3 py-2 bg-white border border-rule rounded-lg mb-2">
+          <div className="px-3 py-2 bg-paper border border-rule rounded-lg mb-2">
             <div className="font-sans font-semibold text-[11px] text-ink truncate">
               {user?.displayName || "Aviation Admin"}
             </div>
@@ -86,7 +88,7 @@ export function AdminLayout() {
           
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-[11px] font-semibold text-rose-600 hover:bg-rose-50 font-mono uppercase tracking-wide transition-colors cursor-pointer select-none"
+            className="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-mono uppercase tracking-wide transition-colors cursor-pointer select-none"
           >
             <LogOut size={13} />
             <span>Sign logout</span>
@@ -96,7 +98,7 @@ export function AdminLayout() {
 
       {/* Small displays / Mobile Layout top bar */}
       <div className="flex-1 flex flex-col min-w-0">
-        <header className="lg:hidden h-[64px] border-b border-rule flex items-center justify-between px-6 bg-white shrink-0">
+        <header className="lg:hidden h-[64px] border-b border-rule flex items-center justify-between px-6 bg-paper shrink-0">
           <Wordmark />
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -108,9 +110,9 @@ export function AdminLayout() {
 
         {/* Mobile Dropdown Menu overlay */}
         {mobileMenuOpen && (
-          <div className="lg:hidden fixed inset-0 top-[64px] z-50 bg-[#fbfaf6] border-b border-rule flex flex-col p-4 animate-fadeIn select-none">
+          <div className="lg:hidden fixed inset-0 top-[64px] z-50 bg-bg border-b border-rule flex flex-col p-4 animate-fadeIn select-none">
             <nav className="space-y-1.5 flex-1 overflow-y-auto">
-              <div className="font-mono text-[8.5px] text-muted uppercase tracking-widest px-3 mb-2 font-bold">
+              <div className="font-mono text-[8.5px] text-muted-2 uppercase tracking-widest px-3 mb-2 font-bold">
                 Administrative Deck
               </div>
               {navItems.map((item) => {
@@ -124,7 +126,7 @@ export function AdminLayout() {
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider transition-colors ${
                         isActive
-                          ? "bg-ink text-bg font-semibold"
+                          ? "bg-ink text-paper font-semibold"
                           : "text-muted hover:text-ink hover:bg-bg-2"
                       }`
                     }
@@ -136,7 +138,7 @@ export function AdminLayout() {
               })}
             </nav>
 
-            <div className="border-t border-rule pt-4 space-y-2 bg-white/20 p-2 rounded-xl mt-4">
+            <div className="border-t border-rule pt-4 space-y-2 bg-paper/20 p-2 rounded-xl mt-4 border border-rule/50">
               <div className="px-3 pb-2 border-b border-rule/50 mb-2">
                 <div className="font-sans font-semibold text-xs text-ink">
                   {user?.displayName || "Aviation Admin"}
@@ -155,7 +157,7 @@ export function AdminLayout() {
               </Link>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2 px-3 h-9 text-xs font-semibold text-rose-600 hover:bg-rose-50 font-mono uppercase tracking-wide transition-colors"
+                className="w-full flex items-center gap-2 px-3 h-9 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-mono uppercase tracking-wide transition-colors"
               >
                 <LogOut size={13} />
                 <span>Sign Out Account</span>

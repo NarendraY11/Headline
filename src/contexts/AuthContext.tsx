@@ -11,6 +11,13 @@ export interface UserData {
   totalQuestionsAnswered?: number;
   totalSessionsCount?: number;
   lastSessionAt?: any;
+  plan?: 'free' | 'pro';
+  planStartedAt?: string;
+  planExpiresAt?: string;
+  dailyGoal?: number;
+  streakCount?: number;
+  lastActivityDate?: string;
+  questionsAnsweredToday?: number;
   settings?: {
     negativeMarking: boolean;
     reduceMotion: boolean;
@@ -18,7 +25,14 @@ export interface UserData {
     practiceLayout?: 'auto' | 'editorial' | 'split';
     timedLayout?: 'auto' | 'instrument' | 'editorial';
     vivaLayout?: 'auto' | 'flashcard' | 'editorial';
+    dailyGoal?: number;
+    streakCount?: number;
+    lastActivityDate?: string;
+    questionsAnsweredToday?: number;
   };
+  referralCode?: string;
+  referredBy?: string;
+  newsletterOptIn?: boolean;
 }
 
 export interface CompatUser {
@@ -106,13 +120,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile = insertedProfile || initialProfile;
       }
 
+      // 1.5. Check and dynamically guarantee a unique referral code exists on this account (for new/migrated profiles)
+      let referralCode = profile?.referral_code;
+      if (!referralCode) {
+        // Generate a clean 8-letter alphanumeric referral code
+        referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        try {
+          const { data: updatedProfile } = await supabase
+            .from('profiles')
+            .update({ referral_code: referralCode })
+            .eq('id', uid)
+            .select()
+            .maybeSingle();
+          if (updatedProfile) {
+            profile = updatedProfile;
+            referralCode = updatedProfile.referral_code;
+          }
+        } catch (updateErr) {
+          console.warn("Failed to write dynamic referral code into database:", updateErr);
+        }
+      }
+
+      // 1.6. Proactively match referrals if they signed up with a clean tracking link
+      const pendingRefCode = localStorage.getItem("referred_by_code");
+      if (pendingRefCode) {
+        try {
+          // Avoid referring yourself
+          if (referralCode !== pendingRefCode && !profile?.referred_by) {
+            // Find referrer details
+            const { data: referrer, error: findReferrerErr } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('referral_code', pendingRefCode)
+              .maybeSingle();
+
+            if (referrer && !findReferrerErr) {
+              // Write referral tracking row and populate referred_by on current profile
+              await supabase.from('profiles').update({ referred_by: pendingRefCode }).eq('id', uid);
+              profile.referred_by = pendingRefCode;
+              
+              const { error: insErr } = await supabase.from('referrals').insert({
+                referrer_id: referrer.id,
+                referred_id: uid,
+                status: 'pending'
+              });
+              
+              if (!insErr) {
+                console.log(`Referral link created between user ${uid} and referrer ${referrer.id}`);
+                localStorage.removeItem("referred_by_code");
+              }
+            }
+          } else {
+            localStorage.removeItem("referred_by_code");
+          }
+        } catch (linkErr) {
+          console.error("Non-blocking context referral binding failed:", linkErr);
+        }
+      }
+
       const uData: UserData = {
         targetExam: profile?.target_exam || "DGCA CPL",
         nextExam: profile?.next_exam || "",
         settings: profile?.settings || { negativeMarking: false, reduceMotion: false, defaultMode: "practice" },
         bookmarks: [],
         attempts: {},
-        photoURL: mappedUser.photoURL || ""
+        photoURL: mappedUser.photoURL || "",
+        plan: profile?.plan || "free",
+        planStartedAt: profile?.plan_started_at,
+        planExpiresAt: profile?.plan_expires_at,
+        dailyGoal: profile?.daily_goal ?? profile?.settings?.dailyGoal ?? 20,
+        streakCount: profile?.streak_count ?? profile?.settings?.streakCount ?? 0,
+        lastActivityDate: profile?.last_activity_date ?? profile?.settings?.lastActivityDate ?? "",
+        questionsAnsweredToday: profile?.questions_answered_today ?? profile?.settings?.questionsAnsweredToday ?? 0,
+        referralCode: referralCode || profile?.referral_code,
+        referredBy: profile?.referred_by,
+        newsletterOptIn: profile?.newsletter_opt_in ?? false,
       };
 
       // 2. Fetch bookmarks
@@ -373,13 +455,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const updatePayload: any = { updated_at: new Date().toISOString() };
         if (data.targetExam !== undefined) updatePayload.target_exam = data.targetExam;
         if (data.nextExam !== undefined) updatePayload.next_exam = data.nextExam;
-        if (data.settings !== undefined) {
-            updatePayload.settings = data.settings;
-            localStorage.setItem("heading_settings", JSON.stringify(data.settings));
-        }
+        
+        if (data.dailyGoal !== undefined) updatePayload.daily_goal = data.dailyGoal;
+        if (data.streakCount !== undefined) updatePayload.streak_count = data.streakCount;
+        if (data.lastActivityDate !== undefined) updatePayload.last_activity_date = data.lastActivityDate;
+        if (data.questionsAnsweredToday !== undefined) updatePayload.questions_answered_today = data.questionsAnsweredToday;
+
+        const baseSettings = data.settings || userData?.settings || { negativeMarking: false, reduceMotion: false, defaultMode: "practice" };
+        const mergedSettings = {
+          ...baseSettings,
+          dailyGoal: data.dailyGoal !== undefined ? data.dailyGoal : (userData?.dailyGoal ?? 20),
+          streakCount: data.streakCount !== undefined ? data.streakCount : (userData?.streakCount ?? 0),
+          lastActivityDate: data.lastActivityDate !== undefined ? data.lastActivityDate : (userData?.lastActivityDate ?? ""),
+          questionsAnsweredToday: data.questionsAnsweredToday !== undefined ? data.questionsAnsweredToday : (userData?.questionsAnsweredToday ?? 0),
+        };
+
+        updatePayload.settings = mergedSettings;
+        localStorage.setItem("heading_settings", JSON.stringify(mergedSettings));
 
         if (Object.keys(updatePayload).length > 1) {
-            await supabase.from('profiles').update(updatePayload).eq('id', user.uid);
+            const { error } = await supabase.from('profiles').update(updatePayload).eq('id', user.uid);
+            if (error) {
+               console.warn("Direct column writes to profiles failed (tables may need migration). Writing into settings backup instead...", error.message);
+               const fallbackPayload: any = {
+                 updated_at: new Date().toISOString(),
+                 settings: mergedSettings,
+               };
+               if (updatePayload.target_exam !== undefined) fallbackPayload.target_exam = updatePayload.target_exam;
+               if (updatePayload.next_exam !== undefined) fallbackPayload.next_exam = updatePayload.next_exam;
+               await supabase.from('profiles').update(fallbackPayload).eq('id', user.uid);
+            }
         }
 
         if (data.bookmarks !== undefined) {

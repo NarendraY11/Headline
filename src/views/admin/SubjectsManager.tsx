@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/Atoms";
-import { Plus, Edit2, Trash2, Save, X, RefreshCw, AlertCircle, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Save, X, RefreshCw, AlertCircle, Eye, EyeOff, CheckCircle2, Server } from "lucide-react";
 import { trackEvent } from "../../lib/track";
+import { seedTaxonomy } from "../../lib/content";
 
 interface Subject {
   id: string;
   title: string;
   description: string | null;
-  exam_authority: "DGCA" | "EASA" | "FAA" | "TYPE-RATING" | string;
+  exam_authority: "DGCA" | "EASA" | "FAA" | "TYPE_RATING" | "TYPE-RATING" | string;
+  license?: "PPL" | "CPL" | "ATPL" | "IR" | "TYPE" | "OTHER" | string;
   sort_order: number;
   status: "draft" | "published" | "archived";
 }
@@ -97,6 +99,7 @@ export default function SubjectsManager() {
       title: "",
       description: "",
       exam_authority: "DGCA",
+      license: "CPL",
       sort_order: (subjects.length + 1) * 10,
       status: "draft",
     });
@@ -138,6 +141,7 @@ export default function SubjectsManager() {
         title: currentSubject.title.trim(),
         description: currentSubject.description?.trim() || null,
         exam_authority: currentSubject.exam_authority || "DGCA",
+        license: currentSubject.license || "CPL",
         sort_order: Number(currentSubject.sort_order) || 0,
         status: currentSubject.status || "draft",
         updated_at: new Date().toISOString(),
@@ -238,7 +242,29 @@ export default function SubjectsManager() {
           <div className="font-mono text-[9px] tracking-widest text-muted uppercase mb-1">Catalog Structures</div>
           <h1 className="font-serif text-3xl font-medium tracking-tight text-ink">Subjects Inventory</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={async () => {
+              if (window.confirm("Do you want to seed real, high-fidelity aviation subjects & exams into the database from standard catalog matrices? (Active connection required)")) {
+                setLoading(true);
+                setErrorStatus("");
+                setSuccessStatus("");
+                try {
+                  const out = await seedTaxonomy();
+                  setSuccessStatus(`Database successfully populated: ${out.subjectsCount} aviation subjects and ${out.examsCount} mock exams are now initialized as published.`);
+                  fetchData();
+                } catch (seededError: any) {
+                  setErrorStatus(seededError.message || "Taxonomy bootstrap seeding transaction failed.");
+                } finally {
+                  setLoading(false);
+                }
+              }
+            }}
+            disabled={loading}
+            className="flex items-center gap-1.5 h-10 text-xs px-4 border border-rule hover:bg-bg-2 rounded-lg font-medium transition-colors"
+          >
+            <Server size={13} className="text-navy" /> Seed Syllabus templates
+          </button>
           <button
             onClick={fetchData}
             disabled={loading}
@@ -429,21 +455,38 @@ export default function SubjectsManager() {
                     <option value="DGCA">DGCA</option>
                     <option value="EASA">EASA</option>
                     <option value="FAA">FAA</option>
+                    <option value="TYPE_RATING">TYPE_RATING</option>
                     <option value="TYPE-RATING">TYPE-RATING</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block font-mono text-[9px] uppercase text-muted tracking-widest mb-1.5 font-bold">Lifecycle Status</label>
+                  <label className="block font-mono text-[9px] uppercase text-muted tracking-widest mb-1.5 font-bold">Pilot License level</label>
                   <select
-                    value={currentSubject.status || "draft"}
-                    onChange={(e) => setCurrentSubject((p) => ({ ...p, status: e.target.value as any }))}
+                    value={currentSubject.license || "CPL"}
+                    onChange={(e) => setCurrentSubject((p) => ({ ...p, license: e.target.value }))}
                     className="w-full font-mono text-xs p-2.5 bg-bg-2 border border-rule rounded-lg focus:outline-none focus:border-rule-strong h-[38px] text-ink font-semibold"
                   >
-                    <option value="draft">DRAFT</option>
-                    <option value="published">PUBLISHED</option>
-                    <option value="archived">ARCHIVED</option>
+                    <option value="PPL">PPL (Private Pilot)</option>
+                    <option value="CPL">CPL (Commercial Pilot)</option>
+                    <option value="ATPL">ATPL (Airline Transport Pilot)</option>
+                    <option value="IR">IR (Instrument Rating)</option>
+                    <option value="TYPE">TYPE (Type Rating)</option>
+                    <option value="OTHER">OTHER (General/Basic)</option>
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block font-mono text-[9px] uppercase text-muted tracking-widest mb-1.5 font-bold">Lifecycle Status</label>
+                <select
+                  value={currentSubject.status || "draft"}
+                  onChange={(e) => setCurrentSubject((p) => ({ ...p, status: e.target.value as any }))}
+                  className="w-full font-mono text-xs p-2.5 bg-bg-2 border border-rule rounded-lg focus:outline-none focus:border-rule-strong h-[38px] text-ink font-semibold"
+                >
+                  <option value="draft">DRAFT</option>
+                  <option value="published">PUBLISHED</option>
+                  <option value="archived">ARCHIVED</option>
+                </select>
               </div>
 
               <div className="border-t border-rule pt-4 flex gap-3 justify-end">

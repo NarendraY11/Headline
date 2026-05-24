@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { trackEvent } from "../lib/track";
 import { useAuth } from "../contexts/AuthContext";
+import { useNotifications } from "../contexts/NotificationContext";
 import { useLogbook } from "../hooks/useLogbook";
 import { useToast } from "../components/ui/Toast";
 import { supabase } from "../lib/supabase";
@@ -9,11 +10,13 @@ import { useGlobalLoading } from "../contexts/LoadingContext";
 import { motion, AnimatePresence } from "motion/react";
 import { Wordmark, Chip, Button, CompassLogomark } from "../components/Atoms";
 import { Question } from "../data/questions";
-import { fetchPublishedQuestions } from "../lib/content";
+import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopic } from "../lib/content";
+import ShareableScorecard from "../components/ShareableScorecard";
 import { apiFetch } from "../lib/api";
 import { mockExams } from "../data/topics";
-import { getDailyReviewItems } from "../lib/logbook";
-import { X, ArrowRight, Settings2, Sparkles, CheckCircle2 } from "lucide-react";
+import { recordAnswerProgress, trackAnswerForStreakAndGoal, getDueQuestionIds } from "../lib/spacedRepetition";
+import { ProGate } from "../components/ProGate";
+import { X, ArrowRight, Settings2, Sparkles, CheckCircle2, Flame } from "lucide-react";
 import { lazy, Suspense } from "react";
 
 const EditorialLayout = lazy(() => import("./quiz-layouts/EditorialLayout"));
@@ -37,7 +40,8 @@ export default function QuizView() {
 
   const topicId = isModeRoute ? "all" : routeTopicId;
 
-  const { user, userData, updateUserData } = useAuth();
+  const { user, userData, updateUserData, openAuthModal } = useAuth();
+  const { addNotification } = useNotifications();
   const { setLoading: setGlobalLoading } = useGlobalLoading();
   const { logbook } = useLogbook();
 
@@ -74,36 +78,23 @@ export default function QuizView() {
           } catch (e) {}
         }
 
-        const pubQuestions = await fetchPublishedQuestions();
+        let quizQs: Question[] = [];
 
         if (topicId?.startsWith("ai-generated-")) {
-          setQuestions([]);
+          quizQs = [];
         } else if (topicId === "review") {
-          const ids = getDailyReviewItems(logbook);
-          setQuestions(pubQuestions.filter((q) => ids.includes(q.id)));
-        } else if (topicId && topicId !== "all") {
-          const normalize = (s: string) =>
-            s.replace(/[^a-z0-9]/gi, "").toLowerCase();
-          const normalizedTopicId = normalize(topicId);
-
-          const filtered = pubQuestions.filter(
-            (q) => normalize(q.topicId) === normalizedTopicId,
-          );
-          if (filtered.length > 0) {
-            setQuestions(filtered);
+          const ids = await getDueQuestionIds(user?.uid || null);
+          if (ids.length > 0) {
+            quizQs = await fetchQuestionsByIds(ids);
           } else {
-            const subjectFiltered = pubQuestions.filter((q) =>
-              normalize(q.topicId).startsWith(normalizedTopicId),
-            );
-            if (subjectFiltered.length > 0) {
-              setQuestions(subjectFiltered);
-            } else {
-              setQuestions(pubQuestions);
-            }
+            quizQs = [];
           }
+        } else if (topicId && topicId !== "all") {
+          quizQs = await fetchQuizQuestionsForTopic(topicId, 50, true);
         } else {
-          setQuestions(pubQuestions);
+          quizQs = await fetchPublishedQuestions({ limit: 50 });
         }
+        setQuestions(quizQs);
       } catch (err) {
         console.error("Error loading quiz questions:", err);
       } finally {
@@ -215,6 +206,13 @@ export default function QuizView() {
 
   // Abort dialog state
   const [showAbortPrompt, setShowAbortPrompt] = useState(false);
+  const [dismissedSavePrompt, setDismissedSavePrompt] = useState(false);
+  const [unlockedMilestone, setUnlockedMilestone] = useState<{
+    id: string;
+    title: string;
+    badge: string;
+    desc: string;
+  } | null>(null);
 
   useEffect(() => {
     if (showAbortPrompt) {
@@ -500,6 +498,12 @@ export default function QuizView() {
       questionId: qId,
       metadata: { correct: isCorrect, timeSec }
     });
+
+    // Record question performance for spacing/review
+    recordAnswerProgress(user?.uid || null, qId, isCorrect, questions[currentIndex].topicId);
+
+    // Track daily goal & streak counters
+    trackAnswerForStreakAndGoal(user, userData, updateUserData, 1);
   };
 
   const handleRevealViva = (qId: string) => {
@@ -552,9 +556,11 @@ export default function QuizView() {
     let correctCount = 0;
     const ataBreakdown: Record<string, { correct: number; total: number }> = {};
     const wrongQuestionIds: string[] = [];
+    let answeredCount = 0;
 
     questions.forEach((q) => {
-      const isCorrect = answers[q.id] === q.correct;
+      const userSelected = answers[q.id];
+      const isCorrect = userSelected === q.correct;
       if (isCorrect) {
         correctCount++;
       } else {
@@ -566,7 +572,18 @@ export default function QuizView() {
       }
       ataBreakdown[q.ata].total++;
       if (isCorrect) ataBreakdown[q.ata].correct++;
+
+      // Record per-question performance for spaced repetition if answered
+      if (userSelected) {
+        answeredCount++;
+        recordAnswerProgress(user?.uid || null, q.id, isCorrect, q.topicId);
+      }
     });
+
+    if (answeredCount > 0) {
+      // Track streaks and daily goal progress on submit
+      trackAnswerForStreakAndGoal(user, userData, updateUserData, answeredCount);
+    }
 
     const isNegativeMarking =
       userData?.settings?.negativeMarking && mode === "timed";
@@ -643,6 +660,51 @@ export default function QuizView() {
 
       const newLogbook = [...localLogbook, attemptRecord];
       localStorage.setItem("heading_logbook", JSON.stringify(newLogbook));
+    }
+
+    // Milestone logic:
+    let localLogList: any[] = [];
+    try {
+      const saved = localStorage.getItem("heading_logbook");
+      if (saved) localLogList = JSON.parse(saved);
+    } catch {}
+    
+    const isFirstTime = logbook ? logbook.length === 0 : localLogList.length === 0;
+    const currentAccuracy = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
+
+    let unlocked = null;
+    if (isFirstTime) {
+      unlocked = {
+        id: "first-flight",
+        title: "Operational Clearance Unlocked",
+        badge: "Opera Alpha",
+        desc: "Your first training block is logged. Solid startup sequence! Clear flight telemetry is now officially running."
+      };
+    } else {
+      const activeLogs = logbook || localLogList;
+      const totalAnswersCount = activeLogs.reduce((acc, x) => acc + (x.total || 0), 0) + totalQuestions;
+      const priorAnswersCount = activeLogs.reduce((acc, x) => acc + (x.total || 0), 0);
+      
+      if (totalAnswersCount >= 100 && priorAnswersCount < 100) {
+        unlocked = {
+          id: "centurion",
+          title: "Centurion Pilot Unlocked",
+          badge: "Centurion",
+          desc: "You have answered over 100 high-fidelity syllabus questions. Excellent pacing density."
+        };
+      } else if (currentAccuracy >= 90 && totalQuestions >= 5) {
+        unlocked = {
+          id: "precision",
+          title: "Supercritical Precision Unlocked",
+          badge: "Precision Pilot",
+          desc: "Completed this training block with over 90% accuracy. Optimal operational standards achieved."
+        };
+      }
+    }
+
+    if (unlocked) {
+      setUnlockedMilestone(unlocked);
+      addNotification(unlocked.title, unlocked.desc, "milestone");
     }
 
     setStatus("results");
@@ -854,8 +916,37 @@ export default function QuizView() {
   // --- RENDER HELPERS ---
   if (loadingContent) {
     return (
-      <div className="relative min-h-screen flex items-center justify-center bg-bg relative">
-        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      <div className="relative min-h-screen">
+        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
+        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <div className="relative z-10 px-4 py-8 md:py-16 max-w-4xl mx-auto space-y-8 animate-pulse">
+          {/* Progress indicators */}
+          <div className="flex justify-between items-center bg-paper border border-rule/50 rounded-xl p-3">
+            <div className="h-4 bg-ink/10 w-24 rounded"></div>
+            <div className="h-4 bg-muted-2/20 w-16 rounded font-mono"></div>
+          </div>
+          
+          {/* Main question skeleton card */}
+          <div className="bg-paper border border-rule/50 rounded-2xl p-6 md:p-8 space-y-6">
+            <div className="space-y-3">
+              <div className="h-4 bg-muted-2/25 w-24 rounded font-mono"></div>
+              <div className="h-6 bg-ink/10 w-full rounded"></div>
+              <div className="h-6 bg-ink/10 w-4/5 rounded pb-2"></div>
+            </div>
+            
+            <hr className="border-t border-rule/40" />
+
+            {/* Answer option button skeletons */}
+            <div className="space-y-3 pt-2">
+              {[1, 2, 3, 4].map((idx) => (
+                <div key={idx} className="h-12 border border-rule/40 bg-bg-2/5 rounded-xl flex items-center px-4">
+                  <div className="w-5 h-5 rounded-full bg-ink/5 mr-3 shrink-0"></div>
+                  <div className="h-4 bg-ink/10 w-5/6 rounded"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -966,6 +1057,7 @@ export default function QuizView() {
               </p>
             </button>
 
+            <ProGate type="timed-mock" isUnlocked={mockExams.some(e => e.id === routeTopicId) && routeTopicId === "nav-cpl-01"}>
             <button
               onClick={() => startQuiz("timed")}
               className="w-full text-left p-6 border border-rule hover:border-ink rounded-lg bg-panel transition-all group focus:outline-none focus:ring-2 focus:ring-ink focus:ring-offset-2"
@@ -983,7 +1075,9 @@ export default function QuizView() {
                 payload is delivered. Track your time-per-question metrics.
               </p>
             </button>
+            </ProGate>
 
+            <ProGate type="viva-practice" isUnlocked={false}>
             <button
               onClick={() => startQuiz("viva")}
               className="w-full text-left p-6 border border-rule hover:border-ink rounded-lg bg-panel transition-all group focus:outline-none focus:ring-2 focus:ring-ink focus:ring-offset-2"
@@ -1001,6 +1095,7 @@ export default function QuizView() {
                 answer mentally, then reveal the regulatory model answer.
               </p>
             </button>
+            </ProGate>
           </div>
 
           <div className="mt-8 pt-4 border-t border-rule text-right">
@@ -1098,6 +1193,31 @@ export default function QuizView() {
         </header>
 
         <div className="relative z-10 max-w-5xl mx-auto py-12 px-4 space-y-6">
+          {unlockedMilestone && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-[#101214] text-bg rounded-2xl p-6 border border-white/10 shadow-2xl relative overflow-hidden flex items-center justify-between gap-6"
+            >
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="font-mono text-[9px] tracking-widest font-bold uppercase text-mint bg-mint/15 px-2.5 py-0.5 rounded-full border border-mint/20 flex items-center gap-1">
+                    <Sparkles size={11} className="text-mint shrink-0" />
+                    MILESTONE UNLOCKED: {unlockedMilestone.badge}
+                  </span>
+                </div>
+                <h2 className="font-serif text-xl font-bold text-white mb-1.5">{unlockedMilestone.title}</h2>
+                <p className="font-sans text-[12.5px] text-white/70 leading-relaxed font-light">{unlockedMilestone.desc}</p>
+              </div>
+              <button 
+                onClick={() => setUnlockedMilestone(null)}
+                className="text-white/40 hover:text-white transition-colors h-9 px-4 font-mono text-[10px] uppercase font-bold tracking-wider hover:bg-white/5 border border-white/15 rounded-full shrink-0"
+              >
+                Dismiss
+              </button>
+            </motion.div>
+          )}
+
           {/* HERO ROW */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-10">
             <div className="max-w-lg">
@@ -1259,6 +1379,64 @@ export default function QuizView() {
               </div>
             </div>
           </div>
+
+          {/* SHAREABLE SCORECARD DOWNLOAD */}
+          <ShareableScorecard 
+            score={correctCount}
+            totalQuestions={totalQuestions}
+            percentage={percentage}
+            subjectTitle={customTopic || (questions && questions[0]?.ata) || "Quiz Attempt"}
+            passed={passed}
+            defaultUserName={userData?.display_name || ""}
+          />
+
+          {/* FREE USER UPGRADE PROMPT ON MOCK END */}
+          {routeTopicId === "nav-cpl-01" && userData?.plan === "free" && (
+            <div className="bg-panel rounded-2xl p-8 border border-rule shadow-md relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
+              <div className="space-y-2 max-w-xl text-center md:text-left animate-in fade-in slide-in-from-bottom-3 duration-500">
+                <div className="inline-flex items-center gap-1.5 font-mono text-[9.5px] tracking-widest font-bold uppercase text-navy bg-sky-soft/40 px-2.5 py-0.5 rounded-full border border-sky/20">
+                  <Sparkles size={10} className="animate-spin-slow text-navy" />
+                  <span>FLIGHT DEBRIEF CLEARANCE</span>
+                </div>
+                <h3 className="font-serif text-2xl text-ink font-semibold">Ready for Unlimited simulator flights?</h3>
+                <p className="font-sans text-xs text-muted leading-relaxed">
+                  Excellent work finishing your 1 free training mock exam. Upgrade to <b>Captain (Pro)</b> today to unlock unlimited real timed exams for DGCA and EASA, dynamic AI Ground Instructor debriefs, interactive weak-area heatmaps, and oral board viva flashcards.
+                </p>
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => navigate("/pricing")}
+                className="w-full md:w-auto px-6 h-12 bg-navy hover:bg-navy-dark text-bg font-mono text-xs tracking-wider uppercase rounded-full shadow-lg shrink-0"
+              >
+                GET UNLIMITED ACCESS
+                <ArrowRight size={14} className="ml-2" />
+              </Button>
+            </div>
+          )}
+
+          {!user && (
+            <div className="bg-[#101214] text-bg rounded-2xl p-6 md:p-8 border border-white/5 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+              <div className="space-y-2 max-w-xl text-center md:text-left">
+                <div className="inline-flex items-center gap-1.5 font-mono text-[9px] tracking-widest font-bold uppercase text-mint bg-mint/10 px-2.5 py-0.5 rounded-full border border-mint/20">
+                  <Flame size={12} className="text-mint animate-pulse" />
+                  <span>PRESERVE PERFORMANCE HISTORY</span>
+                </div>
+                <h3 className="font-serif text-2xl text-white">Secure this performance in your active records.</h3>
+                <p className="font-sans text-xs text-white/70 leading-relaxed font-light">
+                  You just cleared this block with {correctCount} correct out of {totalQuestions} total questions. Sign in now to automatically merge this session, initiate active spaced reviews, and keep your study streak alive!
+                </p>
+              </div>
+              <div className="shrink-0 w-full md:w-auto flex flex-col sm:flex-row gap-3 items-center">
+                <Button
+                  variant="primary"
+                  className="w-full sm:w-auto bg-mint text-bg hover:bg-mint/80 px-6 h-11 rounded-full font-serif text-xs font-semibold border-0"
+                  onClick={() => openAuthModal("signup")}
+                >
+                  Sign Up & Save Session
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* 4 STAT CARDS ROW */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 mb-12">
@@ -1641,6 +1819,52 @@ export default function QuizView() {
           </motion.div>
         )}
 
+        {!user && submittedIds.size >= 3 && !dismissedSavePrompt && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] max-w-md w-[92%] bg-ink text-bg border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-mint/10 border border-mint/20 flex items-center justify-center text-mint shrink-0">
+                  <Flame size={16} />
+                </div>
+                <div>
+                  <h4 className="font-serif text-[15px] font-bold text-white">Save your progress?</h4>
+                  <p className="font-sans text-[11.5px] text-white/70 leading-relaxed mt-0.5">
+                    You've answered {submittedIds.size} questions! Sign in now to secure your accuracy, track your daily streak, and sync your training logs.
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setDismissedSavePrompt(true)}
+                className="text-white/40 hover:text-white transition-colors p-1"
+                title="Continue as guest"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="flex gap-2.5 justify-end">
+              <button
+                onClick={() => setDismissedSavePrompt(true)}
+                className="font-mono text-[9px] uppercase tracking-widest text-white/50 hover:text-white transition-colors px-3 py-1.5"
+              >
+                Keep practicing
+              </button>
+              <button
+                onClick={() => {
+                  openAuthModal("signup");
+                }}
+                className="font-mono text-[10px] uppercase tracking-wider font-bold bg-mint text-bg hover:bg-mint/95 transition-colors px-4 py-1.5 rounded-full"
+              >
+                Secure Streak
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         {showAbortPrompt && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -1701,7 +1925,17 @@ export default function QuizView() {
           </div>
         }
       >
-        <LayoutComponent {...sharedProps} />
+        {mode === "viva" ? (
+          <ProGate type="viva-practice" isUnlocked={false}>
+            <LayoutComponent {...sharedProps} />
+          </ProGate>
+        ) : mode === "timed" ? (
+          <ProGate type="timed-mock" isUnlocked={mockExams.some(e => e.id === routeTopicId) && routeTopicId === "nav-cpl-01"}>
+            <LayoutComponent {...sharedProps} />
+          </ProGate>
+        ) : (
+          <LayoutComponent {...sharedProps} />
+        )}
       </Suspense>
     </div>
   );

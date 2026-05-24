@@ -1,9 +1,10 @@
+import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, XCircle, ArrowLeft, ArrowRight, Clock, Bookmark, Sparkles, X } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowLeft, ArrowRight, Clock, Bookmark, Sparkles, X, Flag } from "lucide-react";
 import { Button, Chip, Wordmark } from "../../components/Atoms";
 import { QuizLayoutProps } from "./types";
 import { FlightControlsDiagram } from "../../components/SystemDiagram";
-import React from "react";
+import ReportQuestionModal from "../../components/ReportQuestionModal";
 
 export default function SplitLayout({
   currentQ,
@@ -35,6 +36,7 @@ export default function SplitLayout({
   customQuestions,
   navigate
 }: QuizLayoutProps) {
+  const [isReportOpen, setIsReportOpen] = useState(false);
   return (
     <div className="flex flex-col h-screen h-[100dvh] bg-bg overflow-hidden">
       <AnimatePresence>
@@ -330,10 +332,21 @@ export default function SplitLayout({
                          <p className="font-serif text-[22px] md:text-[24px] text-ink leading-snug mb-6">
                             {currentQ.explanation}
                          </p>
-                         <div className="flex flex-wrap gap-2.5">
+                         <div className="flex flex-wrap gap-2.5 items-center">
                            {currentQ.references.map((ref, idx) => (
                               <Chip key={idx} variant="default" className="text-[10px] text-muted-2 tracking-widest">{ref}</Chip>
                            ))}
+                           <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide border-t sm:border-t-0 sm:border-l border-rule pt-1.5 sm:pt-0 sm:pl-2.5 sm:ml-0.5 block sm:inline">
+                             IP compliant · Verified from DGCA/ICAO/FAA public files
+                           </span>
+                         </div>
+                         <div className="mt-5 pt-4 border-t border-rule/30 flex items-center justify-between">
+                           <button 
+                             onClick={() => setIsReportOpen(true)}
+                             className="flex items-center gap-1.5 text-[10px] font-mono uppercase text-muted hover:text-signal transition-colors outline-none cursor-pointer"
+                           >
+                             <Flag size={11} className="text-muted-2" /> Report an issue with this question
+                           </button>
                          </div>
                        </div>
                        
@@ -531,6 +544,7 @@ export default function SplitLayout({
           
         </div>
       </main>
+      <ReportQuestionModal questionId={currentQ.id} isOpen={isReportOpen} onClose={() => setIsReportOpen(false)} />
     </div>
   );
 }

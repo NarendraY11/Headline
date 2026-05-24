@@ -59,6 +59,7 @@ export interface SubTopic {
   spec?: { label: string; value: string }[];
   figure?: { caption: string; source: string; type: string };
   sections?: { id: string; title: string; description: string }[];
+  free_chapter?: boolean;
 }
 
 export interface SubjectItem {
@@ -72,60 +73,379 @@ export interface SubjectItem {
   status: "active" | "coming-soon";
   tags: { label: string; variant: "default" | "solid" | "signal" | "amber" | "mint" | "sky" }[];
   subTopics?: SubTopic[];
+  exam_authority?: "DGCA" | "EASA" | "FAA" | "TYPE_RATING" | string;
+  license?: "PPL" | "CPL" | "ATPL" | "IR" | "TYPE" | string;
+  sort_order?: number;
+  is_free?: boolean;
 }
 
 export const rawSubjects: SubjectItem[] = [
+  // DGCA CPL Subjects
+  {
+    id: "air-navigation",
+    num: "01",
+    title: "Air Navigation",
+    questionCount: 450,
+    mastery: 0.25,
+    hue: "navy",
+    blurb: "General Navigation, Radio Navigation, and Aircraft Instruments for DGCA CPL.",
+    status: "active",
+    exam_authority: "DGCA",
+    license: "CPL",
+    sort_order: 1,
+    tags: [{ label: "DGCA CPL", variant: "default" }, { label: "COMPLEX", variant: "amber" }],
+    subTopics: [
+      { id: "nav-gen", title: "General Navigation", questionCount: 200, status: "in-progress" },
+      { id: "nav-rad", title: "Radio Navigation", questionCount: 150, status: "new" },
+      { id: "nav-inst", title: "Aircraft Instruments", questionCount: 100, status: "reviewed" },
+    ]
+  },
+  {
+    id: "meteorology",
+    num: "02",
+    title: "Aviation Meteorology",
+    questionCount: 100,
+    mastery: 0.45,
+    hue: "sky",
+    blurb: "Aviation weather reports, atmospheric structure, ice, wind, and cloud masses.",
+    status: "active",
+    exam_authority: "DGCA",
+    license: "CPL",
+    sort_order: 2,
+    tags: [{ label: "DGCA CPL", variant: "solid" }, { label: "TIMED", variant: "solid" }],
+    subTopics: [
+      { id: "met-1", title: "Met Test 1", questionCount: 50, status: "reviewed" },
+      { id: "met-2", title: "Met Test 2", questionCount: 50, status: "new" },
+    ]
+  },
+  {
+    id: "air-regulation",
+    num: "03",
+    title: "Air Regulation",
+    questionCount: 50,
+    mastery: 0.88,
+    hue: "amber",
+    blurb: "Rules of the air, national procedures, and basic airworthiness rules.",
+    status: "active",
+    exam_authority: "DGCA",
+    license: "CPL",
+    sort_order: 3,
+    tags: [{ label: "DGCA CPL", variant: "signal" }, { label: "NEGATIVE", variant: "signal" }],
+    subTopics: [
+      { id: "reg-1", title: "Air Reg Test 1", questionCount: 50, status: "reviewed" }
+    ]
+  },
+  {
+    id: "dgca-tech-general",
+    num: "04",
+    title: "Technical General",
+    questionCount: 0,
+    mastery: 0,
+    hue: "mint",
+    blurb: "Airframe, engines, electrical, and hydraulic systems basic structures.",
+    status: "coming-soon",
+    exam_authority: "DGCA",
+    license: "CPL",
+    sort_order: 4,
+    tags: [{ label: "DGCA CPL", variant: "solid" }]
+  },
+  {
+    id: "dgca-tech-specific",
+    num: "05",
+    title: "Technical Specific",
+    questionCount: 0,
+    mastery: 0,
+    hue: "navy",
+    blurb: "Specific training for Cessna 172, multi-engine aircraft systems.",
+    status: "coming-soon",
+    exam_authority: "DGCA",
+    license: "CPL",
+    sort_order: 5,
+    tags: [{ label: "DGCA CPL", variant: "default" }]
+  },
+  {
+    id: "dgca-rtr",
+    num: "06",
+    title: "RTR(A)",
+    questionCount: 0,
+    mastery: 0,
+    hue: "amber",
+    blurb: "Aviation radio telephony operations, rules, and mock logs.",
+    status: "coming-soon",
+    exam_authority: "DGCA",
+    license: "CPL",
+    sort_order: 6,
+    tags: [{ label: "DGCA CPL", variant: "amber" }]
+  },
+
+  // EASA ATPL Subjects (the 13 subjects)
+  {
+    id: "easa-air-law",
+    num: "11",
+    title: "Air Law",
+    questionCount: 0,
+    mastery: 0,
+    hue: "navy",
+    blurb: "International agreements, conventions, ICAO annexes, and ATS.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 11,
+    tags: [{ label: "EASA ATPL", variant: "default" }]
+  },
+  {
+    id: "easa-agk-systems",
+    num: "12",
+    title: "AGK - Systems",
+    questionCount: 0,
+    mastery: 0,
+    hue: "mint",
+    blurb: "Aircraft General Knowledge - Airframe, systems, and powerplants.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 12,
+    tags: [{ label: "EASA ATPL", variant: "solid" }]
+  },
+  {
+    id: "easa-agk-instrumentation",
+    num: "13",
+    title: "AGK - Instrumentation",
+    questionCount: 0,
+    mastery: 0,
+    hue: "signal",
+    blurb: "Flight instruments, automatic flight control systems, and warning devices.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 13,
+    tags: [{ label: "EASA ATPL", variant: "signal" }]
+  },
+  {
+    id: "easa-mass-balance",
+    num: "14",
+    title: "Mass & Balance",
+    questionCount: 0,
+    mastery: 0,
+    hue: "amber",
+    blurb: "Center of gravity calculations, limits, loading lists, and schedules.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 14,
+    tags: [{ label: "EASA ATPL", variant: "amber" }]
+  },
+  {
+    id: "easa-performance",
+    num: "15",
+    title: "Performance",
+    questionCount: 0,
+    mastery: 0,
+    hue: "sky",
+    blurb: "Takeoff, climb, cruise, and landing of single/multi-engine aeroplanes.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 15,
+    tags: [{ label: "EASA ATPL", variant: "sky" }]
+  },
+  {
+    id: "easa-flight-planning",
+    num: "16",
+    title: "Flight Planning",
+    questionCount: 0,
+    mastery: 0,
+    hue: "navy",
+    blurb: "Fuel scheduling, route selection, and weather integration blueprints.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 16,
+    tags: [{ label: "EASA ATPL", variant: "default" }]
+  },
+  {
+    id: "easa-human-perf",
+    num: "17",
+    title: "Human Performance",
+    questionCount: 0,
+    mastery: 0,
+    hue: "mint",
+    blurb: "Human physiology, psychology, navigation awareness, and cockpit stress.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 17,
+    tags: [{ label: "EASA ATPL", variant: "solid" }]
+  },
+  {
+    id: "easa-met",
+    num: "18",
+    title: "Meteorology",
+    questionCount: 0,
+    mastery: 0,
+    hue: "sky",
+    blurb: "EASA Climatology, frontal weather systems, air masses, and wind trends.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 18,
+    tags: [{ label: "EASA ATPL", variant: "sky" }]
+  },
+  {
+    id: "easa-gen-nav",
+    num: "19",
+    title: "General Navigation",
+    questionCount: 0,
+    mastery: 0,
+    hue: "navy",
+    blurb: "Great circles, rhumb lines, chart projections, and wind triangle math.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 19,
+    tags: [{ label: "EASA ATPL", variant: "default" }]
+  },
+  {
+    id: "easa-rad-nav",
+    num: "20",
+    title: "Radio Navigation",
+    questionCount: 0,
+    mastery: 0,
+    hue: "amber",
+    blurb: "NDB/ADF, VOR, DME, ILS, radar principles, GPS navigation, and GNSS.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 20,
+    tags: [{ label: "EASA ATPL", variant: "amber" }]
+  },
+  {
+    id: "easa-ops-proc",
+    num: "21",
+    title: "Operational Procedures",
+    questionCount: 0,
+    mastery: 0,
+    hue: "signal",
+    blurb: "Special operational requirements, emergency landings, windshear, and fire drills.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 21,
+    tags: [{ label: "EASA ATPL", variant: "signal" }]
+  },
+  {
+    id: "principles-of-flight",
+    num: "22",
+    title: "Principles of Flight",
+    questionCount: 180,
+    mastery: 0.55,
+    hue: "sky",
+    blurb: "Stability, aerodynamics, and high-speed flight concepts.",
+    status: "active",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 22,
+    tags: [{ label: "EASA ATPL", variant: "sky" }, { label: "ADAPTIVE", variant: "default" }],
+    subTopics: [
+      { id: "pof-stability", title: "Stability & Control", questionCount: 60, status: "reviewed" },
+      { id: "pof-highspeed", title: "High-Speed Flight", questionCount: 60, status: "in-progress" },
+      { id: "pof-sweptwing", title: "Swept-Wing Aerodynamics", questionCount: 60, status: "new" },
+    ]
+  },
+  {
+    id: "easa-communications",
+    num: "23",
+    title: "Communications",
+    questionCount: 0,
+    mastery: 0,
+    hue: "mint",
+    blurb: "VFR and IFR communications protocols, distress calls, and clearances.",
+    status: "coming-soon",
+    exam_authority: "EASA",
+    license: "ATPL",
+    sort_order: 23,
+    tags: [{ label: "EASA ATPL", variant: "solid" }]
+  },
+
+  // FAA Subjects
+  {
+    id: "faa-private",
+    num: "31",
+    title: "Private Pilot written",
+    questionCount: 0,
+    mastery: 0,
+    hue: "navy",
+    blurb: "FAA PPL written test prep: aerodynamics, FAA rules, cross-country, and weather.",
+    status: "coming-soon",
+    exam_authority: "FAA",
+    license: "PPL",
+    sort_order: 31,
+    tags: [{ label: "FAA PPL", variant: "default" }]
+  },
+  {
+    id: "faa-commercial",
+    num: "32",
+    title: "Commercial Pilot written",
+    questionCount: 0,
+    mastery: 0,
+    hue: "amber",
+    blurb: "FAA CPL written test preparation questions, airworthiness, complex systems.",
+    status: "coming-soon",
+    exam_authority: "FAA",
+    license: "CPL",
+    sort_order: 32,
+    tags: [{ label: "FAA CPL", variant: "amber" }]
+  },
+  {
+    id: "faa-instrument",
+    num: "33",
+    title: "Instrument Rating written",
+    questionCount: 0,
+    mastery: 0,
+    hue: "sky",
+    blurb: "FAA Instrument written test prep, IFR charts, procedures, holding patterns.",
+    status: "coming-soon",
+    exam_authority: "FAA",
+    license: "IR",
+    sort_order: 33,
+    tags: [{ label: "FAA IR", variant: "sky" }]
+  },
+  {
+    id: "faa-atp",
+    num: "34",
+    title: "ATP written",
+    questionCount: 0,
+    mastery: 0,
+    hue: "signal",
+    blurb: "FAA Airline Transport Pilot written test prep, Part 121, gas turbines, airline ops.",
+    status: "coming-soon",
+    exam_authority: "FAA",
+    license: "ATPL",
+    sort_order: 34,
+    tags: [{ label: "FAA ATPL", variant: "signal" }]
+  },
+
+  // Type Rating Subjects
   {
     id: "a320-systems",
-    num: "01",
-    title: "Airbus A320 Systems",
+    num: "41",
+    title: "Airbus A320 Family",
     questionCount: 1478,
     mastery: 0.72,
     hue: "navy",
     blurb: "Deep dive into A320 technical systems based on FCOM & FCTM.",
     status: "active",
-    tags: [
-      { label: "ADAPTIVE", variant: "default" },
-      { label: "ATA", variant: "mint" }
-    ],
+    exam_authority: "TYPE_RATING",
+    license: "TYPE",
+    sort_order: 41,
+    tags: [{ label: "A320 Family", variant: "default" }, { label: "ATA", variant: "mint" }],
     subTopics: [
-      { 
-        id: "ata-21", 
-        code: "ATA 21", 
-        title: "Air Conditioning", 
-        questionCount: 84, 
-        status: "reviewed", 
-        description: "Controls cabin pressure and temperature using engine bleed air." 
-      },
+      { id: "ata-21", code: "ATA 21", title: "Air Conditioning", questionCount: 84, status: "reviewed", description: "Controls cabin pressure and temperature using engine bleed air." },
       { id: "ata-22", code: "ATA 22", title: "Auto Flight", questionCount: 142, status: "reviewed" },
       { id: "ata-23", code: "ATA 23", title: "Communications", questionCount: 58, status: "new" },
       { id: "ata-24", code: "ATA 24", title: "Electrical Power", questionCount: 96, status: "in-progress" },
       { id: "ata-26", code: "ATA 26", title: "Fire Protection", questionCount: 64, status: "new" },
-      { 
-        id: "ata-27", 
-        code: "ATA 27", 
-        title: "Flight Controls", 
-        questionCount: 188, 
-        status: "reviewed",
-        description: "Two FCPCs (PRIMs) and three FCSCs (SECs) command the moving surfaces via hydraulic servocontrols. In Normal Law, the THS handles long-term pitch trim; elevators handle short-term commands. Below 100 ft the system blends to Flare law.",
-        spec: [
-          { label: "COMPUTERS", value: "2 PRIM · 3 SEC" },
-          { label: "SURFACES", value: "12" },
-          { label: "LAWS", value: "Normal · Alt · Direct · Mech" },
-          { label: "REFERENCE", value: "FCOM 1.27" }
-        ],
-        figure: {
-          caption: "FIG. 27-04 · PITCH TRIM AUTHORITY HIERARCHY",
-          source: "SOURCE: A320 FCOM REV 41 · PLATE 27-04",
-          type: "a320-flight-controls"
-        },
-        sections: [
-          { id: "27-10", title: "Aileron", description: "Two surfaces, hydraulically powered, ±25° down / ±25° up. Used as roll spoilers when speed brakes deflected." },
-          { id: "27-20", title: "Rudder", description: "Single surface with mechanical yaw damper backup. Travel limiter scheduled with airspeed." },
-          { id: "27-30", title: "Elevator & THS", description: "Two elevators ±30°, THS −13° to +4°, driven by FCPCs through screwjack. Manual trim wheel mechanical." },
-          { id: "27-50", title: "Spoilers", description: "Five panels per wing — speed brakes (panels 2–4), ground spoilers (all), roll assist." }
-        ]
-      },
+      { id: "ata-27", code: "ATA 27", title: "Flight Controls", questionCount: 188, status: "reviewed", description: "Two FCPCs and three FCSCs command the moving surfaces.", spec: [{ label: "COMPUTERS", value: "2 PRIM · 3 SEC" }], figure: { caption: "PITCH AUTHORITY", source: "FCOM", type: "a320-flight-controls" }, sections: [{ id: "27-10", title: "Aileron", description: "Two surfaces ±25°." }] },
       { id: "ata-28", code: "ATA 28", title: "Fuel", questionCount: 72, status: "in-progress" },
       { id: "ata-29", code: "ATA 29", title: "Hydraulic Power", questionCount: 108, status: "reviewed" },
       { id: "ata-30", code: "ATA 30", title: "Ice & Rain Protection", questionCount: 54, status: "reviewed" },
@@ -139,101 +459,60 @@ export const rawSubjects: SubjectItem[] = [
     ]
   },
   {
-    id: "meteorology",
-    num: "02",
-    title: "Meteorology",
-    questionCount: 100,
-    mastery: 0.45,
-    hue: "sky",
-    blurb: "Decoding aviation weather, air masses, frontal structures, and reports.",
-    status: "active",
-    tags: [{ label: "TIMED", variant: "solid" }],
-    subTopics: [
-      { id: "met-1", title: "Met Test 1", questionCount: 50, status: "reviewed" },
-      { id: "met-2", title: "Met Test 2", questionCount: 50, status: "new" },
-    ]
-  },
-  {
-    id: "air-regulation",
-    num: "03",
-    title: "Air Regulation",
-    questionCount: 50,
-    mastery: 0.88,
-    hue: "amber",
-    blurb: "Rules of the air, DGCA/EASA conventions, and procedures.",
-    status: "active",
-    tags: [{ label: "NEGATIVE MARKING", variant: "signal" }],
-    subTopics: [
-      { id: "reg-1", title: "Air Reg Test 1", questionCount: 50, status: "reviewed" }
-    ]
-  },
-  {
-    id: "air-navigation",
-    num: "04",
-    title: "Air Navigation",
-    questionCount: 450,
-    mastery: 0.25,
-    hue: "navy",
-    blurb: "Gen Nav, Radio Nav, and Instruments. Chart your course.",
-    status: "active",
-    tags: [{ label: "COMPLEX", variant: "amber" }],
-    subTopics: [
-      { id: "nav-gen", title: "General Navigation", questionCount: 200, status: "in-progress" },
-      { id: "nav-rad", title: "Radio Navigation", questionCount: 150, status: "new" },
-      { id: "nav-inst", title: "Aircraft Instruments", questionCount: 100, status: "reviewed" },
-    ]
-  },
-  {
-    id: "atg",
-    num: "05",
-    title: "Aircraft Technical General",
+    id: "type-b737",
+    num: "42",
+    title: "Boeing 737 Classic/NG/MAX",
     questionCount: 0,
     mastery: 0,
     hue: "mint",
-    blurb: "Airframes, systems, and powerplants (general).",
+    blurb: "B737 type rating preparation, hydraulic redundancy, and Boeing FMA rules.",
     status: "coming-soon",
-    tags: []
+    exam_authority: "TYPE_RATING",
+    license: "TYPE",
+    sort_order: 42,
+    tags: [{ label: "B737 Family", variant: "solid" }]
   },
   {
-    id: "flight-performance",
-    num: "06",
-    title: "Flight Performance",
+    id: "type-a330",
+    num: "43",
+    title: "Airbus A330 Type Exam",
+    questionCount: 0,
+    mastery: 0,
+    hue: "sky",
+    blurb: "Airbus widebody A330 technical differences, fuel transfer systems, and cockpit details.",
+    status: "coming-soon",
+    exam_authority: "TYPE_RATING",
+    license: "TYPE",
+    sort_order: 43,
+    tags: [{ label: "A330 widebody", variant: "sky" }]
+  },
+  {
+    id: "type-b777",
+    num: "44",
+    title: "Boeing 777 Type Exam",
     questionCount: 0,
     mastery: 0,
     hue: "navy",
-    blurb: "Takeoff, en-route, and landing performance calculations.",
+    blurb: "Boeing 777 systems, fly-by-wire envelopes, GE90 limits, and checklist operations.",
     status: "coming-soon",
-    tags: []
+    exam_authority: "TYPE_RATING",
+    license: "TYPE",
+    sort_order: 44,
+    tags: [{ label: "B777 widebody", variant: "default" }]
   },
   {
-    id: "principles-of-flight",
-    num: "07",
-    title: "Principles of Flight",
-    questionCount: 180,
-    mastery: 0.55,
-    hue: "sky",
-    blurb: "Stability, aerodynamics, and high-speed flight concepts.",
-    status: "active",
-    tags: [{ label: "ADAPTIVE", variant: "default" }],
-    subTopics: [
-      { id: "pof-stability", title: "Stability & Control", questionCount: 60, status: "reviewed" },
-      { id: "pof-highspeed", title: "High-Speed Flight", questionCount: 60, status: "in-progress" },
-      { id: "pof-sweptwing", title: "Swept-Wing Aerodynamics", questionCount: 60, status: "new" },
-    ]
-  },
-  {
-    id: "brain-booster",
-    num: "08",
-    title: "The Brain Booster",
-    questionCount: 120,
-    mastery: 0.10,
-    hue: "signal",
-    blurb: "Full mock papers. Final preparation before the authority exam.",
-    status: "active",
-    tags: [{ label: "MIXED SETS", variant: "solid" }],
-    subTopics: [
-      { id: "mock-paper-1", title: "Mock Paper 1", questionCount: 120, status: "new" }
-    ]
+    id: "type-atr72",
+    num: "45",
+    title: "ATR 72 Type Exam",
+    questionCount: 0,
+    mastery: 0,
+    hue: "amber",
+    blurb: "ATR 72 turboprop mechanical systems, PEC indicators, and regional profiles.",
+    status: "coming-soon",
+    exam_authority: "TYPE_RATING",
+    license: "TYPE",
+    sort_order: 45,
+    tags: [{ label: "ATR Turboprop", variant: "amber" }]
   }
 ];
 

@@ -19,6 +19,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { useLogbook } from "../hooks/useLogbook";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { useToast } from "../components/ui/Toast";
+import { ProGate } from "../components/ProGate";
+import { MasterySunburst } from "../components/MasterySunburst";
 
 export default function AnalyticsView() {
   const { loading, user } = useAuth();
@@ -47,13 +49,42 @@ export default function AnalyticsView() {
   // Loading state
   if (loading || logbookLoading || loadingSubjects) {
     return (
-      <div className="relative min-h-[70vh] flex flex-col items-center justify-center p-4">
-        <div className="absolute inset-0 blueprint pointer-events-none opacity-20 z-0" />
-        <div className="relative z-10 w-full max-w-sm text-center space-y-4 flex flex-col items-center">
-          <div className="w-12 h-12 rounded-full border-t-2 border-navy animate-spin" />
-          <p className="font-mono text-xs uppercase tracking-widest text-muted-2">
-            Retrieving flight profile...
-          </p>
+      <div className="relative min-h-screen">
+        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
+        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <div className="relative z-10 px-4 py-8 md:py-16 max-w-[820px] mx-auto space-y-12 animate-pulse">
+          {/* Header area */}
+          <div className="space-y-3">
+            <span className="h-4 bg-muted-2/25 w-32 rounded font-mono inline-block"></span>
+            <div className="h-10 bg-ink/10 w-[280px] md:w-[400px] rounded-lg"></div>
+            <div className="h-4 bg-muted/20 w-80 rounded"></div>
+          </div>
+          
+          {/* Diagnostic AI panel layout skeleton */}
+          <div className="bg-paper border border-rule/50 rounded-2xl p-6 h-40 flex flex-col justify-between">
+            <div className="space-y-2">
+              <div className="h-5 bg-ink/10 w-44 rounded"></div>
+              <div className="h-3 bg-muted/20 w-full rounded"></div>
+              <div className="h-3 bg-muted/20 w-5/6 rounded"></div>
+            </div>
+            <div className="h-8 bg-ink/10 w-32 rounded-lg"></div>
+          </div>
+
+          {/* Interactive Sunburst area placeholder */}
+          <div className="bg-paper border border-rule/50 rounded-2xl p-6 h-96 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="w-56 h-56 rounded-full bg-ink/5 border-2 border-rule/30 flex items-center justify-center relative">
+              <div className="w-32 h-32 rounded-full bg-paper border border-rule/40"></div>
+            </div>
+            <div className="flex-1 space-y-4 w-full">
+              <div className="h-6 bg-ink/10 w-2/3 rounded"></div>
+              <div className="h-4 bg-muted/20 w-full rounded"></div>
+              <div className="h-4 bg-muted/20 w-4/5 rounded"></div>
+              <div className="grid grid-cols-2 gap-4 pt-4">
+                <div className="h-12 bg-muted/10 rounded"></div>
+                <div className="h-12 bg-muted/10 rounded"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -300,7 +331,8 @@ export default function AnalyticsView() {
     }));
 
   return (
-    <div className="relative min-h-screen pb-20">
+    <ProGate type="analytics">
+      <div className="relative min-h-screen pb-20">
       <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
       <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
 
@@ -329,7 +361,7 @@ export default function AnalyticsView() {
             Mastery Heatmap & Telemetry
           </h2>
           <p className="font-sans text-muted max-w-lg mb-6 leading-relaxed">
-            Dive deep into your performance telemetry, weak subjects, and mock
+            Dive deep into your performance telemetry, key subjects, and mock
             exam history. The Mastery Heatmap visualizes your competency across
             different ATA chapters and subjects. Focus your efforts on the red
             and orange zones.
@@ -339,7 +371,7 @@ export default function AnalyticsView() {
         {/* WEAK AREA COACH */}
         <section className="flex flex-col h-full mb-16">
           <h2 className="font-mono text-sm tracking-widest text-ink uppercase mb-6 flex items-center gap-2">
-            <Sparkles size={16} className="text-mint" /> Weak-Area Coach
+            <Sparkles size={16} className="text-mint" /> Pacing & Alignment Coach
           </h2>
           <Card className="bg-mint-soft border border-mint h-full flex flex-col items-start min-h-[160px]">
             <Chip
@@ -360,7 +392,7 @@ export default function AnalyticsView() {
                 <p className="font-sans text-sm text-ink-2 leading-relaxed max-w-xl">
                   Generate a targeted study plan directly based on your
                   performance over the last 28 days. The coach analyzes your
-                  weak topics and mock exams to provide optimal revision
+                  priority topics and mock exams to provide optimal revision
                   strategy.
                 </p>
                 <Button
@@ -386,6 +418,19 @@ export default function AnalyticsView() {
               </div>
             )}
           </Card>
+        </section>
+
+        {/* INTERACTIVE MASTERY SUNBURST */}
+        <section className="mb-16">
+          <div className="mb-6">
+            <h2 className="font-mono text-sm tracking-widest text-ink uppercase flex items-center gap-2">
+              <Sparkles size={16} className="text-amber" /> Interactive Hierarchy Sunburst
+            </h2>
+            <p className="font-sans text-xs text-muted mt-1">
+              Interactive radial layout visualizing ATA chapters, subjects, and performance distributions. Explore depths seamlessly.
+            </p>
+          </div>
+          <MasterySunburst subjectsList={subjectsList} logbook={logbook} />
         </section>
 
         {/* MASTERY HEATMAP & INTENSITY */}
@@ -645,5 +690,6 @@ export default function AnalyticsView() {
         </section>
       </div>
     </div>
-  );
+  </ProGate>
+);
 }

@@ -7,14 +7,40 @@ import { SubjectItem } from "../data/topics";
 import { fetchMergedSubjects } from "../lib/content";
 import { useLogbook } from "../hooks/useLogbook";
 import { getSubjectMastery, getDailyReviewItems } from "../lib/logbook";
+import { useAuth } from "../contexts/AuthContext";
+import { fetchUserQuestionProgress, getLocalQuestionProgress } from "../lib/spacedRepetition";
+import { Compass, Milestone } from "lucide-react";
+import { ProGate } from "../components/ProGate";
 
 export default function ModulesView() {
   const navigate = useNavigate();
 
   const { logbook } = useLogbook();
+  const { user, userData } = useAuth();
 
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [questionProgress, setQuestionProgress] = useState<Record<string, any>>({});
+
+  const [sortOrder, setSortOrder] = useState<"weakest" | "strongest" | "az">("weakest");
+  const [syllabus, setSyllabus] = useState<"All" | "EASA" | "DGCA" | "FAA" | "TYPE_RATING">("All");
+  const [activeTab, setActiveTab] = useState("All");
+  const [showMasteryOverlay, setShowMasteryOverlay] = useState(false);
+
+  useEffect(() => {
+    async function loadQuestionProgress() {
+      try {
+        const uid = user?.uid || userData?.uid || userData?.id || null;
+        const prog = uid 
+          ? await fetchUserQuestionProgress(uid) 
+          : await getLocalQuestionProgress();
+        setQuestionProgress(prog);
+      } catch (err) {
+        console.error("Error loading question progress in ModulesView:", err);
+      }
+    }
+    loadQuestionProgress();
+  }, [user?.uid, userData?.id]);
 
   useEffect(() => {
     async function loadSubjects() {
@@ -30,20 +56,30 @@ export default function ModulesView() {
     loadSubjects();
   }, []);
 
+  // Sync syllabus state based on target onboarding exam automatically
+  useEffect(() => {
+    if (userData?.targetExam) {
+      const examStr = String(userData.targetExam).toLowerCase();
+      if (examStr.includes("dgca")) {
+        setSyllabus("DGCA");
+        setSortOrder("az"); // Order sequentially by sequence indexing
+      } else if (examStr.includes("easa")) {
+        setSyllabus("EASA");
+        setSortOrder("az");
+      } else if (examStr.includes("faa")) {
+        setSyllabus("FAA");
+        setSortOrder("az");
+      } else if (examStr.includes("type")) {
+        setSyllabus("TYPE_RATING");
+        setSortOrder("az");
+      }
+    }
+  }, [userData]);
+
   const totalSubjectsCount = subjectsList.length;
   const totalQuestions = subjectsList.reduce((sum, s) => sum + s.questionCount, 0);
 
   const dailyReviewItems = getDailyReviewItems(logbook);
-
-  const [sortOrder, setSortOrder] = useState<"weakest" | "strongest" | "az">("weakest");
-  const [syllabus, setSyllabus] = useState<"All" | "EASA" | "DGCA">("EASA");
-  const [activeTab, setActiveTab] = useState("All");
-  const [showMasteryOverlay, setShowMasteryOverlay] = useState(false);
-
-  const uniqueCategoriesFromTopics = Array.from(new Set(
-    subjectsList.map(s => ((s as any).category || s.title || "").trim())
-  )).filter(Boolean);
-  const filterTabs = ["All", ...uniqueCategoriesFromTopics];
 
   const getHueColor = (hue: string) => {
     switch (hue) {
@@ -58,14 +94,51 @@ export default function ModulesView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-bg relative">
-        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin"></div>
+      <div className="relative min-h-screen">
+        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
+        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <div className="relative z-10 px-4 py-8 md:py-16 max-w-7xl mx-auto space-y-12 animate-pulse">
+          <div className="max-w-xl space-y-4">
+            <span className="h-4 bg-muted-2/25 w-32 rounded font-mono inline-block"></span>
+            <div className="h-10 bg-ink/10 w-2/3 rounded-lg"></div>
+            <div className="h-4 bg-muted/20 w-full rounded"></div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-paper border border-rule/50 rounded-2xl p-6 h-56 flex flex-col justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="h-5 bg-ink/10 w-24 rounded"></div>
+                    <div className="h-4 bg-muted-2/20 w-12 rounded"></div>
+                  </div>
+                  <div className="h-6 bg-ink/10 w-3/4 rounded pt-1"></div>
+                  <div className="h-4 bg-muted/20 w-5/6 rounded"></div>
+                </div>
+                <div className="border-t border-rule/30 pt-4 flex justify-between items-center">
+                  <div className="h-4 bg-muted/20 w-20 rounded"></div>
+                  <div className="h-6 bg-ink/10 w-16 rounded-full"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
 
   let displayedSubjects = [...subjectsList];
 
+  // 1. Dynamic filtering by syllabus authority (exam authority)
+  if (syllabus !== "All") {
+    displayedSubjects = displayedSubjects.filter(s => {
+      const auth = String((s as any).exam_authority || s.exam_authority || "").toUpperCase().replace('-', '_');
+      const targetAuth = String(syllabus).toUpperCase().replace('-', '_');
+      return auth === targetAuth;
+    });
+  }
+
+  // 2. Local fallback category tab filtering
   if (activeTab !== "All") {
     displayedSubjects = displayedSubjects.filter(s => {
       const title = (s.title || "").toLowerCase().trim();
@@ -75,12 +148,42 @@ export default function ModulesView() {
     });
   }
 
+  // Calculate stats based on current syllabus filter for waypoint flow logic
+  const trackSubjects = [...subjectsList].filter(s => {
+    if (syllabus === "All") return true;
+    const auth = String((s as any).exam_authority || s.exam_authority || "").toUpperCase().replace('-', '_');
+    const targetAuth = String(syllabus).toUpperCase().replace('-', '_');
+    return auth === targetAuth;
+  }).sort((a, b) => a.title.localeCompare(b.title));
+
+  const sortedWaypoints = trackSubjects.map(sub => {
+    const masteryVal = getSubjectMastery(logbook, sub, questionProgress);
+    return {
+      id: sub.id,
+      title: sub.title,
+      mastery: masteryVal,
+      isCompleted: masteryVal >= 0.8,
+    };
+  });
+
+  const nextWaypointRecommendation = sortedWaypoints.find(w => !w.isCompleted) || sortedWaypoints[0];
+
+  const uniqueCategoriesFromTopics = Array.from(new Set(
+    displayedSubjects.map(s => ((s as any).category || "").trim())
+  )).filter(Boolean);
+  const filterTabs = ["All", ...uniqueCategoriesFromTopics];
+
   displayedSubjects.sort((a, b) => {
-    const aMastery = getSubjectMastery(logbook, a);
-    const bMastery = getSubjectMastery(logbook, b);
+    const aMastery = getSubjectMastery(logbook, a, questionProgress);
+    const bMastery = getSubjectMastery(logbook, b, questionProgress);
     if (sortOrder === "weakest") return aMastery - bMastery;
     if (sortOrder === "strongest") return bMastery - aMastery;
-    if (sortOrder === "az") return a.title.localeCompare(b.title);
+    if (sortOrder === "az") {
+      // Sort sequentially or alphabetically accurately
+      const aVal = a.sort_order || parseInt(a.num) || 99;
+      const bVal = b.sort_order || parseInt(b.num) || 99;
+      return aVal - bVal;
+    }
     return 0;
   });
 
@@ -124,9 +227,11 @@ export default function ModulesView() {
                   value={syllabus}
                   onChange={(e) => setSyllabus(e.target.value as any)}
                 >
-                  <option value="EASA">Syllabus: EASA</option>
-                  <option value="DGCA">Syllabus: DGCA</option>
-                  <option value="All">Syllabus: All</option>
+                  <option value="All">Syllabus: All authorities</option>
+                  <option value="DGCA">Syllabus: DGCA (India)</option>
+                  <option value="EASA">Syllabus: EASA (Europe)</option>
+                  <option value="FAA">Syllabus: FAA (USA)</option>
+                  <option value="TYPE_RATING">Syllabus: Type Ratings</option>
                 </select>
                 <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-2 pointer-events-none" />
               </div>
@@ -170,6 +275,72 @@ export default function ModulesView() {
           </div>
         </div>
 
+        {/* GUIDED TRACK PILOT HIGHWAY SECTION */}
+        {syllabus !== "All" && sortedWaypoints.length > 0 && (
+          <div className="mb-10 p-6 bg-white border border-rule rounded-2xl shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 border border-rule bg-[#fbfaf6] text-navy rounded-xl">
+                  <Compass size={22} className="animate-spin-slow text-navy" />
+                </div>
+                <div>
+                  <div className="font-mono text-[9px] text-muted-2 uppercase tracking-wider font-bold">PILOT RECOMMENDED ROADMAP</div>
+                  <h4 className="font-serif text-lg font-medium text-ink">Guided Flight study Path: <span className="text-navy italic">{syllabus} Track</span></h4>
+                </div>
+              </div>
+              {nextWaypointRecommendation && (
+                <div className="flex items-center gap-2 p-2 bg-sky-soft border border-sky/20 rounded-xl">
+                  <Milestone size={14} className="text-sky shrink-0" />
+                  <span className="font-sans text-[11px] text-ink">
+                    Next checkpoint: <strong className="text-navy font-semibold">{nextWaypointRecommendation.title}</strong>
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Horizontal Timeline Connector Map */}
+            <div className="relative pt-4 pb-2">
+              <div className="absolute top-[28px] left-4 right-4 h-0.5 bg-rule z-0" />
+              <div className="relative z-10 flex items-center justify-between overflow-x-auto no-scrollbar gap-8 px-2">
+                {sortedWaypoints.map((way, idx) => {
+                  const isActiveRecommendation = nextWaypointRecommendation?.id === way.id;
+                  return (
+                    <div 
+                      key={way.id} 
+                      onClick={() => navigate(`/topic/${way.id}`)}
+                      className="flex flex-col items-center text-center cursor-pointer min-w-[110px] select-none group"
+                    >
+                      <div 
+                        className={`w-6 h-6 rounded-full border-2 flex items-center justify-center font-mono text-[10px] font-bold transition-all ${
+                          way.isCompleted 
+                            ? 'bg-mint border-mint text-emerald-800' 
+                            : isActiveRecommendation
+                              ? 'bg-ink border-ink text-bg ring-4 ring-bg-2 scale-110'
+                              : 'bg-paper border-rule text-muted hover:border-ink/50'
+                        }`}
+                      >
+                        {way.isCompleted ? "✓" : idx + 1}
+                      </div>
+                      <span className={`block font-sans text-[11px] mt-2 font-medium leading-tight truncate max-w-[124px] ${
+                        isActiveRecommendation ? 'text-ink font-bold group-hover:underline' : 'text-muted group-hover:text-ink'
+                      }`}>
+                        {way.title}
+                      </span>
+                      <span className="block font-mono text-[8px] text-muted-2 mt-0.5 tracking-tight uppercase">
+                        {Math.round(way.mastery * 100)}% mastery
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <p className="font-sans text-[12px] text-muted leading-relaxed font-light">
+              This sequential syllabus has been assembled dynamically for Narendra using ICAO flight certification sequences. Complete waypoint study criteria to unlock full mock competence metrics.
+            </p>
+          </div>
+        )}
+
         {/* REVIEW BANNER */}
         <AnimatePresence>
           {dailyReviewItems.length > 0 && (
@@ -208,7 +379,7 @@ export default function ModulesView() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             {displayedSubjects.map((sub: SubjectItem, idx: number) => {
             const isComingSoon = sub.status === "coming-soon";
-            const actualMastery = getSubjectMastery(logbook, sub);
+            const actualMastery = getSubjectMastery(logbook, sub, questionProgress);
             
             const hasSavedState = !!localStorage.getItem(`heading_quiz_state_${sub.id}`) || 
                                   (sub.subTopics?.some(t => !!localStorage.getItem(`heading_quiz_state_${t.id}`)) ?? false);
@@ -328,9 +499,11 @@ export default function ModulesView() {
             }
 
             return (
-              <Link to={`/topic/${sub.id}`} key={sub.id} className="block h-full outline-none">
-                {cardContent}
-              </Link>
+              <ProGate key={sub.id} type="subject" isUnlocked={sub.is_free}>
+                <Link to={`/topic/${sub.id}`} className="block h-full outline-none">
+                  {cardContent}
+                </Link>
+              </ProGate>
             );
           })}
         </div>

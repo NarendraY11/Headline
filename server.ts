@@ -3,6 +3,46 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+import Razorpay from "razorpay";
+
+let razorpayClient: any = null;
+
+function getRazorpay() {
+  if (!razorpayClient) {
+    const keyId = process.env.RAZORPAY_KEY_ID;
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keyId || !keySecret) {
+      throw new Error("Razorpay environment variables RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET are missing.");
+    }
+    razorpayClient = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
+    });
+  }
+  return razorpayClient;
+}
+
+const getSupabaseAdmin = () => {
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY environment variable is required.");
+  }
+  return createClient(supabaseUrl, serviceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+};
+
+const verifyWebhookSignature = (body: string, signature: string, secret: string) => {
+  const shasum = crypto.createHmac("sha256", secret);
+  shasum.update(body);
+  const digest = shasum.digest("hex");
+  return digest === signature;
+};
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -25,6 +65,73 @@ const ai = new GoogleGenAI({
 async function startServer() {
   const app = express();
   const PORT = 3000;
+
+  // === Razorpay Webhook (must accept raw body, so declared before express.json()) ===
+  app.post("/api/payment/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    try {
+      const signature = req.headers["x-razorpay-signature"] as string;
+      const bodyBuffer = req.body;
+      const rawBody = bodyBuffer ? bodyBuffer.toString("utf8") : "";
+
+      const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+      if (webhookSecret) {
+        if (!signature) {
+          console.error("Webhook signature header is missing.");
+          return res.status(400).json({ error: "Missing signature header" });
+        }
+        const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
+        if (!isValid) {
+          console.error("Webhook signature mismatch.");
+          return res.status(400).json({ error: "Invalid signature" });
+        }
+      } else {
+        console.warn("Warning: RAZORPAY_WEBHOOK_SECRET is not set. Bypassing signature verification.");
+      }
+
+      const payload = JSON.parse(rawBody);
+      const event = payload.event;
+      console.log(`Razorpay Webhook Event Received: ${event}`);
+
+      if (event === "order.paid" || event === "payment.captured") {
+        const orderNotes = payload.payload?.order?.entity?.notes || {};
+        const paymentNotes = payload.payload?.payment?.entity?.notes || {};
+        
+        const userId = orderNotes.userId || paymentNotes.userId;
+        const interval = orderNotes.interval || paymentNotes.interval || "monthly";
+
+        if (userId) {
+          const startedAt = new Date().toISOString();
+          const expiresAt = new Date();
+          if (interval === "yearly") {
+            expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+          } else {
+            expiresAt.setMonth(expiresAt.getMonth() + 1);
+          }
+
+          const admin = getSupabaseAdmin();
+          const { error } = await admin
+            .from("profiles")
+            .update({
+              plan: "pro",
+              plan_started_at: startedAt,
+              plan_expires_at: expiresAt.toISOString(),
+            })
+            .eq("id", userId);
+
+          if (error) {
+            console.error(`Failed to update profile for user ${userId}:`, error);
+            return res.status(500).json({ error: "Database update failed" });
+          }
+          console.log(`Successfully updated user ${userId} to Pro plan (${interval})`);
+        }
+      }
+
+      res.json({ status: "ok" });
+    } catch (err: any) {
+      console.error("Error in Razorpay Webhook:", err);
+      res.status(500).json({ error: err.message || "Internal server error" });
+    }
+  });
 
   app.use(express.json());
 
@@ -50,27 +157,24 @@ async function startServer() {
   };
 
   // === Rate Limiting Middleware ===
-  // uid -> timestamps of requests made within the last hour
-  const userRequestTimestamps = new Map<string, number[]>();
+  // uid/IP -> timestamps of requests made within the last minute
+  const clientRequestTimestamps = new Map<string, number[]>();
 
   const rateLimiter = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const uid = (req as any).uid;
-    if (!uid) {
-      return res.status(401).json({ error: "Unauthorized: Missing identity context for rate limiting." });
-    }
+    const clientKey = (req as any).uid || req.ip || req.headers["x-forwarded-for"] || "anonymous";
 
     const now = Date.now();
-    const oneHourAgo = now - 60 * 60 * 1000;
+    const oneMinuteAgo = now - 60 * 1000;
 
-    let timestamps = userRequestTimestamps.get(uid) || [];
-    timestamps = timestamps.filter(t => t > oneHourAgo);
+    let timestamps = clientRequestTimestamps.get(String(clientKey)) || [];
+    timestamps = timestamps.filter(t => t > oneMinuteAgo);
 
-    if (timestamps.length >= 20) {
-      return res.status(429).json({ error: "Rate limit reached. Try again later." });
+    if (timestamps.length >= 60) {
+      return res.status(429).json({ error: "Rate limit reached. Please try again after 1 minute." });
     }
 
     timestamps.push(now);
-    userRequestTimestamps.set(uid, timestamps);
+    clientRequestTimestamps.set(String(clientKey), timestamps);
     next();
   };
 
@@ -80,6 +184,136 @@ async function startServer() {
     timestamp: number;
   }
   const weatherCache = new Map<string, WeatherCacheEntry>();
+
+  // === Razorpay Order Creation Endpoint ===
+  app.post("/api/payment/create-order", requireAuth, rateLimiter, async (req, res) => {
+    try {
+      const { interval = "monthly" } = req.body;
+      const amount = interval === "yearly" ? 2999 * 100 : 499 * 100;
+
+      const rz = getRazorpay();
+      const options = {
+        amount,
+        currency: "INR",
+        receipt: `receipt_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        notes: {
+          userId: (req as any).uid,
+          interval,
+        },
+      };
+
+      const order = await rz.orders.create(options);
+      res.json(order);
+    } catch (error: any) {
+      console.error("Error creating Razorpay order:", error);
+      res.status(500).json({ error: error.message || "Failed to create payment order. Ensure RAZORPAY_KEY_ID is set." });
+    }
+  });
+
+  // === Razorpay Signature Verification Endpoint ===
+  app.post("/api/payment/verify", requireAuth, rateLimiter, async (req, res) => {
+    try {
+      const { razorpay_payment_id, razorpay_order_id, razorpay_signature, interval } = req.body;
+      const signaturePayload = `${razorpay_order_id}|${razorpay_payment_id}`;
+      
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+      if (!keySecret) {
+        throw new Error("RAZORPAY_KEY_SECRET is missing.");
+      }
+
+      const isValid = verifyWebhookSignature(signaturePayload, razorpay_signature, keySecret);
+      if (!isValid) {
+        return res.status(400).json({ error: "Signature verification failed." });
+      }
+
+      const startedAt = new Date().toISOString();
+      const expiresAt = new Date();
+      if (interval === "yearly") {
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      } else {
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+      }
+
+      const admin = getSupabaseAdmin();
+      const { error } = await admin
+        .from("profiles")
+        .update({
+          plan: "pro",
+          plan_started_at: startedAt,
+          plan_expires_at: expiresAt.toISOString(),
+        })
+        .eq("id", (req as any).uid);
+
+      if (error) {
+        throw error;
+      }
+
+      // Check for active pending referral link for this user
+      try {
+        const { data: referral, error: refLookupErr } = await admin
+          .from("referrals")
+          .select("*")
+          .eq("referred_id", (req as any).uid)
+          .eq("status", "pending")
+          .maybeSingle();
+
+        if (referral && !refLookupErr) {
+          // 1. Mark referral as completed and reward granted
+          await admin
+            .from("referrals")
+            .update({
+              status: "completed",
+              reward_granted: true
+            })
+            .eq("id", referral.id);
+
+          // 2. Grant 30 days free Pro to the referrer
+          const { data: referrerProfile } = await admin
+            .from("profiles")
+            .select("plan, plan_expires_at")
+            .eq("id", referral.referrer_id)
+            .maybeSingle();
+
+          if (referrerProfile) {
+            let refExpiresOn = new Date();
+            if (referrerProfile.plan === "pro" && referrerProfile.plan_expires_at) {
+              refExpiresOn = new Date(referrerProfile.plan_expires_at);
+            }
+            refExpiresOn.setDate(refExpiresOn.getDate() + 30); // 30 extra days reward
+
+            await admin
+              .from("profiles")
+              .update({
+                plan: "pro",
+                plan_expires_at: refExpiresOn.toISOString(),
+                plan_started_at: new Date().toISOString()
+              })
+              .eq("id", referral.referrer_id);
+          }
+
+          // 3. Grant 30 days additional free Pro to the upgraded referred user (extend by 30 days)
+          const extendedExpiresAt = new Date(expiresAt);
+          extendedExpiresAt.setDate(extendedExpiresAt.getDate() + 30);
+          
+          await admin
+            .from("profiles")
+            .update({
+              plan_expires_at: extendedExpiresAt.toISOString()
+            })
+            .eq("id", (req as any).uid);
+
+          console.log(`Referral rewards processed: Referrer ${referral.referrer_id} & Referred ${(req as any).uid} credited with 30 days Pro.`);
+        }
+      } catch (refErr) {
+        console.error("Non-blocking referral reward grant error:", refErr);
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Payment verification failed:", error);
+      res.status(500).json({ error: error.message || "Failed to verify signature." });
+    }
+  });
 
   // === AI FEATURE 1: "Ask the Instructor" ===
   app.post("/api/instructor/explain", requireAuth, rateLimiter, async (req, res) => {
@@ -253,6 +487,142 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
       // Silently handle failed fetches
       res.status(500).json({ error: "Failed to fetch weather." });
     }
+  });
+
+  // === DYNAMIC SITEMAP ENGINE ===
+  app.get("/sitemap.xml", async (req, res) => {
+    const host = req.headers["x-forwarded-host"] || req.headers.host || "heading.com";
+    const proto = req.headers["x-forwarded-proto"] || "https";
+    const baseUrl = `${proto}://${host}`;
+
+    // Define page-type priority and changefreq settings
+    interface SiteMapConfig {
+      priority: string;
+      changefreq: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
+    }
+
+    const CONFIG_BY_PAGE_TYPE: Record<string, SiteMapConfig> = {
+      home: { priority: "1.0", changefreq: "daily" },
+      exam_landing: { priority: "0.95", changefreq: "daily" }, // Higher priority & frequent check-ins for core exam landing pages
+      topic_module: { priority: "0.80", changefreq: "weekly" },
+      blog_article: { priority: "0.75", changefreq: "weekly" },
+      marketing: { priority: "0.65", changefreq: "monthly" },
+      legal: { priority: "0.30", changefreq: "yearly" }
+    };
+
+    const staticRoutes = [
+      { path: "", type: "home" },
+      { path: "/about", type: "marketing" },
+      { path: "/pricing", type: "marketing" },
+      { path: "/contact", type: "marketing" },
+      { path: "/blog", type: "marketing" },
+      { path: "/privacy", type: "legal" },
+      { path: "/terms", type: "legal" },
+      { path: "/refund", type: "legal" },
+    ];
+
+    const examPaths = [
+      "/exams/dgca-cpl",
+      "/exams/dgca-atpl",
+      "/exams/easa-atpl",
+      "/exams/faa-written",
+      "/exams/a320-type-rating",
+    ];
+
+    const staticBlogSlugs = [
+      "dgca-cpl-air-navigation-syllabus-2026",
+      "how-to-pass-easa-meteorology",
+      "a320-flight-control-computers-elac-sec-fac",
+      "complete-guide-faa-written-exams-acs",
+    ];
+
+    let blogSlugs = [...staticBlogSlugs];
+    try {
+      const adminSupabase = getSupabaseAdmin();
+      const { data } = await adminSupabase
+        .from("blog_posts")
+        .select("slug")
+        .eq("status", "published");
+      if (data && data.length > 0) {
+        const fetchedSlugs = data.map((item: any) => item.slug);
+        blogSlugs = Array.from(new Set([...staticBlogSlugs, ...fetchedSlugs]));
+      }
+    } catch (e) {
+      console.warn("Failed to retrieve dynamic blog posts for sitemap from Supabase, resorting to static slugs.");
+    }
+
+    const topicPaths = [
+      "/topic/air-navigation",
+      "/topic/meteorology",
+      "/topic/air-regulations",
+      "/topic/technical-general",
+      "/topic/human-performance",
+      "/topic/a320-systems",
+    ];
+
+    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
+
+    // 1. Static routes (Home, Marketing, Legal)
+    staticRoutes.forEach(({ path: r, type }) => {
+      const config = CONFIG_BY_PAGE_TYPE[type];
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}${r}</loc>\n`;
+      xml += `    <changefreq>${config.changefreq}</changefreq>\n`;
+      xml += `    <priority>${config.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    // 2. Exam landing pages (Highly promoted)
+    examPaths.forEach(r => {
+      const config = CONFIG_BY_PAGE_TYPE["exam_landing"];
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}${r}</loc>\n`;
+      xml += `    <changefreq>${config.changefreq}</changefreq>\n`;
+      xml += `    <priority>${config.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    // 3. Topic modules
+    topicPaths.forEach(tp => {
+      const config = CONFIG_BY_PAGE_TYPE["topic_module"];
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}${tp}</loc>\n`;
+      xml += `    <changefreq>${config.changefreq}</changefreq>\n`;
+      xml += `    <priority>${config.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    // 4. Blog articles
+    blogSlugs.forEach(slug => {
+      const config = CONFIG_BY_PAGE_TYPE["blog_article"];
+      xml += `  <url>\n`;
+      xml += `    <loc>${baseUrl}/blog/${slug}</loc>\n`;
+      xml += `    <changefreq>${config.changefreq}</changefreq>\n`;
+      xml += `    <priority>${config.priority}</priority>\n`;
+      xml += `  </url>\n`;
+    });
+
+    xml += `</urlset>`;
+
+    res.header("Content-Type", "application/xml");
+    res.status(200).send(xml);
+  });
+
+  // === DYNAMIC ROBOTS.TXT ENGINE ===
+  app.get("/robots.txt", (req, res) => {
+    const host = req.headers["x-forwarded-host"] || req.headers.host || "heading.com";
+    const proto = req.headers["x-forwarded-proto"] || "https";
+    const baseUrl = `${proto}://${host}`;
+    
+    let content = `User-agent: *\n`;
+    content += `Allow: /\n`;
+    content += `Disallow: /admin\n`;
+    content += `Disallow: /admin/\n\n`;
+    content += `Sitemap: ${baseUrl}/sitemap.xml\n`;
+    
+    res.header("Content-Type", "text/plain");
+    res.status(200).send(content);
   });
 
   // Vite middleware for development

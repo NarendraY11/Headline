@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Chip, Button, Card } from "../components/Atoms";
 import { Question } from "../data/questions";
-import { fetchPublishedQuestions } from "../lib/content";
+import { fetchQuestionsByIds } from "../lib/content";
 import { Bookmark, BookmarkMinus, Play } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -27,12 +27,14 @@ export default function BookmarksView() {
           } catch {}
         }
 
-        const pubQuestions = await fetchPublishedQuestions();
+        const stringIds = rawBookmarks.filter(b => typeof b === 'string');
+        const fullObjects = rawBookmarks.filter(b => typeof b !== 'string');
 
-        // Resolve string IDs to full objects, migrate existing full objects
-        const resolvedQuestions = rawBookmarks
-          .map(b => typeof b === 'string' ? pubQuestions.find(q => q.id === b) : b)
-          .filter((q): q is Question => Boolean(q));
+        let resolvedQuestions: Question[] = [...fullObjects];
+        if (stringIds.length > 0) {
+          const fetched = await fetchQuestionsByIds(stringIds);
+          resolvedQuestions = [...resolvedQuestions, ...fetched];
+        }
 
         setBookmarkedQuestions(resolvedQuestions);
       } catch (err) {

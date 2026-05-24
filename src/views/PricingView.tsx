@@ -1,9 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "motion/react";
 import { Button, Chip } from "../components/Atoms";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, XCircle, Sparkles, Zap, RefreshCw } from "lucide-react";
 import { trackEvent } from "../lib/track";
+import { useAuth } from "../contexts/AuthContext";
+import { apiFetch } from "../lib/api";
+import { useToast } from "../components/ui/Toast";
 
 // Scroll reveal helper
 const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: string }> = ({ children, delay = 0, className = "" }) => {
@@ -17,62 +20,350 @@ const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: 
       {children}
     </motion.div>
   );
-}
+};
+
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
 
 export default function PricingView() {
+  const { user, userData, openAuthModal } = useAuth();
+  const { showToast } = useToast();
+  
+  const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
+  const [paymentLoading, setPaymentLoading] = useState(false);
+
+  const isPro = userData?.plan === "pro";
+
+  const handleSubscribe = async () => {
+    if (!user) {
+      showToast({
+        type: "info",
+        title: "Account Required",
+        message: "Please sign in or sign up to activate a Captain (Pro) subscription.",
+        duration: 6000
+      });
+      openAuthModal("signin");
+      return;
+    }
+
+    if (isPro) {
+      showToast({
+        type: "success",
+        title: "Already Captain",
+        message: "You are already on the Pro plan with full operational clearance!",
+        duration: 5000
+      });
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      trackEvent("upgrade_pro_attempt", { metadata: { interval: billingInterval } });
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        throw new Error("Unable to load Razorpay payment client. Please verify your connection.");
+      }
+
+      const response = await apiFetch("/api/payment/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ interval: billingInterval }),
+      });
+
+      if (!response) {
+        throw new Error("Unable to communicate with the payment server. Ensure you have network access.");
+      }
+
+      const orderData = await response.json();
+      if (orderData.error) {
+        throw new Error(orderData.error);
+      }
+
+      const keyId = (import.meta as any).env?.VITE_RAZORPAY_KEY_ID || "rzp_test_placeholderK";
+
+      const options = {
+        key: keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: "Captain's Ground School",
+        description: `Captain (Pro) Plan - ${billingInterval === "yearly" ? "Yearly" : "Monthly"}`,
+        image: "https://images.unsplash.com/photo-1540962351504-03099e0a754b?w=64&auto=format&fit=crop&q=80",
+        order_id: orderData.id,
+        prefill: {
+          email: user.email || "",
+          name: user.displayName || "",
+        },
+        theme: {
+          color: "#0F1E3C",
+        },
+        handler: async (paymentResponse: any) => {
+          setPaymentLoading(true);
+          try {
+            const verifyPayload = {
+              razorpay_payment_id: paymentResponse.razorpay_payment_id,
+              razorpay_order_id: paymentResponse.razorpay_order_id,
+              razorpay_signature: paymentResponse.razorpay_signature,
+              interval: billingInterval,
+            };
+
+            const verifyRes = await apiFetch("/api/payment/verify", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(verifyPayload),
+            });
+
+            if (!verifyRes) {
+              throw new Error("Local verification request timed out. Webhook will process signature in background.");
+            }
+
+            const verifyData = await verifyRes.json();
+            if (verifyData.success) {
+              showToast({
+                type: "success",
+                title: "Clearance Granted!",
+                message: "Aviation subscription successfully upgraded to Captain (Pro)!",
+                duration: 7000
+              });
+              
+              // Refresh or reload page to sync authentication state
+              trackEvent("upgrade_pro_success", { metadata: { interval: billingInterval } });
+              setTimeout(() => {
+                window.location.reload();
+              }, 2000);
+            } else {
+              throw new Error(verifyData.error || "Payment verification failed.");
+            }
+          } catch (err: any) {
+            console.error("Verification error:", err);
+            showToast({
+              type: "error",
+              title: "Verification Error",
+              message: "Payment success, but verification failed. Re-syncing database shortly...",
+              duration: 8000
+            });
+          } finally {
+            setPaymentLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setPaymentLoading(false);
+            showToast({
+              type: "info",
+              title: "Payment Dismissed",
+              message: "Checkout canceled. Upgrade when you are ready to pass the boards.",
+              duration: 5000
+            });
+          },
+        },
+      };
+
+      const rzPay = new (window as any).Razorpay(options);
+      rzPay.open();
+    } catch (err: any) {
+      console.error("Payment error:", err);
+      showToast({
+        type: "error",
+        title: "Checkout Error",
+        message: err.message || "Failed to initiate payment. Please try again.",
+        duration: 6000
+      });
+      setPaymentLoading(false);
+    }
+  };
+
   return (
-    <div className="pt-[64px] min-h-screen bg-bg">
-      <section id="pricing" className="py-24 md:py-32 max-w-[1000px] mx-auto px-6 w-full">
-         <FadeUp className="text-center mb-16">
-            <span className="eyebrow block mb-6 text-[10px]">ACCESS TIERS</span>
-            <h2 className="font-serif text-[56px] text-ink mb-6 tracking-tight leading-none">Invest in your exam pass.</h2>
-            <p className="font-sans text-ink-2 font-light text-[18px]">Simple pricing. Essential for student pilots.</p>
+    <div className="pt-[64px] min-h-screen bg-bg relative">
+      <div className="absolute inset-0 blueprint pointer-events-none opacity-[0.03] z-0" />
+      
+      <section id="pricing" className="py-24 md:py-32 max-w-[1000px] mx-auto px-6 w-full relative z-10">
+         <FadeUp className="text-center mb-10">
+            <span className="eyebrow block mb-4 text-[10px] tracking-[0.25em] text-signal font-mono uppercase">§ 04 · LICENSE TO FLY</span>
+            <h2 className="font-serif text-[48px] md:text-[60px] text-ink mb-4 tracking-tight leading-none">Invest in your exam pass.</h2>
+            <p className="font-sans text-ink-2 font-light text-[17px] max-w-lg mx-auto leading-relaxed">
+              Unlock the entire operational syllabus today. Select your subscription frequency with zero commitment, cancel anytime.
+            </p>
+         </FadeUp>
+
+         {/* BILLING TOGGLE */}
+         <FadeUp delay={100} className="flex justify-center mb-16">
+           <div className="bg-panel border border-rule p-1.5 rounded-full flex gap-1 shadow-sm">
+             <button
+               onClick={() => setBillingInterval("monthly")}
+               className={`px-5 py-2.5 rounded-full text-xs font-mono tracking-wider uppercase transition-all duration-300 focus:outline-none ${billingInterval === "monthly" ? "bg-navy text-bg font-semibold shadow-sm" : "text-muted hover:text-ink"}`}
+             >
+               Monthly Access
+             </button>
+             <button
+               onClick={() => setBillingInterval("yearly")}
+               className={`px-5 py-2.5 rounded-full text-xs font-mono tracking-wider uppercase transition-all duration-300 focus:outline-none relative flex items-center gap-1.5 ${billingInterval === "yearly" ? "bg-navy text-bg font-semibold shadow-sm" : "text-muted hover:text-ink"}`}
+             >
+               Annual Access
+               <span className="bg-[#DF9D38] text-bg font-sans font-bold text-[8px] tracking-normal px-1.5 py-0.5 rounded uppercase leading-none">
+                 Save 50%
+               </span>
+             </button>
+           </div>
          </FadeUp>
          
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-            <FadeUp delay={100} className="h-full">
-               <div className="border border-rule bg-paper rounded-[24px] p-10 h-full flex flex-col hover:border-ink/50 transition-colors">
-                  <h3 className="font-sans font-semibold text-[24px] text-ink mb-2">Cadet</h3>
-                  <p className="font-sans text-[14px] text-muted mb-8">Test the flight controls.</p>
-                  <div className="font-serif text-[64px] leading-none text-ink text-opacity-80 mb-10">Free<span className="font-sans text-lg text-muted font-light align-top"></span></div>
+         {/* VALUE CARDS */}
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch mb-24">
+            {/* FREE TIER */}
+            <FadeUp delay={150} className="h-full">
+               <div className="border border-rule bg-paper rounded-[24px] p-10 h-full flex flex-col hover:border-ink/30 transition-colors">
+                  <h3 className="font-sans font-semibold text-[22px] text-ink mb-2">Cadet (Free)</h3>
+                  <p className="font-sans text-[13px] text-muted mb-8 font-light">Test the flight controls. Basic sandbox access.</p>
                   
-                  <ul className="space-y-4 font-sans text-[15px] text-ink-2 mb-10 flex-1">
-                    <li className="flex items-start gap-4"><CheckCircle2 size={20} className="text-muted opacity-50 shrink-0" /> 100 sample questions</li>
-                    <li className="flex items-start gap-4"><CheckCircle2 size={20} className="text-muted opacity-50 shrink-0" /> 1 standard mock exam</li>
-                    <li className="flex items-start gap-4"><CheckCircle2 size={20} className="text-muted opacity-50 shrink-0" /> Basic analytic logbook</li>
+                  <div className="font-serif text-[54px] md:text-[60px] leading-none text-ink text-opacity-80 mb-10 flex items-end">
+                    Free
+                  </div>
+                  
+                  <ul className="space-y-4 font-sans text-[14px] text-ink-2 mb-10 flex-1 border-t border-rule/50 pt-8">
+                    <li className="flex items-center gap-4"><CheckCircle2 size={18} className="text-muted/60 shrink-0" /> 1 Full Course Subject</li>
+                    <li className="flex items-center gap-4"><CheckCircle2 size={18} className="text-muted/60 shrink-0" /> First Chapter of other courses</li>
+                    <li className="flex items-center gap-4"><CheckCircle2 size={18} className="text-muted/60 shrink-0" /> 1 Free Authority Mock Exam</li>
+                    <li className="flex items-center gap-4"><CheckCircle2 size={18} className="text-muted/60 shrink-0" /> Basic telemetry logbook</li>
+                    <li className="flex items-center gap-4 text-muted/60"><XCircle size={18} className="text-muted/40 shrink-0" /> No AI Instructor access</li>
+                    <li className="flex items-center gap-4 text-muted/60"><XCircle size={18} className="text-muted/40 shrink-0" /> No study plan coaching</li>
                   </ul>
                   
-                  <Link to="/modules"><Button variant="ghost" className="w-full justify-center h-[52px] text-[15px] rounded-full">Explore Free Sets</Button></Link>
+                  <Link to="/modules" className="w-full">
+                    <Button variant="ghost" className="w-full justify-center h-[52px] text-[14px] font-mono tracking-wider uppercase rounded-full">
+                      Explore Free Sets
+                    </Button>
+                  </Link>
                </div>
             </FadeUp>
             
-            <FadeUp delay={200} className="h-full relative">
+            {/* PRO TIER */}
+            <FadeUp delay={250} className="h-full relative">
                <div className="absolute top-0 right-0 -tr-translate-y-1/2 translate-x-1/4 translate-y-[-16px] z-10">
-                 <Chip variant="solid" className="bg-navy text-bg text-[10px] px-3 py-1.5 shadow-md transform rotate-3 tracking-widest font-semibold uppercase border-navy-soft border">CLEARANCE DELIVERY</Chip>
+                 <Chip variant="solid" className="bg-[#DF9D38] border-[#CF8E28] text-bg text-[9px] px-3.5 py-1.5 shadow-md transform rotate-2 tracking-widest font-mono uppercase font-bold">★ PREFLIGHT CLEARANCE</Chip>
                </div>
-               <div className="border-2 border-navy bg-paper rounded-[24px] p-10 h-full flex flex-col shadow-xl relative overflow-hidden">
+               <div className={`border-2 ${isPro ? "border-mint" : "border-navy"} bg-paper rounded-[24px] p-10 h-full flex flex-col shadow-xl relative overflow-hidden`}>
                   <div className="absolute top-0 right-0 w-64 h-64 bg-navy/5 blur-3xl rounded-full translate-x-1/3 -translate-y-1/3" />
                   
-                  <h3 className="font-sans font-semibold text-[24px] text-navy mb-2 relative z-10">Captain (Pro)</h3>
-                  <p className="font-sans text-[14px] text-navy/70 mb-8 font-medium relative z-10">The complete arsenal.</p>
-                  <div className="font-serif text-[64px] text-ink mb-10 flex items-end gap-2 relative z-10 leading-none">
-                    ₹499<span className="font-sans text-[18px] text-muted font-light mb-1">/mo</span>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-sans font-semibold text-[22px] text-navy relative z-10">Captain (Pro)</h3>
+                    {isPro && (
+                      <span className="bg-mint text-bg font-mono font-bold text-[9px] py-1 px-2.5 rounded-full uppercase leading-none tracking-widest">
+                        Active Plan
+                      </span>
+                    )}
+                  </div>
+                  <p className="font-sans text-[13px] text-navy/70 mb-8 font-medium relative z-10">The complete high-altitude arsenal.</p>
+                  
+                  <div className="font-serif text-[54px] md:text-[60px] text-ink mb-10 flex items-baseline gap-2 relative z-10 leading-none">
+                    {billingInterval === "yearly" ? "₹2,999" : "₹499"}
+                    <span className="font-sans text-[16px] text-muted font-light mb-1">
+                      {billingInterval === "yearly" ? "/year" : "/month"}
+                    </span>
+                    {billingInterval === "yearly" && (
+                      <span className="font-mono text-[9px] bg-mint text-bg font-bold px-2 py-1 rounded inline-block self-center tracking-wider ml-2 uppercase">
+                        Save 50%
+                      </span>
+                    )}
                   </div>
                   
-                  <ul className="space-y-4 font-sans text-[15px] text-ink-2 mb-10 flex-1 relative z-10">
-                    <li className="flex items-start gap-4"><CheckCircle2 size={20} className="text-navy shrink-0" /> Full 6,940+ question database</li>
-                    <li className="flex items-start gap-4"><CheckCircle2 size={20} className="text-navy shrink-0" /> Unlimited DGCA & EASA Mock Exams</li>
-                    <li className="flex items-start gap-4"><CheckCircle2 size={20} className="text-navy shrink-0" /> Generative AI Ground Instructor (Gemini)</li>
-                    <li className="flex items-start gap-4"><CheckCircle2 size={20} className="text-navy shrink-0" /> Advanced Weakness Heatmaps & Diagnosis</li>
+                  <ul className="space-y-4 font-sans text-[14px] text-ink-2 mb-10 flex-1 relative z-10 border-t border-rule/50 pt-8">
+                    <li className="flex items-center gap-4 font-medium text-navy"><CheckCircle2 size={18} className="text-navy shrink-0" /> Full 6,940+ questions database</li>
+                    <li className="flex items-center gap-4 font-medium text-navy"><CheckCircle2 size={18} className="text-navy shrink-0" /> Unlimited DGCA & EASA Mock Exams</li>
+                    <li className="flex items-center gap-4 font-medium text-navy"><Sparkles size={18} className="text-[#DF9D38] shrink-0" /> AI Ground Instructor explanation on demand</li>
+                    <li className="flex items-center gap-4 font-medium text-navy"><CheckCircle2 size={18} className="text-navy shrink-0" /> Viva oral board preparation module</li>
+                    <li className="flex items-center gap-4 font-medium text-navy"><CheckCircle2 size={18} className="text-navy shrink-0" /> Interactive weak-area heatmap & analytics</li>
+                    <li className="flex items-center gap-4 font-medium text-navy"><Sparkles size={18} className="text-[#DF9D38] shrink-0" /> AI Weakness Coach & 7-day study plan creators</li>
                   </ul>
                   
                   <div className="relative z-10">
-                    <Button variant="primary" onClick={() => trackEvent("upgrade_pro")} className="w-full justify-center h-[52px] text-[15px] rounded-full shadow-lg bg-navy hover:bg-navy/90 border-0">Activate Subscription</Button>
-                    <div className="text-center mt-4 font-mono text-[9px] text-muted tracking-widest uppercase">Or ₹2,999 / year (Save 50%)</div>
+                    <Button 
+                      variant="primary" 
+                      onClick={handleSubscribe} 
+                      disabled={paymentLoading}
+                      className={`w-full justify-center h-[52px] text-[14px] font-mono tracking-wider uppercase rounded-full shadow-lg ${isPro ? "bg-mint hover:bg-mint/90 text-bg" : "bg-navy hover:bg-navy/90 text-bg"}`}
+                    >
+                      {paymentLoading ? (
+                        <span className="flex items-center gap-2">
+                          <RefreshCw size={14} className="animate-spin" /> Preparing Launchpad...
+                        </span>
+                      ) : isPro ? (
+                        " cleared for take-off"
+                      ) : (
+                        `Activate Pro Class`
+                      )}
+                    </Button>
+                    <div className="text-center mt-4 font-mono text-[9px] text-muted tracking-widest uppercase">
+                      {billingInterval === "yearly" ? "Billed once at ₹2,999 annually" : "Upgrade to annual later & save 50%"}
+                    </div>
                   </div>
                </div>
             </FadeUp>
          </div>
+
+         {/* COMPARISON TABLE */}
+         <FadeUp delay={350}>
+           <div className="border border-rule bg-paper rounded-2xl overflow-hidden shadow-sm">
+             <div className="px-8 py-6 bg-paper-2 border-b border-rule flex items-center justify-between">
+               <h3 className="font-serif text-lg text-ink font-semibold">Functional Matrix</h3>
+               <span className="font-mono text-[9px] tracking-widest uppercase text-muted">Feature Comparison</span>
+             </div>
+             <table className="w-full text-left font-sans text-sm pb-4">
+               <thead>
+                 <tr className="border-b border-rule bg-panel font-mono text-[10px] text-muted uppercase tracking-wider">
+                   <th className="py-4 px-6 md:px-8">Operational Feature</th>
+                   <th className="py-4 px-4 w-32 md:w-44">Cadet Free</th>
+                   <th className="py-4 px-4 w-32 md:w-44 text-navy">Captain Pro</th>
+                 </tr>
+               </thead>
+               <tbody className="divide-y divide-rule/60 text-ink-2 font-light">
+                 <tr>
+                   <td className="py-4 px-6 md:px-8 font-medium text-ink">Aircraft Systems & Subject Access</td>
+                   <td className="py-4 px-4 text-muted font-sans text-xs">1 Full module (Air Nav)</td>
+                   <td className="py-4 px-4 text-navy font-medium font-sans text-xs">Unlimited All (15+ Subjects)</td>
+                 </tr>
+                 <tr>
+                   <td className="py-4 px-6 md:px-8 font-medium text-ink">Chapter Syllabus Ingestion</td>
+                   <td className="py-4 px-4 text-muted font-sans text-xs">Only Chapter 1 open</td>
+                   <td className="py-4 px-4 text-navy font-medium font-sans text-xs">Unlimited full syllabus access</td>
+                 </tr>
+                 <tr>
+                   <td className="py-4 px-6 md:px-8 font-medium text-ink">DGCA/EASA Simulator Mocks</td>
+                   <td className="py-4 px-4 text-muted font-sans text-xs">1 mock (CPL Nav)</td>
+                   <td className="py-4 px-4 text-navy font-medium font-sans text-xs">Unlimited timed exams</td>
+                 </tr>
+                 <tr>
+                   <td className="py-4 px-6 md:px-8 font-medium text-ink">Ground Instructor AI Explanations</td>
+                   <td className="py-4 px-4 text-muted font-sans text-xs font-mono text-[10px]">LOCKED</td>
+                   <td className="py-4 px-4 text-navy font-medium font-sans text-xs flex items-center gap-1.5 font-mono text-[10px]"><Zap size={11} className="text-[#DF9D38]" /> UNLIMITED</td>
+                 </tr>
+                 <tr>
+                   <td className="py-4 px-6 md:px-8 font-medium text-ink">Viva Oral Board Flashcards</td>
+                   <td className="py-4 px-4 text-muted font-sans text-xs font-mono text-[10px]">LOCKED</td>
+                   <td className="py-4 px-4 text-navy font-medium font-sans text-xs flex items-center gap-1.5 font-mono text-[10px]"><CheckCircle2 size={11} className="text-navy" /> ACTIVE</td>
+                 </tr>
+                 <tr>
+                   <td className="py-4 px-6 md:px-8 font-medium text-ink">Dynamic Analytics & Diagnostic</td>
+                   <td className="py-4 px-4 text-muted font-sans text-xs">Basic history log</td>
+                   <td className="py-4 px-4 text-navy font-medium font-sans text-xs flex items-center gap-1.5 font-mono text-[10px]"><Zap size={11} className="text-[#DF9D38]" /> HEATMAPS & AI COACHING</td>
+                 </tr>
+               </tbody>
+             </table>
+           </div>
+         </FadeUp>
       </section>
     </div>
   );

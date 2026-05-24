@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, NavLink, useOutlet } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, NavLink, useOutlet, useNavigate } from "react-router-dom";
 import { trackEvent } from "./lib/track";
 import { useDocumentMeta } from "./hooks/useDocumentMeta";
 import { Wordmark, Button } from "./components/Atoms";
@@ -43,21 +43,32 @@ const ProfileView = lazy(() => import("./views/ProfileView"));
 const NotFoundView = lazy(() => import("./views/NotFoundView"));
 const TodayView = lazy(() => import("./views/TodayView"));
 const ResetPasswordView = lazy(() => import("./views/ResetPasswordView"));
+const PrivacyView = lazy(() => import("./views/PrivacyView"));
+const TermsView = lazy(() => import("./views/TermsView"));
+const RefundView = lazy(() => import("./views/RefundView"));
+const ContactView = lazy(() => import("./views/ContactView"));
+const ExamsSeoView = lazy(() => import("./views/ExamsSeoView"));
+const BlogListView = lazy(() => import("./views/BlogListView"));
+const BlogPostView = lazy(() => import("./views/BlogPostView"));
 
 import { AdminGuard } from "./components/AdminGuard";
+import { AuthGuard } from "./components/AuthGuard";
 import { AdminLayout } from "./components/AdminLayout";
 
 const AdminDashboard = lazy(() => import("./views/admin/AdminDashboard"));
 const SubjectsManager = lazy(() => import("./views/admin/SubjectsManager"));
+const ExamsManager = lazy(() => import("./views/admin/ExamsManager"));
 const SubcategoriesManager = lazy(() => import("./views/admin/SubcategoriesManager"));
 const QuestionsManager = lazy(() => import("./views/admin/QuestionsManager"));
 const BulkImport = lazy(() => import("./views/admin/BulkImport"));
 const UsersAnalytics = lazy(() => import("./views/admin/UsersAnalytics"));
 const AdminActivity = lazy(() => import("./views/admin/AdminActivity"));
 const AdminSettings = lazy(() => import("./views/admin/AdminSettings"));
+const BlogManager = lazy(() => import("./views/admin/BlogManager"));
 
 import SearchOverlay from "./views/SearchOverlay";
 import PricingView from "./views/PricingView";
+import NotificationCenter from "./components/NotificationCenter";
 
 function HeaderAuth() {
   const { user, loading, openAuthModal } = useAuth();
@@ -324,6 +335,42 @@ function SettingsOverlay({ onClose }: { onClose: () => void }) {
         
         <div className="p-8 pt-2 overflow-y-auto sidebar-nav-scroll pb-[32px]">
           <div className="space-y-[24px]">
+            {/* Subscription / Plan Management */}
+            <div>
+               <div className="flex items-center gap-4 mb-4">
+                  <h3 className="font-serif font-medium text-lg text-ink">Flight Clearance Plan</h3>
+                  <div className="h-px bg-rule flex-1" />
+               </div>
+               <div className="bg-panel border border-rule rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="space-y-1 text-center sm:text-left">
+                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 font-sans">
+                        <span className="font-sans font-semibold text-[15px] text-ink">
+                           {userData?.plan === "pro" ? "Captain (Pro Access)" : "Cadet (Free Account)"}
+                        </span>
+                        {userData?.plan === "pro" && (
+                           <span className="bg-mint text-bg font-mono font-bold text-[8px] tracking-wider uppercase px-1.5 py-0.5 rounded leading-none shrink-0">
+                              ACTIVE
+                           </span>
+                        )}
+                     </div>
+                     {userData?.plan === "pro" ? (
+                        <p className="font-sans text-xs text-muted leading-relaxed">
+                           Operational clearance active. Full cockpit access enabled. Thank you for your support, Captain!
+                        </p>
+                     ) : (
+                        <p className="font-sans text-xs text-muted leading-relaxed">
+                           Limited operational sandbox. Gated access on simulated models and ground instructor coaching.
+                        </p>
+                     )}
+                  </div>
+                  <Link to="/pricing" onClick={onClose} className="shrink-0 w-full sm:w-auto">
+                     <Button variant="primary" className="w-full sm:w-auto h-9 text-xs px-4 bg-navy hover:bg-navy-dark text-bg rounded-md">
+                        {userData?.plan === "pro" ? "Manage Subscription" : "Upgrade to Pro"}
+                     </Button>
+                  </Link>
+               </div>
+            </div>
+
             {/* Toggles */}
             <div className="space-y-3">
                <div className="flex justify-between items-center bg-transparent py-2">
@@ -654,39 +701,42 @@ function PublicLayout() {
       </AnimatePresence>
 
       <main className="flex-1 w-full bg-bg text-ink shrink-0 relative flex flex-col">
-        <AnimatePresence mode="wait">
-          <PageTransition keyId={location.pathname}>
-            {outlet}
-          </PageTransition>
-        </AnimatePresence>
+        <Suspense fallback={<LoadingFallback />}>
+          <AnimatePresence mode="wait">
+            <PageTransition keyId={location.pathname}>
+              <ErrorBoundary>
+                {outlet}
+              </ErrorBoundary>
+            </PageTransition>
+          </AnimatePresence>
+        </Suspense>
       </main>
-      {location.pathname === '/' || location.pathname === '/pricing' ? (
-        <footer 
-          className="border-t border-rule pt-12 pb-[calc(3rem+var(--sab))] px-6 mt-12 shrink-0"
-          style={{
-            backgroundColor: "var(--bg-2)",
-            borderColor: "var(--rule)",
-          }}
-        >
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-             <div className="space-y-3">
-               <div className="opacity-70">
-                 <Wordmark compassSize={24} />
-               </div>
-               <p className="footnote text-[10px] text-muted-2">
-                 © {new Date().getFullYear()} HEADING EDITORIAL AVIATION. ALL RIGHTS RESERVED.
-               </p>
+      <footer 
+        className="border-t border-rule pt-12 pb-[calc(3rem+var(--sab))] px-6 mt-12 shrink-0"
+        style={{
+          backgroundColor: "var(--bg-2)",
+          borderColor: "var(--rule)",
+        }}
+      >
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+           <div className="space-y-3">
+             <div className="opacity-70">
+               <Wordmark compassSize={24} />
              </div>
-             <div className="flex flex-wrap gap-8">
-               <Link to="/about" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Mission Specs</Link>
-               <a href="#" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Privacy Policy</a>
-               <a href="#" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Terms of Service</a>
-               <a href="#" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Contact Us</a>
-               <a href="#" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Sitemap</a>
-             </div>
-          </div>
-        </footer>
-      ) : null}
+             <p className="footnote text-[10px] text-muted-2">
+               © {new Date().getFullYear()} HEADING EDITORIAL AVIATION. ALL RIGHTS RESERVED.
+             </p>
+           </div>
+           <div className="flex flex-wrap gap-5 md:gap-7">
+             <Link to="/about" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Mission Specs</Link>
+             <Link to="/privacy" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Privacy Policy</Link>
+             <Link to="/terms" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Terms & Conditions</Link>
+             <Link to="/refund" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Refund Policy</Link>
+             <Link to="/contact" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Contact Us</Link>
+             <a href="/sitemap.xml" target="_blank" rel="noopener noreferrer" className="footnote hover:text-ink transition-all duration-300 hover:-translate-y-0.5">Sitemap</a>
+           </div>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -955,9 +1005,7 @@ function NextCheckWidget({ isSidebarExpanded }: { isSidebarExpanded: boolean }) 
   );
 }
 
-import AppShell from "./components/AppShell";
-
-function LegacyAppShell() {
+function AppShell() {
   const { userData } = useAuth();
   const location = useLocation();
   const outlet = useOutlet();
@@ -1381,6 +1429,9 @@ function LegacyAppShell() {
                   <Flame size={14} className="text-signal fill-signal/15" />
                   <span className="font-mono text-xs font-bold text-signal select-none">14</span>
                 </div>
+
+                {/* Notifications Dropdown */}
+                <NotificationCenter />
                 
                 {/* Settings button - mobile only */}
                 <button 
@@ -1423,38 +1474,38 @@ function LegacyAppShell() {
             <AnimatePresence>
               {mobileMenuOpen && (
                 <motion.div
-                  initial={{ opacity: 0, y: -20 }}
+                  initial={{ opacity: 0, y: -15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  exit={{ opacity: 0, y: -15 }}
+                  transition={{ duration: 0.18, ease: "easeOut" }}
                   id="mobile-nav-drawer"
-                  className="md:hidden fixed top-[64px] left-0 right-0 z-40 bg-paper border-b border-rule shadow-2xl rounded-b-2xl px-6 py-6 flex flex-col gap-5"
+                  className="md:hidden fixed top-[64px] left-0 right-0 z-40 bg-paper border-b border-rule shadow-2xl rounded-b-2xl px-4 py-4 flex flex-col gap-4"
                   style={{
                     borderColor: "var(--rule)",
                     maxHeight: "calc(100vh - 4.5rem)",
                     overflowY: "auto",
                   }}
                 >
-                  {/* Visual branding wordmark inside mobile drawer top */}
-                  <div className="flex items-center justify-between border-b border-rule pb-3">
-                    <Wordmark compassSize={24} />
-                    <span className="footnote text-[10px] text-muted">Aviation exam prep</span>
+                  {/* Wordmark and search row merged to save space */}
+                  <div className="flex gap-2.5 items-center">
+                    <div className="flex items-center flex-shrink-0">
+                      <Wordmark compassSize={20} />
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        setShowSearch(true);
+                      }}
+                      className="flex flex-1 items-center gap-2 px-3 py-1.5 bg-panel border border-rule hover:border-rule-strong rounded-xl transition-all text-left text-[11px] cursor-pointer text-muted-2"
+                    >
+                      <Search size={12} className="text-muted-2" />
+                      <span className="truncate">Search question bank...</span>
+                    </button>
                   </div>
 
-                  {/* Mobile Search Input click trigger */}
-                  <button 
-                    onClick={() => {
-                      setMobileMenuOpen(false);
-                      setShowSearch(true);
-                    }}
-                    className="flex items-center gap-2.5 px-4 py-2.5 bg-panel border border-rule hover:border-rule-strong rounded-lg transition-all text-left text-xs cursor-pointer w-full text-muted-2"
-                  >
-                    <Search size={14} />
-                    <span>Search questions, ATA chapters…</span>
-                  </button>
-
-                  {/* Nav Links mapping */}
-                  <nav className="flex flex-col gap-1.5">
+                  {/* Nav Links compact 2-column grid layout */}
+                  <nav className="grid grid-cols-2 gap-2">
                     {navItems.map((item) => {
                       const active = isItemActive(item.to);
                       return (
@@ -1462,18 +1513,16 @@ function LegacyAppShell() {
                           key={item.label}
                           to={item.to}
                           onClick={() => setMobileMenuOpen(false)}
-                          className={`flex items-center justify-between p-3 rounded-lg text-sm font-sans font-medium tracking-tight transition-colors ${
+                          className={`flex items-center gap-2 p-2 px-3 rounded-xl text-xs font-sans font-medium tracking-tight border transition-all ${
                             active 
-                              ? "bg-panel text-ink border border-rule shadow-sm" 
-                              : "bg-transparent text-muted border border-transparent"
+                              ? "bg-panel text-ink border-rule shadow-sm" 
+                              : "bg-bg text-muted hover:text-ink border-transparent hover:bg-panel/40"
                           }`}
                         >
-                          <div className="flex items-center gap-3">
-                            <item.icon size={16} className={active ? "text-ink" : "text-muted-2"} />
-                            <span>{item.label}</span>
-                          </div>
+                          <item.icon size={14} className={`flex-shrink-0 ${active ? "text-ink" : "text-muted-2"}`} />
+                          <span className="truncate">{item.label}</span>
                           {item.label === "Flashcards" && (
-                            <span className="font-mono text-[10px] bg-bg-2 border border-rule px-2 py-0.5 rounded text-muted-2">
+                            <span className="font-mono text-[9px] bg-bg-2 border border-rule px-1 rounded text-muted-2 ml-auto">
                               {bookmarkCount}
                             </span>
                           )}
@@ -1482,15 +1531,15 @@ function LegacyAppShell() {
                     })}
                   </nav>
                   
-                  {/* Mobile Extra Drawer Footer Links */}
-                  <div className="pt-4 border-t border-rule flex flex-col gap-3">
-                    <div className="flex justify-between text-xs text-muted px-2">
-                       <span>Streak: 14 Days</span>
-                       <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="underline">Mission Specs</Link>
+                  {/* Compact Mobile Footer Links */}
+                  <div className="pt-3 border-t border-rule/55 flex flex-col gap-2.5">
+                    <div className="flex justify-between text-[11px] text-muted-2 px-1">
+                       <span className="flex items-center gap-1"><Flame size={12} className="text-signal" /> Streak: 14 Days</span>
+                       <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="underline hover:text-ink transition-colors">Mission Specs</Link>
                     </div>
                     <Link to="/quiz/ata-27" className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="primary" className="w-full justify-center h-[42px]">
-                        Start studying <ArrowUpRight size={16} />
+                      <Button variant="primary" className="w-full justify-center h-9 text-xs">
+                        Start studying <ArrowUpRight size={13} />
                       </Button>
                     </Link>
                   </div>
@@ -1505,11 +1554,15 @@ function LegacyAppShell() {
             >
               {/* View insertion slot */}
               <div className="flex-grow">
-                <AnimatePresence mode="wait">
-                  <PageTransition keyId={location.pathname}>
-                    {outlet}
-                  </PageTransition>
-                </AnimatePresence>
+                <Suspense fallback={<LoadingFallback />}>
+                  <AnimatePresence mode="wait">
+                    <PageTransition keyId={location.pathname}>
+                      <ErrorBoundary>
+                        {outlet}
+                      </ErrorBoundary>
+                    </PageTransition>
+                  </AnimatePresence>
+                </Suspense>
               </div>
             </main>
 
@@ -1549,15 +1602,40 @@ function RouteMetaHelper() {
 
   useEffect(() => {
     trackEvent("page_view", { metadata: { path: location.pathname } });
-  }, [location.pathname]);
+
+    // Growth: Capture campaign referral codes (e.g., ?ref=PILOT123)
+    const params = new URLSearchParams(location.search);
+    const refCode = params.get("ref");
+    if (refCode) {
+      localStorage.setItem("referred_by_code", refCode);
+      console.log("Captured campaign referral code:", refCode);
+    }
+  }, [location.pathname, location.search]);
 
   return null;
 }
 
 import AuthModal from "./components/AuthModal";
+import { CookieConsent } from "./components/CookieConsent";
 
 function AuthModalTrigger() {
-  const { authModalOpen, authModalTab, closeAuthModal } = useAuth();
+  const { user, authModalOpen, authModalTab, closeAuthModal } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (user) {
+      const redirectFromState = location.state?.from;
+      const redirectFromSession = sessionStorage.getItem("auth_redirect_path");
+      const target = redirectFromState || redirectFromSession;
+
+      if (target) {
+        sessionStorage.removeItem("auth_redirect_path");
+        navigate(target, { replace: true });
+      }
+    }
+  }, [user, navigate, location]);
+
   return (
     <AuthModal isOpen={authModalOpen} onClose={closeAuthModal} defaultTab={authModalTab} />
   );
@@ -1568,6 +1646,7 @@ export default function App() {
     <Router>
       <RouteMetaHelper />
       <AuthModalTrigger />
+      <CookieConsent />
       <ErrorBoundary>
         <Routes>
           {/* PUBLIC ROUTES (No App Shell) */}
@@ -1576,39 +1655,38 @@ export default function App() {
             <Route path="/about" element={<AboutView />} />
             <Route path="/pricing" element={<PricingView />} />
             <Route path="/reset-password" element={<ResetPasswordView />} />
-          </Route>
-
-          {/* NEW BASIC ROUTING AS REQUESTED */}
-          <Route element={<AppShell />}>
-            <Route path="/hero-placeholder" element={
-              <div className="flex flex-col items-center justify-center min-h-[70vh] p-8 text-center animate-[fadeIn_0.5s_ease-out]">
-                <h1 className="h-display text-ink mb-4">Placeholder Hero Content</h1>
-                <p className="font-sans text-muted text-lg max-w-xl mx-auto">This is a placeholder route for the hero content, managed by the newly configured AppShell.</p>
-              </div>
-            } />
+            <Route path="/privacy" element={<PrivacyView />} />
+            <Route path="/terms" element={<TermsView />} />
+            <Route path="/refund" element={<RefundView />} />
+            <Route path="/contact" element={<ContactView />} />
+            <Route path="/exams/:examId" element={<ExamsSeoView />} />
+            <Route path="/blog" element={<BlogListView />} />
+            <Route path="/blog/:slug" element={<BlogPostView />} />
           </Route>
 
           {/* LOCKED ADMINISTRATIVE AREA */}
           <Route element={<AdminGuard><AdminLayout /></AdminGuard>}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/subjects" element={<SubjectsManager />} />
+            <Route path="/admin/exams" element={<ExamsManager />} />
             <Route path="/admin/subcategories" element={<SubcategoriesManager />} />
             <Route path="/admin/questions" element={<QuestionsManager />} />
             <Route path="/admin/import" element={<BulkImport />} />
             <Route path="/admin/users" element={<UsersAnalytics />} />
             <Route path="/admin/activity" element={<AdminActivity />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/blog" element={<BlogManager />} />
           </Route>
 
           {/* AUTHENTICATED APP ROUTES (With App Shell) */}
-          <Route element={<LegacyAppShell />}>
+          <Route element={<AppShell />}>
             <Route path="/today" element={<TodayView />} />
             <Route path="/modules" element={<ModulesView />} />
             <Route path="/topic/:id" element={<TopicView />} />
             <Route path="/mock-exams" element={<MockExamsView />} />
-            <Route path="/analytics" element={<AnalyticsView />} />
-            <Route path="/bookmarks" element={<BookmarksView />} />
-            <Route path="/profile" element={<ProfileView />} />
+            <Route path="/analytics" element={<AuthGuard><AnalyticsView /></AuthGuard>} />
+            <Route path="/bookmarks" element={<AuthGuard><BookmarksView /></AuthGuard>} />
+            <Route path="/profile" element={<AuthGuard><ProfileView /></AuthGuard>} />
             <Route path="/quiz/:topicId" element={<QuizView />} />
             <Route path="*" element={<NotFoundView />} />
           </Route>

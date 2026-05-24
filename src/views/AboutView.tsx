@@ -86,6 +86,49 @@ export default function AboutView() {
             </div>
           </Card>
 
+          {/* Methodology & IP Compliance Card */}
+          <Card className="bg-paper border-2 border-rule-strong space-y-6 p-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 transform translate-x-6 -translate-y-6 w-32 h-32 rounded-full bg-navy/5 border border-navy/10 pointer-events-none" />
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-panel border border-rule flex items-center justify-center shrink-0 shadow-sm">
+                <span className="font-serif text-xl font-bold text-navy">IP</span>
+              </div>
+              <div>
+                <h3 className="h-card-title text-ink font-semibold">Syllabus Methodology & IP Compliance</h3>
+                <span className="footnote text-[9px] tracking-widest text-muted-2">PUBLIC DOMAIN INTEGRITY COMPLIANCE PROTOCOL</span>
+              </div>
+            </div>
+
+            <div className="font-sans font-light text-ink-2 text-sm leading-relaxed space-y-4 pt-4 border-t border-rule relative z-10">
+              <p>
+                Heading strictly enforces compliance with all international intellectual property and copyright standards. 
+                Our team does not scrape, distribute, or license copyrighted question banks. Instead, we perform legal, 
+                high-fidelity reconstructions based on primary, public domain syllabus specifications.
+              </p>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+                <div className="p-4 bg-panel border border-rule rounded-lg">
+                  <span className="font-mono text-xs text-ink font-semibold block mb-1">REGULATORY SYLLABUS ALIGNMENT</span>
+                  <p className="text-muted-2 text-xs leading-relaxed">
+                    All study scenarios, prompt questions, and operational rationale are custom-designed around key regulatory objectives published directly by the <strong>DGCA (Civil Aviation Requirements)</strong>, <strong>EASA (Part-FCL)</strong>, and the <strong>FAA (Airman Certification Standards)</strong>.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-panel border border-rule rounded-lg">
+                  <span className="font-mono text-xs text-ink font-semibold block mb-1">ORIGINAL COMPLIANT IP</span>
+                  <p className="text-muted-2 text-xs leading-relaxed">
+                    All graphics, cockpit simulated systems illustrations (including our interactive wing & airframe mechanics guides), 
+                    and telemetry engines are 100% original, proprietary creations of Heading Editorial Aviation.
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-2 italic pt-2">
+                Note: Referenced FAA Regulations, CAR definitions, and public ICAO specifications remain properties of their respective governmental agencies and are sourced exclusively under open public-domain informational guidelines.
+              </p>
+            </div>
+          </Card>
+
           {/* Footer of the segment */}
           <div className="pt-8 text-center">
             <span className="footnote text-muted-2 text-[9px]">
