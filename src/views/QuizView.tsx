@@ -111,7 +111,7 @@ export default function QuizView() {
     loadQuizQuestions();
   }, [topicId, logbook, customQuestions, location.state?.sessionStorageKey]);
 
-  const totalQuestions = questions.length;
+  const totalQuestions = questions ? questions.length : 0;
 
   // --- STATE ---
   const storageKey = `heading_quiz_state_${topicId || "default"}`;
@@ -1000,7 +1000,9 @@ export default function QuizView() {
     );
   }
 
-  const currentQ = questions[currentIndex] || questions[0];
+  const currentQ = (questions && questions.length > 0)
+    ? (questions[currentIndex] || questions[0] || null)
+    : null;
 
   if (status === "prompt-resume") {
     return (
@@ -1050,7 +1052,7 @@ export default function QuizView() {
           </div>
 
           <p className="font-sans font-light text-ink-2 mb-10 leading-relaxed">
-            Select an operational mode for the "{customTopic || currentQ.ata}"
+            Select an operational mode for the "{customTopic || currentQ?.ata || "this module"}"
             module. Heading adapts to your cognitive training phase.
           </p>
 
@@ -1751,6 +1753,27 @@ export default function QuizView() {
               Share Debrief
             </Button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentQ) {
+    return (
+      <div className="relative min-h-screen flex items-center justify-center p-4">
+        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
+        <div className="relative z-10 text-center">
+          <h2 className="font-serif text-3xl text-ink">
+            {isVivaRoute ? "No VIVA questions available yet" : "No Questions Found"}
+          </h2>
+          <p className="font-sans text-muted mb-8 mt-2">
+            {isVivaRoute 
+              ? "We are currently preparing more oral board questions. Please check back soon!"
+              : "There are no operational limits specified for this module yet."}
+          </p>
+          <Button variant="primary" onClick={() => navigate("/modules")}>
+            Return to Base
+          </Button>
         </div>
       </div>
     );

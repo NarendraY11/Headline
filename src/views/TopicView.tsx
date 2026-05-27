@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { trackEvent } from "../lib/track";
-import { SubjectItem } from "../data/topics";
+import { SubjectItem, rawSubjects } from "../data/topics";
 import { fetchMergedSubjects } from "../lib/content";
 import { apiFetch } from "../lib/api";
 import { Chip, Card, Button } from "../components/Atoms";
@@ -43,7 +43,38 @@ export default function TopicView() {
     loadSubjects();
   }, []);
 
-  const subject = subjectsList.find((s) => s.id === id);
+  let subject = subjectsList.find((s) => s.id === id);
+  if (id === "a320-systems") {
+    const staticA320 = rawSubjects.find((s) => s.id === "a320-systems");
+    if (staticA320) {
+      if (!subject) {
+        subject = staticA320;
+      } else {
+        const mergedSubTopics = [...(subject.subTopics || [])];
+        staticA320.subTopics?.forEach((staticST) => {
+          const existingIdx = mergedSubTopics.findIndex((st) => st.id === staticST.id);
+          if (existingIdx === -1) {
+            mergedSubTopics.push(staticST);
+          } else {
+            const existing = mergedSubTopics[existingIdx];
+            mergedSubTopics[existingIdx] = {
+              ...staticST,
+              ...existing,
+              questionCount: existing.questionCount || staticST.questionCount || 0,
+              spec: existing.spec || staticST.spec,
+              figure: existing.figure || staticST.figure,
+              sections: existing.sections || staticST.sections,
+            };
+          }
+        });
+        subject = {
+          ...staticA320,
+          ...subject,
+          subTopics: mergedSubTopics,
+        };
+      }
+    }
+  }
 
   const [isGenerating, setIsGenerating] = useState(false);
 
