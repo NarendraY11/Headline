@@ -14,8 +14,13 @@ export default function ProfileView() {
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
+  const [isEditingExamDate, setIsEditingExamDate] = useState(false);
+  const [tempExamDate, setTempExamDate] = useState("");
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const savedDate = userData?.nextExam || "";
 
   useEffect(() => {
     return () => {
@@ -26,6 +31,12 @@ export default function ProfileView() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (savedDate) {
+      setTempExamDate(savedDate);
+    }
+  }, [savedDate]);
 
   if (loading) return null;
 
@@ -64,16 +75,6 @@ export default function ProfileView() {
 
   const { targetExam = "DGCA CPL", streaks = 0, photoURL: firestorePhotoURL } = userData || {};
   const currentPhotoURL = firestorePhotoURL || user.photoURL;
-
-  const savedDate = userData?.nextExam || "";
-  const [isEditingExamDate, setIsEditingExamDate] = useState(false);
-  const [tempExamDate, setTempExamDate] = useState("");
-
-  useEffect(() => {
-    if (savedDate) {
-      setTempExamDate(savedDate);
-    }
-  }, [savedDate]);
 
   let daysDiff: number | null = null;
   let isPast = false;
