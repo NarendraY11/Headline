@@ -386,48 +386,91 @@ export async function fetchMergedSubjects(forceRefresh = false): Promise<Subject
   const dbSubjects = await fetchPublishedSubjects();
   const dbSubcats = await fetchPublishedSubcategories();
 
-   const merged = dbSubjects.map(dbSub => {
-    const pMatch = rawSubjects.find(s => s.id === dbSub.id);
-    
-    const subcatsOfThisSubject = dbSubcats.filter(sc => sc.subject_id === dbSub.id);
-    const subTopics = subcatsOfThisSubject.map((dbSubcat, idx) => {
-      const stMatch = pMatch?.subTopics?.find(st => st.id === dbSubcat.id) || 
-        rawSubjects.flatMap(s => s.subTopics || []).find(st => st.id === dbSubcat.id);
-      
-      return {
-        id: dbSubcat.id,
-        code: dbSubcat.code || stMatch?.code || undefined,
-        title: dbSubcat.title,
-        description: dbSubcat.description || stMatch?.description || undefined,
-        spec: stMatch?.spec || undefined,
-        figure: stMatch?.figure || undefined,
-        sections: stMatch?.sections || undefined,
-        status: (dbSubcat.status || "reviewed") as any,
-        questionCount: questionsList.filter(q => q.topicId === dbSubcat.id).length,
-        free_chapter: idx === 0 || !!dbSubcat.free_chapter || !!stMatch?.free_chapter,
-      };
-    });
+   const dbMerged = dbSubjects.map(dbSub => {
+     const pMatch = rawSubjects.find(s => s.id === dbSub.id);
+     
+     const subcatsOfThisSubject = dbSubcats.filter(sc => sc.subject_id === dbSub.id);
+     const subTopics = subcatsOfThisSubject.map((dbSubcat, idx) => {
+       const stMatch = pMatch?.subTopics?.find(st => st.id === dbSubcat.id) || 
+         rawSubjects.flatMap(s => s.subTopics || []).find(st => st.id === dbSubcat.id);
+       
+       return {
+         id: dbSubcat.id,
+         code: dbSubcat.code || stMatch?.code || undefined,
+         title: dbSubcat.title,
+         description: dbSubcat.description || stMatch?.description || undefined,
+         spec: stMatch?.spec || undefined,
+         figure: stMatch?.figure || undefined,
+         sections: stMatch?.sections || undefined,
+         status: (dbSubcat.status || "reviewed") as any,
+         questionCount: questionsList.filter(q => q.topicId === dbSubcat.id).length,
+         free_chapter: idx === 0 || !!dbSubcat.free_chapter || !!stMatch?.free_chapter,
+       };
+     });
 
-    const totalCount = subTopics.reduce((acc, st) => acc + st.questionCount, 0);
-    const isComingSoon = totalCount === 0;
+     const totalCount = subTopics.reduce((acc, st) => acc + st.questionCount, 0);
+     const isComingSoon = totalCount === 0;
 
-    return {
-      id: dbSub.id,
-      num: dbSub.sort_order ? String(dbSub.sort_order).padStart(2, '0') : (pMatch?.num || "01"),
-      title: dbSub.title,
-      questionCount: totalCount,
-      mastery: pMatch?.mastery || 0,
-      hue: (pMatch?.hue || "navy") as any,
-      blurb: dbSub.description || pMatch?.blurb || "",
-      status: isComingSoon ? "coming-soon" as const : "active" as const,
-      tags: pMatch?.tags || [],
-      subTopics: subTopics,
-      exam_authority: dbSub.exam_authority || pMatch?.exam_authority,
-      license: dbSub.license || pMatch?.license,
-      sort_order: dbSub.sort_order || pMatch?.sort_order,
-      is_free: dbSub.is_free ?? (dbSub.id === "air-navigation" || pMatch?.is_free) ?? false,
-    };
-  });
+     return {
+       id: dbSub.id,
+       num: dbSub.sort_order ? String(dbSub.sort_order).padStart(2, '0') : (pMatch?.num || "01"),
+       title: dbSub.title,
+       questionCount: totalCount,
+       mastery: pMatch?.mastery || 0,
+       hue: (pMatch?.hue || "navy") as any,
+       blurb: dbSub.description || pMatch?.blurb || "",
+       status: isComingSoon ? "coming-soon" as const : "active" as const,
+       tags: pMatch?.tags || [],
+       subTopics: subTopics,
+       exam_authority: dbSub.exam_authority || pMatch?.exam_authority,
+       license: dbSub.license || pMatch?.license,
+       sort_order: dbSub.sort_order || pMatch?.sort_order,
+       is_free: dbSub.is_free ?? (dbSub.id === "air-navigation" || pMatch?.is_free) ?? false,
+     };
+   });
+
+   // Fold in static rawSubjects not present in dbMerged to handle fallback and static-only subjects
+   const dbSubjectIds = new Set(dbSubjects.map(s => s.id));
+   const unmatchedRawSubjects = rawSubjects.filter(rs => !dbSubjectIds.has(rs.id));
+
+   const unmatchedMerged = unmatchedRawSubjects.map(rs => {
+     const subTopics = (rs.subTopics || []).map((st, idx) => {
+       return {
+         id: st.id,
+         code: st.code || undefined,
+         title: st.title,
+         description: st.description || undefined,
+         spec: st.spec || undefined,
+         figure: st.figure || undefined,
+         sections: st.sections || undefined,
+         status: (st.status || "reviewed") as any,
+         questionCount: questionsList.filter(q => q.topicId === st.id).length || st.questionCount || 0,
+         free_chapter: idx === 0 || !!st.free_chapter,
+       };
+     });
+
+     const totalCount = subTopics.reduce((acc, st) => acc + st.questionCount, 0) || rs.questionCount || 0;
+     const isComingSoon = totalCount === 0 && rs.status === "coming-soon";
+
+     return {
+       id: rs.id,
+       num: rs.num || "01",
+       title: rs.title,
+       questionCount: totalCount,
+       mastery: rs.mastery || 0,
+       hue: (rs.hue || "navy") as any,
+       blurb: rs.blurb || "",
+       status: isComingSoon ? "coming-soon" as const : "active" as const,
+       tags: rs.tags || [],
+       subTopics: subTopics,
+       exam_authority: rs.exam_authority,
+       license: rs.license,
+       sort_order: rs.sort_order,
+       is_free: rs.is_free ?? (rs.id === "air-navigation") ?? false,
+     };
+   });
+
+   const merged = [...dbMerged, ...unmatchedMerged];
 
   cachedMergedSubjects = merged;
   setLocalCache("merged_subjects", merged);

@@ -274,9 +274,13 @@ export default function QuizView() {
   useEffect(() => {
     if (status === "active") {
       const curQ = questions[currentIndex];
-      setSelectedOptionId(answers[curQ.id] || null);
+      if (curQ) {
+        setSelectedOptionId(answers[curQ.id] || null);
+      } else {
+        setSelectedOptionId(null);
+      }
     }
-  }, [currentIndex, status]); // removed 'questions' from dependencies to avoid loop, it's stable
+  }, [currentIndex, status, questions, answers]);
 
   // --- EFFECTS ---
   // Timer for active quiz
@@ -395,6 +399,7 @@ export default function QuizView() {
 
       const key = e.key.toLowerCase();
       const currentQ = questions[currentIndex];
+      if (!currentQ) return;
       const isSubmitted = submittedIds.has(currentQ.id);
       const isRevealed = revealedIds.has(currentQ.id);
 
@@ -958,8 +963,6 @@ export default function QuizView() {
     );
   }
 
-  const currentQ = questions[currentIndex];
-
   if (totalQuestions === 0) {
     if (topicId?.startsWith("ai-generated-")) {
       return (
@@ -981,9 +984,13 @@ export default function QuizView() {
       <div className="relative min-h-screen flex items-center justify-center p-4">
         <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
         <div className="relative z-10 text-center">
-          <h2 className="font-serif text-3xl text-ink">No Questions Found</h2>
+          <h2 className="font-serif text-3xl text-ink">
+            {isVivaRoute ? "No VIVA questions available yet" : "No Questions Found"}
+          </h2>
           <p className="font-sans text-muted mb-8 mt-2">
-            There are no operational limits specified for this module yet.
+            {isVivaRoute 
+              ? "We are currently preparing more oral board questions. Please check back soon!"
+              : "There are no operational limits specified for this module yet."}
           </p>
           <Button variant="primary" onClick={() => navigate("/modules")}>
             Return to Base
@@ -992,6 +999,8 @@ export default function QuizView() {
       </div>
     );
   }
+
+  const currentQ = questions[currentIndex] || questions[0];
 
   if (status === "prompt-resume") {
     return (
