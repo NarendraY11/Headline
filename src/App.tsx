@@ -74,6 +74,7 @@ import PricingView from "./views/PricingView";
 import NotificationCenter from "./components/NotificationCenter";
 import StreakWidget from "./components/StreakWidget";
 import { useLogbook } from "./hooks/useLogbook";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 function HeaderAuth() {
   const { user, loading, openAuthModal } = useAuth();
@@ -1726,6 +1727,7 @@ export default function App() {
           </Route>
         </Routes>
       </ErrorBoundary>
+      <SpeedInsights />
     </Router>
   );
 }
