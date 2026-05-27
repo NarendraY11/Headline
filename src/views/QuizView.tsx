@@ -12,6 +12,7 @@ import { Wordmark, Chip, Button, CompassLogomark } from "../components/Atoms";
 import { Question } from "../data/questions";
 import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopic } from "../lib/content";
 import ShareableScorecard from "../components/ShareableScorecard";
+import { isPaidActive } from "../lib/plan";
 import { apiFetch } from "../lib/api";
 import { mockExams } from "../data/topics";
 import { recordAnswerProgress, trackAnswerForStreakAndGoal, getDueQuestionIds } from "../lib/spacedRepetition";
@@ -1400,7 +1401,7 @@ export default function QuizView() {
           />
 
           {/* FREE USER UPGRADE PROMPT ON MOCK END */}
-          {routeTopicId === "nav-cpl-01" && userData?.plan === "free" && (
+          {routeTopicId === "nav-cpl-01" && !isPaidActive(userData) && (
             <div className="bg-panel rounded-2xl p-8 border border-rule shadow-md relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6">
               <div className="space-y-2 max-w-xl text-center md:text-left animate-in fade-in slide-in-from-bottom-3 duration-500">
                 <div className="inline-flex items-center gap-1.5 font-mono text-[9.5px] tracking-widest font-bold uppercase text-navy bg-sky-soft/40 px-2.5 py-0.5 rounded-full border border-sky/20">

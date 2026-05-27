@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Lock, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "./Atoms";
+import { isPaidActive } from "../lib/plan";
 
 interface ProGateProps {
   children: React.ReactNode;
@@ -12,10 +13,11 @@ interface ProGateProps {
 }
 
 export function ProGate({ children, type, isUnlocked = false }: ProGateProps) {
-  const { user, userData, openAuthModal } = useAuth();
+  const { user, userData, openAuthModal, updateUserData } = useAuth();
+  const [isTrialLoading, setIsTrialLoading] = useState(false);
   
   // Expose pro plan or bypass if explicit unlock has been passed
-  const isPro = userData?.plan === "pro";
+  const isPro = isPaidActive(userData);
 
   // Check custom rules if isUnlocked is not explicitly defined/true
   let locked = !isPro;
@@ -38,6 +40,23 @@ export function ProGate({ children, type, isUnlocked = false }: ProGateProps) {
       locked = true;
     }
   }
+
+  const startTrial = async () => {
+    setIsTrialLoading(true);
+    try {
+      await updateUserData({
+        plan: "trial",
+        planStartedAt: new Date().toISOString(),
+        planExpiresAt: new Date(Date.now() + 7 * (24 * 60 * 60 * 1000)).toISOString(),
+        trialStartedAt: new Date().toISOString(),
+        trialUsed: true,
+      });
+    } catch (err) {
+      console.error("Failed starting trial:", err);
+    } finally {
+      setIsTrialLoading(false);
+    }
+  };
 
   if (!locked) {
     return <>{children}</>;
@@ -121,15 +140,27 @@ export function ProGate({ children, type, isUnlocked = false }: ProGateProps) {
                 Sign Up & Open Sandbox
               </Button>
             ) : (
-              <Link to="/pricing" className="w-full sm:w-auto">
-                <Button
-                  variant="primary"
-                  className="w-full h-10 text-xs px-5 justify-center bg-navy hover:bg-navy-dark text-bg transition-all"
-                >
-                  Upgrade to Captain Pro
-                  <ArrowRight size={14} />
-                </Button>
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-2.5 items-center justify-center w-full">
+                {userData?.plan === "free" && !userData?.trialUsed && (
+                  <Button
+                    variant="ghost"
+                    onClick={startTrial}
+                    loading={isTrialLoading}
+                    className="w-full sm:w-auto h-10 text-xs px-4 justify-center border-amber text-amber-700 hover:bg-amber-50 font-semibold cursor-pointer"
+                  >
+                    Start 7-day free trial
+                  </Button>
+                )}
+                <Link to="/pricing" className="w-full sm:w-auto">
+                  <Button
+                    variant="primary"
+                    className="w-full h-10 text-xs px-5 justify-center bg-navy hover:bg-navy-dark text-bg transition-all"
+                  >
+                    Upgrade to Captain Pro
+                    <ArrowRight size={14} />
+                  </Button>
+                </Link>
+              </div>
             )}
             
             <Link to="/pricing" className="block text-center text-[11px] font-medium text-muted hover:text-ink transition-colors py-2 sm:py-0 self-center">

@@ -26,8 +26,11 @@ interface Profile {
   display_name: string | null;
   target_exam: string;
   next_exam: string | null;
-  plan: "free" | "pro";
+  plan: "free" | "trial" | "pro" | "lifetime";
   plan_started_at: string;
+  plan_expires_at?: string | null;
+  trial_started_at?: string | null;
+  trial_used?: boolean;
   created_at: string;
 }
 
@@ -49,8 +52,15 @@ export default function UsersAnalytics() {
   // Filtering & Sorting State
   const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [planFilter, setPlanFilter] = useState<"all" | "free" | "pro">("all");
+  const [planFilter, setPlanFilter] = useState<"all" | "free" | "trial" | "pro" | "lifetime">("all");
   const [sortField, setSortField] = useState<"lastActive" | "created_at" | "created_at_asc" | "totalQuestionsAnswered" | "avgScore">("lastActive");
+
+  // Admin Plan Edit State
+  const [editingPlan, setEditingPlan] = useState<"free" | "trial" | "pro" | "lifetime" | "">("");
+  const [expiresAt, setExpiresAt] = useState<string>("");
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+  const [planSuccessMsg, setPlanSuccessMsg] = useState("");
+  const [planErrorMsg, setPlanErrorMsg] = useState("");
   
   // Debounce search input to avoid heavy/unnecessary re-renders on every keystroke
   useEffect(() => {
@@ -187,6 +197,82 @@ export default function UsersAnalytics() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Synchronize edit form state when selectedUser changes
+  useEffect(() => {
+    if (selectedUser) {
+      setEditingPlan(selectedUser.plan || "free");
+      setExpiresAt(selectedUser.plan_expires_at ? selectedUser.plan_expires_at.split("T")[0] : "");
+      setPlanSuccessMsg("");
+      setPlanErrorMsg("");
+    } else {
+      setEditingPlan("");
+      setExpiresAt("");
+    }
+  }, [selectedUser]);
+
+  const handleSavePlan = async () => {
+    if (!selectedUser || !editingPlan) return;
+    setIsSavingPlan(true);
+    setPlanSuccessMsg("");
+    setPlanErrorMsg("");
+
+    try {
+      const expirationTimestamp = expiresAt ? new Date(expiresAt).toISOString() : null;
+      
+      const updateData: any = {
+        plan: editingPlan,
+        plan_expires_at: expirationTimestamp,
+        updated_at: new Date().toISOString()
+      };
+
+      // If switching to trial, set standard trial metrics helper columns
+      if (editingPlan === "trial") {
+        updateData.trial_started_at = new Date().toISOString();
+        updateData.trial_used = true;
+        // Trial set to now + 7 days if expired date not customized
+        if (!expirationTimestamp) {
+          const sevenDaysFromNow = new Date();
+          sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+          updateData.plan_expires_at = sevenDaysFromNow.toISOString();
+        }
+      } else if (editingPlan === "free") {
+        updateData.plan_expires_at = null;
+      } else if (editingPlan === "lifetime") {
+        updateData.plan_expires_at = null;
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update(updateData)
+        .eq("id", selectedUser.id);
+
+      if (error) throw error;
+
+      // Log in audited plan_changes table gracefully
+      try {
+        const adminUser = (await supabase.auth.getUser()).data.user;
+        await supabase.from("plan_changes").insert({
+          user_id: selectedUser.id,
+          from_plan: selectedUser.plan,
+          to_plan: editingPlan,
+          changed_by: adminUser?.id || null
+        });
+      } catch (auditError) {
+        console.warn("Audit table logbook update error (optional):", auditError);
+      }
+
+      setPlanSuccessMsg(`Plan successfully updated to ${editingPlan}!`);
+      
+      // Refresh list to update state across indicators immediately
+      await fetchData();
+    } catch (err: any) {
+      console.error("Failed manual plan override:", err);
+      setPlanErrorMsg(err.message || "Failed to persist database plan updates.");
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
 
   // Filter and sort computation
   const filteredUsers = rawUsers
@@ -357,7 +443,9 @@ export default function UsersAnalytics() {
                   >
                     <option value="all">All Plan Tiers</option>
                     <option value="free">Free Tier</option>
+                    <option value="trial">Trial Tier</option>
                     <option value="pro">Pro Tier</option>
+                    <option value="lifetime">Lifetime Tier</option>
                   </select>
                 </div>
 
@@ -447,7 +535,11 @@ export default function UsersAnalytics() {
                             <span className={`inline-block font-mono text-[9px] px-2.5 py-0.5 rounded-full border font-bold ${
                               profile.plan === "pro"
                                 ? "bg-teal-50 text-teal-700 border-teal-100"
-                                : "bg-bg-1 text-muted border-rule/50 font-semibold"
+                                : profile.plan === "lifetime"
+                                  ? "bg-indigo-50 text-indigo-700 border-indigo-100"
+                                  : profile.plan === "trial"
+                                    ? "bg-amber-50 text-amber-700 border-amber-200"
+                                    : "bg-bg-1 text-muted border-rule/50 font-semibold"
                             }`}>
                               {profile.plan.toUpperCase()}
                             </span>
@@ -562,17 +654,26 @@ export default function UsersAnalytics() {
             {/* Scrollable specs layout */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
               
-              {/* Profile variables bento */}
+               {/* Profile variables bento */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-bg-2/40 border border-rule/75 rounded-lg flex flex-col justify-between">
                   <span className="font-mono text-[8.5px] uppercase text-muted tracking-wide">License Plan</span>
-                  <span className={`inline-block font-mono text-[10px] font-bold px-2 py-0.5 px-3 rounded-full border self-start mt-2 ${
-                    selectedUser.plan === "pro" ? "bg-teal-50 border-teal-100 text-teal-800" : "bg-bg-1 border-rule text-muted-2"
+                  <span className={`inline-block font-mono text-[10px] font-bold px-3 py-0.5 rounded-full border self-start mt-2 ${
+                    selectedUser.plan === "pro"
+                      ? "bg-teal-50 border-teal-100 text-teal-800"
+                      : selectedUser.plan === "lifetime"
+                        ? "bg-indigo-50 border-indigo-100 text-indigo-800"
+                        : selectedUser.plan === "trial"
+                          ? "bg-amber-50 border-amber-200 text-amber-800"
+                          : "bg-bg-1 border-rule text-muted-2"
                   }`}>
                     {selectedUser.plan.toUpperCase()}
                   </span>
                   {selectedUser.plan_started_at && (
                     <span className="font-mono text-[8.5px] text-muted mt-1">Upgrade: {new Date(selectedUser.plan_started_at).toLocaleDateString()}</span>
+                  )}
+                  {selectedUser.plan_expires_at && (
+                    <span className="font-mono text-[8.5px] text-rose-600 font-bold mt-1">Expires: {new Date(selectedUser.plan_expires_at).toLocaleDateString()}</span>
                   )}
                 </div>
 
@@ -601,6 +702,64 @@ export default function UsersAnalytics() {
                     <Activity size={13} className="text-[#E5A93C] shrink-0" />
                     <span>{selectedUser.totalQuestionsAnswered} answered</span>
                   </span>
+                </div>
+              </div>
+
+              {/* ADMIN COCKPIT LICENSE CONTROL PANEL */}
+              <div className="bg-panel/75 border border-rule rounded-lg p-4 space-y-4">
+                <div className="flex items-center gap-1.5 border-b border-rule pb-2">
+                  <Activity size={14} className="text-navy" />
+                  <h3 className="font-serif text-xs font-bold uppercase tracking-wider text-ink">Manage Cockpit Clearance (Admin)</h3>
+                </div>
+                
+                {planSuccessMsg && (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-xs leading-normal">
+                    {planSuccessMsg}
+                  </div>
+                )}
+                {planErrorMsg && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-850 rounded text-xs leading-normal">
+                    {planErrorMsg}
+                  </div>
+                )}
+
+                <div className="space-y-3 font-sans">
+                  <div>
+                    <label className="block font-mono text-[9px] uppercase tracking-wider text-muted mb-1.5 font-bold">Select Active Plan Tier</label>
+                    <select
+                      value={editingPlan}
+                      onChange={(e) => setEditingPlan(e.target.value as any)}
+                      className="w-full bg-white border border-rule text-xs p-2 rounded-lg outline-none cursor-pointer focus:ring-1 focus:ring-sky/50"
+                    >
+                      <option value="free">Free Tier</option>
+                      <option value="trial">Trial Tier (7 Days)</option>
+                      <option value="pro">Pro Tier (Captain)</option>
+                      <option value="lifetime">Lifetime Access (Admin Override)</option>
+                    </select>
+                  </div>
+
+                  {(editingPlan === "pro" || editingPlan === "trial") && (
+                    <div>
+                      <label className="block font-mono text-[9px] uppercase tracking-wider text-muted mb-1.5 font-bold">
+                        Set Plan Expiration Date {editingPlan === "trial" && "(Default is Now + 7 Days)"}
+                      </label>
+                      <input
+                        type="date"
+                        value={expiresAt}
+                        onChange={(e) => setExpiresAt(e.target.value)}
+                        className="w-full bg-white border border-rule text-xs p-2 rounded-lg outline-none focus:ring-1 focus:ring-sky/50"
+                      />
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleSavePlan}
+                    disabled={isSavingPlan || !editingPlan}
+                    className="w-full py-2 bg-navy text-bg hover:bg-navy-dark font-mono text-[10px] uppercase font-bold rounded-lg tracking-wide transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {isSavingPlan ? "Persisting changes..." : "Commit Plan Override"}
+                  </button>
                 </div>
               </div>
 

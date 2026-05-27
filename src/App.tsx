@@ -25,12 +25,14 @@ import {
   MoveRight,
   ChevronDown,
   Check,
-  Gift
+  Gift,
+  Sparkles
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { lazy, Suspense } from "react";
 import { OnboardingFlow } from "./views/OnboardingFlow";
+import { isPaidActive, planLabel, daysLeft } from "./lib/plan";
 
 const HomeView = lazy(() => import("./views/HomeView"));
 const ModulesView = lazy(() => import("./views/ModulesView"));
@@ -350,15 +352,20 @@ function SettingsOverlay({ onClose }: { onClose: () => void }) {
                   <div className="space-y-1 text-center sm:text-left">
                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 font-sans">
                         <span className="font-sans font-semibold text-[15px] text-ink">
-                           {userData?.plan === "pro" ? "Captain (Pro Access)" : "Cadet (Free Account)"}
+                           {userData?.plan === "lifetime" ? "Captain (Lifetime Pro)" : 
+                            userData?.plan === "pro" ? "Captain (Pro Access)" : 
+                            userData?.plan === "trial" ? "Co-Pilot (7-Day Trial)" : "Cadet (Free Account)"}
                         </span>
-                        {userData?.plan === "pro" && (
-                           <span className="bg-mint text-bg font-mono font-bold text-[8px] tracking-wider uppercase px-1.5 py-0.5 rounded leading-none shrink-0">
+                        {isPaidActive(userData) && (
+                           <span className="bg-mint text-bg font-mono font-bold text-[8px] tracking-wider uppercase px-1.5 py-0.5 rounded leading-none shrink-0" title={planLabel(userData)}>
                               ACTIVE
                            </span>
                         )}
                      </div>
-                     {userData?.plan === "pro" ? (
+                     <p className="font-sans text-[11px] font-mono text-muted uppercase">
+                        {planLabel(userData)}
+                     </p>
+                     {isPaidActive(userData) ? (
                         <p className="font-sans text-xs text-muted leading-relaxed">
                            Operational clearance active. Full cockpit access enabled. Thank you for your support, Captain!
                         </p>
@@ -370,7 +377,7 @@ function SettingsOverlay({ onClose }: { onClose: () => void }) {
                   </div>
                   <Link to="/pricing" onClick={onClose} className="shrink-0 w-full sm:w-auto">
                      <Button variant="primary" className="w-full sm:w-auto h-9 text-xs px-4 bg-navy hover:bg-navy-dark text-bg rounded-md">
-                        {userData?.plan === "pro" ? "Manage Subscription" : "Upgrade to Pro"}
+                        {isPaidActive(userData) ? "Manage Subscription" : "Upgrade to Pro"}
                      </Button>
                   </Link>
                </div>
@@ -1578,6 +1585,40 @@ function AppShell() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* TRIAL IN-APP STATUS BANNER */}
+            {userData?.plan === "trial" && (
+              (() => {
+                const dl = Math.max(0, daysLeft(userData));
+                const isUrgent = dl <= 2;
+                return (
+                  <div className={`w-full py-2.5 px-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs font-sans tracking-wide border-b ${
+                    isUrgent 
+                      ? "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900/40" 
+                      : "bg-panel text-muted hover:text-ink border-rule"
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <Sparkles size={14} className={isUrgent ? "text-amber-600 animate-pulse" : "text-[#DF9D38]"} />
+                      <span>
+                        {isUrgent 
+                          ? `Urgent: Your Free Trial is ending in ${dl} ${dl === 1 ? 'day' : 'days'}. Upgrade now to keep cockpit access!` 
+                          : `Trial Mode · ${dl} ${dl === 1 ? 'day' : 'days'} left · Upgrade to Captain Pro to maintain uninterrupted clearance.`
+                        }
+                      </span>
+                    </div>
+                    <Link to="/pricing" className="shrink-0">
+                      <button className={`px-3 py-1 font-mono text-[9px] uppercase tracking-wider rounded-md font-semibold cursor-pointer ${
+                        isUrgent 
+                          ? "bg-amber-600 text-bg hover:bg-amber-700" 
+                          : "bg-navy text-bg hover:bg-navy-dark"
+                      }`}>
+                        Upgrade Now
+                      </button>
+                    </Link>
+                  </div>
+                );
+              })()
+            )}
 
             {/* MAIN SCROLLABLE VIEW */}
             <main 

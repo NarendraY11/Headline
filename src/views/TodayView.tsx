@@ -690,6 +690,76 @@ export default function TodayView() {
     return "text-signal";
   };
 
+  // Load active session from localStorage
+  const [activeSession, setActiveSession] = useState<{
+    topicId: string;
+    currentIndex: number;
+    answeredCount: number;
+    status: string;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      let found: typeof activeSession = null;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("heading_quiz_state_")) {
+          const val = localStorage.getItem(key);
+          if (val) {
+            const data = JSON.parse(val);
+            if (data && data.status !== "ended" && data.answers) {
+              const topicId = key.replace("heading_quiz_state_", "");
+              const answered = Object.keys(data.answers).length;
+              found = {
+                topicId,
+                currentIndex: data.currentIndex || 0,
+                answeredCount: answered,
+                status: data.status
+              };
+              break;
+            }
+          }
+        }
+      }
+      setActiveSession(found);
+    } catch (e) {
+      console.error("Error loading active quiz session:", e);
+    }
+  }, []);
+
+  // Calculate real progression of score trend (latest half of attempts average score - oldest half of attempts average score)
+  let scoreTrendSign = "";
+  let scoreTrendStr = "";
+  if (logbook.length >= 2) {
+    const chronological = [...logbook].sort(
+      (a, b) => new Date(a.dateISO || "").getTime() - new Date(b.dateISO || "").getTime()
+    );
+    const mid = Math.floor(chronological.length / 2);
+    const firstHalf = chronological.slice(0, mid);
+    const secondHalf = chronological.slice(mid);
+    
+    const firstAvg = firstHalf.reduce((sum, a) => sum + (a.percentage || 0), 0) / firstHalf.length;
+    const secondAvg = secondHalf.reduce((sum, a) => sum + (a.percentage || 0), 0) / secondHalf.length;
+    
+    const diff = Math.round(secondAvg - firstAvg);
+    if (diff > 0) {
+      scoreTrendSign = "↑";
+      scoreTrendStr = `+${diff}%`;
+    } else if (diff < 0) {
+      scoreTrendSign = "↓";
+      scoreTrendStr = `${diff}%`;
+    } else {
+      scoreTrendSign = "→";
+      scoreTrendStr = "0%";
+    }
+  } else if (logbook.length === 1) {
+    scoreTrendSign = "↑";
+    scoreTrendStr = `+${Math.round(logbook[0].percentage || 0)}%`;
+  } else {
+    scoreTrendSign = "—";
+    scoreTrendStr = "No study data";
+  }
+
   const renderTile = (tile: string) => {
     const tileBaseClasses =
       "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between cursor-grab active:cursor-grabbing";
@@ -942,8 +1012,8 @@ export default function TodayView() {
             {daysDiff !== null && daysDiff >= 0 ? (
               <>
                 {hasAttempts && (
-                  <div className="bg-mint text-bg font-mono text-[9px] px-2 py-1 rounded-full font-bold shadow-sm">
-                    ↑ 4 WK
+                  <div className={`text-bg font-mono text-[9px] px-2 py-1 rounded-full font-bold shadow-sm ${scoreTrendSign === "↑" ? "bg-mint" : scoreTrendSign === "↓" ? "bg-signal" : "bg-neutral-500"}`}>
+                    {scoreTrendSign} {scoreTrendStr}
                   </div>
                 )}
                 <span
@@ -985,12 +1055,27 @@ export default function TodayView() {
             </p>
           </div>
 
-          <Link to="/modules" className="block w-full relative z-10">
+          <Link 
+            to={
+              activeSession 
+                ? `/quiz/${activeSession.topicId}` 
+                : logbook.length > 0 
+                  ? `/quiz/review` 
+                  : `/modules`
+            } 
+            className="block w-full relative z-10"
+          >
             <Button
               variant="primary"
-              className="w-full bg-bg text-ink hover:bg-paper h-[48px] rounded-[14px] flex items-center justify-center border-0 shadow-none font-medium text-base"
+              className="w-full bg-bg text-ink hover:bg-paper h-[48px] rounded-[14px] flex items-center justify-center border-0 shadow-none font-medium text-base cursor-pointer"
             >
-              {hasAttempts ? "▶ Resume · 14/20" : "▶ Start First Module"}
+              {activeSession ? (
+                `▶ Resume ${activeSession.topicId.toUpperCase().replace("-", " ")} · ${activeSession.answeredCount} Answered`
+              ) : logbook.length > 0 ? (
+                "▶ Start Daily Drill"
+              ) : (
+                "▶ Start First Module"
+              )}
             </Button>
           </Link>
         </div>

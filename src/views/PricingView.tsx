@@ -8,6 +8,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { apiFetch } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 
+import { isPaidActive } from "../lib/plan";
+
 // Scroll reveal helper
 const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: string }> = ({ children, delay = 0, className = "" }) => {
   return (
@@ -37,13 +39,56 @@ const loadRazorpayScript = () => {
 };
 
 export default function PricingView() {
-  const { user, userData, openAuthModal } = useAuth();
+  const { user, userData, openAuthModal, updateUserData } = useAuth();
   const { showToast } = useToast();
   
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [isTrialLoading, setIsTrialLoading] = useState(false);
 
-  const isPro = userData?.plan === "pro";
+  const isPro = isPaidActive(userData);
+
+  const handleStartTrial = async () => {
+    if (!user) {
+      showToast({
+        type: "info",
+        title: "Account Required",
+        message: "Please sign up or sign in to activate your 7-day free trial.",
+        duration: 6000
+      });
+      openAuthModal("signup");
+      return;
+    }
+    
+    setIsTrialLoading(true);
+    try {
+      if (updateUserData) {
+        await updateUserData({
+          plan: "trial",
+          planStartedAt: new Date().toISOString(),
+          planExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          trialStartedAt: new Date().toISOString(),
+          trialUsed: true,
+        });
+        showToast({
+          type: "success",
+          title: "Trial Activated!",
+          message: "You now have full Pro-level access for 7 days!",
+          duration: 5000
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      showToast({
+        type: "error",
+        title: "Activation Failed",
+        message: "Unable to activate free trial. Please try again.",
+        duration: 5000
+      });
+    } finally {
+      setIsTrialLoading(false);
+    }
+  };
 
   const handleSubscribe = async () => {
     if (!user) {
@@ -289,7 +334,18 @@ export default function PricingView() {
                     <li className="flex items-center gap-4 font-medium text-navy"><Sparkles size={18} className="text-[#DF9D38] shrink-0" /> AI Weakness Coach & 7-day study plan creators</li>
                   </ul>
                   
-                  <div className="relative z-10">
+                  <div className="relative z-10 space-y-3">
+                    {(!user || (userData?.plan === "free" && !userData?.trialUsed)) && (
+                      <Button
+                        variant="ghost"
+                        onClick={handleStartTrial}
+                        loading={isTrialLoading}
+                        className="w-full justify-center h-[46px] text-xs font-mono tracking-wider uppercase rounded-full border-amber text-amber-700 hover:bg-amber-50 font-bold cursor-pointer"
+                      >
+                        Start 7-day free trial
+                      </Button>
+                    )}
+
                     <Button 
                       variant="primary" 
                       onClick={handleSubscribe} 

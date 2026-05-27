@@ -11,9 +11,11 @@ export interface UserData {
   totalQuestionsAnswered?: number;
   totalSessionsCount?: number;
   lastSessionAt?: any;
-  plan?: 'free' | 'pro';
+  plan?: 'free' | 'trial' | 'pro' | 'lifetime';
   planStartedAt?: string;
   planExpiresAt?: string;
+  trialStartedAt?: string;
+  trialUsed?: boolean;
   dailyGoal?: number;
   streakCount?: number;
   lastActivityDate?: string;
@@ -188,6 +190,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         plan: profile?.plan || "free",
         planStartedAt: profile?.plan_started_at,
         planExpiresAt: profile?.plan_expires_at,
+        trialStartedAt: profile?.trial_started_at,
+        trialUsed: profile?.trial_used ?? false,
         dailyGoal: profile?.daily_goal ?? profile?.settings?.dailyGoal ?? 20,
         streakCount: profile?.streak_count ?? profile?.settings?.streakCount ?? 0,
         lastActivityDate: profile?.last_activity_date ?? profile?.settings?.lastActivityDate ?? "",
@@ -502,6 +506,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.nextExam !== undefined) updatePayload.next_exam = data.nextExam;
         if (data.newsletterOptIn !== undefined) updatePayload.newsletter_opt_in = data.newsletterOptIn;
         
+        if (data.plan !== undefined) updatePayload.plan = data.plan;
+        if (data.planStartedAt !== undefined) updatePayload.plan_started_at = data.planStartedAt;
+        if (data.planExpiresAt !== undefined) updatePayload.plan_expires_at = data.planExpiresAt;
+        if (data.trialStartedAt !== undefined) updatePayload.trial_started_at = data.trialStartedAt;
+        if (data.trialUsed !== undefined) updatePayload.trial_used = data.trialUsed;
+
         if (data.dailyGoal !== undefined) updatePayload.daily_goal = data.dailyGoal;
         if (data.streakCount !== undefined) updatePayload.streak_count = data.streakCount;
         if (data.lastActivityDate !== undefined) updatePayload.last_activity_date = data.lastActivityDate;
