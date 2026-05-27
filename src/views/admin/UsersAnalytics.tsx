@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { Card } from "../../components/Atoms";
+import { planLabel } from "../../lib/plan";
 import { 
   Users, 
   GraduationCap, 
@@ -55,12 +56,93 @@ export default function UsersAnalytics() {
   const [planFilter, setPlanFilter] = useState<"all" | "free" | "trial" | "pro" | "lifetime">("all");
   const [sortField, setSortField] = useState<"lastActive" | "created_at" | "created_at_asc" | "totalQuestionsAnswered" | "avgScore">("lastActive");
 
-  // Admin Plan Edit State
-  const [editingPlan, setEditingPlan] = useState<"free" | "trial" | "pro" | "lifetime" | "">("");
-  const [expiresAt, setExpiresAt] = useState<string>("");
-  const [isSavingPlan, setIsSavingPlan] = useState(false);
-  const [planSuccessMsg, setPlanSuccessMsg] = useState("");
-  const [planErrorMsg, setPlanErrorMsg] = useState("");
+  // 'Manage Plan' Modal States
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [modalUser, setModalUser] = useState<EnrichedUser | null>(null);
+  const [modalPlan, setModalPlan] = useState<"free" | "trial" | "pro" | "lifetime">("free");
+  const [modalExpiresAt, setModalExpiresAt] = useState<string>("");
+  const [isModalSaving, setIsModalSaving] = useState(false);
+  const [modalSuccessMsg, setModalSuccessMsg] = useState("");
+  const [modalErrorMsg, setModalErrorMsg] = useState("");
+
+  const handleModalPlanSelector = (plan: "free" | "trial" | "pro" | "lifetime") => {
+    setModalPlan(plan);
+    setModalSuccessMsg("");
+    setModalErrorMsg("");
+    
+    const today = new Date();
+    if (plan === "trial") {
+      const trialExpiry = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+      setModalExpiresAt(trialExpiry.toISOString().split("T")[0]);
+    } else if (plan === "pro") {
+      const proExpiry = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+      setModalExpiresAt(proExpiry.toISOString().split("T")[0]);
+    } else {
+      setModalExpiresAt("");
+    }
+  };
+
+  const handleSaveModalPlan = async () => {
+    if (!modalUser || !modalPlan) return;
+    setIsModalSaving(true);
+    setModalSuccessMsg("");
+    setModalErrorMsg("");
+
+    try {
+      const expirationTimestamp = modalExpiresAt ? new Date(modalExpiresAt).toISOString() : null;
+      
+      const updateData: any = {
+        plan: modalPlan,
+        plan_expires_at: expirationTimestamp,
+        updated_at: new Date().toISOString()
+      };
+
+      if (modalPlan === "trial") {
+        updateData.trial_started_at = new Date().toISOString();
+        updateData.trial_used = true;
+      } else if (modalPlan === "free" || modalPlan === "lifetime") {
+        updateData.plan_expires_at = null;
+      }
+
+      const { error } = await supabase
+        .from("profiles")
+        .update(updateData)
+        .eq("id", modalUser.id);
+
+      if (error) throw error;
+
+      // Log in audited plan_changes table gracefully
+      try {
+        const adminUser = (await supabase.auth.getUser()).data.user;
+        await supabase.from("plan_changes").insert({
+          user_id: modalUser.id,
+          from_plan: modalUser.plan,
+          to_plan: modalPlan,
+          changed_by: adminUser?.id || null
+        });
+      } catch (auditError) {
+        console.warn("Audit table logbook update error:", auditError);
+      }
+
+      setModalSuccessMsg(`Plan successfully updated to ${modalPlan}!`);
+      
+      // Refresh list to update state across indicators immediately
+      await fetchData();
+      
+      // Close modal shortly
+      setTimeout(() => {
+        setIsPlanModalOpen(false);
+        setModalUser(null);
+        setModalSuccessMsg("");
+      }, 1500);
+
+    } catch (err: any) {
+      console.error("Failed manual plan override:", err);
+      setModalErrorMsg(err.message || "Failed to persist database plan updates.");
+    } finally {
+      setIsModalSaving(false);
+    }
+  };
   
   // Debounce search input to avoid heavy/unnecessary re-renders on every keystroke
   useEffect(() => {
@@ -198,82 +280,6 @@ export default function UsersAnalytics() {
     fetchData();
   }, []);
 
-  // Synchronize edit form state when selectedUser changes
-  useEffect(() => {
-    if (selectedUser) {
-      setEditingPlan(selectedUser.plan || "free");
-      setExpiresAt(selectedUser.plan_expires_at ? selectedUser.plan_expires_at.split("T")[0] : "");
-      setPlanSuccessMsg("");
-      setPlanErrorMsg("");
-    } else {
-      setEditingPlan("");
-      setExpiresAt("");
-    }
-  }, [selectedUser]);
-
-  const handleSavePlan = async () => {
-    if (!selectedUser || !editingPlan) return;
-    setIsSavingPlan(true);
-    setPlanSuccessMsg("");
-    setPlanErrorMsg("");
-
-    try {
-      const expirationTimestamp = expiresAt ? new Date(expiresAt).toISOString() : null;
-      
-      const updateData: any = {
-        plan: editingPlan,
-        plan_expires_at: expirationTimestamp,
-        updated_at: new Date().toISOString()
-      };
-
-      // If switching to trial, set standard trial metrics helper columns
-      if (editingPlan === "trial") {
-        updateData.trial_started_at = new Date().toISOString();
-        updateData.trial_used = true;
-        // Trial set to now + 7 days if expired date not customized
-        if (!expirationTimestamp) {
-          const sevenDaysFromNow = new Date();
-          sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-          updateData.plan_expires_at = sevenDaysFromNow.toISOString();
-        }
-      } else if (editingPlan === "free") {
-        updateData.plan_expires_at = null;
-      } else if (editingPlan === "lifetime") {
-        updateData.plan_expires_at = null;
-      }
-
-      const { error } = await supabase
-        .from("profiles")
-        .update(updateData)
-        .eq("id", selectedUser.id);
-
-      if (error) throw error;
-
-      // Log in audited plan_changes table gracefully
-      try {
-        const adminUser = (await supabase.auth.getUser()).data.user;
-        await supabase.from("plan_changes").insert({
-          user_id: selectedUser.id,
-          from_plan: selectedUser.plan,
-          to_plan: editingPlan,
-          changed_by: adminUser?.id || null
-        });
-      } catch (auditError) {
-        console.warn("Audit table logbook update error (optional):", auditError);
-      }
-
-      setPlanSuccessMsg(`Plan successfully updated to ${editingPlan}!`);
-      
-      // Refresh list to update state across indicators immediately
-      await fetchData();
-    } catch (err: any) {
-      console.error("Failed manual plan override:", err);
-      setPlanErrorMsg(err.message || "Failed to persist database plan updates.");
-    } finally {
-      setIsSavingPlan(false);
-    }
-  };
-
   // Filter and sort computation
   const filteredUsers = rawUsers
     .filter((user) => {
@@ -283,7 +289,7 @@ export default function UsersAnalytics() {
       const matchesSearch = searchStr.includes(searchTerm.toLowerCase()) || nameStr.includes(searchTerm.toLowerCase());
 
       // plan filter
-      const matchesPlan = planFilter === "all" ? true : user.plan === planFilter;
+      const matchesPlan = planFilter === "all" ? true : (user.plan || "free") === planFilter;
 
       return matchesSearch && matchesPlan;
     })
@@ -541,7 +547,7 @@ export default function UsersAnalytics() {
                                     ? "bg-amber-50 text-amber-700 border-amber-200"
                                     : "bg-bg-1 text-muted border-rule/50 font-semibold"
                             }`}>
-                              {profile.plan.toUpperCase()}
+                              {planLabel(profile)}
                             </span>
                           </td>
 
@@ -706,61 +712,27 @@ export default function UsersAnalytics() {
               </div>
 
               {/* ADMIN COCKPIT LICENSE CONTROL PANEL */}
-              <div className="bg-panel/75 border border-rule rounded-lg p-4 space-y-4">
+              <div className="bg-panel/75 border border-rule rounded-lg p-5 text-center space-y-3.5">
                 <div className="flex items-center gap-1.5 border-b border-rule pb-2">
                   <Activity size={14} className="text-navy" />
-                  <h3 className="font-serif text-xs font-bold uppercase tracking-wider text-ink">Manage Cockpit Clearance (Admin)</h3>
+                  <h3 className="font-serif text-xs font-bold uppercase tracking-wider text-ink">Manage Cockpit Clearance</h3>
                 </div>
-                
-                {planSuccessMsg && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded text-xs leading-normal">
-                    {planSuccessMsg}
-                  </div>
-                )}
-                {planErrorMsg && (
-                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-850 rounded text-xs leading-normal">
-                    {planErrorMsg}
-                  </div>
-                )}
-
-                <div className="space-y-3 font-sans">
-                  <div>
-                    <label className="block font-mono text-[9px] uppercase tracking-wider text-muted mb-1.5 font-bold">Select Active Plan Tier</label>
-                    <select
-                      value={editingPlan}
-                      onChange={(e) => setEditingPlan(e.target.value as any)}
-                      className="w-full bg-white border border-rule text-xs p-2 rounded-lg outline-none cursor-pointer focus:ring-1 focus:ring-sky/50"
-                    >
-                      <option value="free">Free Tier</option>
-                      <option value="trial">Trial Tier (7 Days)</option>
-                      <option value="pro">Pro Tier (Captain)</option>
-                      <option value="lifetime">Lifetime Access (Admin Override)</option>
-                    </select>
-                  </div>
-
-                  {(editingPlan === "pro" || editingPlan === "trial") && (
-                    <div>
-                      <label className="block font-mono text-[9px] uppercase tracking-wider text-muted mb-1.5 font-bold">
-                        Set Plan Expiration Date {editingPlan === "trial" && "(Default is Now + 7 Days)"}
-                      </label>
-                      <input
-                        type="date"
-                        value={expiresAt}
-                        onChange={(e) => setExpiresAt(e.target.value)}
-                        className="w-full bg-white border border-rule text-xs p-2 rounded-lg outline-none focus:ring-1 focus:ring-sky/50"
-                      />
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleSavePlan}
-                    disabled={isSavingPlan || !editingPlan}
-                    className="w-full py-2 bg-navy text-bg hover:bg-navy-dark font-mono text-[10px] uppercase font-bold rounded-lg tracking-wide transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5"
-                  >
-                    {isSavingPlan ? "Persisting changes..." : "Commit Plan Override"}
-                  </button>
-                </div>
+                <p className="font-sans text-xs text-muted leading-normal">
+                  Configure plan status, access validity, and authorization overrides for this student.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalUser(selectedUser);
+                    setModalPlan(selectedUser.plan || "free");
+                    setModalExpiresAt(selectedUser.plan_expires_at ? selectedUser.plan_expires_at.split("T")[0] : "");
+                    setIsPlanModalOpen(true);
+                  }}
+                  className="w-full py-2.5 bg-navy text-bg hover:bg-navy-dark font-mono text-[10px] uppercase font-bold rounded-lg tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <Award size={14} />
+                  <span>Configure User Plan</span>
+                </button>
               </div>
 
               {/* Practiced Subjects lists */}
@@ -836,6 +808,109 @@ export default function UsersAnalytics() {
                 className="px-4 py-2 bg-ink text-white font-mono text-[10px] uppercase font-bold rounded-lg hover:bg-ink-2 tracking-wide transition-colors cursor-pointer"
               >
                 Close Logs
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 'MANAGE PLAN' MODAL DIALOG */}
+      {isPlanModalOpen && modalUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full border border-rule overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-rule bg-bg-2/30 flex items-center justify-between">
+              <div>
+                <h2 className="font-serif text-base font-bold text-ink">Manage Student Plan</h2>
+                <p className="font-mono text-[9px] text-muted-2 uppercase tracking-wider mt-0.5">Authorization Cockpit Control</p>
+              </div>
+              <button 
+                onClick={() => {
+                  setIsPlanModalOpen(false);
+                  setModalUser(null);
+                }}
+                className="w-7 h-7 rounded-full bg-bg-1 border border-rule/60 flex items-center justify-center hover:bg-bg-2 text-muted hover:text-ink transition-colors cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* User summary details card */}
+              <div className="bg-panel/50 border border-rule rounded-xl p-3.5 space-y-1">
+                <div className="font-sans font-bold text-sm text-ink">{modalUser.display_name || "Captain Pilot"}</div>
+                <div className="font-mono text-[10px] text-muted flex items-center gap-1">
+                  <Mail size={10} />
+                  <span>{modalUser.email || "No Email"}</span>
+                </div>
+                <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-rule/40 font-mono text-[10px]">
+                  <span className="text-muted">Current Plan:</span>
+                  <span className="text-[#DF9D38] font-bold uppercase">{modalUser.plan || "free"}</span>
+                </div>
+              </div>
+
+              {modalSuccessMsg && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs leading-normal">
+                  {modalSuccessMsg}
+                </div>
+              )}
+              {modalErrorMsg && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-850 rounded-xl text-xs leading-normal">
+                  {modalErrorMsg}
+                </div>
+              )}
+
+              <div className="space-y-3.5">
+                {/* Select dropdown */}
+                <div>
+                  <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Select Active Plan Tier</label>
+                  <select
+                    value={modalPlan}
+                    onChange={(e) => handleModalPlanSelector(e.target.value as any)}
+                    className="w-full bg-white border border-rule text-xs p-2.5 rounded-xl outline-none cursor-pointer focus:ring-1 focus:ring-navy/30"
+                  >
+                    <option value="free">Free Tier</option>
+                    <option value="trial">Trial Tier (7 Days)</option>
+                    <option value="pro">Pro Tier (Captain)</option>
+                    <option value="lifetime">Lifetime Access (Admin Override)</option>
+                  </select>
+                </div>
+
+                {/* Expiration date */}
+                {(modalPlan === "pro" || modalPlan === "trial") && (
+                  <div className="animate-in slide-in-from-top-1 duration-200">
+                    <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">
+                      Plan Expiration Date {modalPlan === "trial" && "(Default: Now + 7 Days)"}
+                    </label>
+                    <input
+                      type="date"
+                      value={modalExpiresAt}
+                      onChange={(e) => setModalExpiresAt(e.target.value)}
+                      className="w-full bg-white border border-rule text-xs p-2.5 rounded-xl outline-none focus:ring-1 focus:ring-navy/30"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-rule bg-bg-2/30 flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsPlanModalOpen(false);
+                  setModalUser(null);
+                }}
+                className="px-4 py-2 bg-neutral-100 text-muted hover:bg-neutral-200 font-mono text-[10px] uppercase font-bold rounded-lg tracking-wide cursor-pointer transition-colors"
+                disabled={isModalSaving}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveModalPlan}
+                disabled={isModalSaving}
+                className="px-4 py-2 bg-navy text-white hover:bg-navy-dark font-mono text-[10px] uppercase font-bold rounded-lg tracking-wide cursor-pointer transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isModalSaving ? "Saving..." : "Commit Plan Override"}
               </button>
             </div>
           </div>

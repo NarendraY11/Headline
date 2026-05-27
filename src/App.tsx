@@ -1589,27 +1589,27 @@ function AppShell() {
             {/* TRIAL IN-APP STATUS BANNER */}
             {userData?.plan === "trial" && (
               (() => {
-                const dl = Math.max(0, daysLeft(userData));
+                const dl = daysLeft(userData) ?? 0;
                 const isUrgent = dl <= 2;
                 return (
                   <div className={`w-full py-2.5 px-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs font-sans tracking-wide border-b ${
                     isUrgent 
-                      ? "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900/40" 
+                      ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900/40 font-semibold" 
                       : "bg-panel text-muted hover:text-ink border-rule"
                   }`}>
                     <div className="flex items-center gap-2">
-                      <Sparkles size={14} className={isUrgent ? "text-amber-600 animate-pulse" : "text-[#DF9D38]"} />
+                      <Sparkles size={14} className={isUrgent ? "text-rose-600 animate-pulse animate-bounce" : "text-[#DF9D38]"} />
                       <span>
                         {isUrgent 
-                          ? `Urgent: Your Free Trial is ending in ${dl} ${dl === 1 ? 'day' : 'days'}. Upgrade now to keep cockpit access!` 
-                          : `Trial Mode · ${dl} ${dl === 1 ? 'day' : 'days'} left · Upgrade to Captain Pro to maintain uninterrupted clearance.`
+                          ? `Trial · ${dl} ${dl === 1 ? 'day' : 'days'} left. Action Required: Upgrade now to maintain uninterrupted cockpit clearance!` 
+                          : `Trial · ${dl} ${dl === 1 ? 'day' : 'days'} left`
                         }
                       </span>
                     </div>
                     <Link to="/pricing" className="shrink-0">
                       <button className={`px-3 py-1 font-mono text-[9px] uppercase tracking-wider rounded-md font-semibold cursor-pointer ${
                         isUrgent 
-                          ? "bg-amber-600 text-bg hover:bg-amber-700" 
+                          ? "bg-rose-600 text-white hover:bg-rose-700" 
                           : "bg-navy text-bg hover:bg-navy-dark"
                       }`}>
                         Upgrade Now

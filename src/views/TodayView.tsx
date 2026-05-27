@@ -525,7 +525,7 @@ export default function TodayView() {
     }
   }
 
-  const displayedStreak = (userData?.streakCount ?? parseInt(localStorage.getItem("heading_streak_count") || "0")) || currentStreak;
+  const displayedStreak = currentStreak;
 
   const streakWeek = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
@@ -609,8 +609,7 @@ export default function TodayView() {
           .filter(l => l.dateISO && new Date(l.dateISO).getTime() <= d.getTime() + 24 * 3600 * 1000)
           .reduce((sum, l) => sum + ((l.durationSec || 0) / 3600), 0);
       } else {
-        // Mock baseline pattern scaling up from 4 to 12 hours for beautiful visualization
-        cumulativeHours = (6 - i) * 1.5 + 4;
+        cumulativeHours = 0;
       }
       
       const baselineStart = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -765,6 +764,7 @@ export default function TodayView() {
       "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between cursor-grab active:cursor-grabbing";
     switch (tile) {
       case "streak":
+        const hasStreak = displayedStreak > 0;
         return (
           <Reorder.Item
             key="streak"
@@ -773,35 +773,44 @@ export default function TodayView() {
             className={tileBaseClasses}
           >
             <div className="flex items-center gap-1.5 mb-1 text-muted-2">
-              <Flame size={14} className="text-signal md:text-muted" />
+              <Flame size={14} className={hasStreak ? "text-signal" : "text-muted-2"} />
               <span className="font-mono text-[9px] uppercase tracking-widest text-ink-2">
                 STREAK
               </span>
             </div>
-            <div className="font-serif text-3xl text-ink leading-none mt-2">
-              <AnimatedCounter value={displayedStreak} />
-              <span className="font-sans text-xl font-normal lowercase text-muted tracking-normal">
-                d
-              </span>
-            </div>
-            <div className="flex justify-between items-center mt-4 pointer-events-none w-full">
-              {streakWeek.map((d, i) => (
-                <div
-                  key={i}
-                  className="flex flex-col items-center gap-1.5 text-[10px]"
-                >
-                  <div
-                    className={`w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full border flex items-center justify-center
-                      ${d.isActive ? "bg-signal-soft border-signal/30 text-signal" : "bg-bg border-rule text-transparent"} 
-                    `}
-                  >
-                    {d.isActive && (
-                      <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-signal rounded-full"></span>
-                    )}
-                  </div>
+            {hasStreak ? (
+              <>
+                <div className="font-serif text-3xl text-ink leading-none mt-2">
+                  <AnimatedCounter value={displayedStreak} />
+                  <span className="font-sans text-xl font-normal lowercase text-muted tracking-normal">
+                    d
+                  </span>
                 </div>
-              ))}
-            </div>
+                <div className="flex justify-between items-center mt-4 pointer-events-none w-full">
+                  {streakWeek.map((d, i) => (
+                    <div
+                      key={i}
+                      className="flex flex-col items-center gap-1.5 text-[10px]"
+                    >
+                      <div
+                        className={`w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full border flex items-center justify-center
+                          ${d.isActive ? "bg-signal-soft border-signal/30 text-signal" : "bg-bg border-rule text-transparent"} 
+                        `}
+                      >
+                        {d.isActive && (
+                          <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-signal rounded-full"></span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col justify-center items-center py-2 text-center h-full min-h-[50px] animate-in fade-in duration-300">
+                <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide font-semibold">No Active Streak</span>
+                <span className="text-[10px] text-muted leading-tight mt-0.5">Start a session today!</span>
+              </div>
+            )}
           </Reorder.Item>
         );
       case "answered":
@@ -1277,7 +1286,7 @@ export default function TodayView() {
 
         {/* TODAY'S STOPS */}
         <div className="font-mono text-[10px] text-muted-2 tracking-widest uppercase mb-4 mt-8">
-          TODAY · 5 STOPS
+          TODAY · 4 STOPS
         </div>
         <div className="border-t border-rule" />
 

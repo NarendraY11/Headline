@@ -141,7 +141,7 @@ export function ProGate({ children, type, isUnlocked = false }: ProGateProps) {
               </Button>
             ) : (
               <div className="flex flex-col sm:flex-row gap-2.5 items-center justify-center w-full">
-                {userData?.plan === "free" && !userData?.trialUsed && (
+                {(!userData?.plan || userData?.plan === "free") && !userData?.trialUsed && (
                   <Button
                     variant="ghost"
                     onClick={startTrial}
