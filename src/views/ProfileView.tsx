@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button, Card } from "../components/Atoms";
-import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift } from "lucide-react";
+import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function ProfileView() {
@@ -64,6 +64,32 @@ export default function ProfileView() {
 
   const { targetExam = "DGCA CPL", streaks = 0, photoURL: firestorePhotoURL } = userData || {};
   const currentPhotoURL = firestorePhotoURL || user.photoURL;
+
+  const savedDate = userData?.nextExam || "";
+  const [isEditingExamDate, setIsEditingExamDate] = useState(false);
+  const [tempExamDate, setTempExamDate] = useState("");
+
+  useEffect(() => {
+    if (savedDate) {
+      setTempExamDate(savedDate);
+    }
+  }, [savedDate]);
+
+  let daysDiff: number | null = null;
+  let isPast = false;
+  
+  if (savedDate) {
+    const d = new Date(savedDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    const diffTime = d.getTime() - today.getTime();
+    daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (daysDiff < 0) {
+      isPast = true;
+      daysDiff = Math.abs(daysDiff);
+    }
+  }
 
   const startCamera = async () => {
     setUploadError("");
@@ -298,7 +324,7 @@ export default function ProfileView() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         <Card className="bg-panel border-rule p-6">
           <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Target Clearance</div>
           <div className="font-serif text-3xl text-ink">{targetExam}</div>
@@ -306,8 +332,95 @@ export default function ProfileView() {
         <Card className="bg-panel border-rule p-6">
           <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Consecutive Days</div>
           <div className="font-serif text-3xl text-ink flex items-end gap-2">
-            {streaks} <span className="font-sans text-xs font-medium text-muted pb-1">DAY STREAK</span>
+            {streaks} <span className="font-sans text-xs font-semibold text-muted pb-1">DAY STREAK</span>
           </div>
+        </Card>
+        <Card className="bg-panel border-rule p-6 relative group">
+          <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1 flex justify-between items-center">
+            <span>Time-to-Exam</span>
+            {savedDate && !isEditingExamDate && (
+              <button 
+                onClick={() => {
+                  setTempExamDate(savedDate);
+                  setIsEditingExamDate(true);
+                }}
+                className="text-muted-2 hover:text-sky transition-colors cursor-pointer"
+                title="Change Exam Date"
+              >
+                <Edit2 size={11} />
+              </button>
+            )}
+          </div>
+          
+          {isEditingExamDate ? (
+            <div className="space-y-2 mt-2">
+              <input 
+                type="date" 
+                value={tempExamDate}
+                onChange={(e) => setTempExamDate(e.target.value)}
+                className="w-full bg-bg border border-rule rounded-md text-xs px-2 py-1 outline-none text-ink text-center"
+              />
+              <div className="flex gap-2">
+                <Button 
+                  variant="primary" 
+                  size="small" 
+                  className="flex-1 text-[10px] py-1 h-7 text-white"
+                  onClick={async () => {
+                    await updateUserData({ nextExam: tempExamDate });
+                    setIsEditingExamDate(false);
+                  }}
+                >
+                  Save
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="small" 
+                  className="flex-1 text-[10px] py-1 h-7 border border-rule text-ink hover:bg-paper/50"
+                  onClick={() => setIsEditingExamDate(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : savedDate ? (
+            <div className="font-serif text-3xl text-ink flex items-end gap-2 mt-1">
+              {daysDiff !== null ? (
+                <>
+                  {daysDiff === 0 ? (
+                    <div className="text-[20px] font-bold text-mint tracking-tight">Exam Day!</div>
+                  ) : isPast ? (
+                    <div className="flex items-baseline gap-1">
+                      <span>{daysDiff}</span>
+                      <span className="font-sans text-xs font-semibold text-muted">DAYS AGO</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-baseline gap-1">
+                      <span>{daysDiff}</span>
+                      <span className="font-sans text-xs font-semibold text-muted">DAYS LEFT</span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <span className="text-muted text-xs">Invalid date</span>
+              )}
+            </div>
+          ) : (
+            <div className="mt-2 text-center">
+              <span className="font-mono text-[9px] text-muted block mb-2">NO EXAM DATE SET</span>
+              <Button 
+                variant="ghost" 
+                size="small" 
+                className="text-xs h-7 border border-dashed border-rule w-full hover:border-sky hover:text-sky text-ink bg-transparent hover:bg-paper/30"
+                onClick={() => {
+                  const todayStr = new Date().toISOString().split("T")[0];
+                  setTempExamDate(todayStr);
+                  setIsEditingExamDate(true);
+                }}
+              >
+                Set Target Date
+              </Button>
+            </div>
+          )}
         </Card>
       </div>
 

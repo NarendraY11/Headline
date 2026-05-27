@@ -234,6 +234,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (uData.settings) localStorage.setItem("heading_settings", JSON.stringify(uData.settings));
     } catch (e) {
       console.error("Error loading Supabase user details:", e);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -392,18 +394,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let active = true;
+    let lastUserId: string | null = null;
 
     // Check currently active session first
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!active) return;
       if (session?.user) {
         const mappedUser = mapSupabaseUser(session.user, session);
-        setUser(mappedUser);
-        fetchUserData(mappedUser.uid, mappedUser);
+        if (lastUserId !== mappedUser.uid) {
+          lastUserId = mappedUser.uid;
+          setUser(mappedUser);
+          await fetchUserData(mappedUser.uid, mappedUser);
+        }
+        if (active) setLoading(false);
       } else {
         setUser(null);
         setUserData(null);
-        setLoading(false);
+        if (active) setLoading(false);
       }
     });
 
@@ -412,18 +419,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = session?.user || null;
       if (currentUser) {
         const mappedUser = mapSupabaseUser(currentUser, session);
-        setUser(mappedUser);
         
-        // Execute sync/merge transition
-        await syncWithServerAndMerge(mappedUser.uid);
-        
-        // Retrieve profile details
-        await fetchUserData(mappedUser.uid, mappedUser);
+        if (lastUserId !== mappedUser.uid) {
+          lastUserId = mappedUser.uid;
+          setUser(mappedUser);
+          
+          // Execute sync/merge transition
+          await syncWithServerAndMerge(mappedUser.uid);
+          
+          // Retrieve profile details
+          await fetchUserData(mappedUser.uid, mappedUser);
+        } else {
+          setUser(mappedUser);
+        }
       } else {
+        lastUserId = null;
         setUser(null);
         setUserData(null);
+        if (active) setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => {
@@ -436,17 +450,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin
+        redirectTo: window.location.origin,
+        queryParams: {
+          prompt: 'select_account',
+        },
       }
     });
     if (error) throw error;
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
-    setUser(null);
-    setUserData(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Error signing out from Supabase:", error);
+    } finally {
+      // Clear all local auth contexts
+      setUser(null);
+      setUserData(null);
+
+      // Specifically remove all auth/session data from localStorage
+      localStorage.removeItem("heading_bookmarks");
+      localStorage.removeItem("heading_logbook");
+      localStorage.removeItem("heading_settings");
+      localStorage.removeItem("heading_streak_count");
+      localStorage.removeItem("heading_last_activity_date");
+      localStorage.removeItem("heading_questions_answered_today");
+      localStorage.removeItem("heading_onboarding_completed");
+      localStorage.removeItem("heading_question_progress");
+
+      // Clear any cached attempts or state keys
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.startsWith("heading_quiz_state_") || key.startsWith("heading_cache_"))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+      // Navigate immediately and refresh UI to fully reset
+      window.location.href = "/";
+    }
   };
 
   const updateUserData = async (data: Partial<UserData>) => {

@@ -72,6 +72,8 @@ const BlogManager = lazy(() => import("./views/admin/BlogManager"));
 import SearchOverlay from "./views/SearchOverlay";
 import PricingView from "./views/PricingView";
 import NotificationCenter from "./components/NotificationCenter";
+import StreakWidget from "./components/StreakWidget";
+import { useLogbook } from "./hooks/useLogbook";
 
 function HeaderAuth() {
   const { user, loading, openAuthModal } = useAuth();
@@ -1017,6 +1019,40 @@ function AppShell() {
   const [showSettings, setShowSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [bookmarkCount, setBookmarkCount] = useState(42);
+
+  const { logbook } = useLogbook();
+  const uniqueDates = [
+    ...new Set(
+      logbook.map((att) => att.dateISO?.split("T")[0]).filter(Boolean)
+    ),
+  ]
+    .sort()
+    .reverse();
+
+  let computedStreak = 0;
+  if (uniqueDates.length > 0) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const todayStr = today.toISOString().split("T")[0];
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+    if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
+      let expectedDate = new Date(uniqueDates[0]);
+      for (const dStr of uniqueDates) {
+        if (dStr === expectedDate.toISOString().split("T")[0]) {
+          computedStreak++;
+          expectedDate.setDate(expectedDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  const displayedStreakValue = (userData?.streakCount ?? parseInt(localStorage.getItem("heading_streak_count") || "0")) || computedStreak;
   
   const [isSidebarPinned, setIsSidebarPinned] = useState(() => 
     localStorage.getItem("heading_sidebar_pinned") === "true" || false
@@ -1412,27 +1448,19 @@ function AppShell() {
                 </span>
               </div>
 
-              {/* Middle: Global Unified Search Pill (triggers SearchOverlay) */}
-              <button 
-                onClick={() => setShowSearch(true)}
-                className="hidden md:flex items-center justify-center lg:justify-between gap-3 p-2 lg:px-4 lg:py-1.5 bg-panel border border-rule hover:border-rule-strong hover:bg-bg-2/50 rounded-full transition-all text-left text-xs cursor-pointer w-9 h-9 lg:w-[320px] lg:h-auto group shadow-[0_1px_2px_rgba(0,0,0,0.01)]"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Search size={13} className="text-muted-2 group-hover:text-ink transition-colors flex-shrink-0" />
-                  <span className="font-sans font-light text-muted-2 group-hover:text-ink transition-colors hidden lg:inline truncate">Search questions, ATA chapters…</span>
-                </div>
-                <kbd className="hidden lg:inline-flex items-center gap-0.5 font-mono text-[9px] bg-bg-2 border border-rule px-1.5 py-0.5 rounded text-muted-2 uppercase select-none flex-shrink-0">
-                  ⌘K
-                </kbd>
-              </button>
-
               {/* Right side: Streak, Actions, and Auth */}
               <div className="flex items-center gap-2.5 sm:gap-3">
-                {/* Streak flame indicator */}
-                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-signal/10 rounded-full border border-signal/10" title="Daily Prep Streak">
-                  <Flame size={14} className="text-signal fill-signal/15" />
-                  <span className="font-mono text-xs font-bold text-signal select-none">14</span>
-                </div>
+                {/* Search icon button */}
+                <button 
+                  onClick={() => setShowSearch(true)}
+                  className="p-2 text-muted hover:text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none cursor-pointer"
+                  title="Search questions, ATA chapters…"
+                >
+                  <Search size={18} />
+                </button>
+
+                {/* Interactive Streak Indicator */}
+                <StreakWidget />
 
                 {/* Notifications Dropdown */}
                 <NotificationCenter />
@@ -1538,7 +1566,7 @@ function AppShell() {
                   {/* Compact Mobile Footer Links */}
                   <div className="pt-3 border-t border-rule/55 flex flex-col gap-2.5">
                     <div className="flex justify-between text-[11px] text-muted-2 px-1">
-                       <span className="flex items-center gap-1"><Flame size={12} className="text-signal" /> Streak: 14 Days</span>
+                       <span className="flex items-center gap-1"><Flame size={12} className="text-signal" /> Streak: {displayedStreakValue} {displayedStreakValue === 1 ? "Day" : "Days"}</span>
                        <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="underline hover:text-ink transition-colors">Mission Specs</Link>
                     </div>
                     <Link to="/quiz/ata-27" className="w-full" onClick={() => setMobileMenuOpen(false)}>

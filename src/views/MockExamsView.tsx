@@ -9,8 +9,12 @@ import {
   ArrowLeft, 
   Activity, 
   TrendingUp, 
-  Layers 
+  Layers,
+  Clock,
+  RefreshCw
 } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
 import { Question } from "../data/questions";
 import { SubjectItem } from "../data/topics";
 import { 
@@ -27,6 +31,35 @@ import { useToast } from "../components/ui/Toast";
 export default function MockExamsView() {
   const navigate = useNavigate();
   const { showToast } = useToast();
+  
+  const { user } = useAuth();
+  const [attempts, setAttempts] = useState<any[]>([]);
+  const [loadingAttempts, setLoadingAttempts] = useState(false);
+
+  const fetchAttempts = async () => {
+    if (!user) return;
+    setLoadingAttempts(true);
+    try {
+      const { data, error } = await supabase
+        .from("attempts")
+        .select("*")
+        .eq("user_id", user.uid)
+        .order("created_at", { ascending: false });
+      if (!error && data) {
+        setAttempts(data);
+      }
+    } catch (err) {
+      console.error("Error loading mock exam attempts:", err);
+    } finally {
+      setLoadingAttempts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchAttempts();
+    }
+  }, [user]);
   
   const [selectedCompliance, setSelectedCompliance] = useState<string>("all");
   const [exams, setExams] = useState<ExamInfo[]>([]);
@@ -394,6 +427,122 @@ export default function MockExamsView() {
                   </ProGate>
                 );
               })}
+            </div>
+
+            {/* Exam Mock History Section */}
+            <div className="mt-16 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity size={18} className="text-sky" />
+                  <h3 className="font-serif text-xl font-bold text-ink">Exam Mock History</h3>
+                </div>
+                {user && (
+                  <button 
+                    onClick={fetchAttempts}
+                    disabled={loadingAttempts}
+                    className="flex items-center gap-1.5 font-mono text-[10px] text-muted hover:text-ink transition-colors uppercase tracking-wider bg-transparent border-none outline-none cursor-pointer"
+                  >
+                    <RefreshCw size={11} className={`${loadingAttempts ? "animate-spin" : ""}`} />
+                    Refresh Logs
+                  </button>
+                )}
+              </div>
+
+              {!user ? (
+                <Card className="bg-panel border-rule p-8 text-center">
+                  <Clock className="mx-auto text-muted mb-3" size={28} />
+                  <h4 className="font-serif text-md text-ink font-semibold mb-1">Sign In to Access Mock History</h4>
+                  <p className="font-sans text-xs text-muted-2 max-w-sm mx-auto leading-relaxed">
+                    Previous mock attempts, passing status, and score breakdowns are synchronized with active pilot cloud profiles.
+                  </p>
+                </Card>
+              ) : loadingAttempts && attempts.length === 0 ? (
+                <div className="py-12 text-center text-xs font-mono text-muted-2">
+                  Querying simulator database...
+                </div>
+              ) : attempts.length === 0 ? (
+                <Card className="bg-panel/30 border border-dashed border-rule py-12 px-4 text-center">
+                  <span className="font-mono text-[10px] text-muted-2 uppercase tracking-widest block mb-1">NO SIMULATED LOGS YET</span>
+                  <p className="font-sans text-xs text-muted max-w-md mx-auto leading-relaxed">
+                    Select an active compliance flight deck above to launch your first virtual training module.
+                  </p>
+                </Card>
+              ) : (
+                <Card className="bg-panel border-rule overflow-hidden p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="border-b border-rule font-mono uppercase text-[9px] tracking-widest text-muted-2 bg-bg-2/30">
+                          <th className="py-3.5 px-4 font-bold">Date & Time</th>
+                          <th className="py-3.5 px-4 font-bold">Simulation Paper</th>
+                          <th className="py-3.5 px-4 font-bold">Mode</th>
+                          <th className="py-3.5 px-4 font-bold">Duration</th>
+                          <th className="py-3.5 px-4 text-center font-bold">Score</th>
+                          <th className="py-3.5 px-4 text-center font-bold">Accuracy</th>
+                          <th className="py-3.5 px-4 text-right font-bold">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-rule/40 font-sans">
+                        {attempts.map((attempt) => {
+                          const dateText = new Date(attempt.created_at).toLocaleDateString("en-GB", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          });
+                          
+                          const title = attempt.data?.topicTitle || attempt.topic_id || "Simulator Session";
+                          const passThreshold = attempt.data?.overridePassMark || 70;
+                          const scoreRatio = `${attempt.score} / ${attempt.total}`;
+                          const pct = attempt.percentage !== undefined ? attempt.percentage : Math.round((attempt.score / attempt.total) * 100);
+                          const isPass = pct >= passThreshold;
+                          
+                          const getModeLabel = (m: string) => {
+                            switch (m) {
+                              case "timed": return "Full Mock";
+                              case "subject_mock": return "Subject Mock";
+                              case "practice": return "Guided Practice";
+                              default: return m ? m.charAt(0).toUpperCase() + m.slice(1) : "Session";
+                            }
+                          };
+
+                          const formatDuration = (sec: number) => {
+                            if (!sec) return "-";
+                            const mins = Math.floor(sec / 60);
+                            const remainingSecs = sec % 60;
+                            return mins > 0 ? `${mins}m ${remainingSecs}s` : `${remainingSecs}s`;
+                          };
+
+                          return (
+                            <tr key={attempt.id} className="hover:bg-bg-2/20 transition-colors">
+                              <td className="py-3 px-4 font-mono text-[10px] text-muted-2 whitespace-nowrap">{dateText}</td>
+                              <td className="py-3 px-4 text-ink font-medium">{title}</td>
+                              <td className="py-3 px-4 text-muted whitespace-nowrap">
+                                <span className="px-2 py-0.5 rounded bg-bg border border-rule font-mono text-[9px] uppercase font-semibold">
+                                  {getModeLabel(attempt.mode)}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 font-mono text-[10.5px] text-muted-2 whitespace-nowrap">{formatDuration(attempt.duration_sec)}</td>
+                              <td className="py-3 px-4 text-center font-mono text-ink font-medium whitespace-nowrap">{scoreRatio}</td>
+                              <td className="py-3 px-4 text-center font-mono text-ink whitespace-nowrap">{pct}%</td>
+                              <td className="py-3 px-4 text-right whitespace-nowrap">
+                                <span className={`inline-block font-mono text-[9px] font-bold rounded px-2 py-0.5 border ${
+                                  isPass 
+                                    ? "border-emerald-500/20 text-emerald-700 bg-emerald-500/5" 
+                                    : "border-signal-soft text-signal bg-signal-soft"
+                                }`}>
+                                  {isPass ? "PASS" : "FAIL"}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
             </div>
 
             {/* Informative Pilot Card */}
