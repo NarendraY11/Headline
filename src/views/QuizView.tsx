@@ -745,6 +745,7 @@ export default function QuizView() {
 
   // --- AI ACTIONS ---
   const handleExplainDeeper = async () => {
+    if (!currentQ) return;
     if (isAiLoading || aiExplanations[currentQ.id]) return;
     if (!user) {
       setAiExplanations((prev) => ({
@@ -926,6 +927,33 @@ export default function QuizView() {
   };
 
   // --- RENDER HELPERS ---
+  if ((isVivaRoute || mode === "viva") && (loadingContent || !questions)) {
+    return (
+      <div className="relative min-h-screen flex flex-col items-center justify-center p-4 bg-bg">
+        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
+        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <div className="relative z-10 flex flex-col items-center justify-center space-y-6 max-w-md text-center p-8 bg-paper/60 backdrop-blur border border-rule rounded-2xl shadow-xl">
+          <div className="p-4 rounded-full bg-sky-soft/40 border border-sky/20 flex items-center justify-center">
+            <CompassLogomark size={48} spin="rotate" spinDuration={3} />
+          </div>
+          <div>
+            <h2 className="font-serif text-2xl text-ink font-bold tracking-tight">
+              Initializing Oral Board
+            </h2>
+            <p className="font-sans text-xs text-muted mt-2 leading-relaxed">
+              Loading VIVA oral questions, references, and calibrating your voice practice board. Please stand by...
+            </p>
+          </div>
+          <div className="flex gap-1.5 justify-center items-center">
+            <span className="w-2.5 h-2.5 rounded-full bg-sky animate-bounce [animation-delay:-0.3s]"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-sky/80 animate-bounce [animation-delay:-0.15s]"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-sky/60 animate-bounce"></span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loadingContent) {
     return (
       <div className="relative min-h-screen">
@@ -1781,9 +1809,9 @@ export default function QuizView() {
 
   // --- ACTIVE QUIZ RENDER ---
   const isSubmittedPractice =
-    mode === "practice" && submittedIds.has(currentQ.id);
-  const isRevealedViva = mode === "viva" && revealedIds.has(currentQ.id);
-  const isBookmarked = bookmarks.includes(currentQ.id);
+    mode === "practice" && currentQ && submittedIds.has(currentQ.id);
+  const isRevealedViva = mode === "viva" && currentQ && revealedIds.has(currentQ.id);
+  const isBookmarked = currentQ ? bookmarks.includes(currentQ.id) : false;
 
   const sharedProps = {
     currentQ,
