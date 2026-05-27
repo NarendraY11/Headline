@@ -1,87 +1,238 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, Chip, Button } from "../components/Atoms";
-import { Timer, Clipboard, PlaneTakeoff, ArrowUpRight } from "lucide-react";
-import { mockExams } from "../data/topics";
+import { Card, Button } from "../components/Atoms";
+import { 
+  Timer, 
+  Clipboard, 
+  PlaneTakeoff, 
+  ArrowUpRight, 
+  ArrowLeft, 
+  Activity, 
+  TrendingUp, 
+  Layers 
+} from "lucide-react";
 import { Question } from "../data/questions";
-import { fetchPublishedQuestions } from "../lib/content";
+import { SubjectItem } from "../data/topics";
+import { 
+  fetchExams, 
+  fetchMockPapersForExam, 
+  fetchPublishedQuestions, 
+  fetchMergedSubjects,
+  ExamInfo,
+  MockPaperSpec
+} from "../lib/content";
 import { ProGate } from "../components/ProGate";
+import { useToast } from "../components/ui/Toast";
 
 export default function MockExamsView() {
   const navigate = useNavigate();
-  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
+  const { showToast } = useToast();
+  
+  const [selectedCompliance, setSelectedCompliance] = useState<string>("all");
+  const [exams, setExams] = useState<ExamInfo[]>([]);
+  const [subjects, setSubjects] = useState<SubjectItem[]>([]);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Detail deck state
+  const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
+  const [selectedExamMocks, setSelectedExamMocks] = useState<MockPaperSpec[]>([]);
+  const [loadingMocks, setLoadingMocks] = useState(false);
+  const [activeTab, setActiveTab] = useState<"practice" | "subject" | "full">("practice");
+
   useEffect(() => {
-    async function loadQuestions() {
+    async function initData() {
       try {
-        const pub = await fetchPublishedQuestions();
-        setQuestions(pub);
+        const [examList, subjectList, questionList] = await Promise.all([
+          fetchExams(),
+          fetchMergedSubjects(),
+          fetchPublishedQuestions()
+        ]);
+        setExams(examList.filter(e => e.status === "published"));
+        setSubjects(subjectList);
+        setQuestions(questionList);
       } catch (err) {
-        console.error("Error loading mock exam questions:", err);
+        console.error("Error loading mock simulation workspace:", err);
       } finally {
         setLoading(false);
       }
     }
-    loadQuestions();
+    initData();
   }, []);
 
-  const getExamQuestions = (exam: any) => {
-    if (exam.id === "nav-cpl-01") {
-      return questions.filter(q => 
-        q.topicId === "air-navigation" || 
-        q.topicId === "nav-gen" || 
-        q.topicId === "nav-rad" || 
-        q.topicId === "nav-inst" ||
-        q.topicId.startsWith("nav-")
-      );
+  const handleSelectExam = async (examId: string) => {
+    setSelectedExamId(examId);
+    setActiveTab("practice");
+    setLoadingMocks(true);
+    try {
+      const mocks = await fetchMockPapersForExam(examId);
+      // Filter published or complete mock configurations
+      setSelectedExamMocks(mocks.filter(m => m.status === "published" || m.status === "draft"));
+    } catch (err) {
+      console.error("Error fetching mock spec templates:", err);
+    } finally {
+      setLoadingMocks(false);
     }
-    if (exam.id === "met-atpl-01") {
-      return questions.filter(q => 
-        q.topicId === "meteorology" || 
-        q.topicId === "met-1" || 
-        q.topicId === "met-2" ||
-        q.topicId.startsWith("met-")
-      );
-    }
-    if (exam.id === "ops-cpl-02") {
-      return questions.filter(q => 
-        q.topicId === "air-regulation" || 
-        q.topicId === "reg-1" ||
-        q.topicId.startsWith("reg-")
-      );
-    }
-    if (exam.id === "agk-atpl-03") {
-      return questions.filter(q => 
-        q.topicId === "atg" || 
-        q.topicId === "ata-70" || 
-        q.topicId === "ata-73" ||
-        q.topicId.startsWith("ata-") ||
-        (q.ata && q.ata.toLowerCase().includes("engine"))
-      );
-    }
-    return questions.filter(q => q.topicId === exam.id);
   };
 
-  const handleStartExam = (exam: any, examQuests: Question[]) => {
-    const sessionKey = `heading_mock_exam_${exam.id}_quests`;
+  const getExamQuestionsCount = (exam: ExamInfo) => {
+    const examSubjects = subjects.filter(sub => exam.subject_ids?.includes(sub.id));
+    return questions.filter(q => {
+      return examSubjects.some(subject => q.topicId === subject.id || subject.subTopics?.some(st => st.id === q.topicId));
+    }).length;
+  };
+
+  // MODE A: Start Subcategory Syllabus Practice
+  const handleStartSubcategoryPractice = (subcategory_id: string) => {
+    navigate(`/quiz/${subcategory_id}`);
+  };
+
+  // MODE B: Start Subject-Level Sampling Mock
+  const handleStartSubjectMock = (subject: SubjectItem, exam: ExamInfo) => {
+    const subjectQuests = questions.filter(q => q.topicId === subject.id || subject.subTopics?.some(st => st.id === q.topicId));
+    
+    // Draw 30 random sample questions of this subject
+    const shuffled = [...subjectQuests].sort(() => 0.5 - Math.random());
+    const sampleCount = Math.min(30, shuffled.length);
+    const selectedQuests = shuffled.slice(0, sampleCount);
+    
+    if (selectedQuests.length === 0) {
+      showToast({
+        type: "error",
+        title: "Syllabus Dry",
+        message: "No published questions recorded in this subject yet.",
+        duration: 5000,
+      });
+      return;
+    }
+    
+    const sessionKey = `heading_subject_mock_${subject.id}_quests`;
     const sessionData = {
-      expiresAt: Date.now() + 2 * 60 * 60 * 1000, // 2 hours
-      questions: examQuests,
+      expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+      questions: selectedQuests,
     };
     sessionStorage.setItem(sessionKey, JSON.stringify(sessionData));
     
-    navigate(`/quiz/${exam.id}`, {
+    navigate(`/quiz/subject-${subject.id}`, {
       state: {
         sessionStorageKey: sessionKey,
+        overridePassMark: exam.pass_mark,
+        overrideTimeLimit: 30, // 30 minutes for single subject mocks
+        overrideNegMark: exam.neg_marking_percent || 0,
+        examTitle: `${subject.title} - Subject Mock`,
       }
     });
   };
 
-  const filteredExams = selectedDifficulty === "all" 
-    ? mockExams 
-    : mockExams.filter(exam => exam.difficulty === selectedDifficulty);
+  // MODE C1: Start Standard Automatic Full Mock
+  const handleStartAutomaticExamMock = (exam: ExamInfo) => {
+    const examSubjects = subjects.filter(sub => exam.subject_ids?.includes(sub.id));
+    const examQuests = questions.filter(q => {
+      return examSubjects.some(subject => q.topicId === subject.id || subject.subTopics?.some(st => st.id === q.topicId));
+    });
+    
+    const shuffled = [...examQuests].sort(() => 0.5 - Math.random());
+    const count = exam.total_questions || exam.question_count || 50;
+    const selectedQuests = shuffled.slice(0, count);
+    
+    if (selectedQuests.length === 0) {
+      showToast({
+        type: "error",
+        title: "Simulation Refused",
+        message: "This exam syllabus has no published database questions yet.",
+        duration: 5000,
+      });
+      return;
+    }
+    
+    const sessionKey = `heading_auto_exam_${exam.id}_quests`;
+    const sessionData = {
+      expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+      questions: selectedQuests,
+    };
+    sessionStorage.setItem(sessionKey, JSON.stringify(sessionData));
+    
+    navigate(`/quiz/exam-${exam.id}`, {
+      state: {
+        sessionStorageKey: sessionKey,
+        overridePassMark: exam.pass_mark,
+        overrideTimeLimit: exam.duration_min,
+        overrideNegMark: exam.neg_marking_percent || 0,
+        examTitle: `${exam.title} - Simulator Trial`,
+      }
+    });
+  };
+
+  // MODE C2: Start Admin Configured Rules-Weighted Mock Paper
+  const handleStartCustomMockPaper = (mock: MockPaperSpec, exam: ExamInfo) => {
+    let selectedQuests: Question[] = [];
+    
+    // Sample based on weighting rules
+    mock.rules.forEach(rule => {
+      let filtered: Question[] = [];
+      if (rule.subcategory_id) {
+        filtered = questions.filter(q => q.topicId === rule.subcategory_id);
+      } else if (rule.subject_id) {
+        const matchingSubject = subjects.find(s => s.id === rule.subject_id);
+        filtered = questions.filter(q => q.topicId === rule.subject_id || matchingSubject?.subTopics?.some(st => st.id === q.topicId));
+      }
+      
+      const shuffledSub = [...filtered].sort(() => 0.5 - Math.random());
+      selectedQuests.push(...shuffledSub.slice(0, rule.count));
+    });
+    
+    // Backfill from the full exam pool if rules draw empty
+    if (selectedQuests.length === 0) {
+      const examSubjects = subjects.filter(sub => exam.subject_ids?.includes(sub.id));
+      const examQuests = questions.filter(q => {
+        return examSubjects.some(subject => q.topicId === subject.id || subject.subTopics?.some(st => st.id === q.topicId));
+      });
+      const shuffled = [...examQuests].sort(() => 0.5 - Math.random());
+      selectedQuests = shuffled.slice(0, mock.total_questions);
+    }
+    
+    if (selectedQuests.length === 0) {
+      showToast({
+        type: "error",
+        title: "Assembling Failed",
+        message: "Unable to assemble mock questions corresponding to these requirements.",
+        duration: 5000,
+      });
+      return;
+    }
+    
+    // Final shuffle so rules don't bunch answers in order of subjects
+    selectedQuests = [...selectedQuests].sort(() => 0.5 - Math.random());
+    
+    const sessionKey = `heading_mock_paper_${mock.id}_quests`;
+    const sessionData = {
+      expiresAt: Date.now() + 2 * 60 * 60 * 1000,
+      questions: selectedQuests,
+    };
+    sessionStorage.setItem(sessionKey, JSON.stringify(sessionData));
+    
+    navigate(`/quiz/mock-${mock.id}`, {
+      state: {
+        sessionStorageKey: sessionKey,
+        overridePassMark: mock.pass_mark,
+        overrideTimeLimit: mock.duration_min,
+        overrideNegMark: mock.neg_marking_percent || 0,
+        examTitle: `${mock.title}`,
+      }
+    });
+  };
+
+  // Filters mapping
+  const filteredExams = selectedCompliance === "all" 
+    ? exams 
+    : exams.filter(e => e.authority === selectedCompliance);
+
+  const selectedExam = exams.find(e => e.id === selectedExamId);
+
+  // Load subject/subtopic linkages for display
+  const selectedExamSubjects = selectedExam 
+    ? subjects.filter(sub => selectedExam.subject_ids?.includes(sub.id))
+    : [];
 
   if (loading) {
     return (
@@ -93,15 +244,13 @@ export default function MockExamsView() {
             <div className="h-4 bg-muted-2/25 w-40 rounded font-mono"></div>
             <div className="h-10 bg-ink/10 w-80 rounded-lg"></div>
             <div className="h-4 bg-muted/20 w-full rounded"></div>
-            <div className="h-4 bg-muted/20 w-4/5 rounded"></div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-paper border border-rule/50 rounded-2xl p-6 h-64 flex flex-col justify-between">
+              <div key={i} className="bg-paper border border-rule/50 rounded-2xl p-6 h-64 flex flex-col justify-between animate-pulse">
                 <div className="space-y-3">
                   <div className="h-6 bg-ink/10 w-3/4 rounded"></div>
                   <div className="h-4 bg-muted/20 w-full rounded"></div>
-                  <div className="h-4 bg-muted/20 w-5/6 rounded"></div>
                 </div>
                 <div className="flex justify-between items-end pt-4">
                   <div className="h-4 bg-muted-2/20 w-24 rounded"></div>
@@ -122,157 +271,484 @@ export default function MockExamsView() {
 
       <div className="relative z-10 px-4 py-8 md:py-16 max-w-7xl mx-auto">
         
-        {/* Header Block */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-          <div className="max-w-2xl">
-            <span className="eyebrow block mb-3">VIRTUAL SIMULATION SYSTEM</span>
-            <h2 className="h-section text-ink font-semibold">Mock Examinations</h2>
-            <p className="mt-4 font-sans font-light text-muted text-md leading-relaxed">
-              Experience the pressure of real examination screens. Heading administers simulated exam feeds 
-              synchronized exactly to standard European and Asian Civil Aviation authorities.
-            </p>
-          </div>
-
-          {/* Difficulty filter utilizing button layout */}
-          <div className="flex flex-wrap gap-2 font-mono text-xs">
-            <button 
-              onClick={() => setSelectedDifficulty("all")}
-              className={`px-4 py-2 rounded-full border transition-all ${
-                selectedDifficulty === "all" 
-                  ? "bg-ink text-paper border-ink" 
-                  : "bg-paper text-ink border-rule hover:bg-bg-2"
-              }`}
-            >
-              ALL COMPLIANCES
-            </button>
-            <button 
-              onClick={() => setSelectedDifficulty("standard")}
-              className={`px-4 py-2 rounded-full border transition-all ${
-                selectedDifficulty === "standard" 
-                  ? "bg-ink text-paper border-ink" 
-                  : "bg-paper text-ink border-rule hover:bg-bg-2"
-              }`}
-            >
-              STANDARD (CPL)
-            </button>
-            <button 
-              onClick={() => setSelectedDifficulty("complex")}
-              className={`px-4 py-2 rounded-full border transition-all ${
-                selectedDifficulty === "complex" 
-                  ? "bg-ink text-paper border-ink" 
-                  : "bg-paper text-ink border-rule hover:bg-bg-2"
-              }`}
-            >
-              COMPLEX (ATPL)
-            </button>
-          </div>
-        </div>
-
-        {/* Exams Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {filteredExams.map((exam) => {
-            const hasSavedState = !!localStorage.getItem(`heading_quiz_state_${exam.id}`);
-            const examQuests = getExamQuestions(exam);
-            const hasQuestions = examQuests.length >= 10;
-            
-            return (
-              <ProGate type="timed-mock" isUnlocked={exam.id === "nav-cpl-01"}>
-            <Card key={exam.id} className={`relative hover:shadow-[0_12px_36px_rgba(13,26,45,0.06)] transition-all ${
-              !hasQuestions ? "opacity-60 grayscale-[30%]" : ""
-            }`} id={`mock-exam-card-${exam.id}`}>
-              {/* Corner Accent indicator */}
-              <div className="absolute top-0 right-0 h-10 w-10 flex items-center justify-center">
-                <div className={`h-2.5 w-2.5 rounded-full ${
-                  !hasQuestions ? "bg-muted" :
-                  exam.difficulty === "extreme" ? "bg-signal animate-pulse" :
-                  exam.difficulty === "complex" ? "bg-amber" : "bg-mint"
-                }`} />
+        {!selectedExam ? (
+          <>
+            {/* Index Grid of Available Exams */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+              <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+                <span className="eyebrow block mb-3">AUTHORIZED SIMULATION FEED</span>
+                <h2 className="h-section text-ink font-semibold">Mock Examinations</h2>
+                <p className="mt-4 font-sans font-light text-muted text-md leading-relaxed">
+                  Experience standard authority-aligned virtual testing. Heading administers fully certified 
+                  simulators dynamically generated from our rich high-fidelity DB question banks.
+                </p>
               </div>
 
-              <div className="flex items-center gap-2 mb-4">
-                {!hasQuestions && (
-                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-signal/10 border border-signal/20 text-signal font-mono text-[9px] uppercase tracking-widest mr-2 animate-pulse">
-                    <span className="w-1.2 h-1.2 rounded-full bg-signal" /> CONTENT IN PROGRESS
-                  </span>
-                )}
-                {hasSavedState && hasQuestions && (
-                  <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-mint/10 border border-mint/20 text-mint font-mono text-[9px] uppercase tracking-widest mr-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-mint shadow-[0_0_8px] shadow-mint/60" /> IN PROGRESS
-                  </span>
-                )}
-                <span className="footnote text-[10px] tracking-widest">{exam.code}</span>
-                <span className="text-rule-strong text-xs">|</span>
-                <span className="font-mono text-[9px] uppercase tracking-widest text-muted">
-                  PASS PRE-REQ: {exam.passingScore}%
+              {/* Authority filter */}
+              <div className="flex flex-wrap gap-2 font-mono text-xs">
+                <button 
+                  onClick={() => setSelectedCompliance("all")}
+                  className={`px-4 py-2 rounded-full border transition-all ${
+                    selectedCompliance === "all" 
+                      ? "bg-ink text-paper border-ink" 
+                      : "bg-paper text-ink border-rule hover:bg-bg-2"
+                  }`}
+                >
+                  ALL COMPLIANCES
+                </button>
+                {["DGCA", "EASA", "FAA", "AIRLINE", "TYPE_RATING"].map((auth) => (
+                  <button 
+                    key={auth}
+                    onClick={() => setSelectedCompliance(auth)}
+                    className={`px-4 py-2 rounded-full border transition-all uppercase ${
+                      selectedCompliance === auth 
+                        ? "bg-ink text-paper border-ink" 
+                        : "bg-paper text-ink border-rule hover:bg-bg-2"
+                    }`}
+                  >
+                    {auth === "TYPE_RATING" ? "TYPE RATING" : auth}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Exams Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {filteredExams.map((exam) => {
+                const totalQuestionsCount = getExamQuestionsCount(exam);
+                const isComingSoon = totalQuestionsCount === 0;
+                
+                return (
+                  <ProGate key={exam.id} type="timed-mock" isUnlocked={true}>
+                    <Card className={`relative hover:shadow-[0_12px_36px_rgba(13,26,45,0.06)] transition-all flex flex-col justify-between h-full ${
+                      isComingSoon ? "opacity-75" : ""
+                    }`} id={`exam-card-${exam.id}`}>
+                      
+                      {/* Accent Dot Indicator */}
+                      <div className="absolute top-4 right-4 h-3 w-3 flex items-center justify-center">
+                        <span className={`h-2.5 w-2.5 rounded-full ${
+                          isComingSoon ? "bg-muted-2" :
+                          exam.license === "ATPL" ? "bg-amber" :
+                          exam.license === "CPL" ? "bg-sky" : "bg-mint"
+                        }`} />
+                      </div>
+
+                      <div>
+                        {/* Tags and Labels */}
+                        <div className="flex items-center gap-2 mb-4 font-mono text-[9px] uppercase tracking-wider">
+                          <span className="footnote px-2 py-0.5 rounded bg-bg border border-rule font-bold">
+                            {exam.authority} · {exam.license}
+                          </span>
+                          <span className="text-rule-strong">|</span>
+                          <span className="text-muted text-[10px] font-semibold">
+                            PASS REQ: {exam.pass_mark}%
+                          </span>
+                        </div>
+
+                        <h3 className="h-card-title text-ink font-semibold mb-4 leading-snug">
+                          {exam.title}
+                        </h3>
+
+                        {/* Quick Spec list */}
+                        <div className="grid grid-cols-3 gap-2 p-3.5 rounded-lg bg-panel border border-rule mb-6 text-center">
+                          <div>
+                            <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wide">TIME LIMIT</span>
+                            <span className="text-xs font-sans font-medium text-ink flex items-center justify-center gap-1 mt-1">
+                              <Timer size={12} className="text-sky" /> {exam.duration_min} min
+                            </span>
+                          </div>
+                          <div className="border-x border-rule px-2">
+                            <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wide">TOTAL POOL</span>
+                            <span className="text-xs font-sans font-medium text-ink flex items-center justify-center gap-1 mt-1">
+                              <Clipboard size={12} className="text-amber" /> {totalQuestionsCount} Qs
+                            </span>
+                          </div>
+                          <div>
+                            <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wide">NEG MARKING</span>
+                            <span className="text-xs font-sans font-medium text-ink block mt-1">
+                              {exam.neg_marking_percent > 0 ? `${exam.neg_marking_percent}%` : "No"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-4 border-t border-rule mt-auto">
+                        <span className="font-mono text-[9.5px] font-bold text-muted uppercase tracking-wider">
+                          {isComingSoon ? "UNDER DEVELOPMENT" : "COMPLIANT PREP FEED"}
+                        </span>
+                        {!isComingSoon ? (
+                          <Button 
+                            variant="primary" 
+                            className="h-[36px] px-4.5 text-xs text-white"
+                            onClick={() => handleSelectExam(exam.id)}
+                          >
+                            Explore Syllabus <ArrowUpRight size={13} className="ml-0.5" />
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" disabled className="h-[36px] px-4 text-xs text-muted-2 bg-transparent cursor-not-allowed border border-dashed border-rule">
+                            Available Soon
+                          </Button>
+                        )}
+                      </div>
+                    </Card>
+                  </ProGate>
+                );
+              })}
+            </div>
+
+            {/* Informative Pilot Card */}
+            <div className="mt-16 bg-panel border-l-4 border-signal border-t border-r border-b border-rule rounded-r-lg p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
+              <PlaneTakeoff className="text-signal w-10 h-10 flex-shrink-0" />
+              <div className="space-y-1">
+                <h4 className="font-sans font-semibold text-ink text-sm uppercase tracking-wide">
+                  MANDATORY PILOT REMINDER (SECTION 117 OVERVIEW)
+                </h4>
+                <p className="font-sans text-xs text-muted-2 leading-relaxed">
+                  Simulated training mimics flight-deck strain metrics. High session fatigue degrades visual layout processing. 
+                  Always align chart navigation formulas before deploying into full EASA/DGCA-weighted modules.
+                </p>
+              </div>
+            </div>
+          </>
+        ) : (
+          /* Detailed Exam Exploration Deck - 3 Practices Modes */
+          <div className="space-y-8 animate-in fade-in duration-300">
+            <button
+              onClick={() => setSelectedExamId(null)}
+              className="flex items-center gap-2 font-mono text-xs text-muted-2 hover:text-ink transition-colors tracking-widest uppercase mb-4"
+            >
+              <ArrowLeft size={14} /> Back to Simulation Decks
+            </button>
+
+            {/* Exam metadata billboard */}
+            <div className="bg-panel border border-rule rounded-2xl p-6 md:p-8 shadow-sm">
+              <div className="flex flex-wrap items-center gap-3 mb-4">
+                <span className="font-mono text-xs bg-ink text-paper px-2.5 py-1 rounded tracking-wider uppercase">
+                  {selectedExam.authority} Compliance System
+                </span>
+                <span className="footnote font-mono text-[10.5px] uppercase tracking-widest text-muted border border-rule px-2 py-0.5 rounded-full bg-paper">
+                  License Prerequisite: {selectedExam.license}
+                </span>
+                <span className="flex items-center gap-1 text-mint text-xs font-mono ml-auto">
+                  <span className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse" /> SIMULATION SOURCE FEED ACTIVE
                 </span>
               </div>
 
-              <h3 className="h-card-title text-ink font-semibold mb-6">
-                {exam.subject}
-              </h3>
+              <h1 className="font-serif text-3xl md:text-4xl text-ink font-semibold mt-2 leading-tight">
+                {selectedExam.title}
+              </h1>
 
-              <div className="grid grid-cols-3 gap-4 p-4 rounded-lg bg-panel border border-rule mb-8">
-                <div className="text-center md:text-left">
-                  <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wide">TIME LIMIT</span>
-                  <span className="text-sm font-sans font-medium text-ink flex items-center justify-center md:justify-start gap-1 mt-1">
-                    <Timer size={14} className="text-sky" /> {exam.minutes} min
+              {/* Dynamic Metadata stats block */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 mt-8 pt-6 border-t border-rule">
+                <div>
+                  <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wider">Duration Limit</span>
+                  <span className="font-serif text-xl text-ink font-medium block mt-1">{selectedExam.duration_min} Minutes</span>
+                </div>
+                <div className="border-l border-rule pl-4">
+                  <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wider">Pass Standard</span>
+                  <span className="font-serif text-xl text-ink font-medium block mt-1">{selectedExam.pass_mark}% Score</span>
+                </div>
+                <div className="border-l border-rule pl-4">
+                  <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wider">Simulator Payload</span>
+                  <span className="font-serif text-xl text-ink font-medium block mt-1">{getExamQuestionsCount(selectedExam)} Items</span>
+                </div>
+                <div className="border-l border-rule pl-4 sm:border-l-0 sm:pl-0 md:border-l md:pl-4">
+                  <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wider">Negative Marking</span>
+                  <span className="font-serif text-xl text-ink font-medium block mt-1">
+                    {selectedExam.neg_marking_percent > 0 ? `${selectedExam.neg_marking_percent}% Penalty` : "None Applied"}
                   </span>
                 </div>
-
-                <div className="text-center md:text-left border-x border-rule px-4">
-                  <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wide">PAYLOAD</span>
-                  <span className="text-sm font-sans font-medium text-ink flex items-center justify-center md:justify-start gap-1 mt-1">
-                    <Clipboard size={14} className="text-amber" /> {examQuests.length} items
-                  </span>
+                <div className="border-l border-rule pl-4">
+                  <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wider">Validity</span>
+                  <span className="font-serif text-xl text-ink font-medium block mt-1 text-mint">CURRENT V5.2</span>
                 </div>
+                <div className="border-l border-rule pl-4">
+                  <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wider">Database Linkage</span>
+                  <span className="font-serif text-xl text-ink font-medium block mt-1 text-sky">High-Fidelity</span>
+                </div>
+              </div>
+            </div>
 
-                <div className="text-center md:text-left">
-                  <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wide">DIFFICULTY</span>
-                  <div className="mt-1">
-                    {exam.difficulty === "extreme" && <Chip variant="signal">EXTREME</Chip>}
-                    {exam.difficulty === "complex" && <Chip variant="amber">COMPLEX</Chip>}
-                    {exam.difficulty === "standard" && <Chip variant="mint">STANDARD</Chip>}
+            {/* TAB SELECTOR FOR THE THREE PRACTICING MODES */}
+            <div className="border-b border-rule flex gap-8 font-mono text-xs">
+              <button 
+                onClick={() => setActiveTab("practice")}
+                className={`pb-4 px-1 border-b-2 font-bold tracking-widest uppercase flex items-center gap-1.5 transition-all outline-none ${
+                  activeTab === "practice" 
+                    ? "border-ink text-ink font-bold" 
+                    : "border-transparent text-muted hover:text-ink"
+                }`}
+              >
+                <Layers size={13} />
+                (A) Syllabus Topic Practice
+              </button>
+              <button 
+                onClick={() => setActiveTab("subject")}
+                className={`pb-4 px-1 border-b-2 font-bold tracking-widest uppercase flex items-center gap-1.5 transition-all outline-none ${
+                  activeTab === "subject" 
+                    ? "border-ink text-ink font-bold" 
+                    : "border-transparent text-muted hover:text-ink"
+                }`}
+              >
+                <TrendingUp size={13} />
+                (B) Subject Mocks
+              </button>
+              <button 
+                onClick={() => setActiveTab("full")}
+                className={`pb-4 px-1 border-b-2 font-bold tracking-widest uppercase flex items-center gap-1.5 transition-all outline-none ${
+                  activeTab === "full" 
+                    ? "border-ink text-ink font-bold" 
+                    : "border-transparent text-muted hover:text-ink"
+                }`}
+              >
+                <Activity size={13} />
+                (C) Full Exam Mock Sets
+              </button>
+            </div>
+
+            {/* TAB CONTENT DESIGNS */}
+            <div className="pt-2">
+              
+              {/* MODE A: SYLLABUS Topic Practice */}
+              {activeTab === "practice" && (
+                <div className="space-y-6">
+                  <div className="bg-panel border border-rule p-4.5 rounded-xl space-y-1">
+                    <p className="font-mono text-[10.5px] uppercase font-bold text-ink">CHAPTER INTEGRITY PREPARATION</p>
+                    <p className="text-xs text-muted-2 leading-relaxed">
+                      Initialize training directly from isolated syllabus segments. Spaced repetition telemetry records feedback parameters 
+                      securely in your training log to prompt reviews of weak performance tags.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedExamSubjects.flatMap(sub => (sub.subTopics || []).map(topic => {
+                      const hasSavedState = !!localStorage.getItem(`heading_quiz_state_${topic.id}`);
+                      const isDry = topic.questionCount === 0;
+
+                      return (
+                        <div 
+                          key={topic.id} 
+                          className={`bg-paper border border-rule rounded-xl p-4 flex flex-col justify-between transition-all relative group hover:border-ink hover:shadow-xs ${
+                            isDry ? "opacity-60" : ""
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[10px] font-mono text-muted uppercase">
+                              <span>Code: {topic.code || "Syllabus"}</span>
+                              {hasSavedState && (
+                                <span className="text-mint font-bold flex items-center gap-1 animate-pulse">
+                                  <span className="w-1.2 h-1.2 rounded-full bg-mint" /> IN PROGRESS
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-serif text-lg text-ink font-medium pt-1.5 group-hover:text-navy transition-colors">
+                              {topic.title}
+                            </h4>
+                            <p className="font-mono text-[11px] text-muted pt-1">
+                              {isDry ? "No available database questions yet" : `${topic.questionCount} Certified Questions`}
+                            </p>
+                          </div>
+
+                          <div className="border-t border-rule mt-5 pt-3 flex justify-between items-center">
+                            <span className="text-[10px] font-mono text-muted tracking-wider uppercase">
+                              {isDry ? "CHAPTER UNREADY" : hasSavedState ? "Resume Cabin Set" : "Launch Block Prep"}
+                            </span>
+                            {!isDry ? (
+                              <button 
+                                onClick={() => handleStartSubcategoryPractice(topic.id)}
+                                className="w-7 h-7 rounded-full border border-rule flex items-center justify-center group-hover:bg-ink group-hover:text-paper group-hover:border-ink transition-all cursor-pointer"
+                              >
+                                <ArrowUpRight size={12} />
+                              </button>
+                            ) : (
+                              <span className="text-xs text-muted-2 font-mono">Coming Soon</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }))}
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-center justify-between pt-4 border-t border-rule" id={`exam-actions-${exam.id}`}>
-                <span className="font-mono text-[10px] text-muted-2">
-                  ANNEXED METRICS ONBOARD
-                </span>
-                {hasQuestions ? (
-                  <Button 
-                    variant="primary" 
-                    className="h-[38px] px-5 text-xs"
-                    onClick={() => handleStartExam(exam, examQuests)}
-                  >
-                    {hasSavedState ? 'Resume Cabin' : 'Launch Instrument Cabin'} <ArrowUpRight size={14} className="ml-0.5" />
-                  </Button>
-                ) : (
-                  <Button variant="ghost" disabled className="h-[38px] px-5 text-xs border border-rule text-muted cursor-not-allowed">
-                    Coming Soon <ArrowUpRight size={14} className="ml-0.5" />
-                  </Button>
-                )}
-              </div>
-            </Card>
-              </ProGate>
-          )})}
-        </div>
+              {/* MODE B: SUBJECT-SPECIFIC MOCKS */}
+              {activeTab === "subject" && (
+                <div className="space-y-6">
+                  <div className="bg-panel border border-rule p-4.5 rounded-xl space-y-1">
+                    <p className="font-mono text-[10.5px] uppercase font-bold text-ink">SUBJECT UNIFORM SAMPLING MOCKS</p>
+                    <p className="text-xs text-muted-2 leading-relaxed">
+                      Runs simulated mini-mocks (30 randomized questions) with continuous timed enforcement drawn uniformly across an entire subject pool. 
+                      Perfect for testing end-to-end scope mastery on any individual certified course syllabus.
+                    </p>
+                  </div>
 
-        {/* Informative Pilot Card */}
-        <div className="mt-16 bg-panel border-l-4 border-signal border-t border-r border-b border-rule rounded-r-lg p-6 flex flex-col md:flex-row items-start md:items-center gap-6">
-          <PlaneTakeoff className="text-signal w-10 h-10 flex-shrink-0" />
-          <div className="space-y-1">
-            <h4 className="font-sans font-semibold text-ink text-sm uppercase tracking-wide">
-              MANDATORY PILOT REMINDER (SECTION 117 COMPLIANCE)
-            </h4>
-            <p className="font-sans text-xs text-muted-2 leading-relaxed">
-              Entering the test deck represents simulated flight stress training. High fatigue rates may distort cognitive test answers. 
-              Always review navigation chart rules before proceeding to ATPL standard questions.
-            </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedExamSubjects.map(sub => {
+                      const subjectQuestsCount = questions.filter(q => q.topicId === sub.id || sub.subTopics?.some(st => st.id === q.topicId)).length;
+                      const isDry = subjectQuestsCount === 0;
+
+                      return (
+                        <div 
+                          key={sub.id} 
+                          className={`bg-paper border border-rule rounded-xl p-5 flex flex-col justify-between transition-all group hover:border-ink hover:shadow-xs h-full ${
+                            isDry ? "opacity-60" : ""
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className={`h-2 w-2 rounded-full ${
+                                sub.hue === "navy" ? "bg-navy" :
+                                sub.hue === "amber" ? "bg-amber" : "bg-sky"
+                              }`} />
+                              <span className="font-mono text-[9px] text-muted uppercase tracking-widest">
+                                MODULE {sub.num}
+                              </span>
+                            </div>
+                            <h4 className="font-serif text-xl font-semibold text-ink leading-tight mb-2">
+                              {sub.title}
+                            </h4>
+                            <p className="font-sans text-xs text-muted leading-relaxed line-clamp-2 mb-4">
+                              {sub.blurb || "Simulate a dynamic block encompassing the whole curriculum."}
+                            </p>
+                          </div>
+
+                          <div className="border-t border-rule pt-4 flex flex-wrap items-center justify-between gap-3 mt-4">
+                            <div className="font-mono text-[10.5px] text-muted space-x-2">
+                              <span>30 Qs Drafted</span>
+                              <span>·</span>
+                              <span>30 min Time</span>
+                            </div>
+                            {!isDry ? (
+                              <Button 
+                                variant="ghost" 
+                                className="h-8.5 text-xs px-3.5 border border-rule hover:bg-neutral-50"
+                                onClick={() => handleStartSubjectMock(sub, selectedExam)}
+                              >
+                                Test Subject Mock <ArrowUpRight size={12} className="ml-1" />
+                              </Button>
+                            ) : (
+                              <span className="text-[10px] font-mono text-muted uppercase">Under Dev</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* MODE C: FULL RE-ASSEMBLED EXAM MOCK FEEDS */}
+              {activeTab === "full" && (
+                <div className="space-y-8 animate-in fade-in duration-300">
+                  
+                  {/* Explanatory notice */}
+                  <div className="bg-panel border border-rule p-4.5 rounded-xl space-y-1">
+                    <p className="font-mono text-[10.5px] uppercase font-bold text-ink">FULL COMPLIANT SIMULATOR ACCESS</p>
+                    <p className="text-xs text-muted-2 leading-relaxed">
+                      Deploy standard full-sized virtual exam mocks. Enforces real exam countdown clocks, negative scoring weights, 
+                      and target pass cutoffs dynamically derived as set up in the active DB configuration files.
+                    </p>
+                  </div>
+
+                  {/* Standard Auto mock launcher card */}
+                  <Card className="border border-indigo-200 bg-indigo-50/10 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                    <div className="space-y-1 max-w-xl">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-indigo-200 text-indigo-700 bg-indigo-50 font-bold tracking-widest uppercase">
+                        STANDARD GENERATED SIMULATOR
+                      </span>
+                      <h4 className="font-serif text-xl font-bold text-indigo-950 pt-1.5">
+                        Dynamic Automatic Flight Deck
+                      </h4>
+                      <p className="font-sans text-xs text-slate-650 leading-relaxed">
+                        Assembles a complete balanced draft of {selectedExam.total_questions || selectedExam.question_count || 50} random unique questions 
+                        spanning all linked subjects uniformly, simulating standard test pressures with high efficiency.
+                      </p>
+                    </div>
+                    <Button 
+                      variant="primary" 
+                      className="h-11 px-6.5 shrink-0 bg-indigo-600 border-indigo-600 hover:bg-indigo-700 hover:border-indigo-700 shadow-md flex items-center text-xs"
+                      onClick={() => handleStartAutomaticExamMock(selectedExam)}
+                    >
+                      Launch Auto Simulator <ArrowUpRight size={13} className="ml-1" />
+                    </Button>
+                  </Card>
+
+                  {/* Custom Configured mock papers section */}
+                  <div className="space-y-4">
+                    <h4 className="font-sans font-bold text-sm text-ink uppercase tracking-widest flex items-center gap-1.5 pt-4">
+                      <Layers size={14} className="text-amber" />
+                      ADMIN CONFIGURATED EXAM PAPERS
+                    </h4>
+
+                    {loadingMocks ? (
+                      <div className="py-12 flex justify-center text-xs font-mono text-muted-2">
+                        Querying paper templates...
+                      </div>
+                    ) : selectedExamMocks.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-4">
+                        {selectedExamMocks.map((mock) => (
+                          <div 
+                            key={mock.id}
+                            className="bg-paper border border-rule rounded-xl p-5 hover:border-amber hover:shadow-xs transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+                          >
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2 mb-2">
+                                <span className="font-mono text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-amber/10 border border-amber/20 text-amber-700">
+                                  CERTIFIED LAYOUT
+                                </span>
+                                <span className="text-rule-strong font-mono text-xs">|</span>
+                                <span className="font-mono text-[10.5px] text-muted uppercase">
+                                  Passreq: {mock.pass_mark}%
+                                </span>
+                              </div>
+                              <h5 className="font-serif text-lg font-semibold text-ink leading-tight pt-1">
+                                {mock.title}
+                              </h5>
+                              <p className="font-sans text-xs text-muted truncate max-w-xl">
+                                Weighted Rules: {mock.rules.length} topic targets defined inside layout specs.
+                              </p>
+                            </div>
+
+                            <div className="flex items-center gap-6 shrink-0 w-full md:w-auto justify-between border-t border-rule md:border-none pt-4 md:pt-0 mt-2 md:mt-0">
+                              <div className="grid grid-cols-3 gap-6 text-center md:text-right text-xs pr-4">
+                                <div>
+                                  <span className="block font-mono text-[8.5px] text-muted uppercase tracking-wider">Payload</span>
+                                  <span className="font-serif text-sm text-ink block mt-0.5">{mock.total_questions} Qs</span>
+                                </div>
+                                <div className="border-x border-rule px-4">
+                                  <span className="block font-mono text-[8.5px] text-muted uppercase tracking-wider">Timer</span>
+                                  <span className="font-serif text-sm text-ink block mt-0.5">{mock.duration_min} min</span>
+                                </div>
+                                <div>
+                                  <span className="block font-mono text-[8.5px] text-muted uppercase tracking-wider">Penalty</span>
+                                  <span className="font-serif text-sm text-ink block mt-0.5">
+                                    {mock.neg_marking_percent > 0 ? `${mock.neg_marking_percent}%` : "No"}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <Button 
+                                variant="ghost"
+                                className="h-9 px-4 hover:border-amber font-semibold text-xs shrink-0 border border-rule"
+                                onClick={() => handleStartCustomMockPaper(mock, selectedExam)}
+                              >
+                                Pilot Trial <ArrowUpRight size={12} className="ml-0.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="border border-dashed border-rule rounded-xl py-12 px-4 text-center text-muted-2 text-xs font-mono bg-panel/30">
+                        No custom weighted papers configured for this compliance feed yet. Use standard automatic simulator mode instead.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-
+        )}
       </div>
     </div>
   );

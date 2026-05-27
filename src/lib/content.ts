@@ -436,13 +436,15 @@ export async function fetchMergedSubjects(forceRefresh = false): Promise<Subject
 
 export interface ExamInfo {
   id: string;
-  authority: "DGCA" | "EASA" | "FAA" | "TYPE_RATING";
-  license: "PPL" | "CPL" | "ATPL" | "IR" | "TYPE" | "OTHER";
+  authority: "DGCA" | "EASA" | "FAA" | "TYPE_RATING" | "AIRLINE" | string;
+  license: "PPL" | "CPL" | "ATPL" | "IR" | "TYPE" | "RECRUITMENT" | "OTHER" | string;
   title: string;
   pass_mark: number;
-  question_count: number;
   duration_min: number;
-  negative_marking: boolean;
+  neg_marking_percent?: number;
+  total_questions?: number;
+  question_count?: number; // kept for compatibility
+  negative_marking?: boolean; // kept for compatibility
   subject_ids: string[];
   status: "draft" | "published" | "archived";
 }
@@ -452,8 +454,22 @@ export const staticExams: ExamInfo[] = [
     id: "dgca-cpl-mock",
     authority: "DGCA",
     license: "CPL",
-    title: "DGCA CPL Full Mock - Air Navigation & Meteorology",
+    title: "DGCA CPL Full Mock - All Core Subjects",
     pass_mark: 70,
+    total_questions: 100,
+    question_count: 100,
+    duration_min: 120,
+    negative_marking: false,
+    subject_ids: ["air-navigation", "meteorology", "air-regulation", "technical-general", "technical-specific", "rtr-a"],
+    status: "published"
+  },
+  {
+    id: "dgca-atpl-mock",
+    authority: "DGCA",
+    license: "ATPL",
+    title: "DGCA ATPL Theoretical License Simulation",
+    pass_mark: 70,
+    total_questions: 100,
     question_count: 100,
     duration_min: 120,
     negative_marking: false,
@@ -464,20 +480,22 @@ export const staticExams: ExamInfo[] = [
     id: "easa-atpl-mock",
     authority: "EASA",
     license: "ATPL",
-    title: "EASA ATPL Principles of Flight & Meteorology",
+    title: "EASA ATPL (13 Subjects Compliance Deck)",
     pass_mark: 75,
+    total_questions: 120,
     question_count: 120,
     duration_min: 120,
     negative_marking: false,
-    subject_ids: ["principles-of-flight", "meteorology"],
+    subject_ids: ["principles-of-flight", "meteorology", "air-law", "agk", "instrumentation", "mass-balance", "flight-planning", "human-performance", "radio-navigation", "general-navigation", "operational-procedures", "vfr-comms", "ifr-comms"],
     status: "published"
   },
   {
     id: "faa-private-mock",
     authority: "FAA",
     license: "PPL",
-    title: "FAA Private Pilot Airplane Simulation",
+    title: "FAA Private Pilot Airplane Simulation (PAR)",
     pass_mark: 70,
+    total_questions: 60,
     question_count: 60,
     duration_min: 150,
     negative_marking: false,
@@ -485,15 +503,121 @@ export const staticExams: ExamInfo[] = [
     status: "published"
   },
   {
+    id: "faa-commercial-mock",
+    authority: "FAA",
+    license: "CPL",
+    title: "FAA Commercial Pilot Airplane Exam (CAX)",
+    pass_mark: 70,
+    total_questions: 100,
+    question_count: 100,
+    duration_min: 180,
+    negative_marking: false,
+    subject_ids: ["air-navigation", "meteorology", "commercial-concepts"],
+    status: "published"
+  },
+  {
+    id: "faa-instrument-mock",
+    authority: "FAA",
+    license: "IR",
+    title: "FAA Instrument Rating Airplane Exam (IRA)",
+    pass_mark: 70,
+    total_questions: 60,
+    question_count: 60,
+    duration_min: 150,
+    negative_marking: false,
+    subject_ids: ["instrument-procedures", "meteorology"],
+    status: "published"
+  },
+  {
+    id: "faa-atp-mock",
+    authority: "FAA",
+    license: "ATPL",
+    title: "FAA Airline Transport Pilot Multi-Engine (ATM)",
+    pass_mark: 70,
+    total_questions: 125,
+    question_count: 125,
+    duration_min: 240,
+    negative_marking: false,
+    subject_ids: ["air-navigation", "meteorology", "atp-operations"],
+    status: "published"
+  },
+  {
     id: "a320-technical-mock",
     authority: "TYPE_RATING",
     license: "TYPE",
-    title: "A320 Airbus Technical Mock Exam",
+    title: "Airbus A320 Technical Rating System (ATA Chapter-Weighted)",
     pass_mark: 75,
+    total_questions: 80,
     question_count: 80,
     duration_min: 90,
     negative_marking: false,
     subject_ids: ["a320-systems"],
+    status: "published"
+  },
+  {
+    id: "b737-technical-mock",
+    authority: "TYPE_RATING",
+    license: "TYPE",
+    title: "Boeing B737 Technical Course Simulation",
+    pass_mark: 75,
+    total_questions: 80,
+    question_count: 80,
+    duration_min: 90,
+    negative_marking: false,
+    subject_ids: ["b737-systems"],
+    status: "published"
+  },
+  {
+    id: "a330-technical-mock",
+    authority: "TYPE_RATING",
+    license: "TYPE",
+    title: "Airbus A330 Technical Type Rating Simulator",
+    pass_mark: 75,
+    total_questions: 80,
+    question_count: 80,
+    duration_min: 90,
+    negative_marking: false,
+    subject_ids: ["a330-systems"],
+    status: "published"
+  },
+  {
+    id: "b777-technical-mock",
+    authority: "TYPE_RATING",
+    license: "TYPE",
+    title: "Boeing B777 Theoretical Type Rating Exam",
+    pass_mark: 75,
+    total_questions: 80,
+    question_count: 80,
+    duration_min: 90,
+    negative_marking: false,
+    subject_ids: ["b777-systems"],
+    status: "published"
+  },
+  {
+    id: "atr72-technical-mock",
+    authority: "TYPE_RATING",
+    license: "TYPE",
+    title: "ATR 72 Technical Course & ATA Chapters Review",
+    pass_mark: 75,
+    total_questions: 80,
+    question_count: 80,
+    duration_min: 90,
+    negative_marking: false,
+    subject_ids: ["atr72-systems"],
+    status: "published"
+  },
+  {
+    id: "airline-recruitment-mock",
+    authority: "AIRLINE",
+    license: "RECRUITMENT",
+    title: "Airline Technical Pre-Employment Selection Mock",
+    pass_mark: 80,
+    total_questions: 50,
+    question_count: 50,
+    duration_min: 60,
+    negative_marking: true,
+    neg_marking_percent: 25,
+    subject_ids: ["air-navigation", "meteorology", "aviation-aptitude"],
     status: "published"
   }
 ];
@@ -516,9 +640,11 @@ export async function fetchExams(): Promise<ExamInfo[]> {
         license: d.license,
         title: d.title,
         pass_mark: d.pass_mark || 70,
-        question_count: d.question_count || 50,
+        question_count: d.total_questions || d.question_count || 50,
+        total_questions: d.total_questions || d.question_count || 50,
         duration_min: d.duration_min || 60,
-        negative_marking: !!d.negative_marking,
+        negative_marking: !!d.negative_marking || (Number(d.neg_marking_percent) > 0),
+        neg_marking_percent: d.neg_marking_percent !== undefined ? Number(d.neg_marking_percent) : (d.negative_marking ? 25 : 0),
         subject_ids: Array.isArray(d.subject_ids)
           ? d.subject_ids
           : (typeof d.subject_ids === "string" ? JSON.parse(d.subject_ids) : []),
@@ -534,15 +660,20 @@ export async function fetchExams(): Promise<ExamInfo[]> {
 
 export async function saveExam(exam: Omit<ExamInfo, "id"> & { id?: string }): Promise<any> {
   const id = exam.id || `exam-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+  const totalQ = exam.total_questions || exam.question_count || 50;
+  const negP = exam.neg_marking_percent ?? (exam.negative_marking ? 25 : 0);
+  
   const payload = {
     id,
     authority: exam.authority,
     license: exam.license,
     title: exam.title,
     pass_mark: exam.pass_mark,
-    question_count: exam.question_count,
+    question_count: totalQ,
+    total_questions: totalQ,
     duration_min: exam.duration_min,
-    negative_marking: exam.negative_marking,
+    negative_marking: negP > 0,
+    neg_marking_percent: negP,
     subject_ids: exam.subject_ids,
     status: exam.status,
     updated_at: new Date().toISOString(),
@@ -554,12 +685,115 @@ export async function saveExam(exam: Omit<ExamInfo, "id"> & { id?: string }): Pr
     .select();
 
   if (error) throw error;
+
+  // Sync relational integrity on Subjects side: Set or clear exam_id
+  try {
+    if (exam.subject_ids && exam.subject_ids.length > 0) {
+      // 1. Link selected subjects to this exam
+      await supabase
+        .from("subjects")
+        .update({ exam_id: id })
+        .in("id", exam.subject_ids);
+
+      // 2. Unlink any other subjects that were link to this exam but are now deselected
+      // Supabase filter for not in selected subjects list
+      const formattingList = exam.subject_ids.map(sid => `'${sid}'`).join(",");
+      await supabase
+        .from("subjects")
+        .update({ exam_id: null })
+        .eq("exam_id", id)
+        .filter("id", "not.in", `(${formattingList})`);
+    } else {
+      await supabase
+        .from("subjects")
+        .update({ exam_id: null })
+        .eq("exam_id", id);
+    }
+  } catch (syncErr) {
+    console.warn("Minor link subjects synching warning:", syncErr);
+  }
+
   return data;
 }
 
 export async function deleteExam(id: string): Promise<any> {
   const { data, error } = await supabase
     .from("exams")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+  return data;
+}
+
+export interface MockPaperSpec {
+  id: string;
+  exam_id: string;
+  title: string;
+  duration_min: number;
+  pass_mark: number;
+  neg_marking_percent: number;
+  total_questions: number;
+  rules: { subject_id: string; subcategory_id?: string; count: number }[]; // Sample weighting rules
+  status: "draft" | "published" | "archived";
+}
+
+export async function fetchMockPapersForExam(examId: string): Promise<MockPaperSpec[]> {
+  try {
+    const { data, error } = await supabase
+      .from("mock_papers")
+      .select("*")
+      .eq("exam_id", examId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.warn("Error fetching mock papers from db:", error);
+      return [];
+    }
+    return (data || []).map((m: any) => ({
+      id: m.id,
+      exam_id: m.exam_id,
+      title: m.title,
+      duration_min: m.duration_min || 120,
+      pass_mark: m.pass_mark || 75,
+      neg_marking_percent: Number(m.neg_marking_percent) || 0,
+      total_questions: m.total_questions || 100,
+      rules: Array.isArray(m.rules) ? m.rules : [],
+      status: m.status || "draft",
+    }));
+  } catch (err) {
+    console.error("Exception fetching mock papers:", err);
+    return [];
+  }
+}
+
+export async function saveMockPaper(mock: Omit<MockPaperSpec, "id"> & { id?: string }): Promise<any> {
+  const id = mock.id || `mock-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+  const payload = {
+    id,
+    exam_id: mock.exam_id,
+    title: mock.title,
+    duration_min: mock.duration_min,
+    pass_mark: mock.pass_mark,
+    neg_marking_percent: mock.neg_marking_percent,
+    total_questions: mock.total_questions,
+    rules: mock.rules,
+    status: mock.status,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from("mock_papers")
+    .upsert(payload)
+    .select();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteMockPaper(id: string): Promise<any> {
+  const { data, error } = await supabase
+    .from("mock_papers")
     .delete()
     .eq("id", id);
 

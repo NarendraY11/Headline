@@ -455,6 +455,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const updatePayload: any = { updated_at: new Date().toISOString() };
         if (data.targetExam !== undefined) updatePayload.target_exam = data.targetExam;
         if (data.nextExam !== undefined) updatePayload.next_exam = data.nextExam;
+        if (data.newsletterOptIn !== undefined) updatePayload.newsletter_opt_in = data.newsletterOptIn;
         
         if (data.dailyGoal !== undefined) updatePayload.daily_goal = data.dailyGoal;
         if (data.streakCount !== undefined) updatePayload.streak_count = data.streakCount;

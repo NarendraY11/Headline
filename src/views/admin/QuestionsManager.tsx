@@ -32,6 +32,7 @@ interface Question {
   correct: string;
   explanation: string;
   references: string[];
+  topic_tags?: string[];
   status: "draft" | "published" | "archived";
 }
 
@@ -74,6 +75,7 @@ export default function QuestionsManager() {
   });
 
   const [referencesInput, setReferencesInput] = useState("");
+  const [topicTagsInput, setTopicTagsInput] = useState("");
   const [errorStatus, setErrorStatus] = useState("");
   const [successStatus, setSuccessStatus] = useState("");
 
@@ -114,6 +116,7 @@ export default function QuestionsManager() {
         correct: q.correct || "a",
         explanation: q.explanation || "",
         references: Array.isArray(q.refs) ? q.refs : (Array.isArray(q.references) ? q.references : []),
+        topic_tags: Array.isArray(q.topic_tags) ? q.topic_tags : [],
         status: q.status || "draft"
       }));
 
@@ -163,6 +166,7 @@ export default function QuestionsManager() {
 
     setCurrentQuestion(nextPrompt);
     setReferencesInput("");
+    setTopicTagsInput("");
     setErrorStatus("");
     setSuccessStatus("");
     setIsEditing(true);
@@ -195,6 +199,7 @@ export default function QuestionsManager() {
       choices: normalizedChoices,
     });
     setReferencesInput(q.references ? q.references.join(", ") : "");
+    setTopicTagsInput(q.topic_tags ? q.topic_tags.join(", ") : "");
     setErrorStatus("");
     setSuccessStatus("");
     setIsEditing(true);
@@ -267,6 +272,11 @@ export default function QuestionsManager() {
       .map(r => r.trim())
       .filter(Boolean);
 
+    const cleanTopicTags = topicTagsInput
+      .split(/[,;\n|]+/)
+      .map(t => t.trim())
+      .filter(Boolean);
+
     const activeStatus = overrideStatus || currentQuestion.status || "draft";
 
     try {
@@ -282,6 +292,7 @@ export default function QuestionsManager() {
         correct: currentQuestion.correct || "a",
         explanation: currentQuestion.explanation?.trim() || "",
         refs: cleanRefs,
+        topic_tags: cleanTopicTags,
         status: activeStatus,
         updated_at: new Date().toISOString(),
       };
@@ -878,6 +889,18 @@ export default function QuestionsManager() {
                   placeholder="e.g. FCOM 1.25.10, A320 FCTM NP-SF, CAR Section 8 (separate with commas)"
                 />
                 <span className="font-mono text-[8px] text-muted-2 block mt-1">Comma-separated system. Ex: "FCOM 1.27.20, FAA AC 120-74"</span>
+              </div>
+
+              <div>
+                <label className="block font-mono text-[9px] uppercase text-muted tracking-widest mb-1.5 font-bold">Topic Tags (for sub-topic tagging)</label>
+                <input
+                  type="text"
+                  value={topicTagsInput}
+                  onChange={(e) => setTopicTagsInput(e.target.value)}
+                  className="w-full text-xs p-2.5 bg-bg-2 border border-rule rounded-lg focus:outline-none focus:border-rule-strong text-ink font-mono"
+                  placeholder="e.g. altimeter-setting, qnh-calculation, wind-shear-indicators (separate with commas)"
+                />
+                <span className="font-mono text-[8px] text-muted-2 block mt-1">Comma-separated tags for descriptive sub-topic searching.</span>
               </div>
 
               <div>

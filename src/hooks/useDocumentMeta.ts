@@ -28,6 +28,12 @@ export function useDocumentMeta() {
     } else if (path === "/about") {
       title = "About — Heading";
       description = "Explore standard hardware guidelines, aviation designs, and calibration specs including the classic amber paper theme and cognitive metrics.";
+    } else if (path === "/qotd") {
+      title = "Question of the Day — Heading";
+      description = "Practice a high-fidelity mock pilot study question of the day with instant diagnostic feedback and technical logic summaries.";
+    } else if (path === "/referral") {
+      title = "Refer & Earn Free Pro Days — Heading";
+      description = "Invite pilot partners to join Heading. Gifting 30 days of active Pro membership for each pilot who signs up and upgrades.";
     } else if (path === "/blog") {
       title = "Pilot Theory Blog & Syllabus Updates — Heading";
       description = "Educational articles, DGCA 2026 ground syllabus updates, and professional strategies to pass the EASA and FAA pilot theoretical knowledge tests.";

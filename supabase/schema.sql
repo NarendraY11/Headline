@@ -64,8 +64,9 @@ create table if not exists public.subjects (
   id text primary key,
   title text not null,
   description text,
-  exam_authority text, -- e.g., 'EASA', 'DGCA', 'FAA', 'TYPE_RATING'
-  license text check (license in ('PPL', 'CPL', 'ATPL', 'IR', 'TYPE', 'OTHER')),
+  exam_authority text, -- e.g., 'EASA', 'DGCA', 'FAA', 'TYPE_RATING', 'AIRLINE'
+  license text check (license in ('PPL', 'CPL', 'ATPL', 'IR', 'TYPE', 'RECRUITMENT', 'OTHER')),
+  exam_id text, -- linked to exams table
   sort_order int default 0 not null,
   status text default 'draft' not null check (status in ('draft', 'published', 'archived')),
   created_at timestamptz default now() not null,
@@ -97,6 +98,7 @@ create table if not exists public.questions (
   correct text not null check (correct in ('a', 'b', 'c', 'd')),
   explanation text not null,
   refs jsonb default '[]'::jsonb not null, -- Replaced 'references' with idempotent 'refs' column
+  topic_tags text[] default '{}'::text[], -- Added for sub-topic tagging
   status text default 'draft' not null check (status in ('draft', 'published', 'archived')),
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
@@ -104,14 +106,30 @@ create table if not exists public.questions (
 
 create table if not exists public.exams (
   id text primary key,
-  authority text not null check (authority in ('DGCA', 'EASA', 'FAA', 'TYPE_RATING')),
-  license text not null check (license in ('PPL', 'CPL', 'ATPL', 'IR', 'TYPE', 'OTHER')),
+  authority text not null check (authority in ('DGCA', 'EASA', 'FAA', 'TYPE_RATING', 'AIRLINE')),
+  license text not null check (license in ('PPL', 'CPL', 'ATPL', 'IR', 'TYPE', 'RECRUITMENT', 'OTHER')),
   title text not null,
   pass_mark int not null default 70,
-  question_count int not null default 50,
   duration_min int not null default 60,
-  negative_marking boolean not null default false,
+  neg_marking_percent numeric default 0, -- negative marking percent (e.g., 25.00 for -0.25)
+  total_questions int not null default 50, -- renamed/added as total_questions
+  question_count int not null default 50, -- keep for backward compatibility
+  negative_marking boolean not null default false, -- keep for backward compatibility
   subject_ids jsonb not null default '[]'::jsonb,
+  status text default 'draft' not null check (status in ('draft', 'published', 'archived')),
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null
+);
+
+create table if not exists public.mock_papers (
+  id text primary key,
+  exam_id text not null references public.exams(id) on delete cascade,
+  title text not null,
+  duration_min int not null default 120,
+  pass_mark int not null default 75,
+  neg_marking_percent numeric default 0,
+  total_questions int not null default 100,
+  rules jsonb not null default '[]'::jsonb, -- Array of rules: { subject_id: string, subcategory_id?: string, weight: number }
   status text default 'draft' not null check (status in ('draft', 'published', 'archived')),
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null

@@ -33,6 +33,11 @@ export default function QuizView() {
   const location = useLocation();
   const { showToast } = useToast();
 
+  const overrideTimeLimit = location.state?.overrideTimeLimit as number | undefined;
+  const overridePassMark = location.state?.overridePassMark as number | undefined;
+  const overrideNegMark = location.state?.overrideNegMark as number | undefined;
+  const examTitle = location.state?.examTitle as string | undefined;
+
   const isVivaRoute = routeTopicId === "viva";
   const isTimedRoute = routeTopicId === "timed";
   const isPracticeRoute = routeTopicId === "practice";
@@ -298,13 +303,14 @@ export default function QuizView() {
   // Handle initialization of timeLeft
   useEffect(() => {
     if (status === "active" && mode === "timed" && timeLeft === null) {
+      const overrideSec = overrideTimeLimit ? overrideTimeLimit * 60 : undefined;
       const examConfig = mockExams.find((e) => e.id === topicId);
-      const totalSec = examConfig
+      const totalSec = overrideSec || (examConfig
         ? examConfig.minutes * 60
-        : totalQuestions * 60;
+        : totalQuestions * 60);
       setTimeLeft(totalSec - timeElapsed > 0 ? totalSec - timeElapsed : 0);
     }
-  }, [status, mode, topicId, totalQuestions, timeElapsed, timeLeft]);
+  }, [status, mode, topicId, totalQuestions, timeElapsed, timeLeft, overrideTimeLimit]);
 
   // Auto-submit when time reaches zero
   useEffect(() => {
@@ -1129,12 +1135,15 @@ export default function QuizView() {
       if (isCorrect) ataBreakdown[q.ata].correct++;
     });
 
-    const isNegativeMarking =
-      userData?.settings?.negativeMarking && mode === "timed";
-    const penalty = isNegativeMarking ? wrongQuestionIdsLocal.length * 0.25 : 0;
+    const effectivePassMark = overridePassMark !== undefined ? overridePassMark : 70;
+    const isMockOrExam = overrideNegMark !== undefined;
+    const isNegativeMarking = !!(userData?.settings?.negativeMarking && mode === "timed");
+    const penalty = isMockOrExam
+      ? (overrideNegMark > 0 ? wrongQuestionIdsLocal.length * (overrideNegMark / 100) : 0)
+      : (isNegativeMarking ? wrongQuestionIdsLocal.length * 0.25 : 0);
     const finalScore = Math.max(0, correctCount - penalty);
     const percentage = Math.round((finalScore / totalQuestions) * 100);
-    const passed = percentage >= 70; // 70% passing threshold typical
+    const passed = percentage >= effectivePassMark;
 
     // Performance metrics
     const avgTime = Math.round(timeElapsed / totalQuestions);
@@ -1143,7 +1152,7 @@ export default function QuizView() {
     const rushed = timeEntries.filter(([_, time]) => time < 15).length;
     const slow = timeEntries.filter(([_, time]) => time > 90).length;
 
-    const diff = percentage - 70;
+    const diff = percentage - effectivePassMark;
     const marginStr = `${diff >= 0 ? "+" : ""}${diff}%`;
 
     let lowestAta = "";
@@ -1224,7 +1233,7 @@ export default function QuizView() {
               <div className="flex items-center gap-2 mb-6">
                 <div className="w-2 h-2 bg-signal rotate-45 shrink-0" />
                 <span className="font-mono text-[10px] text-muted-2 uppercase tracking-widest mt-px font-semibold">
-                  A320 · {customTopic || questions[0]?.ata || "Quiz"} ·{" "}
+                  A320 · {examTitle || customTopic || questions[0]?.ata || "Quiz"} ·{" "}
                   {Math.max(1, Math.round(timeElapsed / 60))} MIN
                 </span>
               </div>
@@ -1239,12 +1248,12 @@ export default function QuizView() {
 
               <p className="font-sans text-[17px] text-ink-2 font-light leading-relaxed mb-8">
                 {passed
-                  ? `Above the 70% pass cutoff with margin. `
-                  : `Below the 70% pass cutoff. `}
+                  ? `Above the ${effectivePassMark}% pass cutoff with margin. `
+                  : `Below the ${effectivePassMark}% pass cutoff. `}
                 Your weak spot was {lowestAta || "spread evenly"} — added{" "}
                 {wrongQuestionIdsLocal.length} cards to your spaced-repetition
                 deck.
-                {isNegativeMarking && ` Includes a -${penalty} penalty.`}
+                {(isNegativeMarking || isMockOrExam) && penalty > 0 && ` Includes a -${penalty} penalty.`}
               </p>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -1356,7 +1365,7 @@ export default function QuizView() {
                       PASS MARK
                     </span>
                     <span className="font-serif text-2xl text-white block leading-none mt-1">
-                      70%
+                      {effectivePassMark}%
                     </span>
                   </div>
                   <div>

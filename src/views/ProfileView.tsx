@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button, Card } from "../components/Atoms";
-import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw } from "lucide-react";
+import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 export default function ProfileView() {
@@ -339,6 +339,55 @@ export default function ProfileView() {
             <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.settings?.remindersEnabled ? 'translate-x-[20px]' : 'translate-x-0'}`} />
           </button>
         </div>
+      </Card>
+
+      <Card className="bg-panel border-rule p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+        <div className="space-y-1 max-w-lg text-center md:text-left">
+          <span className="block font-mono text-[9px] uppercase tracking-widest text-mint font-bold">AVIATION ACADEMY</span>
+          <h3 className="font-serif text-xl font-bold text-ink flex items-center gap-2 justify-center md:justify-start">
+            <Mail size={18} className="text-navy" /> Weekly Tips & Question of the Day
+          </h3>
+          <p className="font-sans text-xs text-muted leading-relaxed font-light">
+            Receive mock aviation questions of the day, recent airline hiring bulletins, and deep dives on complex general navigation / meteorology logic once a week. 
+          </p>
+        </div>
+        <div className="shrink-0 flex items-center gap-3 bg-bg border border-rule px-4 py-2.5 rounded-xl self-stretch md:self-auto justify-between md:justify-start">
+          <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-muted-2">
+            {userData?.newsletterOptIn ? "SUBSCRIBED" : "OPTED OUT"}
+          </span>
+          <button
+            id="newsletterOptInToggleBtn"
+            onClick={() => {
+              const currentStatus = !!userData?.newsletterOptIn;
+              updateUserData({
+                newsletterOptIn: !currentStatus
+              });
+            }}
+            className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none cursor-pointer ${userData?.newsletterOptIn ? 'bg-mint' : 'bg-rule'}`}
+          >
+            <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.newsletterOptIn ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+          </button>
+        </div>
+      </Card>
+
+      <Card className="bg-emerald-500/5 border border-emerald-500/10 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-12 rounded-2xl">
+        <div className="space-y-1 max-w-lg text-center md:text-left">
+          <span className="block font-mono text-[9px] uppercase tracking-widest text-[#10B981] font-bold">PILOT COOP</span>
+          <h3 className="font-serif text-xl font-bold text-ink flex items-center gap-2 justify-center md:justify-start">
+            <Gift size={18} className="text-emerald-600" /> Refer a Cadet Partner & Earn
+          </h3>
+          <p className="font-sans text-xs text-muted leading-relaxed font-light">
+            Share your custom flight deck dispatch URL. When your referred peer upgrades to premium, you both get <strong className="text-[#10B981]">30 Days of Free Pro membership</strong> credited immediately!
+          </p>
+        </div>
+        <Button
+          id="profileReferEarnBtn"
+          variant="ghost"
+          onClick={() => navigate("/referral")}
+          className="h-10 rounded-full font-mono text-[10px] uppercase tracking-wider px-6 border-emerald-600/20 hover:bg-emerald-500/10 text-emerald-700 bg-transparent flex-shrink-0"
+        >
+          Dispatch Invites
+        </Button>
       </Card>
 
       <div className="space-y-8">

@@ -24,7 +24,8 @@ import {
   PinOff,
   MoveRight,
   ChevronDown,
-  Check
+  Check,
+  Gift
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -50,6 +51,8 @@ const ContactView = lazy(() => import("./views/ContactView"));
 const ExamsSeoView = lazy(() => import("./views/ExamsSeoView"));
 const BlogListView = lazy(() => import("./views/BlogListView"));
 const BlogPostView = lazy(() => import("./views/BlogPostView"));
+const QotdView = lazy(() => import("./views/QotdView"));
+const ReferralView = lazy(() => import("./views/ReferralView"));
 
 import { AdminGuard } from "./components/AdminGuard";
 import { AuthGuard } from "./components/AuthGuard";
@@ -1207,6 +1210,7 @@ function AppShell() {
     { label: "VIVA practice", to: "/quiz/viva", icon: Mic },
     { label: "Flashcards", to: "/bookmarks", icon: Zap },
     { label: "Progress", to: "/analytics", icon: BarChart3 },
+    { label: "Refer & earn", to: "/referral", icon: Gift },
   ];
 
   return (
@@ -1662,6 +1666,7 @@ export default function App() {
             <Route path="/exams/:examId" element={<ExamsSeoView />} />
             <Route path="/blog" element={<BlogListView />} />
             <Route path="/blog/:slug" element={<BlogPostView />} />
+            <Route path="/qotd" element={<QotdView />} />
           </Route>
 
           {/* LOCKED ADMINISTRATIVE AREA */}
@@ -1687,6 +1692,7 @@ export default function App() {
             <Route path="/analytics" element={<AuthGuard><AnalyticsView /></AuthGuard>} />
             <Route path="/bookmarks" element={<AuthGuard><BookmarksView /></AuthGuard>} />
             <Route path="/profile" element={<AuthGuard><ProfileView /></AuthGuard>} />
+            <Route path="/referral" element={<AuthGuard><ReferralView /></AuthGuard>} />
             <Route path="/quiz/:topicId" element={<QuizView />} />
             <Route path="*" element={<NotFoundView />} />
           </Route>

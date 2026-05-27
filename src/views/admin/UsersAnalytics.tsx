@@ -47,10 +47,21 @@ export default function UsersAnalytics() {
   const [rawUsers, setRawUsers] = useState<EnrichedUser[]>([]);
   
   // Filtering & Sorting State
+  const [searchInput, setSearchInput] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState<"all" | "free" | "pro">("all");
   const [sortField, setSortField] = useState<"lastActive" | "created_at" | "created_at_asc" | "totalQuestionsAnswered" | "avgScore">("lastActive");
   
+  // Debounce search input to avoid heavy/unnecessary re-renders on every keystroke
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      setSearchTerm(searchInput);
+      setCurrentPage(1);
+    }, 250);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchInput]);
+
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
@@ -324,10 +335,9 @@ export default function UsersAnalytics() {
                 <input
                   type="text"
                   placeholder="Search emails or names..."
-                  value={searchTerm}
+                  value={searchInput}
                   onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setCurrentPage(1);
+                    setSearchInput(e.target.value);
                   }}
                   className="w-full bg-panel border border-rule rounded-md text-xs px-10 py-2.5 outline-none focus-visible:ring-2 focus-visible:ring-sky/60"
                 />
