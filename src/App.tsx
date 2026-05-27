@@ -1712,15 +1712,15 @@ export default function App() {
           </Route>
 
           {/* AUTHENTICATED APP ROUTES (With App Shell) */}
-          <Route element={<AppShell />}>
+          <Route element={<AuthGuard><AppShell /></AuthGuard>}>
             <Route path="/today" element={<TodayView />} />
             <Route path="/modules" element={<ModulesView />} />
             <Route path="/topic/:id" element={<TopicView />} />
             <Route path="/mock-exams" element={<MockExamsView />} />
-            <Route path="/analytics" element={<AuthGuard><AnalyticsView /></AuthGuard>} />
-            <Route path="/bookmarks" element={<AuthGuard><BookmarksView /></AuthGuard>} />
-            <Route path="/profile" element={<AuthGuard><ProfileView /></AuthGuard>} />
-            <Route path="/referral" element={<AuthGuard><ReferralView /></AuthGuard>} />
+            <Route path="/analytics" element={<AnalyticsView />} />
+            <Route path="/bookmarks" element={<BookmarksView />} />
+            <Route path="/profile" element={<ProfileView />} />
+            <Route path="/referral" element={<ReferralView />} />
             <Route path="/quiz/:topicId" element={<QuizView />} />
             <Route path="*" element={<NotFoundView />} />
           </Route>

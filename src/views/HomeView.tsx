@@ -9,6 +9,7 @@ import { Question, staticQuestionBank } from "../data/questions";
 import { supabase } from "../lib/supabase";
 import { fetchPublishedQuestions, fetchMergedSubjects } from "../lib/content";
 import LeadCapture from "../components/LeadCapture";
+import { useAuth } from "../contexts/AuthContext";
 
 // Scroll reveal helper
 const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: string }> = ({ children, delay = 0, className = "" }) => {
@@ -328,6 +329,7 @@ function InteractiveSampleQuestion({ questions: initialQuestions }: { questions?
 }
 
 export default function HomeView() {
+  const { user, openAuthModal } = useAuth();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [liveQuestionsCount, setLiveQuestionsCount] = useState<number>(0);
   const [liveSubjectsCount, setLiveSubjectsCount] = useState<number>(0);
@@ -400,10 +402,19 @@ export default function HomeView() {
           <Link to="/pricing" className="hover:text-ink transition-colors px-2 py-2">Pricing</Link>
         </div>
         <div className="flex items-center gap-6">
-          <Link to="/today" className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors hidden sm:block">Sign in</Link>
-          <Link to="/today">
-            <Button variant="primary" className="h-[38px] px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Start studying <MoveRight size={14} className="ml-1.5" /></Button>
-          </Link>
+          {user ? (
+            <>
+              <Link to="/today" className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors hidden sm:block">Dashboard</Link>
+              <Link to="/today">
+                <Button variant="primary" className="h-[38px] px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Resume studying <MoveRight size={14} className="ml-1.5" /></Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <button onClick={() => openAuthModal("signin")} className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors hidden sm:block cursor-pointer">Sign in</button>
+              <Button onClick={() => openAuthModal("signup")} variant="primary" className="h-[38px] px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Start studying <MoveRight size={14} className="ml-1.5" /></Button>
+            </>
+          )}
         </div>
       </header>
 
