@@ -55,6 +55,7 @@ const BlogListView = lazy(() => import("./views/BlogListView"));
 const BlogPostView = lazy(() => import("./views/BlogPostView"));
 const QotdView = lazy(() => import("./views/QotdView"));
 const ReferralView = lazy(() => import("./views/ReferralView"));
+const A320SystemsView = lazy(() => import("./views/A320SystemsView"));
 
 import { AdminGuard } from "./components/AdminGuard";
 import { AuthGuard } from "./components/AuthGuard";
@@ -1021,46 +1022,13 @@ function AppShell() {
   const { userData } = useAuth();
   const location = useLocation();
   const outlet = useOutlet();
+  
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [bookmarkCount, setBookmarkCount] = useState(42);
-
-  const { logbook } = useLogbook();
-  const uniqueDates = [
-    ...new Set(
-      logbook.map((att) => att.dateISO?.split("T")[0]).filter(Boolean)
-    ),
-  ]
-    .sort()
-    .reverse();
-
-  let computedStreak = 0;
-  if (uniqueDates.length > 0) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const todayStr = today.toISOString().split("T")[0];
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-    if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
-      let expectedDate = new Date(uniqueDates[0]);
-      for (const dStr of uniqueDates) {
-        if (dStr === expectedDate.toISOString().split("T")[0]) {
-          computedStreak++;
-          expectedDate.setDate(expectedDate.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-    }
-  }
-
-  const displayedStreakValue = (userData?.streakCount ?? parseInt(localStorage.getItem("heading_streak_count") || "0")) || computedStreak;
-  
+  const [history, setHistory] = useState<{path: string, title: string}[]>([]);
   const [isSidebarPinned, setIsSidebarPinned] = useState(() => 
     localStorage.getItem("heading_sidebar_pinned") === "true" || false
   );
@@ -1069,6 +1037,8 @@ function AppShell() {
   const [isSidebarTappedForTablet, setIsSidebarTappedForTablet] = useState(false);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1200);
   const [isScrolled, setIsScrolled] = useState(false);
+
+  const { logbook } = useLogbook();
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -1081,12 +1051,6 @@ function AppShell() {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
-
-  const isTablet = windowWidth >= 768 && windowWidth < 1024;
-  const isSidebarPinnedOpen = isSidebarPinned && windowWidth >= 1024;
-  const isSidebarExpanded = isSidebarPinnedOpen || isSidebarHovered || (isTablet && isSidebarTappedForTablet);
-  
-  const reduceMotion = userData?.settings?.reduceMotion ? "always" : "user";
 
   // Scroll to top on pathname change
   useEffect(() => {
@@ -1126,8 +1090,6 @@ function AppShell() {
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
   }, []);
-
-  const [history, setHistory] = useState<{path: string, title: string}[]>([]);
 
   // Fetch real-time bookmark count securely
   useEffect(() => {
@@ -1183,6 +1145,45 @@ function AppShell() {
       return [{ path: location.pathname, title }, ...filtered].slice(0, 5);
     });
   }, [location.pathname]);
+
+  const uniqueDates = [
+    ...new Set(
+      logbook.map((att) => att.dateISO?.split("T")[0]).filter(Boolean)
+    ),
+  ]
+    .sort()
+    .reverse();
+
+  let computedStreak = 0;
+  if (uniqueDates.length > 0) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const todayStr = today.toISOString().split("T")[0];
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+    if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
+      let expectedDate = new Date(uniqueDates[0]);
+      for (const dStr of uniqueDates) {
+        if (dStr === expectedDate.toISOString().split("T")[0]) {
+          computedStreak++;
+          expectedDate.setDate(expectedDate.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+    }
+  }
+
+  const displayedStreakValue = (userData?.streakCount ?? parseInt(localStorage.getItem("heading_streak_count") || "0")) || computedStreak;
+  
+  const isTablet = windowWidth >= 768 && windowWidth < 1024;
+  const isSidebarPinnedOpen = isSidebarPinned && windowWidth >= 1024;
+  const isSidebarExpanded = isSidebarPinnedOpen || isSidebarHovered || (isTablet && isSidebarTappedForTablet);
+  
+  const reduceMotion = userData?.settings?.reduceMotion ? "always" : "user";
 
   const getReadingTime = () => {
     const p = location.pathname;
@@ -1736,6 +1737,7 @@ export default function App() {
             <Route path="/blog" element={<BlogListView />} />
             <Route path="/blog/:slug" element={<BlogPostView />} />
             <Route path="/qotd" element={<QotdView />} />
+            <Route path="/a320-systems" element={<A320SystemsView />} />
           </Route>
 
           {/* LOCKED ADMINISTRATIVE AREA */}

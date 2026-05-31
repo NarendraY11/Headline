@@ -62,13 +62,12 @@ function InteractiveSampleQuestion({ questions: initialQuestions }: { questions?
 
         let filteredSet: Question[] = [];
         if (dbQs && dbQs.length > 0) {
-          // Shuffle or select a subset of 8-10 questions with mixed subjects
-          filteredSet = dbQs.slice(0, 10);
+          filteredSet = [...dbQs].sort(() => 0.5 - Math.random()).slice(0, 10);
         }
 
         // If DB returned empty/failed, fall back to the staticQuestionBank
         if (filteredSet.length === 0) {
-          filteredSet = (staticQuestionBank || []).slice(0, 10);
+          filteredSet = [...(staticQuestionBank || [])].sort(() => 0.5 - Math.random()).slice(0, 10);
         }
 
         setQuestions(filteredSet);
@@ -86,7 +85,7 @@ function InteractiveSampleQuestion({ questions: initialQuestions }: { questions?
 
     // Initialize with propQuestions first if available, then load/overwrite
     if (initialQuestions && initialQuestions.length > 0) {
-      setQuestions(initialQuestions.slice(0, 10));
+      setQuestions([...initialQuestions].sort(() => 0.5 - Math.random()).slice(0, 10));
       setLoading(false);
     } else {
       getDemoSet();
@@ -396,8 +395,8 @@ export default function HomeView() {
         </Link>
         <div className="hidden lg:flex items-center gap-8 font-sans text-[13px] tracking-wide text-ink-2">
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">Question bank</Link>
-          <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">Mock exams</Link>
-          <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">A320 systems</Link>
+          <Link to="/mock-exams" className="hover:text-ink transition-colors px-2 py-2">Mock exams</Link>
+          <Link to="/a320-systems" className="hover:text-ink transition-colors px-2 py-2">A320 systems</Link>
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">VIVA</Link>
           <Link to="/pricing" className="hover:text-ink transition-colors px-2 py-2">Pricing</Link>
         </div>
@@ -502,27 +501,21 @@ export default function HomeView() {
         </div>
       </section>
 
-      {/* SYLLABUS COVERAGE STRIP */}
-      <div className="w-full border-y border-rule bg-paper overflow-hidden flex items-center py-4">
-         <div className="shrink-0 px-6 font-mono text-[9px] font-semibold text-muted-2 tracking-[0.2em] uppercase border-r border-rule/50 mr-6">
-           APPROVED SYLLABUS COVERAGE
-         </div>
-         <div className="flex gap-10 whitespace-nowrap overflow-x-auto no-scrollbar font-serif text-[18px] text-ink opacity-80 tracking-tight items-center pr-6">
-            <span>DGCA India</span>
-            <span className="text-muted-2 px-1">·</span>
-            <span>EASA Part-FCL</span>
-            <span className="text-muted-2 px-1">·</span>
-            <span>FAA ATP</span>
-            <span className="text-muted-2 px-1">·</span>
-            <span>A320 Type·CFM56</span>
-            <span className="text-muted-2 px-1">·</span>
-            <span>B737 NG·CFM56-7B</span>
-            <span className="text-muted-2 px-1">·</span>
-            <span>ICAO Annex 1</span>
-            <span className="text-muted-2 px-1">·</span>
-            <span>JCAB</span>
-            <span className="text-muted-2 px-1">·</span>
-            <span>GACA</span>
+      {/* IMPLICIT SOCIAL-PROOF MATRIX */}
+      <div className="w-full border-y border-rule bg-paper overflow-hidden py-8">
+         <div className="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row items-center gap-8 md:gap-12">
+            <div className="shrink-0 font-mono text-[10px] font-semibold text-muted-2 tracking-[0.2em] uppercase max-w-[180px] leading-tight">
+              ASSISTING CADETS APPROVED FOR TYPE RATINGS AT SECURE CARRIERS
+            </div>
+            <div className="h-[30px] w-[1px] bg-rule hidden md:block" />
+            <div className="flex gap-10 md:gap-16 whitespace-nowrap overflow-x-auto no-scrollbar font-serif text-[22px] text-ink opacity-60 tracking-tight items-center w-full">
+               <span>Indigo Airlines</span>
+               <span>Air India</span>
+               <span>FlyDubai</span>
+               <span>Akasa Air</span>
+               <span>Air Arabia</span>
+               <span>Emirates (Transition)</span>
+            </div>
          </div>
       </div>
 
@@ -621,28 +614,30 @@ export default function HomeView() {
 
            {/* Card 3: A320 Systems */}
            <FadeUp delay={200} className="h-full">
-             <Card className="h-full bg-paper rounded-[24px] p-8 md:p-10 shadow-sm border border-rule relative overflow-hidden flex flex-col group">
-               <div className="flex justify-between items-start mb-6">
-                 <span className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase">A320 SYSTEMS</span>
-                 <ArrowUpRight size={16} className="text-muted opacity-50 group-hover:opacity-100 transition-opacity" />
-               </div>
-               <h3 className="font-serif text-[28px] md:text-[34px] text-ink leading-tight mb-4 tracking-tight">ATA chapters, ECAM logic, schematics.</h3>
-               <p className="font-sans font-light text-[15px] text-ink-2 leading-relaxed mb-8 flex-1">
-                 An interactive cockpit-grade reference you can study from — or quiz against.
-               </p>
-               <div className="flex flex-wrap gap-2 mb-10">
-                 <Chip variant="solid" className="bg-bg-2 text-ink-2 border border-rule text-[9px] uppercase tracking-wider font-semibold">ATA 21-80</Chip>
-                 <Chip variant="solid" className="bg-bg-2 text-ink-2 border border-rule text-[9px] uppercase tracking-wider font-semibold">ECAM</Chip>
-                 <Chip variant="solid" className="bg-bg-2 text-ink-2 border border-rule text-[9px] uppercase tracking-wider font-semibold">SCHEMATICS</Chip>
-               </div>
-               {/* Graphic */}
-               <div className="bg-bg border border-rule rounded-xl p-5 overflow-hidden flex items-center justify-center blueprint relative" style={{ minHeight: '140px' }}>
-                 <div className="absolute inset-0 bg-paper opacity-50 pointer-events-none mix-blend-overlay"></div>
-                 <div className="scale-75 origin-center w-full z-10 flex justify-center">
-                    <FlightControlsDiagram />
+             <Link to="/a320-systems" className="block h-full">
+               <Card className="h-full bg-paper rounded-[24px] p-8 md:p-10 shadow-sm border border-rule relative overflow-hidden flex flex-col group hover:shadow-md transition-shadow">
+                 <div className="flex justify-between items-start mb-6">
+                   <span className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase">A320 SYSTEMS</span>
+                   <ArrowUpRight size={16} className="text-muted opacity-50 group-hover:opacity-100 transition-opacity" />
                  </div>
-               </div>
-             </Card>
+                 <h3 className="font-serif text-[28px] md:text-[34px] text-ink leading-tight mb-4 tracking-tight">ATA chapters, ECAM logic, schematics.</h3>
+                 <p className="font-sans font-light text-[15px] text-ink-2 leading-relaxed mb-8 flex-1">
+                   An interactive cockpit-grade reference you can study from — or quiz against.
+                 </p>
+                 <div className="flex flex-wrap gap-2 mb-10">
+                   <Chip variant="solid" className="bg-bg-2 text-ink-2 border border-rule text-[9px] uppercase tracking-wider font-semibold">ATA 21-80</Chip>
+                   <Chip variant="solid" className="bg-bg-2 text-ink-2 border border-rule text-[9px] uppercase tracking-wider font-semibold">ECAM</Chip>
+                   <Chip variant="solid" className="bg-bg-2 text-ink-2 border border-rule text-[9px] uppercase tracking-wider font-semibold">SCHEMATICS</Chip>
+                 </div>
+                 {/* Graphic */}
+                 <div className="bg-bg border border-rule rounded-xl p-5 overflow-hidden flex items-center justify-center blueprint relative" style={{ minHeight: '140px' }}>
+                   <div className="absolute inset-0 bg-paper opacity-50 pointer-events-none mix-blend-overlay"></div>
+                   <div className="scale-75 origin-center w-full z-10 flex justify-center">
+                      <FlightControlsDiagram />
+                   </div>
+                 </div>
+               </Card>
+             </Link>
            </FadeUp>
         </div>
       </section>
@@ -765,6 +760,50 @@ export default function HomeView() {
          </div>
       </section>
 
+      {/* 4.5 SEC: COMPARISON */}
+      <section className="py-24 bg-paper w-full border-t border-rule">
+        <FadeUp className="max-w-[1000px] mx-auto px-6">
+           <div className="text-center mb-16">
+             <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase mb-4">
+               § 04 / COMPARISON
+             </div>
+             <h2 className="font-serif text-[40px] md:text-[48px] text-ink leading-[1.0] tracking-tight">
+               Heading vs. Legacy Tools
+             </h2>
+           </div>
+           
+           <div className="border border-rule rounded-2xl overflow-hidden bg-bg shadow-sm">
+             <div className="grid grid-cols-3 border-b border-rule bg-paper">
+               <div className="p-4 md:p-6 font-mono text-[11px] text-muted-2 tracking-widest uppercase flex items-center">Feature</div>
+               <div className="p-4 md:p-6 font-sans font-semibold text-ink border-l border-rule flex items-center bg-bg relative">
+                 <div className="absolute top-0 left-0 w-full h-1 bg-ink"></div>
+                 Heading Simulator
+               </div>
+               <div className="p-4 md:p-6 font-sans font-medium text-ink-2 border-l border-rule flex items-center">Standard Books / Websites</div>
+             </div>
+             
+             {[
+               { feat: 'Spaced Repetition', h: 'Adaptive routing based on weak areas', s: 'Linear reading, manual tracking' },
+               { feat: 'Mock Exam Simulation', h: 'Exact sectional weighting & strict timers', s: 'Static PDFs or endless quizzes' },
+               { feat: 'Negative Marking', h: 'Simulates strict region-specific penalties', s: 'Often ignored or manually scored' },
+               { feat: 'A320 Type Rating Prep', h: 'Interactive schematics & ECAM logic', s: 'Dense manuals (FCOM/FCTM)' },
+               { feat: 'Data Analytics', h: 'Session-by-session telemetry trends', s: 'Mental guesswork' }
+             ].map((r, i) => (
+               <div key={i} className="grid grid-cols-3 border-b border-rule last:border-0 hover:bg-bg-2 transition-colors">
+                 <div className="p-4 md:p-6 font-sans text-[13px] md:text-[14px] text-ink font-medium">{r.feat}</div>
+                 <div className="p-4 md:p-6 font-sans text-[13px] md:text-[14px] text-ink border-l border-rule bg-bg/50">
+                    <div className="flex items-start gap-2">
+                       <CheckCircle2 size={16} className="text-ink shrink-0 mt-0.5" />
+                       <span className="leading-snug">{r.h}</span>
+                    </div>
+                 </div>
+                 <div className="p-4 md:p-6 font-sans text-[13px] md:text-[14px] text-ink-2 border-l border-rule opacity-80">{r.s}</div>
+               </div>
+             ))}
+           </div>
+        </FadeUp>
+      </section>
+
       {/* 5. TESTIMONIALS */}
       <section className="py-24 bg-bg border-y border-rule overflow-hidden">
         <FadeUp className="max-w-[1400px] mx-auto px-6">
@@ -852,6 +891,47 @@ export default function HomeView() {
             </Link>
          </div>
       </section>
+
+      {/* 9. FOOTER */}
+      <footer className="bg-bg py-16 border-t border-rule" style={{ borderColor: 'var(--rule-strong)' }}>
+         <div className="max-w-[1400px] mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12">
+            <div className="col-span-1 md:col-span-2">
+               <Link to="/" className="flex items-center gap-2 mb-6">
+                 <Wordmark compassSize={20} />
+               </Link>
+               <p className="font-sans text-sm text-muted-2 leading-relaxed max-w-xs">
+                 The ultimate simulator for commercial pilot exams. EASA & DGCA ground school prep, mock papers, and active spaced repetition.
+               </p>
+               <div className="mt-6 flex flex-col font-mono text-[10px] text-muted-2 tracking-widest gap-2">
+                 <span>SUPPORT@HEADING.COM</span>
+                 <span>MADE WITH PRECISION FOR AVIATORS</span>
+               </div>
+            </div>
+            
+            <div>
+               <h4 className="font-sans font-medium text-ink mb-6 text-[15px]">Product</h4>
+               <ul className="space-y-4 font-sans text-[13px] text-ink-2">
+                 <li><Link to="/modules" className="hover:text-ink transition-colors">Question Bank</Link></li>
+                 <li><Link to="/mock-exams" className="hover:text-ink transition-colors">Mock Exams</Link></li>
+                 <li><Link to="/pricing" className="hover:text-ink transition-colors">Pricing</Link></li>
+                 <li><Link to="/blog" className="hover:text-ink transition-colors">Blog</Link></li>
+               </ul>
+            </div>
+            
+            <div>
+               <h4 className="font-sans font-medium text-ink mb-6 text-[15px]">Legal / Company</h4>
+               <ul className="space-y-4 font-sans text-[13px] text-ink-2">
+                 <li><Link to="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link></li>
+                 <li><Link to="/terms" className="hover:text-ink transition-colors">Terms of Service</Link></li>
+                 <li><Link to="/refund" className="hover:text-ink transition-colors">Refund Policy</Link></li>
+                 <li><Link to="/contact" className="hover:text-ink transition-colors">Contact</Link></li>
+               </ul>
+            </div>
+         </div>
+         <div className="w-full max-w-[1400px] mx-auto px-6 mt-16 pt-8 border-t border-rule font-serif text-sm text-muted-2 text-center">
+            <p>&copy; {new Date().getFullYear()} Heading Simulator. Built for flight crew capability.</p>
+         </div>
+      </footer>
     </div>
   );
 }

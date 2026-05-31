@@ -428,6 +428,42 @@ export default function TodayView() {
 
   const displayName = userData?.displayName || "Captain";
 
+  const [activeSession, setActiveSession] = useState<{
+    topicId: string;
+    currentIndex: number;
+    answeredCount: number;
+    status: string;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      let found: typeof activeSession = null;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("heading_quiz_state_")) {
+          const val = localStorage.getItem(key);
+          if (val) {
+            const data = JSON.parse(val);
+            if (data && data.status !== "ended" && data.answers) {
+              const topicId = key.replace("heading_quiz_state_", "");
+              const answered = Object.keys(data.answers).length;
+              found = {
+                topicId,
+                currentIndex: data.currentIndex || 0,
+                answeredCount: answered,
+                status: data.status
+              };
+              break;
+            }
+          }
+        }
+      }
+      setActiveSession(found);
+    } catch (e) {
+      console.error("Error loading active quiz session:", e);
+    }
+  }, []);
+
   if (loading || logbookLoading || loadingSubjects) {
     return (
       <div className="relative min-h-screen">
@@ -688,43 +724,6 @@ export default function TodayView() {
     if (score >= 40) return "text-amber";
     return "text-signal";
   };
-
-  // Load active session from localStorage
-  const [activeSession, setActiveSession] = useState<{
-    topicId: string;
-    currentIndex: number;
-    answeredCount: number;
-    status: string;
-  } | null>(null);
-
-  useEffect(() => {
-    try {
-      let found: typeof activeSession = null;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith("heading_quiz_state_")) {
-          const val = localStorage.getItem(key);
-          if (val) {
-            const data = JSON.parse(val);
-            if (data && data.status !== "ended" && data.answers) {
-              const topicId = key.replace("heading_quiz_state_", "");
-              const answered = Object.keys(data.answers).length;
-              found = {
-                topicId,
-                currentIndex: data.currentIndex || 0,
-                answeredCount: answered,
-                status: data.status
-              };
-              break;
-            }
-          }
-        }
-      }
-      setActiveSession(found);
-    } catch (e) {
-      console.error("Error loading active quiz session:", e);
-    }
-  }, []);
 
   // Calculate real progression of score trend (latest half of attempts average score - oldest half of attempts average score)
   let scoreTrendSign = "";

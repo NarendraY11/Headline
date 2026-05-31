@@ -1868,17 +1868,29 @@ export default function QuizView() {
     }
   }
 
-  return (
-    <div
-      className="w-full h-full"
-      style={{ overscrollBehaviorY: "none" }}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEndEvent}
-    >
-      <AnimatePresence>
-        {saveToastVisible && (
-          <motion.div
+  if (status === "active") {
+    if (!currentQ) {
+      return (
+        <div className="flex flex-col min-h-screen items-center justify-center bg-bg relative">
+           <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
+           <div className="relative z-10 p-8 bg-paper border border-rule rounded-xl text-center shadow-sm">
+             <div className="w-8 h-8 rounded-full border-2 border-navy border-t-transparent animate-spin mx-auto mb-4"></div>
+             <p className="font-mono text-xs uppercase tracking-widest text-muted">Awaiting Flight Data...</p>
+           </div>
+        </div>
+      );
+    }
+    return (
+      <div
+        className="w-full h-full"
+        style={{ overscrollBehaviorY: "none" }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEndEvent}
+      >
+        <AnimatePresence>
+          {saveToastVisible && (
+            <motion.div
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
@@ -2009,4 +2021,5 @@ export default function QuizView() {
       </Suspense>
     </div>
   );
+  }
 }
