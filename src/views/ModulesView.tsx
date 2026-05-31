@@ -11,6 +11,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { fetchUserQuestionProgress, getLocalQuestionProgress } from "../lib/spacedRepetition";
 import { Compass, Milestone } from "lucide-react";
 import { ProGate } from "../components/ProGate";
+import ReadingProgress from "../components/ReadingProgress";
 
 export default function ModulesView() {
   const navigate = useNavigate();
@@ -189,6 +190,7 @@ export default function ModulesView() {
 
   return (
     <div className="relative min-h-screen">
+      <ReadingProgress />
       <div className="absolute inset-0 blueprint pointer-events-none opacity-[0.03] z-0" />
       <div className="absolute inset-0 paper-grain pointer-events-none z-1" />
 

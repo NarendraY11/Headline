@@ -15,6 +15,7 @@ import {
   Check
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
+import ReadingProgress from "../components/ReadingProgress";
 
 // In-post dynamic newsletter sub-card
 function NewsletterSubCard() {
@@ -378,6 +379,7 @@ export default function BlogPostView() {
 
   return (
     <div className="bg-bg min-h-screen pb-20 animate-[fadeIn_0.4s_ease-out]">
+      <ReadingProgress />
       {/* Inject Structured Data */}
       <script type="application/ld+json">
         {JSON.stringify(articleJsonLd)}

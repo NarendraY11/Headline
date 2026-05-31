@@ -144,6 +144,7 @@ export default function LeadCapture() {
               </label>
               <select 
                 id="leadResourceSelect"
+                aria-label="Select resource to download"
                 value={selectedResource}
                 onChange={(e) => setSelectedResource(e.target.value)}
                 className="w-full h-10 px-3 bg-bg border border-rule focus:border-navy focus:outline-none rounded text-xs text-ink transition-all font-sans cursor-pointer"

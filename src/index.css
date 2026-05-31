@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -16,8 +14,8 @@
   --ink-2: #1a2c47;
   --navy: #14305a;
   --navy-soft: #2a4a7a;
-  --muted: #5b6a82;
-  --muted-2: #8a94a6;
+  --muted: #334155;
+  --muted-2: #475569;
   --rule: rgba(13, 26, 45, 0.10);
   --rule-strong: rgba(13, 26, 45, 0.22);
   --signal: #c2402e;
@@ -48,8 +46,8 @@
   --navy-soft: #8a94a6;
   --rule: rgba(245, 242, 234, 0.10);
   --rule-strong: rgba(245, 242, 234, 0.25);
-  --muted: #8a94a6;
-  --muted-2: #5b6a82;
+  --muted: #cbd5e1;
+  --muted-2: #94a3b8;
   --signal-soft: #4a1913;
   --amber-soft: #52370e;
   --mint-soft: #0d2e21;

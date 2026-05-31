@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
 import { Button, Card, Chip, CompassLogomark, Wordmark } from "../components/Atoms";
 import { MoveRight, ChevronDown, CheckCircle2, Clock, User, ArrowUpRight, X } from "lucide-react";
 import { FlightControlsDiagram } from "../components/SystemDiagram";
@@ -10,6 +9,8 @@ import { supabase } from "../lib/supabase";
 import { fetchPublishedQuestions, fetchMergedSubjects } from "../lib/content";
 import LeadCapture from "../components/LeadCapture";
 import { useAuth } from "../contexts/AuthContext";
+
+const HomeProgressChart = lazy(() => import('../components/HomeProgressChart'));
 
 // Scroll reveal helper
 const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: string }> = ({ children, delay = 0, className = "" }) => {
@@ -729,27 +730,9 @@ export default function HomeView() {
                  <h3 className="font-serif text-[32px] text-ink mb-12 tracking-tight">Consistent upward trend.</h3>
                  
                  <div className="w-full relative flex-1" style={{ minHeight: '200px' }} role="img" aria-label="A bar chart showing student scores across the last 7 learning sessions, indicating an improvement trend from 62% to 88% accuracy">
-                    <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={[
-                        { name: 'S1', score: 62 },
-                        { name: 'S2', score: 71 },
-                        { name: 'S3', score: 68 },
-                        { name: 'S4', score: 79 },
-                        { name: 'S5', score: 74 },
-                        { name: 'S6', score: 83 },
-                        { name: 'S7', score: 88 }
-                      ]} margin={{ top: 10, right: 0, left: -25, bottom: 0 }}>
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: 'var(--muted-2)', fontFamily: 'var(--font-mono)' }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} ticks={[0, 50, 100]} tick={{ fontSize: 10, fill: 'var(--muted-2)', fontFamily: 'var(--font-mono)' }} />
-                        <Bar dataKey="score" radius={[4, 4, 4, 4]} barSize={24}>
-                          {
-                            [62, 71, 68, 79, 74, 83, 88].map((score, index) => (
-                              <Cell key={`cell-${index}`} fill={score >= 70 ? '#2E7D52' : '#C0392B'} />
-                            ))
-                          }
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                    <Suspense fallback={<div className="w-full h-[200px] bg-bg-2 animate-pulse rounded-md"></div>}>
+                      <HomeProgressChart />
+                    </Suspense>
                  </div>
                  
                  <div className="mt-8 pt-6 border-t border-rule font-mono text-[11px] text-muted font-medium">
@@ -909,7 +892,7 @@ export default function HomeView() {
             </div>
             
             <div>
-               <h4 className="font-sans font-medium text-ink mb-6 text-[15px]">Product</h4>
+               <h3 className="font-sans font-medium text-ink mb-6 text-[15px]">Product</h3>
                <ul className="space-y-4 font-sans text-[13px] text-ink-2">
                  <li><Link to="/modules" className="hover:text-ink transition-colors">Question Bank</Link></li>
                  <li><Link to="/mock-exams" className="hover:text-ink transition-colors">Mock Exams</Link></li>
@@ -919,7 +902,7 @@ export default function HomeView() {
             </div>
             
             <div>
-               <h4 className="font-sans font-medium text-ink mb-6 text-[15px]">Legal / Company</h4>
+               <h3 className="font-sans font-medium text-ink mb-6 text-[15px]">Legal / Company</h3>
                <ul className="space-y-4 font-sans text-[13px] text-ink-2">
                  <li><Link to="/privacy" className="hover:text-ink transition-colors">Privacy Policy</Link></li>
                  <li><Link to="/terms" className="hover:text-ink transition-colors">Terms of Service</Link></li>

@@ -18,6 +18,7 @@ import { useGlobalLoading } from "../contexts/LoadingContext";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { ProGate } from "../components/ProGate";
+import ReadingProgress from "../components/ReadingProgress";
 
 export default function TopicView() {
   const { id } = useParams();
@@ -560,6 +561,7 @@ export default function TopicView() {
   // STANDARD LAYOUT (For other modules)
   return (
     <div className="relative min-h-screen">
+      <ReadingProgress />
       <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
       <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
 
