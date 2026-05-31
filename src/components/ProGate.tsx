@@ -4,6 +4,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { Lock, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "./Atoms";
 import { isPaidActive } from "../lib/plan";
+import { supabase } from "../lib/supabase";
 
 interface ProGateProps {
   children: React.ReactNode;
@@ -44,13 +45,32 @@ export function ProGate({ children, type, isUnlocked = false }: ProGateProps) {
   const startTrial = async () => {
     setIsTrialLoading(true);
     try {
+      const token = await supabase.auth.getSession().then((s) => s.data.session?.access_token);
+      if (!token) throw new Error("No active session");
+
+      const response = await fetch("/api/start-trial", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to start trial");
+      }
+
+      const result = await response.json();
+      
+      // Update local state to reflect the new plan so the UI updates immediately
       await updateUserData({
         plan: "trial",
         planStartedAt: new Date().toISOString(),
-        planExpiresAt: new Date(Date.now() + 7 * (24 * 60 * 60 * 1000)).toISOString(),
+        planExpiresAt: result.plan_expires_at,
         trialStartedAt: new Date().toISOString(),
         trialUsed: true,
       });
+
     } catch (err) {
       console.error("Failed starting trial:", err);
     } finally {

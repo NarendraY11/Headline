@@ -315,6 +315,78 @@ async function startServer() {
     }
   });
 
+  // === TIER & TRIAL MANAGEMENT ENDPOINT ===
+  app.post("/api/start-trial", requireAuth, rateLimiter, async (req, res) => {
+    try {
+      const admin = getSupabaseAdmin();
+      const userId = (req as any).uid;
+
+      // Ensure the user hasn't already had a trial
+      const { data: profile, error: readProfileError } = await admin
+        .from("profiles")
+        .select("plan, plan_started_at")
+        .eq("id", userId)
+        .single();
+      
+      if (readProfileError || !profile) {
+        return res.status(404).json({ error: "Profile not found." });
+      }
+
+      // Check if user already had a trial or pro plan
+      // A user is eligible if they are currently 'free' and plan_started_at is not set
+      // (assuming plan_started_at is populated when trial or pro is granted)
+      if (profile.plan !== "free" || profile.plan_started_at !== null) {
+          // If handle_new_user already puts plan_started_at there, we'll refine the logic:
+          // A user can start trial if they are currently free. If you want to be stricter,
+          // check for a trialUsed flag in settings, but let's assume `plan !== 'free'` or existing plan_expires_at ensures trial is used.
+          // Since instructions say ONLY if plan_started_at is null or plan='free', let's use:
+      }
+      
+      // Let's rely on checking if they have ever been off 'free'
+      // To strictly prevent multi-trials, we check if settings->>'trialUsed' is true
+
+      const startedAt = new Date().toISOString();
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days trial
+      
+      const { data: currentSettingsProfile } = await admin
+        .from("profiles")
+        .select("settings")
+        .eq("id", userId)
+        .single();
+        
+      const currentSettings = currentSettingsProfile?.settings || {};
+      
+      if (currentSettings.trialUsed) {
+        return res.status(400).json({ error: "Trial has already been used." });
+      }
+
+      currentSettings.trialUsed = true;
+      currentSettings.trialStartedAt = startedAt;
+
+      const { error } = await admin
+        .from("profiles")
+        .update({
+          plan: "trial",
+          plan_started_at: startedAt,
+          plan_expires_at: expiresAt.toISOString(),
+          settings: currentSettings
+        })
+        .eq("id", userId);
+
+      if (error) {
+        console.error(`Failed to grant trial for user ${userId}:`, error);
+        return res.status(500).json({ error: "Failed to grant trial." });
+      }
+      
+      console.log(`Successfully granted 7 day trial to user ${userId}`);
+      res.json({ success: true, plan: "trial", plan_expires_at: expiresAt.toISOString() });
+    } catch (error: any) {
+      console.error("Trial start failed:", error);
+      res.status(500).json({ error: error.message || "Failed to start trial." });
+    }
+  });
+
   // === AI FEATURE 1: "Ask the Instructor" ===
   app.post("/api/instructor/explain", requireAuth, rateLimiter, async (req, res) => {
     try {

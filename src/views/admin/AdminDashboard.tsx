@@ -33,6 +33,8 @@ import {
   Legend 
 } from "recharts";
 
+import { RecentEventsAuditTable } from "./AdminActivity";
+
 type TimeRangeType = "Today" | "7d" | "30d" | "All";
 
 export default function AdminDashboard() {
@@ -80,6 +82,7 @@ export default function AdminDashboard() {
   // Recent log list
   const [recentAttempts, setRecentAttempts] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [profilesMap, setProfilesMap] = useState<Record<string, any>>({});
 
   // DB Sync trigger
   const fetchAllAnalytics = async (selectedRange: TimeRangeType) => {
@@ -138,6 +141,11 @@ export default function AdminDashboard() {
       const allProfiles = profilesRes.data || [];
       const allAttempts = attemptsRes.data || [];
       const allEvents = eventsRes.data || [];
+
+      // Create a map for the external components
+      const pMap: Record<string, any> = {};
+      allProfiles.forEach(p => pMap[p.id] = p);
+      setProfilesMap(pMap);
 
       // Divide datasets into chunks of Current vs Previous for precise trends
       const curProfiles = allProfiles.filter(p => new Date(p.created_at).getTime() >= currentPeriodStart);
@@ -1128,6 +1136,11 @@ export default function AdminDashboard() {
                 </table>
               </div>
             )}
+          </div>
+
+          {/* Real-time System Activity Table */}
+          <div className="mt-8">
+            <RecentEventsAuditTable profiles={profilesMap} />
           </div>
         </>
       )}

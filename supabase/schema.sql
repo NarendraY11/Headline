@@ -162,8 +162,9 @@ create table if not exists public.profiles (
   display_name text,
   target_exam text default 'General Study',
   next_exam text,
-  plan text default 'free' not null check (plan in ('free', 'pro')),
-  plan_started_at timestamptz default now() not null,
+  plan text default 'free' not null check (plan in ('free', 'trial', 'pro')),
+  plan_started_at timestamptz,
+  plan_expires_at timestamptz,
   settings jsonb default '{}'::jsonb not null,
   daily_goal int default 20 not null,
   streak_count int default 0 not null,
@@ -358,6 +359,26 @@ create policy "Users update own profile"
   on public.profiles for update
   using (auth.uid() = id)
   with check (auth.uid() = id);
+
+-- Trigger to prevent users from modifying their billing status
+create or replace function public.protect_billing_fields()
+returns trigger as $$
+begin
+  -- Only enforce this check for non-service roles
+  if auth.role() <> 'service_role' then
+    NEW.plan = OLD.plan;
+    NEW.plan_started_at = OLD.plan_started_at;
+    NEW.plan_expires_at = OLD.plan_expires_at;
+  end if;
+  return NEW;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists enforce_billing_security on public.profiles;
+create trigger enforce_billing_security
+  before update on public.profiles
+  for each row
+  execute function public.protect_billing_fields();
 
 -- ---------------------------------------------------------------------
 -- ATTEMPTS POLICIES
