@@ -512,6 +512,7 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
       targetExam: exam || "dgca-cpl", 
       nextExam: customDate, 
       dailyGoal: parseInt(dailyGoal),
+      onboardingCompleted: true,
       settings: {
         lastDiagnosticScore: diagScore,
         onboardingCompletedAt: new Date().toISOString()

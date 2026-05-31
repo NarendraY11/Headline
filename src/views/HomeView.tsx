@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from "react";
+import React, { useState, useEffect, lazy, Suspense, useRef } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import { Button, Card, Chip, CompassLogomark, Wordmark } from "../components/Atoms";
@@ -9,8 +9,36 @@ import { supabase } from "../lib/supabase";
 import { fetchPublishedQuestions, fetchMergedSubjects } from "../lib/content";
 import LeadCapture from "../components/LeadCapture";
 import { useAuth } from "../contexts/AuthContext";
+import DailyStudyGoal from "../components/DailyStudyGoal";
 
 const HomeProgressChart = lazy(() => import('../components/HomeProgressChart'));
+
+function LazyChartWrapper() {
+  const [inView, setInView] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '200px' }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} className="w-full relative flex-1 min-h-[200px]" role="img" aria-label="A bar chart showing student scores across the last 7 learning sessions, indicating an improvement trend from 62% to 88% accuracy">
+      <Suspense fallback={<div className="w-full h-[200px] bg-bg-2 animate-pulse rounded-md" />}>
+        {inView ? <HomeProgressChart /> : <div className="w-full h-[200px] bg-bg-2 animate-pulse rounded-md" />}
+      </Suspense>
+    </div>
+  );
+}
 
 // Scroll reveal helper
 const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: string }> = ({ children, delay = 0, className = "" }) => {
@@ -394,13 +422,13 @@ export default function HomeView() {
           <Wordmark compassSize={24} />
           <span className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase border border-rule px-1.5 py-0.5 rounded-[4px] mt-0.5 opacity-80">FL · 380</span>
         </Link>
-        <div className="hidden lg:flex items-center gap-8 font-sans text-[13px] tracking-wide text-ink-2">
+        <nav className="hidden lg:flex items-center gap-8 font-sans text-[13px] tracking-wide text-ink-2" aria-label="Primary site navigation">
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">Question bank</Link>
           <Link to="/mock-exams" className="hover:text-ink transition-colors px-2 py-2">Mock exams</Link>
           <Link to="/a320-systems" className="hover:text-ink transition-colors px-2 py-2">A320 systems</Link>
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">VIVA</Link>
           <Link to="/pricing" className="hover:text-ink transition-colors px-2 py-2">Pricing</Link>
-        </div>
+        </nav>
         <div className="flex items-center gap-6">
           {user ? (
             <>
@@ -418,8 +446,10 @@ export default function HomeView() {
         </div>
       </header>
 
-      {/* 1. SEC: HERO */}
-      <section className="relative pt-10 pb-12 md:pt-20 md:pb-20 w-full flex justify-center overflow-hidden">
+      {/* MAIN CONTENT */}
+      <main>
+        {/* 1. SEC: HERO */}
+        <section className="relative pt-10 pb-12 md:pt-20 md:pb-20 w-full flex justify-center overflow-hidden">
         {/* REPLACED WATERMARKED VIDEO WITH ELEGANT BLUEPRINT AND AMBIENT GRADIENT */}
         <div className="absolute inset-0 bg-gradient-to-tr from-[#f3eee0] via-[#f8f5ed] to-[#ede8dc] z-0" />
         <div className="absolute inset-0 blueprint pointer-events-none opacity-[0.25] z-[1]" />
@@ -695,9 +725,9 @@ export default function HomeView() {
             </div>
          </FadeUp>
 
-         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <FadeUp delay={100} className="w-full">
-               <Card className="bg-paper border border-rule rounded-[24px] p-8 md:p-12 shadow-sm h-full flex flex-col justify-center">
+               <Card className="bg-paper border border-rule rounded-[24px] p-8 md:p-12 shadow-sm h-full flex flex-col justify-center relative group">
                  <div className="flex justify-between items-center mb-8">
                     <div className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase">MASTERY · BY SYLLABUS HEADING</div>
                     <Chip variant="solid" className="bg-signal-soft text-signal border-signal/20 text-[9px] uppercase tracking-widest font-semibold px-2">3 ACTIONS PENDING</Chip>
@@ -729,16 +759,16 @@ export default function HomeView() {
                  <div className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase mb-8">PROGRESS · LAST 7 SESSIONS</div>
                  <h3 className="font-serif text-[32px] text-ink mb-12 tracking-tight">Consistent upward trend.</h3>
                  
-                 <div className="w-full relative flex-1" style={{ minHeight: '200px' }} role="img" aria-label="A bar chart showing student scores across the last 7 learning sessions, indicating an improvement trend from 62% to 88% accuracy">
-                    <Suspense fallback={<div className="w-full h-[200px] bg-bg-2 animate-pulse rounded-md"></div>}>
-                      <HomeProgressChart />
-                    </Suspense>
-                 </div>
+                 <LazyChartWrapper />
                  
                  <div className="mt-8 pt-6 border-t border-rule font-mono text-[11px] text-muted font-medium">
                    +26pts improvement across 7 sessions
                  </div>
                </Card>
+            </FadeUp>
+
+            <FadeUp delay={300} className="w-full">
+               <DailyStudyGoal />
             </FadeUp>
          </div>
       </section>
@@ -874,6 +904,7 @@ export default function HomeView() {
             </Link>
          </div>
       </section>
+      </main>
 
       {/* 9. FOOTER */}
       <footer className="bg-bg py-16 border-t border-rule" style={{ borderColor: 'var(--rule-strong)' }}>

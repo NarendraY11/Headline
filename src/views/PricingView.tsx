@@ -233,10 +233,10 @@ export default function PricingView() {
   };
 
   return (
-    <div className="pt-[64px] min-h-screen bg-bg relative">
+    <div className="min-h-screen bg-bg relative">
       <div className="absolute inset-0 blueprint pointer-events-none opacity-[0.03] z-0" />
       
-      <section id="pricing" className="py-24 md:py-32 max-w-[1000px] mx-auto px-6 w-full relative z-10">
+      <section id="pricing" className="pt-10 pb-24 md:pt-16 md:pb-32 max-w-[1000px] mx-auto px-6 w-full relative z-10">
          <FadeUp className="text-center mb-10">
             <span className="eyebrow block mb-4 text-[10px] tracking-[0.25em] text-signal font-mono uppercase">§ 04 · LICENSE TO FLY</span>
             <h2 className="font-serif text-[48px] md:text-[60px] text-ink mb-4 tracking-tight leading-none">Invest in your exam pass.</h2>

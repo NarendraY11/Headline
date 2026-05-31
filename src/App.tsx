@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, NavLink, useOutlet, useNavigate } from "react-router-dom";
+import { HashRouter as Router, Routes, Route, Link, useLocation, NavLink, useOutlet, useNavigate } from "react-router-dom";
 import { trackEvent } from "./lib/track";
 import { useDocumentMeta } from "./hooks/useDocumentMeta";
 import { Wordmark, Button } from "./components/Atoms";
@@ -25,14 +25,14 @@ import {
   MoveRight,
   ChevronDown,
   Check,
-  Gift,
-  Sparkles
+  Gift
 } from "lucide-react";
 import { useAuth } from "./contexts/AuthContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { lazy, Suspense } from "react";
 import { OnboardingFlow } from "./views/OnboardingFlow";
-import { isPaidActive, planLabel, daysLeft } from "./lib/plan";
+import TopSubscriptionBanner from "./components/TopSubscriptionBanner";
+import { isPaidActive, planLabel } from "./lib/plan";
 
 const HomeView = lazy(() => import("./views/HomeView"));
 const ModulesView = lazy(() => import("./views/ModulesView"));
@@ -550,8 +550,15 @@ function SettingsOverlay({ onClose }: { onClose: () => void }) {
                      </div>
                     <button 
                       onClick={() => {
-                         localStorage.removeItem("heading_onboarding_completed");
-                         window.location.reload();
+                         if (userData) {
+                           updateUserData({ onboardingCompleted: false }).finally(() => {
+                             localStorage.removeItem("heading_onboarding_completed");
+                             window.location.reload();
+                           });
+                         } else {
+                           localStorage.removeItem("heading_onboarding_completed");
+                           window.location.reload();
+                         }
                       }}
                       className="px-5 py-2.5 text-sm font-sans font-medium bg-panel border-2 border-rule rounded-full text-ink hover:border-rule-strong transition-colors flex items-center gap-2 shadow-sm"
                     >
@@ -664,7 +671,7 @@ function PublicLayout() {
           <Wordmark compassSize={26} />
           <span className="font-mono text-[9px] text-muted-2 tracking-widest uppercase md:hidden border border-rule px-1 rounded-sm mt-0.5">FL</span>
         </Link>
-        <div className="flex items-center gap-4">
+        <nav className="flex items-center gap-4" aria-label="Global support and authentication">
           <Link to="/about" className="text-sm font-sans text-muted hover:text-ink hidden md:block">Mission Specs</Link>
           {!user ? (
             <button onClick={() => openAuthModal("signin")} className="text-sm font-sans text-muted hover:text-ink hidden md:block cursor-pointer">Sign in</button>
@@ -683,7 +690,7 @@ function PublicLayout() {
           >
             {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-        </div>
+        </nav>
       </header>
       )}
 
@@ -850,16 +857,16 @@ function PageTransition({ children, keyId }: { children: React.ReactNode, keyId?
 }
 
 function AuthOnboardingHandler() {
-  const { user, loading } = useAuth();
+  const { user, userData, loading } = useAuth();
   const [show, setShow] = useState(false);
   
   useEffect(() => {
-    if (!loading && user) {
-      if (!localStorage.getItem("heading_onboarding_completed")) {
+    if (!loading && user && userData) {
+      if (!userData.onboardingCompleted && !localStorage.getItem("heading_onboarding_completed")) {
         setShow(true);
       }
     }
-  }, [user, loading]);
+  }, [user, userData, loading]);
 
   if (!show) return null;
   return <OnboardingFlow onClose={() => setShow(false)} />;
@@ -1597,39 +1604,8 @@ function AppShell() {
               )}
             </AnimatePresence>
 
-            {/* TRIAL IN-APP STATUS BANNER */}
-            {userData?.plan === "trial" && (
-              (() => {
-                const dl = daysLeft(userData) ?? 0;
-                const isUrgent = dl <= 2;
-                return (
-                  <div className={`w-full py-2.5 px-6 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-xs font-sans tracking-wide border-b ${
-                    isUrgent 
-                      ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900/40 font-semibold" 
-                      : "bg-panel text-muted hover:text-ink border-rule"
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <Sparkles size={14} className={isUrgent ? "text-rose-600 animate-pulse animate-bounce" : "text-[#DF9D38]"} />
-                      <span>
-                        {isUrgent 
-                          ? `Trial · ${dl} ${dl === 1 ? 'day' : 'days'} left. Action Required: Upgrade now to maintain uninterrupted cockpit clearance!` 
-                          : `Trial · ${dl} ${dl === 1 ? 'day' : 'days'} left`
-                        }
-                      </span>
-                    </div>
-                    <Link to="/pricing" className="shrink-0">
-                      <button className={`px-3 py-1 font-mono text-[9px] uppercase tracking-wider rounded-md font-semibold cursor-pointer ${
-                        isUrgent 
-                          ? "bg-rose-600 text-white hover:bg-rose-700" 
-                          : "bg-navy text-bg hover:bg-navy-dark"
-                      }`}>
-                        Upgrade Now
-                      </button>
-                    </Link>
-                  </div>
-                );
-              })()
-            )}
+            {/* TRIAL & SUBSCRIPTION STATUS BANNER */}
+            <TopSubscriptionBanner />
 
             {/* MAIN SCROLLABLE VIEW */}
             <main 

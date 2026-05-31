@@ -12,9 +12,11 @@ export interface UserData {
   totalSessionsCount?: number;
   lastSessionAt?: any;
   plan?: 'free' | 'trial' | 'pro' | 'lifetime';
+  planStatus?: 'active' | 'expired' | 'none';
   planStartedAt?: string;
   planExpiresAt?: string;
   trialStartedAt?: string;
+  trialEndsAt?: string;
   trialUsed?: boolean;
   dailyGoal?: number;
   streakCount?: number;
@@ -35,6 +37,7 @@ export interface UserData {
   referralCode?: string;
   referredBy?: string;
   newsletterOptIn?: boolean;
+  onboardingCompleted?: boolean;
 }
 
 export interface CompatUser {
@@ -188,9 +191,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         attempts: {},
         photoURL: mappedUser.photoURL || "",
         plan: profile?.plan || "free",
+        planStatus: profile?.plan_status || "none",
         planStartedAt: profile?.plan_started_at,
         planExpiresAt: profile?.plan_expires_at,
         trialStartedAt: profile?.trial_started_at,
+        trialEndsAt: profile?.trial_ends_at,
         trialUsed: profile?.trial_used ?? false,
         dailyGoal: profile?.daily_goal ?? profile?.settings?.dailyGoal ?? 20,
         streakCount: profile?.streak_count ?? profile?.settings?.streakCount ?? 0,
@@ -199,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         referralCode: referralCode || profile?.referral_code,
         referredBy: profile?.referred_by,
         newsletterOptIn: profile?.newsletter_opt_in ?? false,
+        onboardingCompleted: profile?.onboarding_completed ?? false,
       };
 
       // 2. Fetch bookmarks
@@ -505,11 +511,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.targetExam !== undefined) updatePayload.target_exam = data.targetExam;
         if (data.nextExam !== undefined) updatePayload.next_exam = data.nextExam;
         if (data.newsletterOptIn !== undefined) updatePayload.newsletter_opt_in = data.newsletterOptIn;
+        if (data.onboardingCompleted !== undefined) updatePayload.onboarding_completed = data.onboardingCompleted;
         
         if (data.plan !== undefined) updatePayload.plan = data.plan;
+        if (data.planStatus !== undefined) updatePayload.plan_status = data.planStatus;
         if (data.planStartedAt !== undefined) updatePayload.plan_started_at = data.planStartedAt;
         if (data.planExpiresAt !== undefined) updatePayload.plan_expires_at = data.planExpiresAt;
         if (data.trialStartedAt !== undefined) updatePayload.trial_started_at = data.trialStartedAt;
+        if (data.trialEndsAt !== undefined) updatePayload.trial_ends_at = data.trialEndsAt;
         if (data.trialUsed !== undefined) updatePayload.trial_used = data.trialUsed;
 
         if (data.dailyGoal !== undefined) updatePayload.daily_goal = data.dailyGoal;
