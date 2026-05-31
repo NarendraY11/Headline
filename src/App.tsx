@@ -649,7 +649,7 @@ function PublicLayout() {
   const location = useLocation();
   const outlet = useOutlet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { openAuthModal } = useAuth();
+  const { user, openAuthModal } = useAuth();
 
   // Close menu when route changes
   useEffect(() => {
@@ -666,7 +666,11 @@ function PublicLayout() {
         </Link>
         <div className="flex items-center gap-4">
           <Link to="/about" className="text-sm font-sans text-muted hover:text-ink hidden md:block">Mission Specs</Link>
-          <button onClick={() => openAuthModal("signin")} className="text-sm font-sans text-muted hover:text-ink hidden md:block cursor-pointer">Sign in</button>
+          {!user ? (
+            <button onClick={() => openAuthModal("signin")} className="text-sm font-sans text-muted hover:text-ink hidden md:block cursor-pointer">Sign in</button>
+          ) : (
+            <Link to="/today" className="text-sm font-sans text-muted hover:text-ink hidden md:block">Dashboard</Link>
+          )}
           <Link to="/modules" className="hidden md:block">
             <Button variant="primary" className="h-[34px] px-3.5 text-xs font-sans font-semibold border-0">Start studying</Button>
           </Link>
@@ -701,9 +705,15 @@ function PublicLayout() {
                <NavLink to="/modules" className="py-3 px-4 border-b border-rule/50 hover:bg-bg-2 transition-colors flex justify-between">
                   Study Modules <MoveRight size={18} className="text-muted" />
                </NavLink>
-               <NavLink to="/today" className="py-3 px-4 border-b border-rule/50 hover:bg-bg-2 transition-colors flex justify-between">
-                  Sign In <MoveRight size={18} className="text-muted" />
-               </NavLink>
+               {!user ? (
+                 <button onClick={() => { setMobileMenuOpen(false); openAuthModal("signin"); }} className="py-3 px-4 border-b border-rule/50 hover:bg-bg-2 transition-colors flex justify-between w-full text-left">
+                    Sign In <MoveRight size={18} className="text-muted" />
+                 </button>
+               ) : (
+                 <NavLink to="/today" className="py-3 px-4 border-b border-rule/50 hover:bg-bg-2 transition-colors flex justify-between">
+                    Dashboard <MoveRight size={18} className="text-muted" />
+                 </NavLink>
+               )}
                <div className="mt-8 px-4 flex justify-between items-center text-sm">
                  <span className="text-muted">Display Mode</span>
                  <DarkModeToggle />

@@ -435,6 +435,20 @@ export default function TodayView() {
     status: string;
   } | null>(null);
 
+  const [currentDateString, setCurrentDateString] = useState("");
+
+  useEffect(() => {
+    setCurrentDateString(
+      new Date()
+        .toLocaleDateString("en-US", {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+        })
+        .toUpperCase()
+    );
+  }, []);
+
   useEffect(() => {
     try {
       let found: typeof activeSession = null;
@@ -929,13 +943,7 @@ export default function TodayView() {
             <span className="w-1.5 h-1.5 rounded-sm bg-signal transform rotate-45" />
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2">
               BRIEFING ·{" "}
-              {new Date()
-                .toLocaleDateString("en-US", {
-                  weekday: "short",
-                  day: "numeric",
-                  month: "short",
-                })
-                .toUpperCase()}
+              {currentDateString}
             </span>
           </div>
 

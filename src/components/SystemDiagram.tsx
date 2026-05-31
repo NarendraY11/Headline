@@ -143,6 +143,23 @@ export function FlightControlsDiagram() {
          </div>
       </div>
 
+      <div className={`absolute bottom-4 left-4 md:bottom-6 md:left-6 z-20 flex flex-col gap-1.5 p-3 md:p-4 rounded-xl border backdrop-blur-md shadow-sm transition-colors duration-300 pointer-events-none ${
+        blueprintMode ? 'bg-white/80 border-ink/30 text-ink' :
+        lawIdx === 0 ? 'bg-mint/5 border-mint/40 text-mint' : 
+        lawIdx === 1 ? 'bg-amber-500/5 border-amber-500/40 text-amber-500' : 
+        'bg-signal/5 border-signal/40 text-signal'
+      }`}>
+        <span className={`font-mono text-[9px] uppercase tracking-widest ${blueprintMode ? 'opacity-60' : 'opacity-80'}`}>System Readiness</span>
+        <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider font-semibold">
+           {!blueprintMode && <span className={`w-2 h-2 rounded-full shrink-0 ${
+             lawIdx === 0 ? 'bg-mint animate-pulse' : 
+             lawIdx === 1 ? 'bg-amber-500' : 
+             'bg-signal'
+           }`} />}
+           <span>{lawIdx === 0 ? 'SIGNAL CONN: NORMAL' : lawIdx === 1 ? 'SIGNAL CONN: DEGRADED (ALT)' : 'SIGNAL CONN: DIRECT (MANUAL)'}</span>
+        </div>
+      </div>
+
       <div className="relative w-full max-w-[800px] aspect-[2/1] mx-auto z-0 mt-12 md:mt-16 mb-4 md:mb-8" onClick={handleSVGClick}>
         <svg className={`absolute inset-0 w-full h-full ${blueprintMode ? '' : 'drop-shadow-sm'}`} viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet">
           <g stroke="var(--ink)" strokeWidth="1.5" fill="none" opacity={blueprintMode ? "0.2" : "0.4"}>
@@ -153,10 +170,18 @@ export function FlightControlsDiagram() {
 
           {PATHS.map(p => {
              const activeNode = p.nodes.some(n => pinned.includes(n) || hoveredNodes.includes(n));
+             const isSimulatedActive = (lawIdx > 0) && p.nodes.some(n => (n === 'FCSC' || n === 'FCPC2'));
              const isHoveredPath = hoveredPath === p.id;
-             const isActive = activeNode || isHoveredPath;
+             const isFailedNodePath = (lawIdx > 0) && p.nodes.includes('FCPC1');
              
-             const highlightColor = blueprintMode ? 'var(--ink)' : 'var(--sky)';
+             // If failed, hovering FCPC1 won't trace
+             const isActive = (activeNode && !isFailedNodePath) || isHoveredPath || isSimulatedActive;
+             
+             let traceColor = blueprintMode ? 'var(--ink)' : 'var(--sky)';
+             if (isSimulatedActive && !blueprintMode) {
+               traceColor = lawIdx === 1 ? 'var(--amber)' : '#ef4444'; // amber or red(signal)
+             }
+             const highlightColor = traceColor;
 
              return (
                <g key={`trace-${p.id}`}>
@@ -205,14 +230,14 @@ export function FlightControlsDiagram() {
                        <motion.path
                           d={p.d}
                           stroke={highlightColor}
-                          strokeWidth="3"
+                          strokeWidth={isSimulatedActive ? "3.5" : "3"}
                           fill="none"
-                          strokeDasharray="6 12"
-                          initial={{ strokeDashoffset: 18 }}
+                          strokeDasharray={isSimulatedActive ? "8 16" : "6 12"}
+                          initial={{ strokeDashoffset: isSimulatedActive ? 24 : 18 }}
                           animate={{ strokeDashoffset: 0 }}
-                          transition={{ duration: 0.6, repeat: Infinity, ease: "linear" }}
+                          transition={{ duration: isSimulatedActive ? 0.3 : 0.6, repeat: Infinity, ease: "linear" }}
                           className="pointer-events-none"
-                          style={isHoveredPath ? { filter: 'drop-shadow(0 0 8px var(--sky))' } : {}}
+                          style={isHoveredPath || isSimulatedActive ? { filter: `drop-shadow(0 0 ${isSimulatedActive ? '12px' : '8px'} ${highlightColor})` } : {}}
                        />
                      )}
                    </>
@@ -229,12 +254,19 @@ export function FlightControlsDiagram() {
           {NODES.map(node => {
             const isHovered = hoveredNodes.includes(node.id);
             const isPinned = pinned.includes(node.id);
-            const isActive = isHovered || isPinned;
+            const isFailed = (lawIdx > 0) && node.id === 'FCPC1';
+            const isActive = (isHovered || isPinned) && !isFailed;
             
-            const nodeFill = blueprintMode ? (isActive ? 'var(--ink)' : 'var(--white)') : 'var(--paper)';
-            const textFill = blueprintMode ? (isActive ? 'var(--white)' : 'var(--ink)') : (isActive ? 'var(--sky)' : 'var(--ink)');
-            const strokeColor = blueprintMode ? 'var(--ink)' : (isActive ? 'var(--sky)' : 'var(--ink)');
+            let nodeFill = blueprintMode ? (isActive ? 'var(--ink)' : 'var(--white)') : 'var(--paper)';
+            let textFill = blueprintMode ? (isActive ? 'var(--white)' : 'var(--ink)') : (isActive ? 'var(--sky)' : 'var(--ink)');
+            let strokeColor = blueprintMode ? 'var(--ink)' : (isActive ? 'var(--sky)' : 'var(--ink)');
             const strokeWidth = isActive ? (blueprintMode ? "2.5" : "2") : (blueprintMode ? "1" : "1.5");
+
+            if (isFailed) {
+              nodeFill = blueprintMode ? 'var(--white)' : 'rgba(239, 68, 68, 0.1)';
+              textFill = blueprintMode ? 'var(--ink-40, #9ca3af)' : 'var(--signal, #ef4444)';
+              strokeColor = blueprintMode ? 'var(--ink-40, #9ca3af)' : 'var(--signal, #ef4444)';
+            }
 
             return (
               <motion.g 

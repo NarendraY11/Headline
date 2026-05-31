@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "./ui/Toast";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Mail, Lock, User, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { Button, Card } from "./Atoms";
@@ -13,6 +14,7 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalProps) {
   const { signInWithGoogle } = useAuth();
+  const { showToast } = useToast();
   
   const [activeTab, setActiveTab] = useState<"signin" | "signup" | "forgot">(defaultTab);
   const [showPassword, setShowPassword] = useState(false);
@@ -80,13 +82,16 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
     } catch (err: any) {
       console.error("Sign In Error:", err);
       // Map standard Firebase/Supabase style errors for better copy
-      if (err.message?.includes("Invalid login credentials")) {
-        setError("Incorrect email or password. Please try again.");
+      let msg = err.message || "An error occurred during sign in.";
+      if (err.message?.includes("Invalid login credentials") || err.message?.includes("Invalid password") || err.message?.includes("Invalid credentials")) {
+        msg = "Incorrect email or password. Please try again.";
       } else if (err.message?.includes("Email not confirmed")) {
-        setError("Your email address is not yet confirmed. Please check your inbox.");
-      } else {
-        setError(err.message || "An error occurred during sign in.");
+        msg = "Your email address is not yet confirmed. Please check your inbox.";
+      } else if (err.message?.includes("Rate limit") || err.message?.includes("Too many requests")) {
+        msg = "Too many attempts. Please try again later.";
       }
+      setError(msg);
+      showToast({ type: 'error', title: 'Sign In Failed', message: msg });
     } finally {
       setLoading(false);
     }
@@ -144,11 +149,14 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
       }
     } catch (err: any) {
       console.error("Sign Up Error:", err);
-      if (err.message?.includes("User already registered")) {
-        setError("An account with this email address already exists.");
-      } else {
-        setError(err.message || "An error occurred during registration.");
+      let msg = err.message || "An error occurred during registration.";
+      if (err.message?.includes("User already registered") || err.message?.includes("User already exists")) {
+        msg = "An account with this email address already exists.";
+      } else if (err.message?.includes("Rate limit") || err.message?.includes("Too many requests")) {
+        msg = "Too many attempts. Please try again later.";
       }
+      setError(msg);
+      showToast({ type: 'error', title: 'Sign Up Failed', message: msg });
     } finally {
       setLoading(false);
     }
@@ -178,7 +186,9 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
       setEmail("");
     } catch (err: any) {
       console.error("Password Reset Error:", err);
-      setError(err.message || "Could not process password reset request.");
+      const msg = err.message || "Could not process password reset request.";
+      setError(msg);
+      showToast({ type: 'error', title: 'Reset Failed', message: msg });
     } finally {
       setLoading(false);
     }
@@ -190,7 +200,9 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
     try {
       await signInWithGoogle();
     } catch (err: any) {
-      setError(err.message || "Google Sign-In failed.");
+      const msg = err.message || "Google Sign-In failed.";
+      setError(msg);
+      showToast({ type: 'error', title: 'Authentication Error', message: msg });
       setLoading(false);
     }
   };
