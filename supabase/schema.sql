@@ -662,3 +662,30 @@ create policy "Only admins manage referrals"
 -- END OF SCHEMA FILE
 -- Run this file FIRST, then run seed-admin.sql.
 -- =====================================================================
+
+-- =====================================================================
+-- 11. ACTIVE SESSIONS (Single Device Login)
+-- =====================================================================
+
+create table if not exists public.active_sessions (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  session_id text not null,
+  device_info text,
+  last_seen timestamptz default now() not null
+);
+
+create index if not exists idx_active_sessions_user_id on public.active_sessions(user_id);
+
+-- RLS for active_sessions
+alter table public.active_sessions enable row level security;
+
+drop policy if exists "Users can view own active session" on public.active_sessions;
+create policy "Users can view own active session"
+  on public.active_sessions for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert/update own active session" on public.active_sessions;
+create policy "Users can insert/update own active session"
+  on public.active_sessions for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

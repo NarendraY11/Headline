@@ -863,9 +863,10 @@ export async function deleteMockPaper(id: string): Promise<any> {
   return data;
 }
 
-export async function seedTaxonomy(): Promise<{ subjectsCount: number; examsCount: number }> {
+export async function seedTaxonomy(): Promise<{ subjectsCount: number; examsCount: number; questionsCount: number }> {
   let subCount = 0;
   let exCount = 0;
+  let qCount = 0;
 
   try {
     // 1. Seed rawSubjects
@@ -945,9 +946,41 @@ export async function seedTaxonomy(): Promise<{ subjectsCount: number; examsCoun
         if (!error) exCount++;
       }
     }
+
+    // 4. Seed questions
+    const { staticQuestionBank } = await import("../data/staticQuestions");
+    if (staticQuestionBank && staticQuestionBank.length > 0) {
+       for (const q of staticQuestionBank) {
+         const { data: existQ } = await supabase
+           .from("questions")
+           .select("id")
+           .eq("id", q.id)
+           .maybeSingle();
+         
+         if (!existQ) {
+           const { error } = await supabase
+             .from("questions")
+             .insert({
+               id: q.id,
+               subcategory_id: q.topicId || q.subcategoryId || null,
+               subject_id: q.subjectId || null,
+               ata: q.ata || "Uncategorized",
+               difficulty: q.difficulty || "standard",
+               prompt: q.prompt,
+               diagram_caption: q.diagramCaption,
+               choices: q.choices,
+               correct: q.correct,
+               explanation: q.explanation || "",
+               refs: q.references || [],
+               status: "published",
+             });
+           if (!error) qCount++;
+         }
+       }
+    }
   } catch (err) {
     console.error("Exception seeding taxonomy:", err);
   }
 
-  return { subjectsCount: subCount, examsCount: exCount };
+  return { subjectsCount: subCount, examsCount: exCount, questionsCount: qCount };
 }
