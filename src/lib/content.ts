@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { Question, staticQuestionBank } from "../data/questions";
+import { Question } from "../data/questions";
 import { rawSubjects, SubjectItem } from "../data/topics";
 
 const CACHE_TTL = 300000; // 5 minutes in milliseconds
@@ -54,6 +54,9 @@ export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
     return data.map((q: any) => ({
       id: q.id,
       topicId: q.subcategory_id || q.subject_id || "",
+      subjectId: q.subject_id || "",
+      subcategoryId: q.subcategory_id || "",
+      examId: q.exam_id || "",
       ata: q.ata || "Uncategorized",
       difficulty: q.difficulty || "standard",
       prompt: q.prompt,
@@ -118,6 +121,9 @@ export async function fetchQuizQuestionsForTopic(
     let questions = (data || []).map((q: any) => ({
       id: q.id,
       topicId: q.subcategory_id || q.subject_id || "",
+      subjectId: q.subject_id || "",
+      subcategoryId: q.subcategory_id || "",
+      examId: q.exam_id || "",
       ata: q.ata || "Uncategorized",
       difficulty: q.difficulty || "standard",
       prompt: q.prompt,
@@ -183,6 +189,9 @@ export async function fetchPublishedQuestions(options?: {
       return (data || []).map((q: any) => ({
         id: q.id,
         topicId: q.subcategory_id || q.subject_id || "",
+        subjectId: q.subject_id || "",
+        subcategoryId: q.subcategory_id || "",
+        examId: q.exam_id || "",
         ata: q.ata || "Uncategorized",
         difficulty: q.difficulty || "standard",
         prompt: q.prompt,
@@ -217,11 +226,15 @@ export async function fetchPublishedQuestions(options?: {
 
     if (error) {
       console.warn("Error fetching questions, using static fallback:", error);
+      const { staticQuestionBank } = await import("../data/staticQuestions");
       cachedQuestions = staticQuestionBank;
     } else if (data && data.length > 0) {
       cachedQuestions = data.map((q: any) => ({
         id: q.id,
         topicId: q.subcategory_id || q.subject_id || "",
+        subjectId: q.subject_id || "",
+        subcategoryId: q.subcategory_id || "",
+        examId: q.exam_id || "",
         ata: q.ata || "Uncategorized",
         difficulty: q.difficulty || "standard",
         prompt: q.prompt,
@@ -241,14 +254,20 @@ export async function fetchPublishedQuestions(options?: {
         isAiGenerated: !!q.is_ai_generated,
       }));
     } else {
+      const { staticQuestionBank } = await import("../data/staticQuestions");
       cachedQuestions = staticQuestionBank;
     }
   } catch (err) {
     console.warn("Exception fetching questions, using static fallback:", err);
+    const { staticQuestionBank } = await import("../data/staticQuestions");
     cachedQuestions = staticQuestionBank;
   }
 
-  return cachedQuestions || staticQuestionBank;
+  if (!cachedQuestions) {
+    const { staticQuestionBank } = await import("../data/staticQuestions");
+    return staticQuestionBank;
+  }
+  return cachedQuestions;
 }
 
 export async function fetchPublishedSubjects(): Promise<any[]> {

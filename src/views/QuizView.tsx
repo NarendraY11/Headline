@@ -16,6 +16,7 @@ import { isPaidActive } from "../lib/plan";
 import { apiFetch } from "../lib/api";
 import { mockExams } from "../data/topics";
 import { recordAnswerProgress, trackAnswerForStreakAndGoal, getDueQuestionIds } from "../lib/spacedRepetition";
+import { submitQuestionAttempt } from "../lib/progress";
 import { ProGate } from "../components/ProGate";
 import { X, ArrowRight, Settings2, Sparkles, CheckCircle2, Flame } from "lucide-react";
 import { lazy, Suspense } from "react";
@@ -512,7 +513,13 @@ export default function QuizView() {
     });
 
     // Record question performance for spacing/review
-    recordAnswerProgress(user?.uid || null, qId, isCorrect, questions[currentIndex].topicId);
+    const currentQ = questions[currentIndex];
+    recordAnswerProgress(user?.uid || null, qId, isCorrect, currentQ.topicId);
+    
+    // Single source of truth analytics
+    if (user) {
+      submitQuestionAttempt(user.uid, qId, isCorrect, currentQ.subjectId, currentQ.subcategoryId, currentQ.examId);
+    }
 
     // Track daily goal & streak counters
     trackAnswerForStreakAndGoal(user, userData, updateUserData, 1);
@@ -589,6 +596,10 @@ export default function QuizView() {
       if (userSelected) {
         answeredCount++;
         recordAnswerProgress(user?.uid || null, q.id, isCorrect, q.topicId);
+        
+        if (user) {
+          submitQuestionAttempt(user.uid, q.id, isCorrect, q.subjectId, q.subcategoryId, q.examId);
+        }
       }
     });
 

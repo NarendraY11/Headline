@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { Button, Card, Chip, CompassLogomark, Wordmark } from "../components/Atoms";
 import { MoveRight, ChevronDown, CheckCircle2, Clock, User, ArrowUpRight, X } from "lucide-react";
 import { FlightControlsDiagram } from "../components/SystemDiagram";
-import { Question, staticQuestionBank } from "../data/questions";
+import { Question } from "../data/questions";
 import { supabase } from "../lib/supabase";
 import { fetchPublishedQuestions, fetchMergedSubjects } from "../lib/content";
 import LeadCapture from "../components/LeadCapture";
@@ -96,6 +96,7 @@ function InteractiveSampleQuestion({ questions: initialQuestions }: { questions?
 
         // If DB returned empty/failed, fall back to the staticQuestionBank
         if (filteredSet.length === 0) {
+          const { staticQuestionBank } = await import("../data/staticQuestions");
           filteredSet = [...(staticQuestionBank || [])].sort(() => 0.5 - Math.random()).slice(0, 10);
         }
 
@@ -103,7 +104,13 @@ function InteractiveSampleQuestion({ questions: initialQuestions }: { questions?
       } catch (err) {
         console.warn("Error fetching demo questions, using static fallback:", err);
         if (active) {
-          setQuestions((staticQuestionBank || []).slice(0, 10));
+          try {
+            const { staticQuestionBank } = await import("../data/staticQuestions");
+            setQuestions((staticQuestionBank || []).slice(0, 10));
+          } catch (e) {
+            console.error(e);
+            setQuestions([]);
+          }
         }
       } finally {
         if (active) {

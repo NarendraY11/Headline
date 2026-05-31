@@ -6,9 +6,9 @@ import { ArrowUpRight, Lock, Target, ChevronDown, Plus, Search } from "lucide-re
 import { SubjectItem } from "../data/topics";
 import { fetchMergedSubjects } from "../lib/content";
 import { useLogbook } from "../hooks/useLogbook";
-import { getSubjectMastery, getDailyReviewItems } from "../lib/logbook";
+import { getDailyReviewItems } from "../lib/logbook";
 import { useAuth } from "../contexts/AuthContext";
-import { fetchUserQuestionProgress, getLocalQuestionProgress } from "../lib/spacedRepetition";
+import { useUserProgress } from "../lib/progress";
 import { Compass, Milestone } from "lucide-react";
 import { ProGate } from "../components/ProGate";
 import ReadingProgress from "../components/ReadingProgress";
@@ -17,31 +17,16 @@ export default function ModulesView() {
   const navigate = useNavigate();
 
   const { logbook } = useLogbook();
-  const { user, userData } = useAuth();
+  const { userData } = useAuth();
+  const { stats: progressStats } = useUserProgress();
 
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [questionProgress, setQuestionProgress] = useState<Record<string, any>>({});
 
   const [sortOrder, setSortOrder] = useState<"weakest" | "strongest" | "az">("weakest");
   const [syllabus, setSyllabus] = useState<"All" | "EASA" | "DGCA" | "FAA" | "TYPE_RATING">("All");
   const [activeTab, setActiveTab] = useState("All");
   const [showMasteryOverlay, setShowMasteryOverlay] = useState(false);
-
-  useEffect(() => {
-    async function loadQuestionProgress() {
-      try {
-        const uid = user?.uid || userData?.uid || userData?.id || null;
-        const prog = uid 
-          ? await fetchUserQuestionProgress(uid) 
-          : await getLocalQuestionProgress();
-        setQuestionProgress(prog);
-      } catch (err) {
-        console.error("Error loading question progress in ModulesView:", err);
-      }
-    }
-    loadQuestionProgress();
-  }, [user?.uid, userData?.id]);
 
   useEffect(() => {
     async function loadSubjects() {
@@ -158,7 +143,7 @@ export default function ModulesView() {
   }).sort((a, b) => a.title.localeCompare(b.title));
 
   const sortedWaypoints = trackSubjects.map(sub => {
-    const masteryVal = getSubjectMastery(logbook, sub, questionProgress);
+    const masteryVal = (progressStats.subjectMastery[sub.id] || 0) / 100;
     return {
       id: sub.id,
       title: sub.title,
@@ -175,8 +160,8 @@ export default function ModulesView() {
   const filterTabs = ["All", ...uniqueCategoriesFromTopics];
 
   displayedSubjects.sort((a, b) => {
-    const aMastery = getSubjectMastery(logbook, a, questionProgress);
-    const bMastery = getSubjectMastery(logbook, b, questionProgress);
+    const aMastery = (progressStats.subjectMastery[a.id] || 0) / 100;
+    const bMastery = (progressStats.subjectMastery[b.id] || 0) / 100;
     if (sortOrder === "weakest") return aMastery - bMastery;
     if (sortOrder === "strongest") return bMastery - aMastery;
     if (sortOrder === "az") {
@@ -381,22 +366,22 @@ export default function ModulesView() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
             {displayedSubjects.map((sub: SubjectItem, idx: number) => {
             const isComingSoon = sub.status === "coming-soon";
-            const actualMastery = getSubjectMastery(logbook, sub, questionProgress);
+            const actualMastery = (progressStats.subjectMastery[sub.id] || 0) / 100;
             
             const hasSavedState = !!localStorage.getItem(`heading_quiz_state_${sub.id}`) || 
                                   (sub.subTopics?.some(t => !!localStorage.getItem(`heading_quiz_state_${t.id}`)) ?? false);
 
             let barColor = getHueColor(sub.hue);
-            let statusPillLabel = "ON TRACK";
-            let statusPillClass = "bg-sky-soft text-sky border border-sky/20"; 
+            let statusPillLabel = "MASTERED";
+            let statusPillClass = "bg-mint/10 text-mint border border-mint/20"; 
 
-            if (actualMastery < 0.60 && !isComingSoon) {
+            if (actualMastery < 0.40 && !isComingSoon) {
               statusPillLabel = "FOCUS AREA";
               statusPillClass = "bg-signal-soft text-signal border border-signal/20";
               barColor = "var(--signal)";
             } else if (actualMastery < 0.80 && !isComingSoon) {
-              statusPillLabel = "IN PROGRESS";
-              statusPillClass = "bg-amber-soft text-amber border border-amber/20";
+              statusPillLabel = "ON TRACK";
+              statusPillClass = "bg-sky-soft text-sky border border-sky/20";
             }
 
             if (actualMastery === 0 && hasSavedState && !isComingSoon) {

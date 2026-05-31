@@ -1,18 +1,29 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { trackEvent } from '../lib/track';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+} from "react";
+import { supabase } from "../lib/supabase";
+import { trackEvent } from "../lib/track";
+import {
+  registerActiveSession,
+  checkSessionValidity,
+  clearLocalSession,
+} from "../lib/sessionTracker";
 
 export interface UserData {
   attempts: any;
-  bookmarks: string[]; 
+  bookmarks: string[];
   targetExam: string;
   nextExam?: string;
   photoURL?: string;
   totalQuestionsAnswered?: number;
   totalSessionsCount?: number;
   lastSessionAt?: any;
-  plan?: 'free' | 'trial' | 'pro' | 'lifetime';
-  planStatus?: 'active' | 'expired' | 'none';
+  plan?: "free" | "trial" | "pro" | "lifetime";
+  planStatus?: "active" | "expired" | "none";
   planStartedAt?: string;
   planExpiresAt?: string;
   trialStartedAt?: string;
@@ -26,9 +37,9 @@ export interface UserData {
     negativeMarking: boolean;
     reduceMotion: boolean;
     defaultMode: string;
-    practiceLayout?: 'auto' | 'editorial' | 'split';
-    timedLayout?: 'auto' | 'instrument' | 'editorial';
-    vivaLayout?: 'auto' | 'flashcard' | 'editorial';
+    practiceLayout?: "auto" | "editorial" | "split";
+    timedLayout?: "auto" | "instrument" | "editorial";
+    vivaLayout?: "auto" | "flashcard" | "editorial";
     dailyGoal?: number;
     streakCount?: number;
     lastActivityDate?: string;
@@ -58,8 +69,8 @@ interface AuthContextType {
   updateUserData: (data: Partial<UserData>) => Promise<void>;
   resetAccount: () => Promise<void>;
   authModalOpen: boolean;
-  authModalTab: 'signin' | 'signup' | 'forgot';
-  openAuthModal: (defaultTab?: 'signin' | 'signup' | 'forgot') => void;
+  authModalTab: "signin" | "signup" | "forgot";
+  openAuthModal: (defaultTab?: "signin" | "signup" | "forgot") => void;
   closeAuthModal: () => void;
 }
 
@@ -70,11 +81,16 @@ function mapSupabaseUser(sbUser: any, session: any): CompatUser {
     uid: sbUser.id,
     id: sbUser.id,
     email: sbUser.email,
-    displayName: sbUser.user_metadata?.full_name || sbUser.user_metadata?.display_name || sbUser.email?.split('@')[0] || 'Aviation Pilot',
-    photoURL: sbUser.user_metadata?.avatar_url || sbUser.user_metadata?.photoURL || '',
+    displayName:
+      sbUser.user_metadata?.full_name ||
+      sbUser.user_metadata?.display_name ||
+      sbUser.email?.split("@")[0] ||
+      "Aviation Pilot",
+    photoURL:
+      sbUser.user_metadata?.avatar_url || sbUser.user_metadata?.photoURL || "",
     getIdToken: async () => {
-      return session?.access_token || '';
-    }
+      return session?.access_token || "";
+    },
   };
 }
 
@@ -84,9 +100,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup' | 'forgot'>('signin');
+  const [authModalTab, setAuthModalTab] = useState<
+    "signin" | "signup" | "forgot"
+  >("signin");
 
-  const openAuthModal = (defaultTab: 'signin' | 'signup' | 'forgot' = 'signin') => {
+  const openAuthModal = (
+    defaultTab: "signin" | "signup" | "forgot" = "signin",
+  ) => {
     setAuthModalTab(defaultTab);
     setAuthModalOpen(true);
   };
@@ -99,29 +119,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // 1. Fetch profile
       let { data: profile, error: profileErr } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', uid)
+        .from("profiles")
+        .select("*")
+        .eq("id", uid)
         .maybeSingle();
 
       // If profile doesn't exist, try to set up an initial record (equivalent to Firebase setDoc with merge)
       if (profileErr || !profile) {
         // Track the first signup event
         trackEvent("signup");
-        
+
         const initialProfile = {
           id: uid,
           email: mappedUser.email,
-          display_name: mappedUser.displayName || '',
-          target_exam: 'DGCA CPL',
-          settings: { negativeMarking: false, reduceMotion: false, defaultMode: "practice" }
+          display_name: mappedUser.displayName || "",
+          target_exam: "DGCA CPL",
+          settings: {
+            negativeMarking: false,
+            reduceMotion: false,
+            defaultMode: "practice",
+          },
         };
         const { data: insertedProfile } = await supabase
-          .from('profiles')
+          .from("profiles")
           .upsert(initialProfile)
           .select()
           .maybeSingle();
-        
+
         profile = insertedProfile || initialProfile;
       }
 
@@ -129,12 +153,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let referralCode = profile?.referral_code;
       if (!referralCode) {
         // Generate a clean 8-letter alphanumeric referral code
-        referralCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        referralCode = Math.random()
+          .toString(36)
+          .substring(2, 10)
+          .toUpperCase();
         try {
           const { data: updatedProfile } = await supabase
-            .from('profiles')
+            .from("profiles")
             .update({ referral_code: referralCode })
-            .eq('id', uid)
+            .eq("id", uid)
             .select()
             .maybeSingle();
           if (updatedProfile) {
@@ -142,7 +169,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             referralCode = updatedProfile.referral_code;
           }
         } catch (updateErr) {
-          console.warn("Failed to write dynamic referral code into database:", updateErr);
+          console.warn(
+            "Failed to write dynamic referral code into database:",
+            updateErr,
+          );
         }
       }
 
@@ -154,24 +184,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (referralCode !== pendingRefCode && !profile?.referred_by) {
             // Find referrer details
             const { data: referrer, error: findReferrerErr } = await supabase
-              .from('profiles')
-              .select('id')
-              .eq('referral_code', pendingRefCode)
+              .from("profiles")
+              .select("id")
+              .eq("referral_code", pendingRefCode)
               .maybeSingle();
 
             if (referrer && !findReferrerErr) {
               // Write referral tracking row and populate referred_by on current profile
-              await supabase.from('profiles').update({ referred_by: pendingRefCode }).eq('id', uid);
+              await supabase
+                .from("profiles")
+                .update({ referred_by: pendingRefCode })
+                .eq("id", uid);
               profile.referred_by = pendingRefCode;
-              
-              const { error: insErr } = await supabase.from('referrals').insert({
-                referrer_id: referrer.id,
-                referred_id: uid,
-                status: 'pending'
-              });
-              
+
+              const { error: insErr } = await supabase
+                .from("referrals")
+                .insert({
+                  referrer_id: referrer.id,
+                  referred_id: uid,
+                  status: "pending",
+                });
+
               if (!insErr) {
-                console.log(`Referral link created between user ${uid} and referrer ${referrer.id}`);
+                console.log(
+                  `Referral link created between user ${uid} and referrer ${referrer.id}`,
+                );
                 localStorage.removeItem("referred_by_code");
               }
             }
@@ -179,14 +216,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem("referred_by_code");
           }
         } catch (linkErr) {
-          console.error("Non-blocking context referral binding failed:", linkErr);
+          console.error(
+            "Non-blocking context referral binding failed:",
+            linkErr,
+          );
         }
       }
 
       const uData: UserData = {
         targetExam: profile?.target_exam || "DGCA CPL",
         nextExam: profile?.next_exam || "",
-        settings: profile?.settings || { negativeMarking: false, reduceMotion: false, defaultMode: "practice" },
+        settings: profile?.settings || {
+          negativeMarking: false,
+          reduceMotion: false,
+          defaultMode: "practice",
+        },
         bookmarks: [],
         attempts: {},
         photoURL: mappedUser.photoURL || "",
@@ -198,9 +242,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         trialEndsAt: profile?.trial_ends_at,
         trialUsed: profile?.trial_used ?? false,
         dailyGoal: profile?.daily_goal ?? profile?.settings?.dailyGoal ?? 20,
-        streakCount: profile?.streak_count ?? profile?.settings?.streakCount ?? 0,
-        lastActivityDate: profile?.last_activity_date ?? profile?.settings?.lastActivityDate ?? "",
-        questionsAnsweredToday: profile?.questions_answered_today ?? profile?.settings?.questionsAnsweredToday ?? 0,
+        streakCount:
+          profile?.streak_count ?? profile?.settings?.streakCount ?? 0,
+        lastActivityDate:
+          profile?.last_activity_date ??
+          profile?.settings?.lastActivityDate ??
+          "",
+        questionsAnsweredToday:
+          profile?.questions_answered_today ??
+          profile?.settings?.questionsAnsweredToday ??
+          0,
         referralCode: referralCode || profile?.referral_code,
         referredBy: profile?.referred_by,
         newsletterOptIn: profile?.newsletter_opt_in ?? false,
@@ -209,30 +260,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 2. Fetch bookmarks
       const { data: bookmarksData, error: bookmarksErr } = await supabase
-        .from('bookmarks')
-        .select('question_id')
-        .eq('user_id', uid);
-      
+        .from("bookmarks")
+        .select("question_id")
+        .eq("user_id", uid);
+
       if (!bookmarksErr && bookmarksData) {
-        uData.bookmarks = bookmarksData.map(b => b.question_id);
+        uData.bookmarks = bookmarksData.map((b) => b.question_id);
       }
 
       // 3. Fetch attempts
       const { data: attemptsData, error: attemptsErr } = await supabase
-        .from('attempts')
-        .select('*')
-        .eq('user_id', uid);
+        .from("attempts")
+        .select("*")
+        .eq("user_id", uid);
 
       if (!attemptsErr && attemptsData) {
-        attemptsData.forEach(item => {
+        attemptsData.forEach((item) => {
           uData.attempts[`heading_quiz_state_${item.topic_id}`] = item.data;
         });
 
         // Compute auxiliary metrics on the fly
         uData.totalSessionsCount = attemptsData.length;
-        uData.totalQuestionsAnswered = attemptsData.reduce((sum, item) => sum + (item.data?.total || 0), 0);
+        uData.totalQuestionsAnswered = attemptsData.reduce(
+          (sum, item) => sum + (item.data?.total || 0),
+          0,
+        );
         if (attemptsData.length > 0) {
-          const sorted = [...attemptsData].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          const sorted = [...attemptsData].sort(
+            (a, b) =>
+              new Date(b.created_at).getTime() -
+              new Date(a.created_at).getTime(),
+          );
           uData.lastSessionAt = sorted[0].created_at;
         }
       }
@@ -240,8 +298,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUserData(uData);
 
       // Save to localStorage to keep local preferences in sync
-      if (uData.bookmarks) localStorage.setItem("heading_bookmarks", JSON.stringify(uData.bookmarks));
-      if (uData.settings) localStorage.setItem("heading_settings", JSON.stringify(uData.settings));
+      if (uData.bookmarks)
+        localStorage.setItem(
+          "heading_bookmarks",
+          JSON.stringify(uData.bookmarks),
+        );
+      if (uData.settings)
+        localStorage.setItem(
+          "heading_settings",
+          JSON.stringify(uData.settings),
+        );
     } catch (e) {
       console.error("Error loading Supabase user details:", e);
     } finally {
@@ -253,34 +319,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Collect local storage bookmarks
     const localBookmarksStr = localStorage.getItem("heading_bookmarks");
     let localBookmarks = [];
-    try { if (localBookmarksStr) localBookmarks = JSON.parse(localBookmarksStr); } catch {}
+    try {
+      if (localBookmarksStr) localBookmarks = JSON.parse(localBookmarksStr);
+    } catch {}
 
     // Collect local storage logbook
     const localLogbookStr = localStorage.getItem("heading_logbook");
     let localLogbook: any[] = [];
-    try { if (localLogbookStr) localLogbook = JSON.parse(localLogbookStr); } catch {}
+    try {
+      if (localLogbookStr) localLogbook = JSON.parse(localLogbookStr);
+    } catch {}
 
     const localSettingsStr = localStorage.getItem("heading_settings");
-    let localSettings = { negativeMarking: false, reduceMotion: false, defaultMode: "practice" };
-    try { if (localSettingsStr) localSettings = JSON.parse(localSettingsStr); } catch {}
+    let localSettings = {
+      negativeMarking: false,
+      reduceMotion: false,
+      defaultMode: "practice",
+    };
+    try {
+      if (localSettingsStr) localSettings = JSON.parse(localSettingsStr);
+    } catch {}
 
     // Find local active attempts
     const localAttempts: Record<string, any> = {};
     for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('heading_quiz_state_')) {
-            try {
-                localAttempts[key] = JSON.parse(localStorage.getItem(key) || '{}');
-            } catch {}
-        }
+      const key = localStorage.key(i);
+      if (key?.startsWith("heading_quiz_state_")) {
+        try {
+          localAttempts[key] = JSON.parse(localStorage.getItem(key) || "{}");
+        } catch {}
+      }
     }
 
     try {
       // 1. Get current Profile
       const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', uid)
+        .from("profiles")
+        .select("*")
+        .eq("id", uid)
         .maybeSingle();
 
       let bookmarksToSave: string[] = [];
@@ -289,114 +365,114 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Format local bookmarks
       for (const lb of localBookmarks) {
-         if (typeof lb === 'string') bookmarksToSave.push(lb);
-         else if (lb && lb.id) bookmarksToSave.push(lb.id);
+        if (typeof lb === "string") bookmarksToSave.push(lb);
+        else if (lb && lb.id) bookmarksToSave.push(lb.id);
       }
 
       if (profile) {
-         const { data: existingBookmarks } = await supabase
-           .from('bookmarks')
-           .select('question_id')
-           .eq('user_id', uid);
-         
-         const serverBookmarks = existingBookmarks?.map(b => b.question_id) || [];
-         const serverSettings = profile.settings;
-         
-         if (serverSettings) {
-           settingsToSave = { ...localSettings, ...serverSettings };
-         }
-         
-         if (!nextExamToSave && profile.next_exam) {
-           nextExamToSave = profile.next_exam;
-         }
+        const { data: existingBookmarks } = await supabase
+          .from("bookmarks")
+          .select("question_id")
+          .eq("user_id", uid);
 
-         const mergedBookmarks = [...serverBookmarks];
-         for (const lbId of bookmarksToSave) {
-             if (!mergedBookmarks.includes(lbId)) {
-                mergedBookmarks.push(lbId);
-             }
-         }
-         bookmarksToSave = mergedBookmarks;
+        const serverBookmarks =
+          existingBookmarks?.map((b) => b.question_id) || [];
+        const serverSettings = profile.settings;
+
+        if (serverSettings) {
+          settingsToSave = { ...localSettings, ...serverSettings };
+        }
+
+        if (!nextExamToSave && profile.next_exam) {
+          nextExamToSave = profile.next_exam;
+        }
+
+        const mergedBookmarks = [...serverBookmarks];
+        for (const lbId of bookmarksToSave) {
+          if (!mergedBookmarks.includes(lbId)) {
+            mergedBookmarks.push(lbId);
+          }
+        }
+        bookmarksToSave = mergedBookmarks;
       }
 
       // 2. Upsert profile
-      await supabase.from('profiles').upsert({
+      await supabase.from("profiles").upsert({
         id: uid,
         target_exam: profile?.target_exam || "DGCA CPL",
         next_exam: nextExamToSave,
         settings: settingsToSave,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
       });
 
       // 3. Save bookmarks
       if (bookmarksToSave.length > 0) {
-        await supabase.from('bookmarks').delete().eq('user_id', uid);
-        const rows = bookmarksToSave.map(qid => ({
+        await supabase.from("bookmarks").delete().eq("user_id", uid);
+        const rows = bookmarksToSave.map((qid) => ({
           user_id: uid,
-          question_id: qid
+          question_id: qid,
         }));
-        await supabase.from('bookmarks').insert(rows);
+        await supabase.from("bookmarks").insert(rows);
       }
 
       // 4. Save historic logbook entries
       for (const item of localLogbook) {
-          if (!item.id) continue;
-          await supabase.from('attempts').insert({
-            user_id: uid,
-            topic_id: item.id,
-            mode: item.mode || 'practice',
-            score: item.score || 0,
-            total: item.total || 0,
-            percentage: item.percentage || 0,
-            duration_sec: item.durationSec || 0,
-            wrong_question_ids: item.wrongQuestionIds || [],
-            data: item
-          });
+        if (!item.id) continue;
+        await supabase.from("attempts").insert({
+          user_id: uid,
+          topic_id: item.id,
+          mode: item.mode || "practice",
+          score: item.score || 0,
+          total: item.total || 0,
+          percentage: item.percentage || 0,
+          duration_sec: item.durationSec || 0,
+          wrong_question_ids: item.wrongQuestionIds || [],
+          data: item,
+        });
       }
 
       // 5. Save local state attempts
       for (const [key, value] of Object.entries(localAttempts)) {
-        const topicId = key.replace('heading_quiz_state_', '');
+        const topicId = key.replace("heading_quiz_state_", "");
         const { data: existing } = await supabase
-          .from('attempts')
-          .select('id')
-          .eq('user_id', uid)
-          .eq('topic_id', topicId)
+          .from("attempts")
+          .select("id")
+          .eq("user_id", uid)
+          .eq("topic_id", topicId)
           .maybeSingle();
 
         const payload = {
           user_id: uid,
           topic_id: topicId,
-          mode: value?.mode || 'practice',
+          mode: value?.mode || "practice",
           score: value?.score || 0,
           total: value?.total || 0,
           percentage: value?.percentage || 0,
           duration_sec: value?.durationSec || 0,
           wrong_question_ids: value?.wrongQuestionIds || [],
-          data: value
+          data: value,
         };
 
         if (existing?.id) {
-          await supabase.from('attempts').update(payload).eq('id', existing.id);
+          await supabase.from("attempts").update(payload).eq("id", existing.id);
         } else {
-          await supabase.from('attempts').insert(payload);
+          await supabase.from("attempts").insert(payload);
         }
       }
 
       // 6. Housekeeping - clear synced keys from LocalStorage
       if (localLogbook.length > 0) {
-          localStorage.removeItem('heading_logbook');
+        localStorage.removeItem("heading_logbook");
       }
       if (localBookmarks.length > 0) {
-          localStorage.removeItem('heading_bookmarks');
+        localStorage.removeItem("heading_bookmarks");
       }
       if (localStorage.getItem("heading_next_exam")) {
-          localStorage.removeItem('heading_next_exam');
+        localStorage.removeItem("heading_next_exam");
       }
       for (const key of Object.keys(localAttempts)) {
         localStorage.removeItem(key);
       }
-
     } catch (e) {
       console.error("Error migrating anonymous local storage progress:", e);
     }
@@ -424,19 +500,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!active) return;
+
+      // If user successfully signs in, overwrite current session immediately
+      if (event === "SIGNED_IN" && session?.user) {
+        await registerActiveSession(session.user.id);
+      }
+
       const currentUser = session?.user || null;
       if (currentUser) {
         const mappedUser = mapSupabaseUser(currentUser, session);
-        
+
         if (lastUserId !== mappedUser.uid) {
           lastUserId = mappedUser.uid;
           setUser(mappedUser);
-          
+
           // Execute sync/merge transition
           await syncWithServerAndMerge(mappedUser.uid);
-          
+
           // Retrieve profile details
           await fetchUserData(mappedUser.uid, mappedUser);
         } else {
@@ -456,15 +540,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Concurrent Login Check
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    const checkSession = async () => {
+      if (!user) return;
+
+      const isValid = await checkSessionValidity(user.uid);
+      if (!isValid) {
+        // Log them out
+        window.dispatchEvent(new Event("force-logout-toast"));
+        logout();
+      }
+    };
+
+    if (user) {
+      // Small delay on initial mount to allow register to finish if it's a new login
+      setTimeout(checkSession, 1000);
+      intervalId = setInterval(checkSession, 30000); // check every 30s
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [user]);
+
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
         redirectTo: window.location.origin,
         queryParams: {
-          prompt: 'select_account',
+          prompt: "select_account",
         },
-      }
+      },
     });
     if (error) throw error;
   };
@@ -478,6 +588,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear all local auth contexts
       setUser(null);
       setUserData(null);
+      clearLocalSession();
 
       // Specifically remove all auth/session data from localStorage
       localStorage.removeItem("heading_bookmarks");
@@ -493,7 +604,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith("heading_quiz_state_") || key.startsWith("heading_cache_"))) {
+        if (
+          key &&
+          (key.startsWith("heading_quiz_state_") ||
+            key.startsWith("heading_cache_"))
+        ) {
           keysToRemove.push(key);
         }
       }
@@ -507,146 +622,195 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUserData = async (data: Partial<UserData>) => {
     if (!user) return;
     try {
-        const updatePayload: any = { updated_at: new Date().toISOString() };
-        if (data.targetExam !== undefined) updatePayload.target_exam = data.targetExam;
-        if (data.nextExam !== undefined) updatePayload.next_exam = data.nextExam;
-        if (data.newsletterOptIn !== undefined) updatePayload.newsletter_opt_in = data.newsletterOptIn;
-        if (data.onboardingCompleted !== undefined) updatePayload.onboarding_completed = data.onboardingCompleted;
-        
-        if (data.plan !== undefined) updatePayload.plan = data.plan;
-        if (data.planStatus !== undefined) updatePayload.plan_status = data.planStatus;
-        if (data.planStartedAt !== undefined) updatePayload.plan_started_at = data.planStartedAt;
-        if (data.planExpiresAt !== undefined) updatePayload.plan_expires_at = data.planExpiresAt;
-        if (data.trialStartedAt !== undefined) updatePayload.trial_started_at = data.trialStartedAt;
-        if (data.trialEndsAt !== undefined) updatePayload.trial_ends_at = data.trialEndsAt;
-        if (data.trialUsed !== undefined) updatePayload.trial_used = data.trialUsed;
+      const updatePayload: any = { updated_at: new Date().toISOString() };
+      if (data.targetExam !== undefined)
+        updatePayload.target_exam = data.targetExam;
+      if (data.nextExam !== undefined) updatePayload.next_exam = data.nextExam;
+      if (data.newsletterOptIn !== undefined)
+        updatePayload.newsletter_opt_in = data.newsletterOptIn;
+      if (data.onboardingCompleted !== undefined)
+        updatePayload.onboarding_completed = data.onboardingCompleted;
 
-        if (data.dailyGoal !== undefined) updatePayload.daily_goal = data.dailyGoal;
-        if (data.streakCount !== undefined) updatePayload.streak_count = data.streakCount;
-        if (data.lastActivityDate !== undefined) updatePayload.last_activity_date = data.lastActivityDate;
-        if (data.questionsAnsweredToday !== undefined) updatePayload.questions_answered_today = data.questionsAnsweredToday;
+      if (data.plan !== undefined) updatePayload.plan = data.plan;
+      if (data.planStatus !== undefined)
+        updatePayload.plan_status = data.planStatus;
+      if (data.planStartedAt !== undefined)
+        updatePayload.plan_started_at = data.planStartedAt;
+      if (data.planExpiresAt !== undefined)
+        updatePayload.plan_expires_at = data.planExpiresAt;
+      if (data.trialStartedAt !== undefined)
+        updatePayload.trial_started_at = data.trialStartedAt;
+      if (data.trialEndsAt !== undefined)
+        updatePayload.trial_ends_at = data.trialEndsAt;
+      if (data.trialUsed !== undefined)
+        updatePayload.trial_used = data.trialUsed;
 
-        const baseSettings = data.settings || userData?.settings || { negativeMarking: false, reduceMotion: false, defaultMode: "practice" };
-        const mergedSettings = {
-          ...baseSettings,
-          dailyGoal: data.dailyGoal !== undefined ? data.dailyGoal : (userData?.dailyGoal ?? 20),
-          streakCount: data.streakCount !== undefined ? data.streakCount : (userData?.streakCount ?? 0),
-          lastActivityDate: data.lastActivityDate !== undefined ? data.lastActivityDate : (userData?.lastActivityDate ?? ""),
-          questionsAnsweredToday: data.questionsAnsweredToday !== undefined ? data.questionsAnsweredToday : (userData?.questionsAnsweredToday ?? 0),
+      if (data.dailyGoal !== undefined)
+        updatePayload.daily_goal = data.dailyGoal;
+      if (data.streakCount !== undefined)
+        updatePayload.streak_count = data.streakCount;
+      if (data.lastActivityDate !== undefined)
+        updatePayload.last_activity_date = data.lastActivityDate;
+      if (data.questionsAnsweredToday !== undefined)
+        updatePayload.questions_answered_today = data.questionsAnsweredToday;
+
+      const baseSettings = data.settings ||
+        userData?.settings || {
+          negativeMarking: false,
+          reduceMotion: false,
+          defaultMode: "practice",
         };
+      const mergedSettings = {
+        ...baseSettings,
+        dailyGoal:
+          data.dailyGoal !== undefined
+            ? data.dailyGoal
+            : (userData?.dailyGoal ?? 20),
+        streakCount:
+          data.streakCount !== undefined
+            ? data.streakCount
+            : (userData?.streakCount ?? 0),
+        lastActivityDate:
+          data.lastActivityDate !== undefined
+            ? data.lastActivityDate
+            : (userData?.lastActivityDate ?? ""),
+        questionsAnsweredToday:
+          data.questionsAnsweredToday !== undefined
+            ? data.questionsAnsweredToday
+            : (userData?.questionsAnsweredToday ?? 0),
+      };
 
-        updatePayload.settings = mergedSettings;
-        localStorage.setItem("heading_settings", JSON.stringify(mergedSettings));
+      updatePayload.settings = mergedSettings;
+      localStorage.setItem("heading_settings", JSON.stringify(mergedSettings));
 
-        if (Object.keys(updatePayload).length > 1) {
-            const { error } = await supabase.from('profiles').update(updatePayload).eq('id', user.uid);
-            if (error) {
-               console.warn("Direct column writes to profiles failed (tables may need migration). Writing into settings backup instead...", error.message);
-               const fallbackPayload: any = {
-                 updated_at: new Date().toISOString(),
-                 settings: mergedSettings,
-               };
-               if (updatePayload.target_exam !== undefined) fallbackPayload.target_exam = updatePayload.target_exam;
-               if (updatePayload.next_exam !== undefined) fallbackPayload.next_exam = updatePayload.next_exam;
-               await supabase.from('profiles').update(fallbackPayload).eq('id', user.uid);
+      if (Object.keys(updatePayload).length > 1) {
+        const { error } = await supabase
+          .from("profiles")
+          .update(updatePayload)
+          .eq("id", user.uid);
+        if (error) {
+          console.warn(
+            "Direct column writes to profiles failed (tables may need migration). Writing into settings backup instead...",
+            error.message,
+          );
+          const fallbackPayload: any = {
+            updated_at: new Date().toISOString(),
+            settings: mergedSettings,
+          };
+          if (updatePayload.target_exam !== undefined)
+            fallbackPayload.target_exam = updatePayload.target_exam;
+          if (updatePayload.next_exam !== undefined)
+            fallbackPayload.next_exam = updatePayload.next_exam;
+          await supabase
+            .from("profiles")
+            .update(fallbackPayload)
+            .eq("id", user.uid);
+        }
+      }
+
+      if (data.bookmarks !== undefined) {
+        await supabase.from("bookmarks").delete().eq("user_id", user.uid);
+        if (data.bookmarks.length > 0) {
+          const rows = data.bookmarks.map((qid) => ({
+            user_id: user.uid,
+            question_id: qid,
+          }));
+          await supabase.from("bookmarks").insert(rows);
+        }
+        localStorage.setItem(
+          "heading_bookmarks",
+          JSON.stringify(data.bookmarks),
+        );
+      }
+
+      if (data.photoURL !== undefined) {
+        // Sync photo to metadata
+        await supabase.auth.updateUser({
+          data: { avatar_url: data.photoURL, photoURL: data.photoURL },
+        });
+      }
+
+      if (data.attempts) {
+        for (const [key, value] of Object.entries(data.attempts)) {
+          if (key.startsWith("heading_quiz_state_")) {
+            const topicId = key.replace("heading_quiz_state_", "");
+            const attemptVal = value as any;
+
+            const { data: existing } = await supabase
+              .from("attempts")
+              .select("id")
+              .eq("user_id", user.uid)
+              .eq("topic_id", topicId)
+              .maybeSingle();
+
+            const payload = {
+              user_id: user.uid,
+              topic_id: topicId,
+              mode: attemptVal?.mode || "practice",
+              score: attemptVal?.score || 0,
+              total: attemptVal?.total || 0,
+              percentage: attemptVal?.percentage || 0,
+              duration_sec: attemptVal?.durationSec || 0,
+              wrong_question_ids: attemptVal?.wrongQuestionIds || [],
+              data: attemptVal,
+            };
+
+            if (existing?.id) {
+              await supabase
+                .from("attempts")
+                .update(payload)
+                .eq("id", existing.id);
+            } else {
+              await supabase.from("attempts").insert(payload);
             }
+          }
         }
+      }
 
-        if (data.bookmarks !== undefined) {
-            await supabase.from('bookmarks').delete().eq('user_id', user.uid);
-            if (data.bookmarks.length > 0) {
-              const rows = data.bookmarks.map(qid => ({
-                user_id: user.uid,
-                question_id: qid
-              }));
-              await supabase.from('bookmarks').insert(rows);
-            }
-            localStorage.setItem("heading_bookmarks", JSON.stringify(data.bookmarks));
-        }
-
-        if (data.photoURL !== undefined) {
-          // Sync photo to metadata
-          await supabase.auth.updateUser({
-            data: { avatar_url: data.photoURL, photoURL: data.photoURL }
-          });
-        }
-
-        if (data.attempts) {
-           for (const [key, value] of Object.entries(data.attempts)) {
-              if (key.startsWith('heading_quiz_state_')) {
-                const topicId = key.replace('heading_quiz_state_', '');
-                const attemptVal = value as any;
-
-                const { data: existing } = await supabase
-                  .from('attempts')
-                  .select('id')
-                  .eq('user_id', user.uid)
-                  .eq('topic_id', topicId)
-                  .maybeSingle();
-
-                const payload = {
-                  user_id: user.uid,
-                  topic_id: topicId,
-                  mode: attemptVal?.mode || 'practice',
-                  score: attemptVal?.score || 0,
-                  total: attemptVal?.total || 0,
-                  percentage: attemptVal?.percentage || 0,
-                  duration_sec: attemptVal?.durationSec || 0,
-                  wrong_question_ids: attemptVal?.wrongQuestionIds || [],
-                  data: attemptVal
-                };
-
-                if (existing?.id) {
-                  await supabase.from('attempts').update(payload).eq('id', existing.id);
-                } else {
-                  await supabase.from('attempts').insert(payload);
-                }
-              }
-           }
-        }
-        
-        await fetchUserData(user.uid, user);
+      await fetchUserData(user.uid, user);
     } catch (e) {
       console.error("Error saving user settings payload inside Supabase:", e);
     }
   };
 
   const resetAccount = async () => {
-      if (!user) return;
-      try {
-        await supabase.from('attempts').delete().eq('user_id', user.uid);
-        await supabase.from('bookmarks').delete().eq('user_id', user.uid);
+    if (!user) return;
+    try {
+      await supabase.from("attempts").delete().eq("user_id", user.uid);
+      await supabase.from("bookmarks").delete().eq("user_id", user.uid);
 
-        localStorage.removeItem("heading_bookmarks");
-        localStorage.removeItem("heading_logbook");
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.startsWith('heading_quiz_state_')) {
-                keysToRemove.push(key);
-            }
+      localStorage.removeItem("heading_bookmarks");
+      localStorage.removeItem("heading_logbook");
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("heading_quiz_state_")) {
+          keysToRemove.push(key);
         }
-        keysToRemove.forEach(k => localStorage.removeItem(k));
-        await fetchUserData(user.uid, user);
-      } catch (e) {
-         console.error("Error resetting Supabase user credentials:", e);
       }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+      await fetchUserData(user.uid, user);
+    } catch (e) {
+      console.error("Error resetting Supabase user credentials:", e);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      userData,
-      loading,
-      signInWithGoogle,
-      logout,
-      updateUserData,
-      resetAccount,
-      authModalOpen,
-      authModalTab,
-      openAuthModal,
-      closeAuthModal
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        userData,
+        loading,
+        signInWithGoogle,
+        logout,
+        updateUserData,
+        resetAccount,
+        authModalOpen,
+        authModalTab,
+        openAuthModal,
+        closeAuthModal,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

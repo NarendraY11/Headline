@@ -2,41 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { Card } from './Atoms';
 import { Settings2, Plus, Minus, CheckCircle } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function DailyStudyGoal() {
+  const { userData, updateUserData } = useAuth();
+  
   const [goal, setGoal] = useState(() => {
     const saved = localStorage.getItem('dailyStudyGoal');
     return saved ? parseInt(saved, 10) : 50;
   });
   
-  const [progress, setProgress] = useState(0);
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    const loadProgress = () => {
-      const today = new Date().toISOString().split('T')[0];
-      const statsStr = localStorage.getItem('studyStats');
-      if (statsStr) {
-        try {
-          const stats = JSON.parse(statsStr);
-          if (stats[today]) {
-            setProgress(stats[today].questionsAnswered || 0);
-            return;
-          }
-        } catch (e) {
-          // ignore parsing error
-        }
-      }
-      
-      setProgress(12);
-    };
-    
-    loadProgress();
-  }, []);
+    if (userData?.dailyGoal) {
+      setGoal(userData.dailyGoal);
+    }
+  }, [userData?.dailyGoal]);
+
+  const progress = userData?.questionsAnsweredToday || parseInt(localStorage.getItem('heading_questions_answered_today') || '0');
 
   const saveGoal = (newGoal: number) => {
     setGoal(newGoal);
     localStorage.setItem('dailyStudyGoal', newGoal.toString());
+    if (userData) {
+      updateUserData({ dailyGoal: newGoal });
+    }
   };
 
   const percentage = Math.min(Math.round((progress / goal) * 100), 100);

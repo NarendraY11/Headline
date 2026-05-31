@@ -6,6 +6,8 @@ import { TrendingUp, Sparkles } from "lucide-react";
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
   ResponsiveContainer,
   YAxis,
   Tooltip,
@@ -17,6 +19,7 @@ import { fetchMergedSubjects } from "../lib/content";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useLogbook } from "../hooks/useLogbook";
+import { useUserProgress } from "../lib/progress";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { useToast } from "../components/ui/Toast";
 import { ProGate } from "../components/ProGate";
@@ -29,6 +32,7 @@ export default function AnalyticsView() {
   const [isInsightLoading, setIsInsightLoading] = useState(false);
 
   const { logbook, loading: logbookLoading } = useLogbook();
+  const { stats: progressStats } = useUserProgress();
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
 
@@ -164,27 +168,13 @@ export default function AnalyticsView() {
   }
 
   // Calculate Mastery
-  const topicAgg: Record<string, { correct: number; total: number }> = {};
-  logbook.forEach((att) => {
-    if (att.perTopic) {
-      for (const [ata, stats] of Object.entries(att.perTopic) as [
-        string,
-        any,
-      ][]) {
-        if (!topicAgg[ata]) topicAgg[ata] = { correct: 0, total: 0 };
-        topicAgg[ata].correct += stats.correct || 0;
-        topicAgg[ata].total += stats.total || 0;
-      }
-    }
-  });
-
   const masteries = subjectsList
     .map((sub) => {
-      const stats = topicAgg[sub.title];
+      const score = progressStats.subjectMastery[sub.id];
       return {
         title: sub.title,
         code: sub.num,
-        score: stats ? Math.round((stats.correct / stats.total) * 100) : null,
+        score: score !== undefined ? score : null,
         hue: sub.hue,
       };
     })
@@ -195,22 +185,6 @@ export default function AnalyticsView() {
       if (b.score === null) return -1;
       return a.score - b.score;
     });
-
-  const getBarColor = (hue: string, isWeakest: boolean) => {
-    if (isWeakest) return "bg-signal";
-    switch (hue) {
-      case "navy":
-        return "bg-navy";
-      case "sky":
-        return "bg-sky";
-      case "mint":
-        return "bg-mint";
-      case "amber":
-        return "bg-amber";
-      default:
-        return "bg-ink";
-    }
-  };
 
   const { setLoading: setGlobalLoading } = useGlobalLoading();
 
@@ -441,38 +415,51 @@ export default function AnalyticsView() {
                 <TrendingUp size={16} /> ATA Mastery
               </h2>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {masteries.map((m) => {
-                const hasScore = m.score !== null;
-                const isWeakest = hasScore && m.score! < 50;
-                return (
-                  <div
-                    key={m.title}
-                    className="border border-rule rounded-lg p-3 flex flex-col justify-between h-[100px] bg-paper transition-colors relative overflow-hidden"
-                  >
-                    <div className="relative z-10 flex flex-col justify-between h-full">
-                      <div
-                        className="font-mono text-[10px] tracking-widest font-bold uppercase overflow-hidden whitespace-nowrap text-ellipsis opacity-80"
-                        title={m.title}
-                      >
-                        {m.code.replace("ATA ", "")} &middot;{" "}
-                        {m.title.substring(0, 8)}
-                      </div>
-                      <div className="flex justify-between items-end">
-                        <div className="font-serif text-2xl font-medium tracking-tight">
-                          {hasScore ? `${m.score}%` : "--"}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-1.5 flex bg-rule/30">
-                      <div
-                        className={`h-full ${getBarColor(m.hue || "navy", isWeakest)} transition-all`}
-                        style={{ width: hasScore ? `${m.score}%` : "0%" }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="h-[300px] w-full border border-rule rounded-lg p-2 sm:p-4 bg-paper">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={masteries.map(m => ({
+                    name: m.code.replace("ATA ", ""),
+                    title: m.title,
+                    score: m.score || 0,
+                    fill: m.score !== null && m.score < 50 ? "var(--color-signal)" : "var(--color-navy)"
+                  }))}
+                  margin={{ top: 5, right: 0, left: -20, bottom: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-rule)" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{
+                      fontSize: 10,
+                      fill: "var(--color-muted-2)",
+                      fontFamily: "ui-monospace, monospace",
+                    }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickMargin={10}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fontSize: 10, fill: "var(--color-muted-2)" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'var(--color-rule)', opacity: 0.4 }}
+                    contentStyle={{
+                      backgroundColor: "var(--color-ink)",
+                      color: "var(--color-bg)",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                      fontFamily: "ui-monospace, monospace",
+                    }}
+                    formatter={(value: number) => [`${value}%`, "Mastery"]}
+                    labelFormatter={(label) => `ATA ${label}`}
+                  />
+                  <Bar dataKey="score" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
 

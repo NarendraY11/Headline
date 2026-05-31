@@ -17,6 +17,7 @@ import { FlightControlsDiagram } from "../components/SystemDiagram";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
+import { useUserProgress } from "../lib/progress";
 import { ProGate } from "../components/ProGate";
 import ReadingProgress from "../components/ReadingProgress";
 
@@ -26,6 +27,7 @@ export default function TopicView() {
   const { setLoading: setGlobalLoading } = useGlobalLoading();
   const { showToast } = useToast();
   const { user } = useAuth();
+  const { stats: progressStats } = useUserProgress();
 
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -622,7 +624,7 @@ export default function TopicView() {
                 </span>
               </div>
               <div className="font-mono text-[10px] text-muted-2 text-right">
-                MASTERY: {Math.round(subject.mastery * 100)}%
+                MASTERY: {progressStats.subjectMastery[subject.id] || 0}%
               </div>
             </div>
           </div>

@@ -21,12 +21,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useLogbook } from "../hooks/useLogbook";
-import { getSubjectMastery } from "../lib/logbook";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { SubjectItem } from "../data/topics";
 import { fetchMergedSubjects } from "../lib/content";
 import { getDueQuestionIds } from "../lib/spacedRepetition";
 import { apiFetch } from "../lib/api";
+import { useUserProgress } from "../lib/progress";
 import {
   Radar,
   RadarChart,
@@ -283,6 +283,7 @@ function WeatherWidget() {
 
 export default function TodayView() {
   const { userData, loading, updateUserData } = useAuth();
+  const { stats: progressStats } = useUserProgress();
   const [notificationStatus, setNotificationStatus] = useState<
     NotificationPermission | "unsupported"
   >("default");
@@ -531,51 +532,20 @@ export default function TodayView() {
     );
   }
 
-  const totalQuestions = logbook.reduce(
-    (sum, att) => sum + (att.total || 0),
-    0,
-  );
-  const avgScore = logbook.length
-    ? Math.round(
-        logbook.reduce((sum, att) => sum + (att.percentage || 0), 0) /
-          logbook.length,
-      )
-    : 0;
+  const totalQuestions = progressStats.totalQuestionsAnswered;
+  const avgScore = progressStats.averageScore || 0;
+  // Fallback to logbook for hoursStudied since user_question_attempts doesn't track duration yet
   const hoursStudied = Math.round(
     logbook.reduce((sum, att) => sum + (att.durationSec || 0), 0) / 3600,
   );
+
+  const displayedStreak = progressStats.streakCount;
 
   const uniqueDates = [
     ...new Set(
       logbook.map((att) => att.dateISO?.split("T")[0]).filter(Boolean),
     ),
-  ]
-    .sort()
-    .reverse();
-  let currentStreak = 0;
-  if (uniqueDates.length > 0) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const todayStr = today.toISOString().split("T")[0];
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-    if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
-      let expectedDate = new Date(uniqueDates[0]);
-      for (const dStr of uniqueDates) {
-        if (dStr === expectedDate.toISOString().split("T")[0]) {
-          currentStreak++;
-          expectedDate.setDate(expectedDate.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-    }
-  }
-
-  const displayedStreak = currentStreak;
+  ];
 
   const streakWeek = Array.from({ length: 7 }).map((_, i) => {
     const d = new Date();
@@ -590,22 +560,8 @@ export default function TodayView() {
   });
 
   // Calculate Mastery for Radar Chart
-  const topicAgg: Record<string, { correct: number; total: number }> = {};
-  logbook.forEach((att: any) => {
-    if (att.perTopic) {
-      for (const [ata, stats] of Object.entries(att.perTopic) as [
-        string,
-        any,
-      ][]) {
-        if (!topicAgg[ata]) topicAgg[ata] = { correct: 0, total: 0 };
-        topicAgg[ata].correct += stats.correct || 0;
-        topicAgg[ata].total += stats.total || 0;
-      }
-    }
-  });
-
   const masteries = subjectsList.map((sub: any) => {
-    const stats = topicAgg[sub.title];
+    const score = progressStats.subjectMastery[sub.id] || 0;
     const mappings: Record<string, string> = {
       "Air Regulation": "Air Reg.",
       Meteorology: "Meteo.",
@@ -620,21 +576,19 @@ export default function TodayView() {
     return {
       subject: label,
       fullTitle: sub.title,
-      score: stats ? Math.round((stats.correct / stats.total) * 100) : 0,
-      correct: stats ? stats.correct : 0,
-      total: stats ? stats.total : 0,
+      score: score,
+      correct: score, // these aren't used separately mostly, but the radar uses 'score'
+      total: 100,
     };
   });
 
   const subjectMasteries = subjectsList.map((sub) => {
-    return getSubjectMastery(logbook, sub);
+    return (progressStats.subjectMastery[sub.id] || 0) / 100;
   });
 
   const passedCount = subjectMasteries.filter((m) => m >= 0.8).length;
   const isReadyForExam = subjectMasteries.length > 0 && passedCount === subjectMasteries.length;
-  const readinessPercentage = subjectMasteries.length > 0 
-    ? Math.round((passedCount / subjectMasteries.length) * 100) 
-    : 0;
+  const readinessPercentage = progressStats.examReadiness;
 
   // Calculate study pacing target timeline vs logged hours
   const getPacingData = () => {

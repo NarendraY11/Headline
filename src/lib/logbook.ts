@@ -52,7 +52,7 @@ export function getSubjectMastery(
 
   // Fallback to traditional block logbook if fine-grained question progress isn't recorded yet
   if (totalTracked === 0) {
-    if (!logbook || logbook.length === 0) return subject.mastery;
+    if (!logbook || logbook.length === 0) return 0;
 
     let correct = 0;
     let total = 0;
@@ -68,7 +68,7 @@ export function getSubjectMastery(
       }
     });
     
-    if (total === 0) return subject.mastery;
+    if (total === 0) return 0;
     return correct / total;
   }
 
