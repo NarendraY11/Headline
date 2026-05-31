@@ -365,7 +365,7 @@ export default function EditorialLayout({
                            Need more details? Get a precise technical breakdown from our AI Chief Ground Instructor.
                          </p>
                          <Button variant="ghost" className="w-fit border border-rule hover:bg-rule" onClick={handleExplainDeeper}>
-                           Explain Deeper
+                           Explain it differently / I still don't get it
                          </Button>
                        </div>
                      ) : isAiLoading && !aiExplanations[currentQ.id] ? (

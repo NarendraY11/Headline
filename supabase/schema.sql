@@ -680,6 +680,30 @@ create policy "Only admins manage referrals"
 
 
 -- =====================================================================
+-- 12. WEATHER CACHE
+-- =====================================================================
+
+create table if not exists public.weather_cache (
+  icao text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now() not null
+);
+
+-- RLS for weather cache
+alter table public.weather_cache enable row level security;
+
+drop policy if exists "Anyone can view weather cache" on public.weather_cache;
+create policy "Anyone can view weather cache"
+  on public.weather_cache for select
+  using (true);
+
+drop policy if exists "Only service role can update weather cache" on public.weather_cache;
+create policy "Only service role can update weather cache"
+  on public.weather_cache for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+-- =====================================================================
 -- END OF SCHEMA FILE
 -- Run this file FIRST, then run seed-admin.sql.
 -- =====================================================================

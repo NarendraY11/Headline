@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { HashRouter as Router, Routes, Route, Link, useLocation, NavLink, useOutlet, useNavigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, NavLink, useOutlet, useNavigate } from "react-router-dom";
 import { trackEvent } from "./lib/track";
 import { useDocumentMeta } from "./hooks/useDocumentMeta";
 import { Wordmark, Button } from "./components/Atoms";

@@ -96,7 +96,7 @@ function WeatherWidget() {
         headers: { 
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ location: "London Heathrow (LHR)" }),
+        body: JSON.stringify({ icao: "EGLL" }),
       });
 
       if (!response) {

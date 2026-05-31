@@ -178,13 +178,6 @@ async function startServer() {
     next();
   };
 
-  // === Weather Cache ===
-  interface WeatherCacheEntry {
-    data: any;
-    timestamp: number;
-  }
-  const weatherCache = new Map<string, WeatherCacheEntry>();
-
   // === Razorpay Order Creation Endpoint ===
   app.post("/api/payment/create-order", requireAuth, rateLimiter, async (req, res) => {
     try {
@@ -521,42 +514,68 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   // === WEATHER METAR ENDPOINT (WITH SERVER CACHING) ===
   app.post("/api/weather", requireAuth, rateLimiter, async (req, res) => {
     try {
-      const { location = "major global aviation hubs" } = req.body;
-      const cachedKey = location.trim().toLowerCase();
-      const cachedEntry = weatherCache.get(cachedKey);
+      const { icao = "EGLL" } = req.body;
+      const cachedKey = icao.trim().toUpperCase();
+      
+      const admin = getSupabaseAdmin();
+
+      const { data: cacheRow } = await admin
+        .from('weather_cache')
+        .select('*')
+        .eq('icao', cachedKey)
+        .single();
+
       const CACHE_DURATION = 45 * 60 * 1000; // 45 minutes
+      const now = Date.now();
 
-      if (cachedEntry && (Date.now() - cachedEntry.timestamp < CACHE_DURATION)) {
-        return res.json(cachedEntry.data);
+      if (cacheRow && (now - new Date(cacheRow.updated_at).getTime() < CACHE_DURATION)) {
+        return res.json(cacheRow.data);
       }
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [
-          { role: "user", parts: [{ text: `Provide a concise 1-2 sentence current aviation weather briefing for ${location}. Include METAR highlights like visibility or wind warnings if relevant. Keep it under 200 characters. Return the response as JSON with three fields: "briefing" (the text), "condition" (one of: "SUNNY", "CLOUDY", "RAIN", "STORM", "SNOW", "WINDY", "FOG"), and "forecast" (array of 6 objects with "hour" (e.g. "+1H"), "condition" (same enum), and "temp" (e.g. "15°C")).` }] }
-        ],
-        config: {
-          responseMimeType: "application/json",
-          tools: [{ googleSearch: {} }]
-        }
-      });
-      let parsed = {};
-      try {
-        parsed = JSON.parse(response.text || "{}");
-      } catch (parseError) {
-        // Silently handle parse errors
+      const url = `https://aviationweather.gov/api/data/metar?ids=${cachedKey}&format=json`;
+      const noaaRes = await fetch(url);
+      if (!noaaRes.ok) throw new Error("NOAA API failed");
+      const metarData = await noaaRes.json();
+
+      if (!metarData || metarData.length === 0) {
+        throw new Error(`No METAR found for ${cachedKey}`);
       }
 
-      if (parsed && (parsed as any).briefing) {
-        weatherCache.set(cachedKey, {
-          data: parsed,
-          timestamp: Date.now()
-        });
-      }
+      const metar = metarData[0];
 
-      res.json(parsed);
+      const wdir = metar.wdir === 'VRB' ? 'Variable' : (metar.wdir ? `${metar.wdir}°` : '');
+      const wspd = metar.wspd ? `${metar.wspd}kt` : '';
+      const wind = wdir && wspd ? `Wind ${wdir} at ${wspd}` : '';
+      const vis = metar.visib ? `Vis ${metar.visib}sm` : '';
+      const temp = (metar.temp !== null && metar.temp !== undefined) ? `Temp ${metar.temp}°C` : '';
+      const clouds = metar.clouds ? metar.clouds.map((c: any) => c.cover).join('/') : '';
+
+      const briefingParts = [wind, vis, temp, clouds].filter(Boolean);
+      const briefing = `METAR for ${cachedKey}: ${briefingParts.join(', ')}.`;
+
+      let condition = "SUNNY";
+      if (metar.wxString && metar.wxString.includes("TS")) condition = "STORM";
+      else if (metar.wxString && (metar.wxString.includes("RA") || metar.wxString.includes("DZ"))) condition = "RAIN";
+      else if (metar.wxString && metar.wxString.includes("SN")) condition = "SNOW";
+      else if (metar.wxString && (metar.wxString.includes("BR") || metar.wxString.includes("FG"))) condition = "FOG";
+      else if (wspd && parseInt(metar.wspd) > 20) condition = "WINDY";
+      else if (metar.clouds && metar.clouds.some((c: any) => ['BKN', 'OVC'].includes(c.cover))) condition = "CLOUDY";
+
+      const finalData = {
+        briefing,
+        condition,
+        forecast: []
+      };
+
+      await admin.from('weather_cache').upsert({
+        icao: cachedKey,
+        data: finalData,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'icao' });
+
+      res.json(finalData);
     } catch (e) {
-      // Silently handle failed fetches
+      console.error("Error in weather handler:", e);
       res.status(500).json({ error: "Failed to fetch weather." });
     }
   });
@@ -706,8 +725,25 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*all', (_req, res) => {
+    // First let express.static try to find the direct mapping (which includes dist/<route>/index.html naturally)
+    app.use(express.static(distPath, { extensions: ['html'] }));
+    
+    // For anything express.static didn't catch, check if there's a pre-rendered folder
+    app.get('*all', async (req, res) => {
+      // Clean path to prevent directory traversal
+      const reqPath = String(req.path).replace(/\.\./g, '');
+      const potentialPrerenderPath = path.join(distPath, reqPath, 'index.html');
+      
+      try {
+        const stats = await import('fs/promises').then(m => m.stat(potentialPrerenderPath));
+        if (stats.isFile()) {
+           return res.sendFile(potentialPrerenderPath);
+        }
+      } catch (err) {
+        // file doesn't exist, ignore and fallback
+      }
+
+      // Final fallback to SPA shell
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
