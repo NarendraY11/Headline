@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../../components/Atoms";
-import { ShieldCheck, UserPlus, Trash2, Mail, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
+import { ShieldCheck, UserPlus, Trash2, Mail, CheckCircle2, AlertCircle, RefreshCw, Megaphone, Send } from "lucide-react";
 import { trackEvent } from "../../lib/track";
+import { apiFetchRaw, readError } from "../../lib/api";
 
 interface AdminRecord {
   email: string;
@@ -18,6 +19,43 @@ export default function AdminSettings() {
   const [errorStatus, setErrorStatus] = useState("");
   const [successStatus, setSuccessStatus] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+
+  // Broadcast notification state
+  const [bcTitle, setBcTitle] = useState("");
+  const [bcMessage, setBcMessage] = useState("");
+  const [bcSending, setBcSending] = useState(false);
+
+  const handleBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorStatus("");
+    setSuccessStatus("");
+    if (!bcTitle.trim() || !bcMessage.trim()) {
+      setErrorStatus("Broadcast needs both a title and a message.");
+      return;
+    }
+    if (!window.confirm("Send this notification to ALL users?")) return;
+
+    setBcSending(true);
+    try {
+      const res = await apiFetchRaw("/api/admin/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: bcTitle.trim(), message: bcMessage.trim(), type: "system" }),
+      });
+      if (!res) throw new Error("Could not reach the broadcast service.");
+      if (!res.ok) throw new Error(await readError(res, "Broadcast failed."));
+      const data = await res.json();
+      setSuccessStatus(`Broadcast delivered to ${data.sent} user${data.sent === 1 ? "" : "s"}.`);
+      setBcTitle("");
+      setBcMessage("");
+      trackEvent("admin_broadcast", { metadata: { sent: data.sent } });
+    } catch (err: any) {
+      console.error("Broadcast failed:", err);
+      setErrorStatus(err.message || "Broadcast failed.");
+    } finally {
+      setBcSending(false);
+    }
+  };
 
   const fetchAdmins = async () => {
     setLoading(true);
@@ -263,6 +301,48 @@ export default function AdminSettings() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Broadcast notification */}
+      <div className="bg-white border border-rule rounded-xl p-5 shadow-xs space-y-4">
+        <div className="flex items-center gap-2 border-b border-rule pb-3">
+          <Megaphone size={16} className="text-navy" />
+          <div>
+            <h3 className="font-serif text-base font-medium text-ink">Broadcast Notification</h3>
+            <p className="font-mono text-[9px] text-muted uppercase tracking-wider mt-0.5">
+              Send a message to every user's notification panel
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleBroadcast} className="space-y-3">
+          <div>
+            <label className="block font-mono text-[9px] uppercase text-muted tracking-widest mb-1.5 font-bold">Title</label>
+            <input
+              type="text"
+              value={bcTitle}
+              onChange={(e) => setBcTitle(e.target.value)}
+              maxLength={200}
+              className="w-full text-xs p-2.5 bg-bg-2 border border-rule rounded-lg focus:outline-none focus:border-rule-strong text-ink font-semibold"
+              placeholder="New questions added!"
+            />
+          </div>
+          <div>
+            <label className="block font-mono text-[9px] uppercase text-muted tracking-widest mb-1.5 font-bold">Message</label>
+            <textarea
+              value={bcMessage}
+              onChange={(e) => setBcMessage(e.target.value)}
+              maxLength={2000}
+              rows={3}
+              className="w-full text-xs p-2.5 bg-bg-2 border border-rule rounded-lg focus:outline-none focus:border-rule-strong text-ink"
+              placeholder="We just published 200 fresh DGCA Navigation questions. Go practice!"
+            />
+          </div>
+          <Button variant="primary" type="submit" disabled={bcSending} className="justify-center gap-2 h-10 text-xs">
+            {bcSending ? <RefreshCw className="animate-spin" size={13} /> : <Send size={13} />}
+            <span>{bcSending ? "Sending…" : "Send to all users"}</span>
+          </Button>
+        </form>
       </div>
     </div>
   );

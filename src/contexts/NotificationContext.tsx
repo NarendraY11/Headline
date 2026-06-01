@@ -156,6 +156,21 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     refreshNotifications();
   }, [user]);
 
+  // Realtime: push new notifications to the user the moment they're inserted
+  // (e.g. admin broadcast, plan grant) without a manual refresh.
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`notifications:${user.uid}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.uid}` },
+        () => { refreshNotifications(); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
   // Handle countdown exam date reminders dynamically
   useEffect(() => {
     const savedName = localStorage.getItem("heading_nextCheckName") || "";

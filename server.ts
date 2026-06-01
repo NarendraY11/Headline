@@ -157,6 +157,46 @@ async function startServer() {
     }
   });
 
+  // Broadcast a notification to every user (admins only).
+  app.post("/api/admin/broadcast", requireAuth, async (req, res) => {
+    try {
+      const admin = getSupabaseAdmin();
+      const uid = (req as any).uid;
+      const { data: userRes } = await admin.auth.admin.getUserById(uid);
+      const email = userRes?.user?.email;
+
+      const { data: adminRow } = await admin.from("admins").select("email").eq("email", email).maybeSingle();
+      if (!adminRow) return res.status(403).json({ error: "Admins only." });
+
+      const { title, message, type } = req.body || {};
+      if (!title || !message) return res.status(400).json({ error: "title and message are required." });
+
+      const { data: profiles, error } = await admin.from("profiles").select("id");
+      if (error) throw error;
+
+      const rows = (profiles || []).map((p: any) => ({
+        user_id: p.id,
+        title: String(title).slice(0, 200),
+        message: String(message).slice(0, 2000),
+        type: type || "system",
+        read: false,
+      }));
+
+      let sent = 0;
+      for (let i = 0; i < rows.length; i += 500) {
+        const chunk = rows.slice(i, i + 500);
+        const { error: insErr } = await admin.from("notifications").insert(chunk);
+        if (insErr) throw insErr;
+        sent += chunk.length;
+      }
+
+      return res.json({ success: true, sent });
+    } catch (e: any) {
+      console.error("Broadcast error:", e);
+      return res.status(500).json({ error: e.message || "Broadcast failed." });
+    }
+  });
+
   // === Rate Limiting Middleware ===
   // uid/IP -> timestamps of requests made within the last minute
   const clientRequestTimestamps = new Map<string, number[]>();
