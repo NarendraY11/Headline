@@ -4,6 +4,7 @@ import { Button } from "../../components/Atoms";
 import { useToast } from "../../components/ui/Toast";
 import { defaultFlags, FlagKeys, Flags } from "../../hooks/useFeatureFlags";
 import { supabase } from "../../lib/supabase";
+import { Spinner } from "../../components/Spinner";
 import { getFeatureMedia } from "./featureMedia";
 
 interface HoverState {
@@ -154,7 +155,7 @@ export default function FeatureControl() {
   };
 
   if (loading) {
-    return <div className="p-8 text-muted-2">Loading...</div>;
+    return <Spinner label="Loading feature flags" />;
   }
 
   return (

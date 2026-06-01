@@ -91,6 +91,31 @@ export default function QuizView() {
           } catch (e) {}
         }
 
+        // Resume: if a saved session exists for this topic, reload the EXACT
+        // same question set (and order) so currentIndex/answers stay aligned.
+        // Without this the random re-fetch below would desync the resume.
+        try {
+          const savedRaw = localStorage.getItem(`heading_quiz_state_${topicId || "default"}`);
+          if (savedRaw) {
+            const st = JSON.parse(savedRaw);
+            if (
+              st?.status === "active" &&
+              Array.isArray(st.questionIds) &&
+              st.questionIds.length > 0
+            ) {
+              const fetched = await fetchQuestionsByIds(st.questionIds);
+              const byId = new Map(fetched.map((q) => [q.id, q]));
+              const ordered = st.questionIds
+                .map((id: string) => byId.get(id))
+                .filter(Boolean) as Question[];
+              if (ordered.length > 0) {
+                setQuestions(ordered);
+                return;
+              }
+            }
+          }
+        } catch (e) {}
+
         let quizQs: Question[] = [];
 
         if (topicId?.startsWith("ai-generated-")) {
@@ -353,6 +378,9 @@ export default function QuizView() {
       revealedIds: Array.from(revealedIds),
       timeElapsed,
       timePerQuestion,
+      // Persist the exact question set so resume reloads the same questions
+      // in the same order (random re-fetch would otherwise desync progress).
+      questionIds: questions.map((q) => q.id),
     };
     localStorage.setItem(storageKey, JSON.stringify(stateToSave));
 
@@ -382,6 +410,7 @@ export default function QuizView() {
     revealedIds,
     timeElapsed,
     storageKey,
+    questions,
   ]);
 
   // Handle keyboard navigation inside the quiz
