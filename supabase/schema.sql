@@ -1199,3 +1199,33 @@ create policy "weather_cache_delete" on public.weather_cache for delete
 drop policy if exists "Only service role can update or read AI cache" on public.ai_cache;
 create policy "ai_cache_all" on public.ai_cache for all
   using ((select auth.role()) = 'service_role') with check ((select auth.role()) = 'service_role');
+
+-- =====================================================================
+-- 17. ADMIN BILLING MANAGEMENT
+-- Admins can change any user's subscription from the admin panel.
+-- =====================================================================
+
+-- Admins may update any profile (plan overrides). profiles_update only
+-- covers a user's own row.
+drop policy if exists "profiles_admin_update" on public.profiles;
+create policy "profiles_admin_update" on public.profiles for update
+  using ((select public.is_admin()))
+  with check ((select public.is_admin()));
+
+-- Billing-protection trigger must exempt admins (and service_role) so the
+-- admin panel can change plan/expiry. Regular users stay blocked.
+create or replace function public.protect_billing_fields()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.role() <> 'service_role' and not public.is_admin() then
+    NEW.plan = OLD.plan;
+    NEW.plan_started_at = OLD.plan_started_at;
+    NEW.plan_expires_at = OLD.plan_expires_at;
+  end if;
+  return NEW;
+end;
+$$;

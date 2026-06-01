@@ -114,12 +114,15 @@ export default function UsersAnalytics() {
       // Log in audited plan_changes table gracefully
       try {
         const adminUser = (await supabase.auth.getUser()).data.user;
-        await supabase.from("plan_changes").insert({
+        const { error: auditError } = await supabase.from("plan_changes").insert({
           user_id: modalUser.id,
-          from_plan: modalUser.plan,
-          to_plan: modalPlan,
-          changed_by: adminUser?.id || null
+          old_plan: modalUser.plan,
+          new_plan: modalPlan,
+          expires_at: expirationTimestamp,
+          changed_by_email: adminUser?.email || null,
+          note: "admin manual override",
         });
+        if (auditError) console.warn("Audit table logbook update error:", auditError.message);
       } catch (auditError) {
         console.warn("Audit table logbook update error:", auditError);
       }
