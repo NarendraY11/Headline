@@ -7,23 +7,8 @@ import {
     TrendingUp
 } from "lucide-react";
 import { Reorder } from "motion/react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-    Area,
-    CartesianGrid,
-    ComposedChart,
-    Line,
-    PolarAngleAxis,
-    PolarGrid,
-    PolarRadiusAxis,
-    Radar,
-    RadarChart,
-    Tooltip as RechartsTooltip,
-    ResponsiveContainer,
-    XAxis,
-    YAxis,
-} from "recharts";
 import { Button } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
 import { SubjectItem } from "../data/topics";
@@ -34,10 +19,14 @@ import { useUserProgress } from "../lib/progress";
 import { getDueQuestionIds } from "../lib/spacedRepetition";
 
 import { AnimatedCounter } from "./today/AnimatedCounter";
-import { CustomTooltip } from "./today/CustomTooltip";
 import { TodayLoader } from "./today/DashboardLoaders";
 import { TodayStops } from "./today/TodayStops";
 import { getPacingData } from "./today/utils";
+
+const MasteryRadar = lazy(() => import("./today/MasteryRadar"));
+const PacingChart = lazy(() => import("./today/PacingChart"));
+
+const ChartFallback = () => <div className="w-full h-full min-h-[260px] bg-bg-2 animate-pulse rounded-md" />;
 import { WeatherWidget } from "./today/WeatherWidget";
 
 export default function TodayView() {
@@ -706,42 +695,9 @@ export default function TodayView() {
             <div className="flex-1 w-full pt-[30px] md:pt-[50px] pb-4 px-2 md:px-4 bg-bg-2/30" role="img" aria-label="Radar chart showing aviation topic mastery percentage telemetry">
               <div style={{ width: "100%", minHeight: 320, height: "100%" }}>
                 {logbook.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={320}>
-                    <RadarChart
-                      cx="50%"
-                      cy="50%"
-                      outerRadius={isMobile ? "55%" : "75%"}
-                      data={masteries}
-                    >
-                      <PolarGrid stroke="#e5e5e5" />
-                      <PolarAngleAxis
-                        dataKey="subject"
-                        tick={{
-                          fill: "#737373",
-                          fontSize: isMobile ? 8 : 10,
-                          fontFamily: "JetBrains Mono",
-                        }}
-                      />
-                      <PolarRadiusAxis
-                        angle={30}
-                        domain={[0, 100]}
-                        tick={{ fill: "#a3a3a3", fontSize: 9 }}
-                        tickCount={5}
-                      />
-                      <RechartsTooltip
-                        content={<CustomTooltip />}
-                        cursor={{ fill: "rgba(0,43,91,0.05)" }}
-                      />
-                      <Radar
-                        name="Mastery %"
-                        dataKey="score"
-                        stroke="#002B5B"
-                        fill="#002B5B"
-                        fillOpacity={0.15}
-                        activeDot={{ r: 4, fill: "#002B5B" }}
-                      />
-                    </RadarChart>
-                  </ResponsiveContainer>
+                  <Suspense fallback={<ChartFallback />}>
+                    <MasteryRadar data={masteries} isMobile={isMobile} />
+                  </Suspense>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center p-6 border border-dashed border-rule rounded-xl bg-white/40">
                     <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest mb-1.5 font-bold"> telemetry outline </span>
@@ -809,55 +765,9 @@ export default function TodayView() {
 
             <div style={{ width: "100%", height: 260 }} role="img" aria-label="Study pacing timeline chart comparing weekly logged hours against target exam pace">
               {logbook.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={pacingData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorActual" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#002B5B" stopOpacity={0.15}/>
-                        <stop offset="95%" stopColor="#002B5B" stopOpacity={0.0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
-                    <XAxis 
-                      dataKey="day" 
-                      tick={{ fill: "#737373", fontSize: 9, fontFamily: "JetBrains Mono" }}
-                      axisLine={{ stroke: "#e5e5e5" }}
-                    />
-                    <YAxis 
-                      tick={{ fill: "#a3a3a3", fontSize: 9, fontFamily: "JetBrains Mono" }}
-                      axisLine={{ stroke: "#e5e5e5" }}
-                    />
-                    <RechartsTooltip 
-                      contentStyle={{ 
-                        backgroundColor: "#002b5b", 
-                        borderRadius: "8px", 
-                        color: "#fff", 
-                        fontFamily: "Space Grotesk",
-                        fontSize: "12px",
-                        border: "none",
-                        padding: "8px 12px"
-                      }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="actual" 
-                      name="Logged Hours"
-                      stroke="#002B5B" 
-                      strokeWidth={2}
-                      fillOpacity={1} 
-                      fill="url(#colorActual)" 
-                    />
-                    <Line 
-                      type="monotone" 
-                      dataKey="target" 
-                      name="Target Pace"
-                      stroke="#ff4d4d" 
-                      strokeWidth={2}
-                      strokeDasharray="5 5"
-                      dot={false}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <Suspense fallback={<ChartFallback />}>
+                  <PacingChart data={pacingData} />
+                </Suspense>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full min-h-[220px] text-center p-6 rounded-xl border border-dashed border-rule bg-white/40">
                   <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest mb-1.5 font-bold"> timeline blank </span>
