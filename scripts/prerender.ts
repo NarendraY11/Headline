@@ -1,4 +1,5 @@
-import puppeteer from "puppeteer";
+import chromium from "@sparticuz/chromium";
+import puppeteerCore from "puppeteer-core";
 import express from "express";
 import path from "path";
 import fs from "fs";
@@ -41,10 +42,26 @@ async function prerender() {
     console.log(`Server started on http://localhost:${PORT}`);
 
     try {
-      const browser = await puppeteer.launch({
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-        headless: true
-      });
+      // On Vercel (and other serverless build images) the bundled Chrome
+      // can't launch because system shared libs (libnspr4 etc.) are missing.
+      // Use @sparticuz/chromium which ships a self-contained Chrome.
+      // Locally, fall back to a Chrome found via PUPPETEER_EXECUTABLE_PATH or
+      // the system install.
+      const isServerless = !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+      const browser = isServerless
+        ? await puppeteerCore.launch({
+            args: chromium.args,
+            executablePath: await chromium.executablePath(),
+            headless: true
+          })
+        : await puppeteerCore.launch({
+            args: ["--no-sandbox", "--disable-setuid-sandbox"],
+            executablePath:
+              process.env.PUPPETEER_EXECUTABLE_PATH ||
+              (await chromium.executablePath()),
+            headless: true
+          });
 
       for (const route of routes) {
         console.log(`Prerendering route: ${route}`);
