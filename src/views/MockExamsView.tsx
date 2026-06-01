@@ -399,7 +399,7 @@ export default function MockExamsView() {
                           <div>
                             <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wide">NEG MARKING</span>
                             <span className="text-xs font-sans font-medium text-ink block mt-1">
-                              {exam.neg_marking_percent > 0 ? `${exam.neg_marking_percent}%` : "No"}
+                              {(exam.neg_marking_percent || 0) > 0 ? `${exam.neg_marking_percent}%` : "No"}
                             </span>
                           </div>
                         </div>
@@ -604,7 +604,7 @@ export default function MockExamsView() {
                 <div className="border-l border-rule pl-4 sm:border-l-0 sm:pl-0 md:border-l md:pl-4">
                   <span className="block font-mono text-[9px] text-muted-2 uppercase tracking-wider">Negative Marking</span>
                   <span className="font-serif text-xl text-ink font-medium block mt-1">
-                    {selectedExam.neg_marking_percent > 0 ? `${selectedExam.neg_marking_percent}% Penalty` : "None Applied"}
+                    {(selectedExam.neg_marking_percent || 0) > 0 ? `${selectedExam.neg_marking_percent}% Penalty` : "None Applied"}
                   </span>
                 </div>
                 <div className="border-l border-rule pl-4">

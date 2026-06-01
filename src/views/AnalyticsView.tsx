@@ -458,7 +458,7 @@ export default function AnalyticsView() {
                       fontSize: "12px",
                       fontFamily: "ui-monospace, monospace",
                     }}
-                    formatter={(value: number) => [`${value}%`, "Mastery"]}
+                    formatter={(value: any) => [`${value}%`, "Mastery"]}
                     labelFormatter={(label) => `ATA ${label}`}
                   />
                   <Bar dataKey="score" radius={[4, 4, 0, 0]} />

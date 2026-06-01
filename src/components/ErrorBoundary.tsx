@@ -12,7 +12,6 @@ interface State {
 }
 
 export class ErrorBoundary extends React.Component<Props, State> {
-  props: Props;
   public state: State = {
     hasError: false,
     error: null,

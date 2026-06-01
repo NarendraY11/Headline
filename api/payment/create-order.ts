@@ -1,23 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser } from "../_lib/utils";
-import Razorpay from "razorpay";
-
-let razorpayClient: Razorpay | null = null;
-
-function getRazorpay(): Razorpay {
-  if (!razorpayClient) {
-    const keyId = process.env.RAZORPAY_KEY_ID;
-    const keySecret = process.env.RAZORPAY_KEY_SECRET;
-    if (!keyId || !keySecret) {
-      throw new Error("Razorpay environment variables RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET are missing.");
-    }
-    razorpayClient = new Razorpay({
-      key_id: keyId,
-      key_secret: keySecret,
-    });
-  }
-  return razorpayClient;
-}
+import { getAuthenticatedUser, getRazorpay } from "../_lib/utils";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {

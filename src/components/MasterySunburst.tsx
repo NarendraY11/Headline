@@ -383,7 +383,7 @@ export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps)
               <div className="space-y-0.5">
                 <span className="font-sans text-[10px] text-muted-2 uppercase">Competency Mastery</span>
                 <div className="flex items-baseline gap-1.5">
-                  <span className={`font-serif text-2xl font-bold ${hasScore ? (displayNode.data.score >= 80 ? "text-mint" : displayNode.data.score >= 50 ? "text-amber" : "text-signal") : "text-muted-2"}`}>
+                  <span className={`font-serif text-2xl font-bold ${hasScore ? (displayNode.data.score! >= 80 ? "text-mint" : displayNode.data.score! >= 50 ? "text-amber" : "text-signal") : "text-muted-2"}`}>
                     {hasScore ? `${displayNode.data.score}%` : "0%"}
                   </span>
                   <span className="font-mono text-[9px] text-muted">score</span>

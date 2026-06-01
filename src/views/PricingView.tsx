@@ -137,7 +137,7 @@ export default function PricingView() {
         throw new Error(orderData.error);
       }
 
-      const keyId = (import.meta as any).env?.VITE_RAZORPAY_KEY_ID || "rzp_test_placeholderK";
+      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_placeholderK";
 
       const options = {
         key: keyId,

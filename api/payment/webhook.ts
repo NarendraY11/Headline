@@ -1,32 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import crypto from "crypto";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin, verifyWebhookSignature } from "../_lib/utils";
 
 export const config = {
   api: {
     bodyParser: false,
   },
-};
-
-const getSupabaseAdmin = () => {
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY environment variable is required.");
-  }
-  return createClient(supabaseUrl, serviceKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
-};
-
-const verifyWebhookSignature = (body: string, signature: string, secret: string) => {
-  const shasum = crypto.createHmac("sha256", secret);
-  shasum.update(body);
-  const digest = shasum.digest("hex");
-  return digest === signature;
 };
 
 async function getRawBody(req: any): Promise<string> {

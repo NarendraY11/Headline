@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { animate, Reorder, motion } from "motion/react";
+import { Reorder } from "motion/react";
 import { Button } from "../components/Atoms";
 import {
   Compass,
@@ -10,23 +10,13 @@ import {
   Award,
   BookOpen,
   TrendingUp,
-  Sun,
-  Cloud,
-  CloudRain,
-  CloudLightning,
-  Snowflake,
-  Wind,
-  CloudFog,
-  CloudOff,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useLogbook } from "../hooks/useLogbook";
-import { useGlobalLoading } from "../contexts/LoadingContext";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { SubjectItem } from "../data/topics";
 import { fetchMergedSubjects } from "../lib/content";
 import { getDueQuestionIds } from "../lib/spacedRepetition";
-import { apiFetch } from "../lib/api";
 import { useUserProgress } from "../lib/progress";
 import {
   Radar,
@@ -44,243 +34,12 @@ import {
   ComposedChart,
 } from "recharts";
 
-function AnimatedCounter({
-  value,
-  duration = 1.5,
-}: {
-  value: number;
-  duration?: number;
-}) {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    const controls = animate(0, value, {
-      duration: duration,
-      ease: "easeOut",
-      onUpdate: (v) => setDisplayValue(Math.round(v)),
-    });
-    return () => controls.stop();
-  }, [value, duration]);
-
-  return <span>{displayValue.toLocaleString()}</span>;
-}
-
-function WeatherWidget() {
-  const { user } = useAuth();
-  const [weatherData, setWeatherData] = useState<{
-    briefing: string;
-    condition: string;
-    forecast?: any[];
-    unavailable?: boolean;
-  } | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [expanded, setExpanded] = useState(false);
-  const { setLoading: setGlobalLoading } = useGlobalLoading();
-
-  const fetchWeather = async () => {
-    if (!user) {
-      setWeatherData({
-        briefing: "Sign in to see weather briefing",
-        condition: "CLOUDY",
-        unavailable: true,
-      });
-      setLoading(false);
-      setGlobalLoading(false);
-      return;
-    }
-    setLoading(true);
-    setGlobalLoading(true);
-
-    try {
-      const response = await apiFetch("/api/weather", {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ icao: "EGLL" }),
-      });
-
-      if (!response) {
-        setWeatherData((prev) => ({ 
-          briefing: "Weather briefing is currently offline", 
-          condition: "CLOUDY", 
-          unavailable: true 
-        }) as any);
-        return;
-      }
-
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.indexOf("application/json") !== -1) {
-        try {
-          const d = await response.json();
-          if (d && d.briefing) {
-            setWeatherData({
-              ...d,
-              unavailable: false,
-              forecast: Array.isArray(d.forecast) ? d.forecast : [],
-            });
-          } else {
-            setWeatherData((prev) => ({ 
-              briefing: "Weather briefing is currently offline", 
-              condition: "CLOUDY", 
-              unavailable: true 
-            }) as any);
-          }
-        } catch (jsonError) {
-          setWeatherData((prev) => ({ 
-            briefing: "Weather briefing is currently offline", 
-            condition: "CLOUDY", 
-            unavailable: true 
-          }) as any);
-        }
-      } else {
-        setWeatherData((prev) => ({ 
-          briefing: "Weather briefing is currently offline", 
-          condition: "CLOUDY", 
-          unavailable: true 
-        }) as any);
-      }
-    } catch (error) {
-      setWeatherData((prev) => ({ 
-        briefing: "Weather briefing is currently offline", 
-        condition: "CLOUDY", 
-        unavailable: true 
-      }) as any);
-    } finally {
-      setLoading(false);
-      setGlobalLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchWeather();
-  }, [user]);
-
-  const getWeatherIcon = (condition: string, size: number = 24) => {
-    switch (condition) {
-      case "SUNNY":
-        return <Sun size={size} className="text-amber" />;
-      case "CLOUDY":
-        return <Cloud size={size} className="text-muted" />;
-      case "RAIN":
-        return <CloudRain size={size} className="text-sky" />;
-      case "STORM":
-        return <CloudLightning size={size} className="text-signal" />;
-      case "SNOW":
-        return <Snowflake size={size} className="text-sky" />;
-      case "WINDY":
-        return <Wind size={size} className="text-muted" />;
-      case "FOG":
-        return <CloudFog size={size} className="text-muted" />;
-      default:
-        return <Sun size={size} className="text-amber" />;
-    }
-  };
-
-  const isAlert =
-    weatherData?.condition === "STORM" || weatherData?.condition === "RAIN";
-
-  if (!user) {
-    return (
-      <div
-        className="bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-1 flex items-center justify-between"
-        style={{ padding: "14px 20px", minHeight: "52px" }}
-      >
-        <div className="flex items-center gap-2 md:gap-3 shrink-0 mr-2">
-          <CloudOff size={16} className="text-muted shrink-0" />
-          <span className="font-sans text-[14px] text-ink font-normal truncate">
-            Sign in to use AI coaching
-          </span>
-          <span className="text-muted-2 shrink-0">·</span>
-          <span className="font-mono text-[11px] text-muted-2 uppercase tracking-wide truncate hidden sm:inline">
-            Aviation weather briefing requires active login
-          </span>
-        </div>
-      </div>
-    );
-  }
-
-  if (weatherData?.unavailable) {
-    return (
-      <div
-        className="bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-1 flex items-center justify-between"
-        style={{ padding: "14px 20px", minHeight: "52px" }}
-      >
-        <div className="flex items-center gap-2 md:gap-3 shrink-0 mr-2">
-          <CloudOff size={16} className="text-muted shrink-0" />
-          <span className="font-sans text-[14px] text-ink font-normal truncate">
-            WX Data Offline
-          </span>
-          <span className="text-muted-2 shrink-0">·</span>
-          <span className="font-mono text-[11px] text-muted-2 uppercase tracking-wide truncate hidden sm:inline">
-            METAR feed unavailable
-          </span>
-        </div>
-        <button
-          onClick={fetchWeather}
-          disabled={loading}
-          className="flex items-center justify-center border border-rule rounded-full px-4 font-sans text-[11px] font-medium text-ink hover:bg-rule/30 transition-colors disabled:opacity-50 h-[32px] shrink-0"
-        >
-          {loading ? "Retrying..." : "Retry"}
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-paper border border-rule rounded-2xl md:rounded-lg p-5 md:p-4 shadow-sm col-span-1 flex flex-col justify-between transition-all duration-300">
-      <div className="flex justify-between items-center mb-2">
-        <div className="font-mono text-[9px] text-muted-2 tracking-widest uppercase flex items-center gap-2">
-          <span>WX INFO</span>
-          {isAlert && <span className="w-1.5 h-1.5 rounded-full bg-signal" />}
-        </div>
-        <div
-          className={`w-1.5 h-1.5 rounded-sm transform rotate-45 ${loading && !weatherData?.unavailable ? "bg-signal animate-pulse" : "bg-signal"}`}
-          title="Live WX Data"
-        />
-      </div>
-      <div>
-        {loading && !weatherData ? (
-          <div className="h-6 flex items-center">
-            <div className="w-4 h-4 rounded-full border-t-2 border-navy animate-spin" />
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-start gap-3">
-              {weatherData?.condition && (
-                <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
-                  className="mt-1 cursor-pointer hover:opacity-80 transition-opacity"
-                  onClick={() => setExpanded(!expanded)}
-                  title="Click to toggle forecast"
-                >
-                  {getWeatherIcon(weatherData.condition)}
-                </div>
-              )}
-              <p className="font-sans text-sm text-ink-2">
-                {weatherData?.briefing}
-              </p>
-            </div>
-            {expanded && weatherData?.forecast && (
-              <div className="mt-2 pt-4 border-t border-rule grid grid-cols-3 xs:grid-cols-6 sm:grid-cols-6 gap-2.5 sm:gap-2">
-                {weatherData.forecast.map((f: any, i: number) => (
-                  <div key={i} className="flex flex-col items-center gap-1">
-                    <span className="font-mono text-[9px] text-muted-2">
-                      {f.hour}
-                    </span>
-                    {getWeatherIcon(f.condition, 14)}
-                    <span className="font-sans text-[10px] text-ink font-semibold">
-                      {f.temp}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+import { AnimatedCounter } from "./today/AnimatedCounter";
+import { WeatherWidget } from "./today/WeatherWidget";
+import { CustomTooltip } from "./today/CustomTooltip";
+import { TodayLoader } from "./today/DashboardLoaders";
+import { TodayStops } from "./today/TodayStops";
+import { getPacingData } from "./today/utils";
 
 export default function TodayView() {
   const { userData, user, loading, updateUserData } = useAuth();
@@ -482,56 +241,7 @@ export default function TodayView() {
   }, []);
 
   if (loading || logbookLoading || loadingSubjects) {
-    return (
-      <div className="relative min-h-screen">
-        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
-        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
-        <div className="relative z-10 px-4 py-8 md:py-16 max-w-7xl mx-auto space-y-12 animate-pulse">
-          {/* Dashboard Header skeleton */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-            <div className="space-y-3 max-w-md">
-              <div className="h-4 bg-muted-2/25 w-24 rounded font-mono"></div>
-              <div className="h-10 bg-ink/10 w-64 rounded-lg"></div>
-              <div className="h-4 bg-muted/20 w-80 rounded"></div>
-            </div>
-            <div className="h-10 bg-muted/15 w-40 rounded-full"></div>
-          </div>
-          
-          {/* Key Metric cards skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-paper border border-rule/50 rounded-2xl p-5 h-28 flex flex-col justify-between">
-                <div className="h-4 bg-muted-2/20 w-16 rounded font-mono"></div>
-                <div className="h-8 bg-ink/10 w-20 rounded"></div>
-              </div>
-            ))}
-          </div>
-
-          {/* Daily study sequence cards skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 bg-paper border border-rule/50 rounded-2xl p-6 h-96 space-y-6">
-              <div className="flex justify-between items-center border-b border-rule/35 pb-4">
-                <div className="h-5 bg-ink/10 w-32 rounded"></div>
-                <div className="h-4 bg-muted-2/20 w-16 rounded"></div>
-              </div>
-              <div className="space-y-4">
-                <div className="h-4 bg-muted/20 w-full rounded"></div>
-                <div className="h-4 bg-muted/20 w-5/6 rounded"></div>
-                <div className="h-4 bg-muted/20 w-4/5 rounded"></div>
-              </div>
-            </div>
-            <div className="bg-paper border border-rule/50 rounded-2xl p-6 h-96 space-y-6">
-              <div className="h-5 bg-ink/10 w-2/3 rounded border-b border-rule/35 pb-4"></div>
-              <div className="space-y-3">
-                <div className="h-10 bg-muted/10 w-full rounded-lg"></div>
-                <div className="h-10 bg-muted/10 w-full rounded-lg"></div>
-                <div className="h-10 bg-muted/10 w-full rounded-lg"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <TodayLoader />;
   }
 
   const totalQuestions = progressStats.totalQuestionsAnswered;
@@ -592,92 +302,7 @@ export default function TodayView() {
   const isReadyForExam = subjectMasteries.length > 0 && passedCount === subjectMasteries.length;
   const readinessPercentage = progressStats.examReadiness;
 
-  // Calculate study pacing target timeline vs logged hours
-  const getPacingData = () => {
-    const today = new Date();
-    // Default target exam date is savedDate or 30 days from now
-    const targetDate = savedDate ? new Date(savedDate) : new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-    
-    let cumulativeHours = 0;
-    const historyData: { day: string; actual: number; target: number }[] = [];
-    
-    const totalTargetHours = 50; // recommend 50 hours of total logging to pass EASA/DGCA
-    const daysToTarget = Math.max(1, Math.ceil((targetDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)));
-    
-    // Generate dates for the last 7 days
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(today);
-      d.setDate(today.getDate() - i);
-      const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      
-      if (logbook.length > 0) {
-        cumulativeHours = logbook
-          .filter(l => l.dateISO && new Date(l.dateISO).getTime() <= d.getTime() + 24 * 3600 * 1000)
-          .reduce((sum, l) => sum + ((l.durationSec || 0) / 3600), 0);
-      } else {
-        cumulativeHours = 0;
-      }
-      
-      const baselineStart = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
-      const totalPeriod = (targetDate.getTime() - baselineStart.getTime()) || 1;
-      const progressRatio = (d.getTime() - baselineStart.getTime()) / totalPeriod;
-      const targetHours = Math.max(0, Math.round(totalTargetHours * Math.min(1, progressRatio) * 10) / 10);
-
-      historyData.push({
-        day: dateStr,
-        actual: Math.round(cumulativeHours * 10) / 10,
-        target: targetHours,
-      });
-    }
-
-    // Add Future Target Milestone Projection point
-    const projDate = new Date(today);
-    projDate.setDate(today.getDate() + Math.min(daysToTarget, 5));
-    const projDateStr = projDate.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " (Proj)";
-    
-    const baselineStart = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
-    const totalPeriod = (targetDate.getTime() - baselineStart.getTime()) || 1;
-    const progressRatio = (projDate.getTime() - baselineStart.getTime()) / totalPeriod;
-    const projTargetHours = Math.max(0, Math.round(totalTargetHours * Math.min(1, progressRatio) * 10) / 10);
-
-    historyData.push({
-      day: projDateStr,
-      actual: Math.round(cumulativeHours * 10) / 10, // assumes no extra study yet in future projection
-      target: projTargetHours
-    });
-
-    return historyData;
-  };
-
-  const pacingData = getPacingData();
-
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-ink text-bg font-sans p-3 rounded-lg shadow-xl border border-rule/20 min-w-[200px]">
-          <div className="font-serif text-sm border-b border-rule/20 pb-2 mb-2">
-            {data.fullTitle}
-          </div>
-          <div className="flex justify-between items-center mb-1">
-            <span className="font-mono text-[9px] uppercase tracking-widest opacity-70">
-              Mastery
-            </span>
-            <span className="font-mono text-sm text-mint">{data.score}%</span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="font-mono text-[9px] uppercase tracking-widest opacity-70">
-              Questions
-            </span>
-            <span className="font-mono text-[10px]">
-              {data.correct} / {data.total}
-            </span>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
+  const pacingData = getPacingData(savedDate, logbook);
 
   const handleReorder = (newOrder: string[]) => {
     setTileOrder(newOrder);
@@ -931,33 +556,31 @@ export default function TodayView() {
 
         {/* Due For Review Alert CTA Banner */}
         {dueCount > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-signal-soft border border-signal/20 rounded-[14px] p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative overflow-hidden"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-signal/15 flex items-center justify-center text-signal">
-                <Flame size={16} />
+          <div className="motion-div" style={{ animation: "fadeIn 0.5s" }}>
+            <div className="bg-signal-soft border border-signal/20 rounded-[14px] p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative overflow-hidden">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-signal/15 flex items-center justify-center text-signal">
+                  <Flame size={16} />
+                </div>
+                <div>
+                  <h3 className="font-serif text-base text-ink font-bold leading-tight">
+                    Spaced Repetition Review Ready
+                  </h3>
+                  <p className="font-mono text-[11px] text-muted-2 tracking-normal uppercase">
+                    {dueCount} {dueCount === 1 ? "question is" : "questions are"} due for spaced review
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-serif text-base text-ink font-bold leading-tight">
-                  Spaced Repetition Review Ready
-                </h3>
-                <p className="font-mono text-[11px] text-muted-2 tracking-normal uppercase">
-                  {dueCount} {dueCount === 1 ? "question is" : "questions are"} due for spaced review
-                </p>
-              </div>
+              <Link to="/quiz/review" className="w-full sm:w-auto">
+                <Button
+                  variant="primary"
+                  className="w-full sm:w-auto bg-signal text-bg hover:bg-signal/80 px-4 py-2 h-9 rounded-lg font-mono text-[11px] font-bold tracking-wider uppercase flex items-center justify-center gap-1 border-0 shadow-none"
+                >
+                  Start Review ({dueCount}) →
+                </Button>
+              </Link>
             </div>
-            <Link to="/quiz/review" className="w-full sm:w-auto">
-              <Button
-                variant="primary"
-                className="w-full sm:w-auto bg-signal text-bg hover:bg-signal/80 px-4 py-2 h-9 rounded-lg font-mono text-[11px] font-bold tracking-wider uppercase flex items-center justify-center gap-1 border-0 shadow-none"
-              >
-                Start Review ({dueCount}) →
-              </Button>
-            </Link>
-          </motion.div>
+          </div>
         )}
 
         {/* Readiness Card */}
@@ -1247,92 +870,7 @@ export default function TodayView() {
           </div>
         </div>
 
-        {/* TODAY'S STOPS */}
-        <div className="font-mono text-[10px] text-muted-2 tracking-widest uppercase mb-4 mt-8">
-          TODAY · 4 STOPS
-        </div>
-        <div className="border-t border-rule" />
-
-        <Link
-          to="/quiz/mock-exam"
-          className="group block border-b border-rule py-4 transition-colors hover:bg-bg-2 active:bg-rule -mx-4 px-4 md:mx-0 md:px-2 rounded-md"
-        >
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full text-signal border border-signal/30 bg-signal/10">
-              MOCK
-            </span>
-            <span className="font-serif text-lg text-ink font-medium">
-              EASA Paper VI
-            </span>
-            <span className="ml-auto font-mono text-[10px] text-muted-2 uppercase">
-              90m
-            </span>
-            <ArrowUpRight
-              size={16}
-              className="text-muted ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </div>
-        </Link>
-        <Link
-          to="/quiz/drill"
-          className="group block border-b border-rule py-4 transition-colors hover:bg-bg-2 active:bg-rule -mx-4 px-4 md:mx-0 md:px-2 rounded-md"
-        >
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full text-amber border border-amber/30 bg-amber/10">
-              DRILL
-            </span>
-            <span className="font-serif text-lg text-ink font-medium">
-              Met · Icing & TS
-            </span>
-            <span className="ml-auto font-mono text-[10px] text-muted-2 uppercase">
-              22m
-            </span>
-            <ArrowUpRight
-              size={16}
-              className="text-muted ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </div>
-        </Link>
-        <Link
-          to="/topic/a320-systems"
-          className="group block border-b border-rule py-4 transition-colors hover:bg-bg-2 active:bg-rule -mx-4 px-4 md:mx-0 md:px-2 rounded-md"
-        >
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full text-navy border border-navy/30 bg-navy/5">
-              ATA
-            </span>
-            <span className="font-serif text-lg text-ink font-medium">
-              A320 · 36 Pneu
-            </span>
-            <span className="ml-auto font-mono text-[10px] text-muted-2 uppercase">
-              18m
-            </span>
-            <ArrowUpRight
-              size={16}
-              className="text-muted ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </div>
-        </Link>
-        <Link
-          to="/quiz/viva"
-          className="group block border-b border-rule py-4 transition-colors hover:bg-bg-2 active:bg-rule -mx-4 px-4 md:mx-0 md:px-2 rounded-md"
-        >
-          <div className="flex items-center gap-4">
-            <span className="font-mono text-[9px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full text-mint border border-mint/30 bg-mint/10">
-              VIVA
-            </span>
-            <span className="font-serif text-lg text-ink font-medium">
-              Type · Evac
-            </span>
-            <span className="ml-auto font-mono text-[10px] text-muted-2 uppercase">
-              12m
-            </span>
-            <ArrowUpRight
-              size={16}
-              className="text-muted ml-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            />
-          </div>
-        </Link>
+        <TodayStops />
       </div>
     </div>
   );

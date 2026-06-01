@@ -518,7 +518,7 @@ export default function TopicView() {
                     // Given the prompt, clicking should start quiz/practice for that chapter. We can pass the section ID or just the sub topic ID.
                     const targetId = selectedSub.id;
                     return (
-                      <ProGate key={idx} type="chapter" isUnlocked={isSubUnlocked}>
+                      <ProGate key={idx} type="chapter" isUnlocked={isSubUnlocked ?? undefined}>
                         <Link
                           to={`/quiz/${targetId}`}
                           className="block outline-none group"
@@ -541,7 +541,7 @@ export default function TopicView() {
                 </div>
               ) : (
                 <div className="pb-24">
-                  <ProGate type="chapter" isUnlocked={isSubUnlocked}>
+                  <ProGate type="chapter" isUnlocked={isSubUnlocked ?? undefined}>
                     <Link to={`/quiz/${selectedSub.id}`} className="block">
                       <Button variant="primary" className="h-12 px-6">
                         Start Chapter Practice Set

@@ -21,12 +21,27 @@ const slugify = (text: string) => {
     .replace(/^-+|-+$/g, "");
 };
 
+interface BlogPostFormData {
+  id?: string;
+  slug: string;
+  title: string;
+  description: string;
+  date: string;
+  read_time: string;
+  category: string;
+  tags: string[];
+  content: string;
+  author: string;
+  author_role: string;
+  status: string;
+}
+
 export default function BlogManager() {
   const [posts, setPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isNew, setIsNew] = useState(false);
-  const [currentPost, setCurrentPost] = useState<any>({
+  const [currentPost, setCurrentPost] = useState<BlogPostFormData>({
     slug: "",
     title: "",
     description: "",
@@ -111,7 +126,7 @@ export default function BlogManager() {
   };
 
   const handleTitleChange = (title: string) => {
-    setCurrentPost((prev) => {
+    setCurrentPost((prev: BlogPostFormData) => {
       const next = { ...prev, title };
       if (isNew) {
         next.slug = slugify(title);
