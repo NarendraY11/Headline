@@ -40,6 +40,26 @@ let cachedMergedSubjects: SubjectItem[] | null = null;
 
 export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
   if (!ids || ids.length === 0) return [];
+
+  // Fill any ids the DB doesn't return from the static bank, so callers (e.g.
+  // quiz resume) always get the questions they saved even when the DB is empty
+  // or only partially seeded.
+  const fillFromStatic = async (found: Question[]): Promise<Question[]> => {
+    const foundIds = new Set(found.map((q) => q.id));
+    const missing = ids.filter((id) => !foundIds.has(id));
+    if (missing.length === 0) return found;
+    try {
+      const { staticQuestionBank } = await import("../data/staticQuestions");
+      const byId = new Map(staticQuestionBank.map((q) => [q.id, q]));
+      const filled = missing
+        .map((id) => byId.get(id))
+        .filter(Boolean) as Question[];
+      return [...found, ...filled];
+    } catch {
+      return found;
+    }
+  };
+
   try {
     const { data, error } = await supabase
       .from("questions")
@@ -47,11 +67,11 @@ export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
       .in("id", ids);
 
     if (error || !data) {
-      console.warn("Error fetching questions by IDs:", error);
-      return [];
+      console.warn("Error fetching questions by IDs, using static fallback:", error);
+      return fillFromStatic([]);
     }
 
-    return data.map((q: any) => ({
+    const mapped = data.map((q: any) => ({
       id: q.id,
       topicId: q.subcategory_id || q.subject_id || "",
       subjectId: q.subject_id || "",
@@ -75,9 +95,10 @@ export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
             : (typeof q.references === "string" ? JSON.parse(q.references) : []))),
       isAiGenerated: !!q.is_ai_generated,
     }));
+    return fillFromStatic(mapped);
   } catch (err) {
-    console.error("Exception fetching questions by IDs:", err);
-    return [];
+    console.error("Exception fetching questions by IDs, using static fallback:", err);
+    return fillFromStatic([]);
   }
 }
 
@@ -118,7 +139,7 @@ export async function fetchQuizQuestionsForTopic(
       );
     }
 
-    let questions = (data || []).map((q: any) => ({
+    let questions: Question[] = (data || []).map((q: any) => ({
       id: q.id,
       topicId: q.subcategory_id || q.subject_id || "",
       subjectId: q.subject_id || "",
@@ -143,14 +164,38 @@ export async function fetchQuizQuestionsForTopic(
       isAiGenerated: !!q.is_ai_generated,
     }));
 
+    // Static fallback: if the DB has no published questions for this topic,
+    // serve from the bundled bank so the quiz is never empty. Match the topic
+    // where possible, otherwise fall back to the whole bank.
+    if (questions.length === 0) {
+      const { staticQuestionBank } = await import("../data/staticQuestions");
+      const normalize = (s: string | undefined) => (s || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+      const normTarget = normalize(topicId);
+      const matched = staticQuestionBank.filter(
+        (q) =>
+          normalize(q.subcategoryId) === normTarget ||
+          normalize(q.subjectId) === normTarget ||
+          normalize(q.topicId) === normTarget
+      );
+      questions = matched.length > 0 ? matched : staticQuestionBank;
+    }
+
     if (randomize) {
       questions = questions.sort(() => Math.random() - 0.5);
     }
 
     return questions.slice(0, limit);
   } catch (err) {
-    console.error("Failed fetching quiz questions server-side:", err);
-    return [];
+    console.error("Failed fetching quiz questions server-side, using static fallback:", err);
+    try {
+      const { staticQuestionBank } = await import("../data/staticQuestions");
+      const pool = randomize
+        ? [...staticQuestionBank].sort(() => Math.random() - 0.5)
+        : staticQuestionBank;
+      return pool.slice(0, limit);
+    } catch {
+      return [];
+    }
   }
 }
 
@@ -181,12 +226,25 @@ export async function fetchPublishedQuestions(options?: {
       }
 
       const { data, error } = await query;
+
+      // Static fallback so the quiz is never empty when the DB has no
+      // published questions matching the requested filters.
+      const staticFallback = async (): Promise<Question[]> => {
+        const { staticQuestionBank } = await import("../data/staticQuestions");
+        let pool = staticQuestionBank;
+        if (options.subjectId) pool = pool.filter((q) => q.subjectId === options.subjectId);
+        if (options.subcategoryId) pool = pool.filter((q) => q.subcategoryId === options.subcategoryId);
+        if (pool.length === 0) pool = staticQuestionBank;
+        const start = options.offset || 0;
+        return options.limit !== undefined ? pool.slice(start, start + options.limit) : pool;
+      };
+
       if (error) {
-        console.warn("Error fetching questions with options:", error);
-        return [];
+        console.warn("Error fetching questions with options, using static fallback:", error);
+        return staticFallback();
       }
 
-      return (data || []).map((q: any) => ({
+      const mapped: Question[] = (data || []).map((q: any) => ({
         id: q.id,
         topicId: q.subcategory_id || q.subject_id || "",
         subjectId: q.subject_id || "",
@@ -210,9 +268,18 @@ export async function fetchPublishedQuestions(options?: {
               : (typeof q.references === "string" ? JSON.parse(q.references) : []))),
         isAiGenerated: !!q.is_ai_generated,
       }));
+      return mapped.length > 0 ? mapped : staticFallback();
     } catch (err) {
-      console.warn("Exception fetching questions with options:", err);
-      return [];
+      console.warn("Exception fetching questions with options, using static fallback:", err);
+      try {
+        const { staticQuestionBank } = await import("../data/staticQuestions");
+        const start = options.offset || 0;
+        return options.limit !== undefined
+          ? staticQuestionBank.slice(start, start + options.limit)
+          : staticQuestionBank;
+      } catch {
+        return [];
+      }
     }
   }
 
