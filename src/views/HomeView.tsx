@@ -877,7 +877,7 @@ export default function HomeView() {
                <h2 className="font-serif text-[40px] text-ink mb-2 tracking-tight">Flight Briefing (FAQ)</h2>
             </FadeUp>
             
-            <FadeUp delay={100} className="border-t border-rule" style={{ borderColor: 'var(--rule-strong)' }}>
+            <FadeUp delay={100} className="border-t border-rule-strong">
               <FAQItem 
                 question="Which official syllabi do you cover?" 
                 answer="We currently map to EASA Part-FCL and the Indian DGCA curriculum. The question logic handles both standard and complex negative-marking environments. You can select your region during account setup."

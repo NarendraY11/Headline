@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { AdSlot } from "../components/AdSlot";
 import { Card, Button } from "../components/Atoms";
 import { 
   Shield, 
@@ -334,14 +335,7 @@ export default function ExamsSeoView() {
               </Card>
             </section>
 
-            {/* HIGH VALUE ADSENSE BANNER INTERSTITIAL CARD */}
-            <div className="bg-bg-2/30 border border-rule/70 rounded p-6 text-center select-none space-y-2 relative overflow-hidden">
-              <div className="absolute top-1 right-2 font-mono text-[8px] uppercase tracking-widest text-muted-2">Advertisement Reference</div>
-              <div className="py-2 flex flex-col items-center justify-center min-h-[90px] border border-dashed border-rule rounded bg-paper/60">
-                <span className="font-mono text-[9px] tracking-[0.2em] text-muted uppercase">Google AdSense Partner Channel</span>
-                <span className="font-sans text-xs text-muted-2 mt-1">Syllabus-Aligned Direct Context ADS-ID: 7082</span>
-              </div>
-            </div>
+            <AdSlot slotId={import.meta.env.VITE_ADSENSE_SLOT_BANNER} className="my-8" />
 
             {/* EXECUTIVE SUMMARY OVERVIEW */}
             <section className="space-y-4">
@@ -434,7 +428,7 @@ export default function ExamsSeoView() {
 
                 <div className="space-y-2 pt-2">
                   <button 
-                    onClick={() => openAuthModal && openAuthModal("register")}
+                    onClick={() => openAuthModal && openAuthModal("signup")}
                     className="w-full h-10 rounded bg-amber text-navy font-mono text-xs uppercase tracking-widest hover:bg-amber-strong font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow"
                   >
                     Launch Free Trials <ArrowRight size={14} className="animate-pulse" />

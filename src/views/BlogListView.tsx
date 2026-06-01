@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { blogPosts, BlogPost } from "../data/blog";
+import { AdSlot } from "../components/AdSlot";
 import { Card, Button } from "../components/Atoms";
 import { supabase } from "../lib/supabase";
 import { 
@@ -166,14 +167,7 @@ export default function BlogListView() {
               </div>
             </div>
 
-            {/* HIGH-IMPACT ADSENSE AD SLOT (HEADER DESKTOP BANNER PLACEHOLDER) */}
-            <div className="bg-bg-2/30 border border-rule/50 rounded p-4 text-center select-none relative overflow-hidden">
-              <span className="absolute top-1 right-2 font-mono text-[7px] uppercase tracking-widest text-muted-2">Advertisement Slot</span>
-              <div className="min-h-[90px] border border-dashed border-rule rounded bg-paper/60 flex flex-col items-center justify-center p-2">
-                <span className="font-mono text-[8px] text-muted-2 tracking-widest uppercase">Leaderboard Placement (AdSense Script)</span>
-                <span className="text-[10px] text-muted mt-0.5">Recommended sizes: 728x90 or 970x90 Responsive Unit</span>
-              </div>
-            </div>
+            <AdSlot slotId={import.meta.env.VITE_ADSENSE_SLOT_BANNER} />
 
             {/* ARTICLES LOOP */}
             {loading ? (
@@ -291,14 +285,7 @@ export default function BlogListView() {
               </Link>
             </Card>
 
-            {/* AD PLACEMENT SIDEBAR BOX */}
-            <div className="bg-bg-2/30 border border-rule/50 rounded p-4 text-center select-none space-y-1">
-              <span className="font-mono text-[8px] uppercase tracking-widest text-muted-2">Ad Unit: sidebar-post-ad</span>
-              <div className="h-[250px] border border-dashed border-rule rounded bg-paper/60 flex flex-col items-center justify-center p-3">
-                <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest font-bold">Square Native Ad Placement</span>
-                <span className="text-[10px] text-muted mt-1">Responsive AdSense Script Slot</span>
-              </div>
-            </div>
+            <AdSlot slotId={import.meta.env.VITE_ADSENSE_SLOT_SQUARE} format="rectangle" />
 
             {/* RELATED EXAMS SUMMARY CARDS */}
             <Card className="bg-paper border border-rule p-5 space-y-4 rounded shadow-sm">

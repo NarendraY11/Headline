@@ -26,7 +26,7 @@ export default function BlogManager() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isNew, setIsNew] = useState(false);
-  const [currentPost, setCurrentPost] = useState<Partial<any>>({
+  const [currentPost, setCurrentPost] = useState<any>({
     slug: "",
     title: "",
     description: "",

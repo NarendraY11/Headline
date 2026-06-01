@@ -24,9 +24,9 @@ export interface UserData {
   lastActivityDate?: string;
   questionsAnsweredToday?: number;
   settings?: {
-    negativeMarking: boolean;
-    reduceMotion: boolean;
-    defaultMode: string;
+    negativeMarking?: boolean;
+    reduceMotion?: boolean;
+    defaultMode?: string;
     practiceLayout?: 'auto' | 'editorial' | 'split';
     timedLayout?: 'auto' | 'instrument' | 'editorial';
     vivaLayout?: 'auto' | 'flashcard' | 'editorial';
@@ -34,11 +34,21 @@ export interface UserData {
     streakCount?: number;
     lastActivityDate?: string;
     questionsAnsweredToday?: number;
+    dashboardTiles?: string[];
+    doNotDisturb?: boolean;
+    remindersEnabled?: boolean;
+    nextCheckName?: string;
+    nextCheckDate?: string;
+    nextCheckTime?: string;
+    lastDiagnosticScore?: number;
+    theme?: string;
+    onboardingCompletedAt?: string;
   };
   referralCode?: string;
   referredBy?: string;
   newsletterOptIn?: boolean;
   onboardingCompleted?: boolean;
+  role?: "admin" | "user";
 }
 
 export interface CompatUser {

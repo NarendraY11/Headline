@@ -2,15 +2,15 @@ import { useEffect } from 'react';
 import { useToast } from './ui/Toast';
 
 export function GlobalToastListener() {
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   useEffect(() => {
     const handleForceLogout = (e: Event) => {
       const customEvent = e as CustomEvent;
-      toast({
+      showToast({
         title: "Session Expired",
-        description: customEvent.detail?.message || "You have been logged out.",
-        variant: "destructive"
+        message: customEvent.detail?.message || "You have been logged out.",
+        type: "error"
       });
     };
 
@@ -18,7 +18,7 @@ export function GlobalToastListener() {
     return () => {
       window.removeEventListener('force-logout-toast', handleForceLogout);
     };
-  }, [toast]);
+  }, [showToast]);
 
   return null;
 }

@@ -353,7 +353,7 @@ export default function BulkImport() {
               1. Drop Question Catalog File
             </div>
 
-            <div
+            <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
               onDragOver={handleDragOver}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}

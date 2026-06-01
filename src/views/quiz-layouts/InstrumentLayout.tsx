@@ -250,7 +250,7 @@ export default function InstrumentLayout({
                     }
 
                     return (
-                      <motion.div
+                      <motion.div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                         key={choice.id}
                         whileTap={{ scale: 0.99 }}
                         onClick={() => handleSelectOption(choice.id)}

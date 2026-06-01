@@ -7,6 +7,7 @@ import { useLogbook } from "../hooks/useLogbook";
 import { useToast } from "../components/ui/Toast";
 import { supabase } from "../lib/supabase";
 import { useGlobalLoading } from "../contexts/LoadingContext";
+import { useFeature } from "../hooks/useFeatureFlags";
 import { motion, AnimatePresence } from "motion/react";
 import { Wordmark, Chip, Button, CompassLogomark } from "../components/Atoms";
 import { Question } from "../data/questions";
@@ -51,6 +52,10 @@ export default function QuizView() {
   const { addNotification } = useNotifications();
   const { setLoading: setGlobalLoading } = useGlobalLoading();
   const { logbook } = useLogbook();
+  const aiCoachEnabled = useFeature("aiCoach");
+  const aiExplainEnabled = useFeature("aiExplain");
+  const flashcardsEnabled = useFeature("flashcards");
+  const cockpitEnabled = useFeature("cockpitLayouts");
 
   // Load questions
   const customQuestions = location.state?.customQuestions as
@@ -1447,7 +1452,7 @@ export default function QuizView() {
             percentage={percentage}
             subjectTitle={customTopic || (questions && questions[0]?.ata) || "Quiz Attempt"}
             passed={passed}
-            defaultUserName={userData?.display_name || ""}
+            defaultUserName={user?.displayName || ""}
           />
 
           {/* FREE USER UPGRADE PROMPT ON MOCK END */}
@@ -1564,15 +1569,16 @@ export default function QuizView() {
           </div>
 
           {/* AI Box */}
-          <div className="mb-12">
-            {!user ? (
-              <div className="border border-dashed border-rule bg-bg p-6 rounded-xl text-center flex flex-col items-center gap-2 shadow-sm">
-                <p className="font-sans text-[14px] font-mono tracking-widest uppercase text-muted-2">
-                  Sign in to use AI coaching
-                </p>
-              </div>
-            ) : !studyPlan && !isCoachLoading ? (
-              <div
+          {aiCoachEnabled && (
+            <div className="mb-12">
+              {!user ? (
+                <div className="border border-dashed border-rule bg-bg p-6 rounded-xl text-center flex flex-col items-center gap-2 shadow-sm">
+                  <p className="font-sans text-[14px] font-mono tracking-widest uppercase text-muted-2">
+                    Sign in to use AI coaching
+                  </p>
+                </div>
+              ) : !studyPlan && !isCoachLoading ? (
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                 className="border border-rule bg-paper p-6 rounded-xl text-center flex flex-col items-center gap-4 hover:border-mint/50 hover:bg-ring-green/5 transition-colors group cursor-pointer shadow-sm"
                 onClick={handleGetStudyPlan}
               >
@@ -1612,6 +1618,7 @@ export default function QuizView() {
               </div>
             )}
           </div>
+          )}
 
           {/* Q-by-Q TABLE */}
           <div className="bg-paper bg-opacity-70 border border-rule/50 rounded-xl shadow-sm overflow-hidden mb-8 backdrop-blur-sm">
@@ -1680,7 +1687,7 @@ export default function QuizView() {
                         : "--:--";
 
                       return (
-                        <tr
+                        <tr role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                           key={q.id}
                           className={`transition-colors group cursor-pointer ${bgHover}`}
                           onClick={() =>
@@ -1855,6 +1862,7 @@ export default function QuizView() {
     storageKey,
     customQuestions: customQuestions || null,
     navigate,
+    aiExplainEnabled,
   };
 
   let LayoutComponent: any;
@@ -1862,11 +1870,11 @@ export default function QuizView() {
   if (mode === "viva") {
     const override = userData?.settings?.vivaLayout || "auto";
     LayoutComponent =
-      override === "editorial" ? EditorialLayout : FlashcardLayout;
+      (override === "editorial" || !flashcardsEnabled) ? EditorialLayout : FlashcardLayout;
   } else if (mode === "timed") {
     const override = userData?.settings?.timedLayout || "auto";
     LayoutComponent =
-      override === "editorial" ? EditorialLayout : InstrumentLayout;
+      (override === "editorial" || !cockpitEnabled) ? EditorialLayout : InstrumentLayout;
   } else {
     // practice
     const override = userData?.settings?.practiceLayout || "auto";
@@ -1959,14 +1967,14 @@ export default function QuizView() {
         )}
 
         {showAbortPrompt && (
-          <motion.div
+          <motion.div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/70 backdrop-blur-sm"
             onClick={() => setShowAbortPrompt(false)}
           >
-            <motion.div
+            <motion.div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}

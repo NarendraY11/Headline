@@ -3,8 +3,10 @@ import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "./ui/Toast";
 import { motion, AnimatePresence } from "motion/react";
+import FocusTrap from "focus-trap-react";
 import { X, Mail, Lock, User, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { Button, Card } from "./Atoms";
+import { useFeature } from "../hooks/useFeatureFlags";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,8 +17,11 @@ interface AuthModalProps {
 export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: AuthModalProps) {
   const { signInWithGoogle } = useAuth();
   const { showToast } = useToast();
+  const signupsOpen = useFeature("signupsOpen");
   
-  const [activeTab, setActiveTab] = useState<"signin" | "signup" | "forgot">(defaultTab);
+  const [activeTab, setActiveTab] = useState<"signin" | "signup" | "forgot">(
+    defaultTab === "signup" && !signupsOpen ? "signin" : defaultTab
+  );
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -209,37 +214,40 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-        {/* Backdrop overlay */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={loading ? undefined : onClose}
-          className="fixed inset-0 bg-ink/30 dark:bg-black/60 backdrop-blur-md"
-        />
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <FocusTrap focusTrapOptions={{ initialFocus: false, escapeDeactivates: false, clickOutsideDeactivates: false, returnFocusOnDeactivate: true }}>
+            <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
+              {/* Backdrop overlay */}
+              <motion.div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={loading ? undefined : onClose}
+                className="fixed inset-0 bg-ink/30 dark:bg-black/60 backdrop-blur-md pointer-events-auto"
+              />
 
-        {/* Modal body container */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, y: 15 }}
-          transition={{ duration: 0.23, ease: "easeOut" }}
-          className="relative w-full max-w-md z-10"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-        >
-          <Card className="p-6 md:p-8 bg-paper border border-rule-strong shadow-2xl relative">
-            {/* Close button */}
-            <button
-              onClick={onClose}
-              disabled={loading}
-              className="absolute top-4 right-4 p-1.5 text-muted hover:text-ink hover:bg-bg-2 rounded-full cursor-pointer transition-colors"
-              aria-label="Close authentication modal"
-            >
-              <X size={18} />
-            </button>
+              {/* Modal body container */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 15 }}
+                transition={{ duration: 0.23, ease: "easeOut" }}
+                className="relative w-full max-w-md z-10 pointer-events-auto mx-4"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="modal-title"
+              >
+                <Card className="p-6 md:p-8 bg-paper border border-rule-strong shadow-2xl relative">
+                  {/* Close button */}
+                  <button
+                    onClick={onClose}
+                    disabled={loading}
+                    className="absolute top-4 right-4 p-1.5 text-muted hover:text-ink hover:bg-bg-2 rounded-full cursor-pointer transition-colors"
+                    aria-label="Close authentication modal"
+                  >
+                    <X size={18} />
+                  </button>
 
             {/* Header branding */}
             <div className="text-center mb-6">
@@ -347,7 +355,15 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                 </form>
               )}
 
-              {activeTab === "signup" && (
+              {activeTab === "signup" && !signupsOpen && (
+                <div className="py-8 text-center">
+                  <AlertCircle size={32} className="mx-auto text-muted-2 mb-3" />
+                  <p className="font-medium text-ink">Registration is currently closed.</p>
+                  <p className="text-sm text-muted-2 mt-1">We are not accepting new accounts at this time. Please check back later.</p>
+                </div>
+              )}
+
+              {activeTab === "signup" && signupsOpen && (
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div>
                     <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
@@ -554,13 +570,17 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                 {activeTab === "signin" && (
                   <p className="text-xs text-muted-2">
                     Don't have an account?{" "}
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab("signup")}
-                      className="text-indigo-600 dark:text-sky font-semibold hover:underline cursor-pointer"
-                    >
-                      Sign up
-                    </button>
+                    {signupsOpen ? (
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("signup")}
+                        className="text-indigo-600 dark:text-sky font-semibold hover:underline cursor-pointer"
+                      >
+                        Sign up
+                      </button>
+                    ) : (
+                      <span className="text-muted-3">Signups closed for now.</span>
+                    )}
                   </p>
                 )}
                 {activeTab === "signup" && (
@@ -580,6 +600,9 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
           </Card>
         </motion.div>
       </div>
+      </FocusTrap>
+      </div>
+      )}
     </AnimatePresence>
   );
 }

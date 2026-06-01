@@ -15,12 +15,12 @@ import {
 export default function ReferralView() {
   useDocumentMeta();
 
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [referrals, setReferrals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
-  const referralCode = user?.referralCode || "PILOT";
+  const referralCode = userData?.referralCode || "PILOT";
   const referralLink = `${window.location.origin}?ref=${referralCode}`;
 
   const fetchReferralStats = async () => {

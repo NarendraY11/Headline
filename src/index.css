@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+@layer base {
+  button, a, [role="button"], input, select, textarea {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg;
+  }
+}
+
 @font-face {
   font-family: "Instrument Serif Fallback";
   src: local("Georgia");
@@ -38,7 +44,7 @@
   --rule-strong: rgba(13, 26, 45, 0.22);
   --signal: #c2402e;
   --signal-soft: #f0d9d3;
-  --amber: #c98a2b;
+  --amber: #946108; /* Fixed from #c98a2b for 4.5:1 contrast on light bg */
   --amber-soft: #f1e2c1;
   --mint: #2c6e54;
   --mint-soft: #d4e6dc;
@@ -66,9 +72,13 @@
   --rule-strong: rgba(245, 242, 234, 0.25);
   --muted: #cbd5e1;
   --muted-2: #94a3b8;
+  --signal: #e85d4a; /* Added to fix 4.5:1 contrast on dark bg */
   --signal-soft: #4a1913;
+  --amber: #c98a2b; /* Original amber works well on dark bg (6:1) */
   --amber-soft: #52370e;
+  --mint: #4ade80; /* Added to fix 4.5:1 contrast on dark bg */
   --mint-soft: #0d2e21;
+  --sky: #7eb6f2; /* Added to fix 4.5:1 contrast on dark bg */
   --sky-soft: #14283f;
   --ring-green: #37bf30;
 }

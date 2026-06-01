@@ -30,6 +30,8 @@ import {
 import { useAuth } from "./contexts/AuthContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { lazy, Suspense } from "react";
+import { useFeature } from "./hooks/useFeatureFlags";
+import { AlertCircle } from "lucide-react";
 import { OnboardingFlow } from "./views/OnboardingFlow";
 import TopSubscriptionBanner from "./components/TopSubscriptionBanner";
 import { isPaidActive, planLabel } from "./lib/plan";
@@ -70,6 +72,7 @@ const BulkImport = lazy(() => import("./views/admin/BulkImport"));
 const UsersAnalytics = lazy(() => import("./views/admin/UsersAnalytics"));
 const AdminActivity = lazy(() => import("./views/admin/AdminActivity"));
 const AdminSettings = lazy(() => import("./views/admin/AdminSettings"));
+const FeatureControl = lazy(() => import("./views/admin/FeatureControl"));
 const BlogManager = lazy(() => import("./views/admin/BlogManager"));
 
 import SearchOverlay from "./views/SearchOverlay";
@@ -1263,11 +1266,14 @@ function AppShell() {
     return path.startsWith(to);
   };
 
+  const mockExamsEnabled = useFeature("mockExams");
+  const a320SystemsEnabled = useFeature("a320Systems");
+
   const navItems = [
     { label: "Today", to: "/today", icon: Compass },
     { label: "Question bank", to: "/modules", icon: Layers },
-    { label: "Mock exams", to: "/mock-exams", icon: LayoutGrid },
-    { label: "A320 systems", to: "/topic/a320-systems", icon: Plane },
+    ...(mockExamsEnabled ? [{ label: "Mock exams", to: "/mock-exams", icon: LayoutGrid }] : []),
+    ...(a320SystemsEnabled ? [{ label: "A320 systems", to: "/topic/a320-systems", icon: Plane }] : []),
     { label: "VIVA practice", to: "/quiz/viva", icon: Mic },
     { label: "Flashcards", to: "/bookmarks", icon: Zap },
     { label: "Progress", to: "/analytics", icon: BarChart3 },
@@ -1702,9 +1708,58 @@ function AuthModalTrigger() {
   );
 }
 
+function FeatureGatingBlocks() {
+  const maintenanceMode = useFeature("maintenanceMode");
+  const announcementBanner = useFeature("announcementBanner");
+  const announcementText = useFeature("announcementText");
+  const { userData } = useAuth(); // don't block admins even if maintenance is on
+  
+  if (maintenanceMode && userData?.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-bg">
+        <div className="p-8 max-w-md text-center bg-paper border border-rule-strong rounded-xl shadow-sm">
+          <AlertCircle className="w-12 h-12 text-muted-2 mx-auto mb-4" />
+          <h1 className="text-xl font-serif text-ink mb-2">Scheduled Maintenance</h1>
+          <p className="text-muted text-sm">
+            Our systems are currently undergoing required maintenance. We will be back online shortly.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      {announcementBanner && announcementText && (
+        <div className="w-full bg-indigo-600 dark:bg-indigo-500/20 dark:border-b dark:border-indigo-500 text-white dark:text-sky text-[11px] font-sans font-medium text-center py-1.5 px-4 tracking-wide shadow-sm z-[100] relative">
+          {announcementText}
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function App() {
+  const maintenanceMode = useFeature("maintenanceMode");
+  const { userData } = useAuth();
+
+  if (maintenanceMode && userData?.role !== "admin") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-bg">
+        <div className="p-8 max-w-md text-center bg-paper border border-rule-strong rounded-xl shadow-sm">
+          <AlertCircle className="w-12 h-12 text-muted-2 mx-auto mb-4" />
+          <h1 className="text-xl font-serif text-ink mb-2">Scheduled Maintenance</h1>
+          <p className="text-muted text-sm">
+            Our systems are currently undergoing required maintenance. We will be back online shortly.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <Router>
+      <FeatureGatingBlocks />
       <RouteMetaHelper />
       <AuthModalTrigger />
       <CookieConsent />
@@ -1739,6 +1794,7 @@ export default function App() {
             <Route path="/admin/users" element={<UsersAnalytics />} />
             <Route path="/admin/activity" element={<AdminActivity />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/features" element={<FeatureControl />} />
             <Route path="/admin/blog" element={<BlogManager />} />
           </Route>
 

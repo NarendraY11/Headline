@@ -269,7 +269,7 @@ export default function SubjectsManager() {
             onClick={fetchData}
             disabled={loading}
             className="p-2 border border-rule hover:bg-bg-2 rounded-full transition-colors inline-flex justify-center items-center text-ink disabled:opacity-50 h-10 w-10 shrink-0"
-            title="Refresh database state"
+            aria-label="Refresh database state" title="Refresh database state"
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>

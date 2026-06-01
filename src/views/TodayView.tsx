@@ -22,6 +22,7 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import { useLogbook } from "../hooks/useLogbook";
 import { useGlobalLoading } from "../contexts/LoadingContext";
+import { useFeature } from "../hooks/useFeatureFlags";
 import { SubjectItem } from "../data/topics";
 import { fetchMergedSubjects } from "../lib/content";
 import { getDueQuestionIds } from "../lib/spacedRepetition";
@@ -247,7 +248,7 @@ function WeatherWidget() {
           <div className="flex flex-col gap-3">
             <div className="flex items-start gap-3">
               {weatherData?.condition && (
-                <div
+                <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                   className="mt-1 cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => setExpanded(!expanded)}
                   title="Click to toggle forecast"
@@ -282,7 +283,8 @@ function WeatherWidget() {
 }
 
 export default function TodayView() {
-  const { userData, loading, updateUserData } = useAuth();
+  const { userData, user, loading, updateUserData } = useAuth();
+  const weatherBriefingEnabled = useFeature("weatherBriefing");
   const { stats: progressStats } = useUserProgress();
   const [notificationStatus, setNotificationStatus] = useState<
     NotificationPermission | "unsupported"
@@ -295,14 +297,14 @@ export default function TodayView() {
   useEffect(() => {
     async function fetchDueCount() {
       try {
-        const ids = await getDueQuestionIds(userData?.id || null);
+        const ids = await getDueQuestionIds(user?.id || null);
         setDueCount(ids.length);
       } catch (err) {
         console.error("Failed loading due count in TodayView:", err);
       }
     }
     fetchDueCount();
-  }, [userData?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     async function loadSubjects() {
@@ -427,7 +429,7 @@ export default function TodayView() {
     isLate = true;
   }
 
-  const displayName = userData?.displayName || "Captain";
+  const displayName = user?.displayName || "Captain";
 
   const [activeSession, setActiveSession] = useState<{
     topicId: string;
@@ -1067,9 +1069,9 @@ export default function TodayView() {
 
         {/* WEATHER & MASTERY HEATMAP ROW */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-10 w-full">
-          <WeatherWidget />
+          {weatherBriefingEnabled && <WeatherWidget />}
 
-          <div className="bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-1 md:col-span-2 flex flex-col justify-between overflow-hidden relative min-h-[220px]">
+          <div className={`bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-1 ${weatherBriefingEnabled ? 'md:col-span-2' : 'md:col-span-3'} flex flex-col justify-between overflow-hidden relative min-h-[220px]`}>
             <div className="p-4 flex items-center justify-between border-b border-rule/50 z-10 bg-paper/80 backdrop-blur-md absolute top-0 left-0 right-0">
               <div className="font-mono text-[9px] text-muted-2 tracking-widest uppercase flex items-center gap-1.5">
                 <TrendingUp size={14} className="text-ink" />

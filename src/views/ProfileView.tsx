@@ -73,7 +73,7 @@ export default function ProfileView() {
     );
   }
 
-  const { targetExam = "DGCA CPL", streaks = 0, photoURL: firestorePhotoURL } = userData || {};
+  const { targetExam = "DGCA CPL", streakCount = 0, photoURL: firestorePhotoURL } = userData || {};
   const currentPhotoURL = firestorePhotoURL || user.photoURL;
 
   let daysDiff: number | null = null;
@@ -333,7 +333,7 @@ export default function ProfileView() {
         <Card className="bg-panel border-rule p-6">
           <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Consecutive Days</div>
           <div className="font-serif text-3xl text-ink flex items-end gap-2">
-            {streaks} <span className="font-sans text-xs font-semibold text-muted pb-1">DAY STREAK</span>
+            {streakCount} <span className="font-sans text-xs font-semibold text-muted pb-1">DAY STREAK</span>
           </div>
         </Card>
         <Card className="bg-panel border-rule p-6 relative group">

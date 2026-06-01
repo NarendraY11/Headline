@@ -31,4 +31,5 @@ export interface QuizLayoutProps {
   storageKey: string;
   customQuestions?: Question[] | null;
   navigate: (to: string) => void;
+  aiExplainEnabled?: boolean;
 }

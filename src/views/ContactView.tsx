@@ -4,7 +4,7 @@ import { useToast } from "../components/ui/Toast";
 import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
 
 export default function ContactView() {
-  const { toast } = useToast();
+  const { showToast } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -17,10 +17,10 @@ export default function ContactView() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) {
-      toast({
+      showToast({
         title: "Validation Error",
-        description: "Please fill out all required fields before dispatching your flight note.",
-        variant: "destructive"
+        message: "Please fill out all required fields before dispatching your flight note.",
+        type: "error"
       });
       return;
     }
@@ -30,10 +30,10 @@ export default function ContactView() {
     setTimeout(() => {
       setLoading(false);
       setSubmitted(true);
-      toast({
+      showToast({
         title: "Message Dispatched",
-        description: "Your briefing report was successfully received. Our ground crew will contact you shortly.",
-        variant: "default"
+        message: "Your briefing report was successfully received. Our ground crew will contact you shortly.",
+        type: "success"
       });
     }, 1200);
   };

@@ -66,6 +66,17 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // === Security Headers Middleware ===
+  app.use((req, res, next) => {
+    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://*.razorpay.com https://vitals.vercel-insights.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.supabase.co https://checkout.razorpay.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.gstatic.com; connect-src 'self' wss://*.supabase.co https://*.supabase.co https://checkout.razorpay.com https://*.razorpay.com https://aviationweather.gov https://vitals.vercel-insights.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.gstatic.com; frame-src 'self' https://checkout.razorpay.com https://*.razorpay.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://*.google.com https://*.gstatic.com; object-src 'none'; base-uri 'self';");
+    res.setHeader("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+    res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    next();
+  });
+
   // === Razorpay Webhook (must accept raw body, so declared before express.json()) ===
   app.post("/api/payment/webhook", express.raw({ type: "application/json" }), async (req, res) => {
     try {
@@ -74,6 +85,12 @@ async function startServer() {
       const rawBody = bodyBuffer ? bodyBuffer.toString("utf8") : "";
 
       const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+      if (process.env.NODE_ENV === "production" && !webhookSecret) {
+        console.error("CRITICAL: RAZORPAY_WEBHOOK_SECRET is missing in production. Refusing webhook.");
+        return res.status(500).json({ error: "Server misconfiguration" });
+      }
+
       if (webhookSecret) {
         if (!signature) {
           console.error("Webhook signature header is missing.");
@@ -178,8 +195,70 @@ async function startServer() {
     next();
   };
 
+  const requirePro = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    try {
+      const uid = (req as any).uid;
+      const admin = getSupabaseAdmin();
+      const { data: profile } = await admin.from('profiles').select('*').eq('id', uid).single();
+      
+      let isPro = false;
+      if (profile) {
+        const plan = profile.plan;
+        const planExpiresAt = profile.plan_expires_at || profile.planExpiresAt;
+        
+        if (plan === 'lifetime') isPro = true;
+        else if (plan === 'pro') {
+          if (!planExpiresAt) isPro = true;
+          else isPro = new Date(planExpiresAt).getTime() > new Date().getTime();
+        } else if (plan === 'trial') {
+          if (planExpiresAt && new Date(planExpiresAt).getTime() > new Date().getTime()) {
+            isPro = true;
+          }
+        }
+      }
+      
+      if (!isPro) {
+        return res.status(403).json({ error: "Access denied. Pro or active Trial subscription required." });
+      }
+      next();
+    } catch (e) {
+      console.error("requirePro error:", e);
+      return res.status(500).json({ error: "Failed to verify subscription status." });
+    }
+  };
+
+  // === Feature Flags ===
+  let appSettingsCache: { flags: Record<string, boolean>, timestamp: number } | null = null;
+  const CACHE_TTL = 60 * 1000; // 60 seconds
+
+  const assertFeatureEnabled = async (flagKey: string, res: express.Response) => {
+    try {
+      const now = Date.now();
+      if (!appSettingsCache || (now - appSettingsCache.timestamp > CACHE_TTL)) {
+        const admin = getSupabaseAdmin();
+        const { data } = await admin.from('app_settings').select('flags').eq('id', 1).single();
+        if (data && data.flags) {
+           appSettingsCache = { flags: data.flags, timestamp: now };
+        } else {
+           appSettingsCache = { flags: {}, timestamp: now };
+        }
+      }
+      
+      const enabled = appSettingsCache.flags[flagKey] ?? true;
+      if (!enabled) {
+        res.status(403).json({ error: "This feature is currently disabled." });
+        return false;
+      }
+      return true;
+    } catch (e) {
+       console.error("Feature flag check error:", e);
+       return true; 
+    }
+  };
+
   // === Razorpay Order Creation Endpoint ===
   app.post("/api/payment/create-order", requireAuth, rateLimiter, async (req, res) => {
+    if (!(await assertFeatureEnabled("pricingCheckout", res))) return;
     try {
       const { interval = "monthly" } = req.body;
       const amount = interval === "yearly" ? 2999 * 100 : 499 * 100;
@@ -205,6 +284,7 @@ async function startServer() {
 
   // === Razorpay Signature Verification Endpoint ===
   app.post("/api/payment/verify", requireAuth, rateLimiter, async (req, res) => {
+    if (!(await assertFeatureEnabled("pricingCheckout", res))) return;
     try {
       const { razorpay_payment_id, razorpay_order_id, razorpay_signature, interval } = req.body;
       const signaturePayload = `${razorpay_order_id}|${razorpay_payment_id}`;
@@ -310,6 +390,7 @@ async function startServer() {
 
   // === TIER & TRIAL MANAGEMENT ENDPOINT ===
   app.post("/api/start-trial", requireAuth, rateLimiter, async (req, res) => {
+    if (!(await assertFeatureEnabled("freeTrial", res))) return;
     try {
       const admin = getSupabaseAdmin();
       const userId = (req as any).uid;
@@ -382,6 +463,7 @@ async function startServer() {
 
   // === AI FEATURE 1: "Ask the Instructor" ===
   app.post("/api/instructor/explain", requireAuth, rateLimiter, async (req, res) => {
+    if (!(await assertFeatureEnabled("aiExplain", res))) return;
     try {
       const { prompt, userAnswer, correctAnswer } = req.body;
       
@@ -411,9 +493,29 @@ async function startServer() {
   });
 
   // === AI FEATURE 2: "Generate practice questions" ===
-  app.post("/api/instructor/practice", requireAuth, rateLimiter, async (req, res) => {
+  app.post("/api/instructor/practice", requireAuth, requirePro, rateLimiter, async (req, res) => {
+    if (!(await assertFeatureEnabled("aiPractice", res))) return;
     try {
       const { topic, code } = req.body;
+      const admin = getSupabaseAdmin();
+      
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: cachedDrafts } = await admin.from('questions')
+        .select('id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation')
+        .eq('ata', code)
+        .eq('status', 'draft')
+        .gte('created_at', oneDayAgo)
+        .limit(5);
+
+      if (cachedDrafts && cachedDrafts.length === 5) {
+        // Map db format back to expected json format for client
+        const out = cachedDrafts.map((q: any) => ({
+          ...q,
+          diagramCaption: q.diagram_caption,
+          references: []
+        }));
+        return res.json(out);
+      }
       
       const response = await ai.models.generateContent({
         model: "gemini-3.5-flash",
@@ -451,7 +553,31 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
       responseText = responseText.replace(/^```json\s*/, "").replace(/\s*```$/, "");
       
       const questions = JSON.parse(responseText);
-      res.json(questions);
+      
+      const questionsToInsert = questions.map((q: any) => ({
+        id: crypto.randomUUID(),
+        ata: code,
+        prompt: q.prompt,
+        diagram_caption: q.diagramCaption || null,
+        choices: q.choices,
+        correct: q.correct,
+        explanation: q.explanation,
+        difficulty: q.difficulty || "standard",
+        status: "draft"
+      }));
+
+      const { data: inserted, error: insertError } = await admin.from('questions').insert(questionsToInsert).select();
+      if (insertError) {
+        console.error("Error inserting drafts:", insertError);
+        return res.json(questions);
+      }
+
+      const out = inserted.map((q: any) => ({
+          ...q,
+          diagramCaption: q.diagram_caption,
+          references: []
+      }));
+      res.json(out);
     } catch (error) {
       console.error("Error generating practice questions:", error);
       res.status(500).json({ error: "Failed to generate practice set. Please try again." });
@@ -459,9 +585,21 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   });
 
   // === AI FEATURE 3: "Weak-area coach" ===
-  app.post("/api/instructor/coach", requireAuth, rateLimiter, async (req, res) => {
+  app.post("/api/instructor/coach", requireAuth, requirePro, rateLimiter, async (req, res) => {
+    if (!(await assertFeatureEnabled("aiCoach", res))) return;
     try {
       const { scores } = req.body;
+      const uid = (req as any).uid;
+      const payloadHash = crypto.createHash('sha256').update(JSON.stringify(scores)).digest('hex');
+      const cacheKey = `coach_${uid}_${payloadHash}`;
+      const admin = getSupabaseAdmin();
+      
+      const { data: cacheRow } = await admin.from('ai_cache').select('*').eq('cache_key', cacheKey).single();
+      const CACHE_DURATION = 24 * 60 * 60 * 1000;
+      if (cacheRow && (Date.now() - new Date(cacheRow.updated_at).getTime() < CACHE_DURATION)) {
+        return res.json(cacheRow.data);
+      }
+
       // scores might look like { "ATA 27": { correct: 5, total: 8 }, "ATA 21": { correct: 2, total: 10 } }
       
       const scoresText = Object.entries(scores).map(([topic, data]: [string, any]) => 
@@ -478,7 +616,14 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
         }
       });
 
-      res.json({ text: response.text });
+      const finalData = { text: response.text };
+      await admin.from('ai_cache').upsert({
+        cache_key: cacheKey,
+        data: finalData,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'cache_key' });
+
+      res.json(finalData);
     } catch (error) {
       console.error("Error generating study plan:", error);
       res.status(500).json({ error: "Failed to generate study plan. Please try again." });
@@ -486,9 +631,23 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   });
 
   // === AI FEATURE 4: "Analytics Diagnosis" ===
-  app.post("/api/instructor/diagnosis", requireAuth, rateLimiter, async (req, res) => {
+  app.post("/api/instructor/diagnosis", requireAuth, requirePro, rateLimiter, async (req, res) => {
+    if (!(await assertFeatureEnabled("aiDiagnosis", res))) return;
     try {
       const { summary } = req.body;
+      const uid = (req as any).uid;
+      const today = new Date().toISOString().split('T')[0];
+      const cacheKey = `diagnosis_${uid}_${today}`;
+      const admin = getSupabaseAdmin();
+
+      const { data: cacheRow } = await admin.from('ai_cache').select('*').eq('cache_key', cacheKey).single();
+      const CACHE_DURATION = 24 * 60 * 60 * 1000;
+      if (cacheRow && (Date.now() - new Date(cacheRow.updated_at).getTime() < CACHE_DURATION)) {
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        res.write(cacheRow.data.text);
+        return res.end();
+      }
+
       const responseStream = await ai.models.generateContentStream({
         model: "gemini-3.5-flash",
         contents: [
@@ -501,10 +660,21 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
       res.setHeader("Content-Type", "text/plain; charset=utf-8");
       res.setHeader("Transfer-Encoding", "chunked");
 
+      let fullText = "";
       for await (const chunk of responseStream) {
-        if (chunk.text) res.write(chunk.text);
+        if (chunk.text) {
+          fullText += chunk.text;
+          res.write(chunk.text);
+        }
       }
       res.end();
+      
+      await admin.from('ai_cache').upsert({
+        cache_key: cacheKey,
+        data: { text: fullText },
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'cache_key' });
+
     } catch (error) {
       console.error("Error in AI diagnosis:", error);
       res.status(500).json({ error: "Failed to generate diagnosis." });
@@ -512,7 +682,8 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   });
 
   // === WEATHER METAR ENDPOINT (WITH SERVER CACHING) ===
-  app.post("/api/weather", requireAuth, rateLimiter, async (req, res) => {
+  app.post("/api/weather", requireAuth, requirePro, rateLimiter, async (req, res) => {
+    if (!(await assertFeatureEnabled("weatherBriefing", res))) return;
     try {
       const { icao = "EGLL" } = req.body;
       const cachedKey = icao.trim().toUpperCase();
@@ -586,131 +757,33 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
     const proto = req.headers["x-forwarded-proto"] || "https";
     const baseUrl = `${proto}://${host}`;
 
-    // Define page-type priority and changefreq settings
-    interface SiteMapConfig {
-      priority: string;
-      changefreq: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
-    }
+    const { generateSitemapXml } = await import("./src/lib/sitemap.js");
 
-    const CONFIG_BY_PAGE_TYPE: Record<string, SiteMapConfig> = {
-      home: { priority: "1.0", changefreq: "daily" },
-      exam_landing: { priority: "0.95", changefreq: "daily" }, // Higher priority & frequent check-ins for core exam landing pages
-      topic_module: { priority: "0.80", changefreq: "weekly" },
-      blog_article: { priority: "0.75", changefreq: "weekly" },
-      marketing: { priority: "0.65", changefreq: "monthly" },
-      legal: { priority: "0.30", changefreq: "yearly" }
-    };
-
-    const staticRoutes = [
-      { path: "", type: "home" },
-      { path: "/about", type: "marketing" },
-      { path: "/pricing", type: "marketing" },
-      { path: "/contact", type: "marketing" },
-      { path: "/blog", type: "marketing" },
-      { path: "/privacy", type: "legal" },
-      { path: "/terms", type: "legal" },
-      { path: "/refund", type: "legal" },
-    ];
-
-    const examPaths = [
-      "/exams/dgca-cpl",
-      "/exams/dgca-atpl",
-      "/exams/easa-atpl",
-      "/exams/faa-written",
-      "/exams/a320-type-rating",
-    ];
-
-    const staticBlogSlugs = [
-      "dgca-cpl-air-navigation-syllabus-2026",
-      "how-to-pass-easa-meteorology",
-      "a320-flight-control-computers-elac-sec-fac",
-      "complete-guide-faa-written-exams-acs",
-    ];
-
-    let blogSlugs = [...staticBlogSlugs];
-    try {
-      const adminSupabase = getSupabaseAdmin();
-      const { data } = await adminSupabase
-        .from("blog_posts")
-        .select("slug")
-        .eq("status", "published");
-      if (data && data.length > 0) {
-        const fetchedSlugs = data.map((item: any) => item.slug);
-        blogSlugs = Array.from(new Set([...staticBlogSlugs, ...fetchedSlugs]));
+    const xml = await generateSitemapXml(baseUrl, async () => {
+      try {
+        const adminSupabase = getSupabaseAdmin();
+        const { data } = await adminSupabase
+          .from("blog_posts")
+          .select("slug, updated_at")
+          .eq("status", "published");
+        return data || [];
+      } catch (e) {
+        return [];
       }
-    } catch (e) {
-      console.warn("Failed to retrieve dynamic blog posts for sitemap from Supabase, resorting to static slugs.");
-    }
-
-    const topicPaths = [
-      "/topic/air-navigation",
-      "/topic/meteorology",
-      "/topic/air-regulations",
-      "/topic/technical-general",
-      "/topic/human-performance",
-      "/topic/a320-systems",
-    ];
-
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-    xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-
-    // 1. Static routes (Home, Marketing, Legal)
-    staticRoutes.forEach(({ path: r, type }) => {
-      const config = CONFIG_BY_PAGE_TYPE[type];
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}${r}</loc>\n`;
-      xml += `    <changefreq>${config.changefreq}</changefreq>\n`;
-      xml += `    <priority>${config.priority}</priority>\n`;
-      xml += `  </url>\n`;
     });
-
-    // 2. Exam landing pages (Highly promoted)
-    examPaths.forEach(r => {
-      const config = CONFIG_BY_PAGE_TYPE["exam_landing"];
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}${r}</loc>\n`;
-      xml += `    <changefreq>${config.changefreq}</changefreq>\n`;
-      xml += `    <priority>${config.priority}</priority>\n`;
-      xml += `  </url>\n`;
-    });
-
-    // 3. Topic modules
-    topicPaths.forEach(tp => {
-      const config = CONFIG_BY_PAGE_TYPE["topic_module"];
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}${tp}</loc>\n`;
-      xml += `    <changefreq>${config.changefreq}</changefreq>\n`;
-      xml += `    <priority>${config.priority}</priority>\n`;
-      xml += `  </url>\n`;
-    });
-
-    // 4. Blog articles
-    blogSlugs.forEach(slug => {
-      const config = CONFIG_BY_PAGE_TYPE["blog_article"];
-      xml += `  <url>\n`;
-      xml += `    <loc>${baseUrl}/blog/${slug}</loc>\n`;
-      xml += `    <changefreq>${config.changefreq}</changefreq>\n`;
-      xml += `    <priority>${config.priority}</priority>\n`;
-      xml += `  </url>\n`;
-    });
-
-    xml += `</urlset>`;
 
     res.header("Content-Type", "application/xml");
     res.status(200).send(xml);
   });
 
   // === DYNAMIC ROBOTS.TXT ENGINE ===
-  app.get("/robots.txt", (req, res) => {
+  app.get("/robots.txt", async (req, res) => {
     const host = req.headers["x-forwarded-host"] || req.headers.host || "heading.com";
     const proto = req.headers["x-forwarded-proto"] || "https";
     const baseUrl = `${proto}://${host}`;
     
-    let content = `User-agent: *\n`;
-    content += `Allow: /\n`;
-    content += `Disallow: /admin\n`;
-    content += `Disallow: /admin/\n\n`;
-    content += `Sitemap: ${baseUrl}/sitemap.xml\n`;
+    const { generateRobotsTxt } = await import("./src/lib/robots.js");
+    const content = generateRobotsTxt(baseUrl);
     
     res.header("Content-Type", "text/plain");
     res.status(200).send(content);
@@ -728,6 +801,13 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
     // First let express.static try to find the direct mapping (which includes dist/<route>/index.html naturally)
     app.use(express.static(distPath, { extensions: ['html'] }));
     
+    // Known SPA prefixes
+    const KNOWN_PREFIXES = [
+      '/about', '/pricing', '/reset-password', '/privacy', '/terms', '/refund', '/contact', 
+      '/exams', '/blog', '/qotd', '/a320-systems', '/admin', '/today', '/modules', '/topic', 
+      '/mock-exams', '/analytics', '/bookmarks', '/profile', '/referral', '/quiz'
+    ];
+
     // For anything express.static didn't catch, check if there's a pre-rendered folder
     app.get('*all', async (req, res) => {
       // Clean path to prevent directory traversal
@@ -741,6 +821,12 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
         }
       } catch (err) {
         // file doesn't exist, ignore and fallback
+      }
+
+      // Soft 404 for unknown routes
+      const isKnownRoute = reqPath === '/' || KNOWN_PREFIXES.some(prefix => reqPath.startsWith(prefix));
+      if (!isKnownRoute) {
+        res.status(404);
       }
 
       // Final fallback to SPA shell

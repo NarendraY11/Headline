@@ -516,7 +516,7 @@ export default function UsersAnalytics() {
                       const passPercent = profile.avgScore >= 70;
 
                       return (
-                        <tr 
+                        <tr role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} 
                           key={profile.id} 
                           onClick={() => setSelectedUser(profile)}
                           className={`border-b border-rule/50 hover:bg-bg-2/40 transition-colors cursor-pointer select-none ${selectedUser?.id === profile.id ? "bg-bg-2/50" : ""}`}
@@ -631,8 +631,8 @@ export default function UsersAnalytics() {
 
       {/* Slide-out detail Drawer */}
       {selectedUser && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-xs animate-fadeIn" onClick={() => setSelectedUser(null)}>
-          <div 
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-xs animate-fadeIn" onClick={() => setSelectedUser(null)}>
+          <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} 
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-lg bg-white border-l border-rule h-screen flex flex-col shadow-2xl relative animate-slideLeft overflow-hidden"
           >

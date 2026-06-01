@@ -148,7 +148,7 @@ export default function NotificationCenter() {
                 </div>
               ) : (
                 notifications.map((item) => (
-                  <div
+                  <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                     key={item.id}
                     onClick={() => handleNotificationClick(item)}
                     className={`p-4 flex gap-3 relative transition-all group hover:bg-bg ${

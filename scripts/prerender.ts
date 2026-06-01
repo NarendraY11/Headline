@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { blogPosts } from "../src/data/blog";
 
-const PORT = 5000;
+const PORT = 5555;
 const DIST_DIR = path.resolve(process.cwd(), "dist");
 
 // All public routes to prerender
@@ -50,10 +50,19 @@ async function prerender() {
         console.log(`Prerendering route: ${route}`);
         const page = await browser.newPage();
         
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+          if (['image', 'stylesheet', 'font'].includes(req.resourceType()) || req.url().includes('google') || req.url().includes('doubleclick')) {
+            req.abort();
+          } else {
+            req.continue();
+          }
+        });
+
         // Wait for network to be idle to ensure JS has executed and #root is populated
         await page.goto(`http://localhost:${PORT}${route}`, {
-          waitUntil: "networkidle0",
-          timeout: 30000
+          waitUntil: "networkidle2",
+          timeout: 10000
         });
 
         // Wait an extra second for any animations or late rendering

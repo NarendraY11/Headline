@@ -126,7 +126,7 @@ export function RecentEventsAuditTable({ profiles }: RecentEventsAuditTableProps
             onClick={fetchRecentEvents}
             disabled={loading}
             className="p-2 border border-rule hover:bg-bg-2 rounded-lg text-ink hover:text-ink-2 transition-colors disabled:opacity-50 cursor-pointer h-9 w-9 flex items-center justify-center shrink-0"
-            title="Reload last 50 events"
+            aria-label="Reload last 50 events" title="Reload last 50 events"
           >
             <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
           </button>
@@ -424,7 +424,7 @@ export default function AdminActivity() {
             onClick={handleExportToCSV}
             disabled={filteredEvents.length === 0}
             className="flex items-center gap-1.5 px-4 py-2 border border-rule hover:bg-bg-2 rounded-full font-sans text-xs text-ink transition-colors disabled:opacity-40 cursor-pointer h-10 shrink-0 font-semibold bg-emerald-500/5 hover:bg-emerald-500/15 border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-            title="Export currently filtered audit logs to CSV format"
+            aria-label="Export currently filtered audit logs to CSV format" title="Export currently filtered audit logs to CSV format"
           >
             <Download size={13} />
             <span>Export CSV</span>

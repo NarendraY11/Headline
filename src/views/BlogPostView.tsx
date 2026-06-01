@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { blogPosts, BlogPost } from "../data/blog";
+import { AdSlot } from "../components/AdSlot";
 import { Card, Button } from "../components/Atoms";
 import { supabase } from "../lib/supabase";
 import { 
@@ -228,13 +229,7 @@ function CustomMarkdown({ content }: { content: string }) {
       // Custom In-article high-yield Adsense placements
       if (line.trim() === "---") {
         renderedElements.push(
-          <div key={`hr-ad-${keyIdx++}`} className="my-8 py-3 bg-bg-2/20 border-y border-rule text-center select-none rounded space-y-1">
-            <span className="font-mono text-[7px] text-muted-2 uppercase tracking-widest block">In-Article Contextual Ad Placement</span>
-            <div className="py-1 flex flex-col items-center justify-center">
-              <span className="font-mono text-[9px] text-muted tracking-widest uppercase">Automatic Google AdSense Segment</span>
-              <span className="text-[10px] text-muted-2">Dynamic Related Links Feed Slot</span>
-            </div>
-          </div>
+          <AdSlot key={`ad-${keyIdx++}`} slotId={import.meta.env.VITE_ADSENSE_SLOT_ARTICLE} />
         );
       } else {
         // Standard Paragraph
@@ -465,7 +460,7 @@ export default function BlogPostView() {
               </p>
               <div className="pt-2 flex flex-wrap gap-3">
                 <button 
-                  onClick={() => openAuthModal && openAuthModal("register")}
+                  onClick={() => openAuthModal && openAuthModal("signup")}
                   className="h-10 px-5 rounded bg-amber text-navy hover:bg-amber-strong font-mono text-xs uppercase tracking-widest font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow"
                 >
                   Start Practice Deck <ArrowRight size={14} className="animate-pulse" />

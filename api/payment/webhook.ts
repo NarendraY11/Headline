@@ -51,6 +51,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rawBody = await getRawBody(req);
 
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+    if (process.env.NODE_ENV === "production" && !webhookSecret) {
+      console.error("CRITICAL: RAZORPAY_WEBHOOK_SECRET is missing in production. Refusing webhook.");
+      return res.status(500).json({ error: "Server misconfiguration" });
+    }
+
     if (webhookSecret) {
       if (!signature) {
         console.error("Webhook signature header is missing.");

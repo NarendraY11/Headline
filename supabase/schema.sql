@@ -704,6 +704,83 @@ create policy "Only service role can update weather cache"
   with check (auth.role() = 'service_role');
 
 -- =====================================================================
+-- 13. AI CACHE
+-- =====================================================================
+
+create table if not exists public.ai_cache (
+  cache_key text primary key,
+  data jsonb not null,
+  updated_at timestamptz default now() not null
+);
+
+-- RLS for AI cache
+alter table public.ai_cache enable row level security;
+
+drop policy if exists "Only service role can update or read AI cache" on public.ai_cache;
+create policy "Only service role can update or read AI cache"
+  on public.ai_cache for all
+  using (auth.role() = 'service_role')
+  with check (auth.role() = 'service_role');
+
+-- =====================================================================
+-- 14. APP SETTINGS (Feature Flags)
+-- =====================================================================
+
+create table if not exists public.app_settings (
+  id int primary key default 1 check (id = 1),
+  flags jsonb not null default '{}'::jsonb,
+  updated_at timestamptz default now(),
+  updated_by text
+);
+
+alter table public.app_settings enable row level security;
+
+drop policy if exists "Anyone can read app_settings" on public.app_settings;
+create policy "Anyone can read app_settings"
+  on public.app_settings for select
+  using (true);
+
+drop policy if exists "Only admins can update app_settings" on public.app_settings;
+create policy "Only admins can update app_settings"
+  on public.app_settings for all
+  using (public.is_admin());
+
+-- Seed the initial row if it doesn't exist
+insert into public.app_settings (id, flags)
+values (
+  1, 
+  '{
+    "aiExplain": true,
+    "aiCoach": true,
+    "aiDiagnosis": true,
+    "aiPractice": true,
+    "weatherBriefing": true,
+    "mockExams": true,
+    "topicPractice": true,
+    "qotd": true,
+    "spacedRepetition": true,
+    "flashcards": true,
+    "cockpitLayouts": true,
+    "analytics": true,
+    "masteryCharts": true,
+    "blog": true,
+    "examSeoPages": true,
+    "a320Systems": true,
+    "adsense": true,
+    "pricingCheckout": true,
+    "freeTrial": true,
+    "proGating": true,
+    "maintenanceMode": false,
+    "cookieConsent": true,
+    "announcementBanner": true,
+    "announcementText": "Welcome to our platform!",
+    "signupsOpen": true,
+    "themeToggle": true
+  }'::jsonb
+)
+on conflict (id) do nothing;
+
+-- =====================================================================
 -- END OF SCHEMA FILE
 -- Run this file FIRST, then run seed-admin.sql.
 -- =====================================================================

@@ -2,14 +2,15 @@ import React, { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Wordmark } from "./branding/Wordmark";
-import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity, ShieldCheck, FileText } from "lucide-react";
+import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity, ShieldCheck, FileText, SlidersHorizontal, ChevronDown, ChevronRight } from "lucide-react";
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const navigate = useNavigate();
 
-  const navItems = [
+  const mainNavItems = [
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
     { label: "Subjects Manager", path: "/admin/subjects", icon: BookOpen },
     { label: "Exams Manager", path: "/admin/exams", icon: ShieldCheck },
@@ -18,7 +19,11 @@ export function AdminLayout() {
     { label: "Questions Catalog", path: "/admin/questions", icon: HelpCircle },
     { label: "Bulk Importer", path: "/admin/import", icon: UploadCloud },
     { label: "Student cohorts", path: "/admin/users", icon: Users },
+  ];
+
+  const secondaryNavItems = [
     { label: "Admin Activity", path: "/admin/activity", icon: Activity },
+    { label: "Feature Control", path: "/admin/features", icon: SlidersHorizontal },
     { label: "Admin Settings", path: "/admin/settings", icon: Settings },
   ];
 
@@ -30,6 +35,30 @@ export function AdminLayout() {
       console.error("Logout failed:", err);
     }
   };
+
+  const renderNavLinks = (items: typeof mainNavItems) => (
+    items.map((item) => {
+      const Icon = item.icon;
+      return (
+        <NavLink
+          key={item.path}
+          to={item.path}
+          end={item.path === "/admin"}
+          onClick={() => setMobileMenuOpen(false)}
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider transition-colors select-none ${
+              isActive
+                ? "bg-ink text-paper font-semibold shadow-sm"
+                : "text-muted hover:text-ink hover:bg-bg-2"
+            }`
+          }
+        >
+          <Icon size={14} className="shrink-0" />
+          <span>{item.label}</span>
+        </NavLink>
+      );
+    })
+  );
 
   return (
     <div className="min-h-screen flex bg-bg text-ink font-sans">
@@ -45,26 +74,25 @@ export function AdminLayout() {
           <div className="font-mono text-[8.5px] text-muted-2 uppercase tracking-widest px-3 mb-2 font-bold">
             Administrative Deck
           </div>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.path === "/admin"}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider transition-colors select-none ${
-                    isActive
-                      ? "bg-ink text-paper font-semibold shadow-sm"
-                      : "text-muted hover:text-ink hover:bg-bg-2"
-                  }`
-                }
-              >
-                <Icon size={14} className="shrink-0" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
+          {renderNavLinks(mainNavItems)}
+
+          <div className="pt-2">
+            <button
+              onClick={() => setAdvancedOpen(!advancedOpen)}
+              className="flex items-center justify-between w-full px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider text-muted hover:text-ink hover:bg-bg-2 transition-colors select-none"
+            >
+              <div className="flex items-center gap-3">
+                <Settings size={14} className="shrink-0" />
+                <span>System & Config</span>
+              </div>
+              {advancedOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+            {advancedOpen && (
+              <div className="mt-1 space-y-1.5 pl-3 border-l-2 border-rule ml-4">
+                {renderNavLinks(secondaryNavItems)}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Footer actions */}
@@ -115,27 +143,25 @@ export function AdminLayout() {
               <div className="font-mono text-[8.5px] text-muted-2 uppercase tracking-widest px-3 mb-2 font-bold">
                 Administrative Deck
               </div>
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    end={item.path === "/admin"}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider transition-colors ${
-                        isActive
-                          ? "bg-ink text-paper font-semibold"
-                          : "text-muted hover:text-ink hover:bg-bg-2"
-                      }`
-                    }
-                  >
-                    <Icon size={14} className="shrink-0" />
-                    <span>{item.label}</span>
-                  </NavLink>
-                );
-              })}
+              {renderNavLinks(mainNavItems)}
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setAdvancedOpen(!advancedOpen)}
+                  className="flex items-center justify-between w-full px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider text-muted hover:text-ink hover:bg-bg-2 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-3">
+                    <Settings size={14} className="shrink-0" />
+                    <span>System & Config</span>
+                  </div>
+                  {advancedOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                {advancedOpen && (
+                  <div className="mt-1 space-y-1.5 pl-3 border-l-2 border-rule ml-4">
+                    {renderNavLinks(secondaryNavItems)}
+                  </div>
+                )}
+              </div>
             </nav>
 
             <div className="border-t border-rule pt-4 space-y-2 bg-paper/20 p-2 rounded-xl mt-4 border border-rule/50">

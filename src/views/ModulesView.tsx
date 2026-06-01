@@ -292,7 +292,7 @@ export default function ModulesView() {
                 {sortedWaypoints.map((way, idx) => {
                   const isActiveRecommendation = nextWaypointRecommendation?.id === way.id;
                   return (
-                    <div 
+                    <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} 
                       key={way.id} 
                       onClick={() => navigate(`/topic/${way.id}`)}
                       className="flex flex-col items-center text-center cursor-pointer min-w-[110px] select-none group"

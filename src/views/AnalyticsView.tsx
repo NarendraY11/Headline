@@ -22,6 +22,7 @@ import { useLogbook } from "../hooks/useLogbook";
 import { useUserProgress } from "../lib/progress";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { useToast } from "../components/ui/Toast";
+import { useFeature } from "../hooks/useFeatureFlags";
 import { ProGate } from "../components/ProGate";
 import { MasterySunburst } from "../components/MasterySunburst";
 
@@ -30,6 +31,7 @@ export default function AnalyticsView() {
   const { showToast } = useToast();
   const [insight, setInsight] = useState<string | null>(null);
   const [isInsightLoading, setIsInsightLoading] = useState(false);
+  const aiDiagnosisEnabled = useFeature("aiDiagnosis");
 
   const { logbook, loading: logbookLoading } = useLogbook();
   const { stats: progressStats } = useUserProgress();
@@ -343,6 +345,7 @@ export default function AnalyticsView() {
         </div>
 
         {/* WEAK AREA COACH */}
+        {aiDiagnosisEnabled && (
         <section className="flex flex-col h-full mb-16">
           <h2 className="font-mono text-sm tracking-widest text-ink uppercase mb-6 flex items-center gap-2">
             <Sparkles size={16} className="text-mint" /> Pacing & Alignment Coach
@@ -393,6 +396,7 @@ export default function AnalyticsView() {
             )}
           </Card>
         </section>
+        )}
 
         {/* INTERACTIVE MASTERY SUNBURST */}
         <section className="mb-16">

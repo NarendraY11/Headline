@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { getMetaForRoute } from "../lib/seoMeta";
+import { generateJsonLd } from "../lib/jsonLd";
 
 export function useDocumentMeta() {
   const location = useLocation();
@@ -8,7 +9,8 @@ export function useDocumentMeta() {
   useEffect(() => {
     const path = location.pathname;
     const { title, description, ogImage } = getMetaForRoute(path);
-    const canonicalUrl = `${window.location.origin}${path}`;
+    const origin = window.location.origin;
+    const canonicalUrl = `${origin}${path}`;
 
     // Update document title
     document.title = title;
@@ -35,13 +37,23 @@ export function useDocumentMeta() {
     setElementAttr("meta", 'meta[property="og:description"]', "property", "og:description", "content", description);
     setElementAttr("meta", 'meta[property="og:url"]', "property", "og:url", "content", canonicalUrl);
     setElementAttr("meta", 'meta[property="og:type"]', "property", "og:type", "content", "article");
-    setElementAttr("meta", 'meta[property="og:image"]', "property", "og:image", "content", ogImage.startsWith("http") ? ogImage : `${window.location.origin}${ogImage}`);
+    setElementAttr("meta", 'meta[property="og:image"]', "property", "og:image", "content", ogImage.startsWith("http") ? ogImage : `${origin}${ogImage}`);
 
     // Twitter card tags
     setElementAttr("meta", 'meta[name="twitter:card"]', "name", "twitter:card", "content", "summary_large_image");
     setElementAttr("meta", 'meta[name="twitter:title"]', "name", "twitter:title", "content", title);
     setElementAttr("meta", 'meta[name="twitter:description"]', "name", "twitter:description", "content", description);
-    setElementAttr("meta", 'meta[name="twitter:image"]', "name", "twitter:image", "content", ogImage.startsWith("http") ? ogImage : `${window.location.origin}${ogImage}`);
+    setElementAttr("meta", 'meta[name="twitter:image"]', "name", "twitter:image", "content", ogImage.startsWith("http") ? ogImage : `${origin}${ogImage}`);
+
+    // Inject JSON-LD
+    let scriptElem = document.querySelector('script[type="application/ld+json"]');
+    if (!scriptElem) {
+      scriptElem = document.createElement("script");
+      scriptElem.setAttribute("type", "application/ld+json");
+      document.head.appendChild(scriptElem);
+    }
+    const jsonLdData = generateJsonLd(path);
+    scriptElem.textContent = JSON.stringify(jsonLdData);
 
   }, [location.pathname]);
 }

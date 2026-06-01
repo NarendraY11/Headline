@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "motion/react";
+import FocusTrap from "focus-trap-react";
 import { Search, BookOpen, Clock } from "lucide-react";
 import { mockExams, SubjectItem } from "../data/topics";
 import { fetchMergedSubjects } from "../lib/content";
@@ -88,16 +89,17 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
   }, [selectedIndex]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4">
-      <div className="absolute inset-0 bg-ink/20 backdrop-blur-sm" onClick={onClose} />
-      
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: -20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: -20 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className="w-full max-w-xl bg-paper border border-rule shadow-2xl rounded-xl overflow-hidden relative z-10 flex flex-col max-h-[70vh]"
-      >
+    <FocusTrap focusTrapOptions={{ initialFocus: false, escapeDeactivates: false, clickOutsideDeactivates: false, returnFocusOnDeactivate: true }}>
+      <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 pointer-events-none">
+        <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} className="absolute inset-0 bg-ink/20 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
+        
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95, y: -20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: -20 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+          className="w-full max-w-xl bg-paper border border-rule shadow-2xl rounded-xl overflow-hidden relative z-10 flex flex-col max-h-[70vh] pointer-events-auto"
+        >
         <div className="p-4 border-b border-rule flex items-center gap-3">
           <Search size={20} className="text-muted-2" />
           <input 
@@ -145,5 +147,6 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
         )}
       </motion.div>
     </div>
+    </FocusTrap>
   );
 }

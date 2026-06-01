@@ -34,7 +34,8 @@ export default function EditorialLayout({
   showAbortPrompt,
   storageKey,
   customQuestions,
-  navigate
+  navigate,
+  aiExplainEnabled
 }: QuizLayoutProps) {
   const [isReportOpen, setIsReportOpen] = useState(false);
   return (
@@ -183,7 +184,7 @@ export default function EditorialLayout({
             className="w-full flex-1 flex flex-col"
           >
             {/* Question Area */}
-            <div 
+            <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} 
               className={`mb-8 ${mode === "viva" && !isRevealedViva ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
               onClick={() => {
                  if (mode === "viva" && !isRevealedViva) {
@@ -233,7 +234,7 @@ export default function EditorialLayout({
               {mode === "viva" ? (
                  // VIVA MODE
                  !isRevealedViva ? (
-                    <div 
+                    <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} 
                       className="h-40 flex items-center justify-center border-2 border-rule border-dashed rounded-xl bg-panel cursor-pointer hover:border-ink transition-colors"
                       onClick={() => handleRevealViva(currentQ.id)}
                     >
@@ -350,6 +351,7 @@ export default function EditorialLayout({
                    </div>
                    
                    {/* AI Expansion Area */}
+                   {aiExplainEnabled && (
                    <div className="bg-paper p-6 md:p-8 flex-1 border-t lg:border-t-0 lg:border-l border-rule flex flex-col h-auto">
                      <div className="flex items-center justify-between mb-4">
                         <span className="font-mono text-[10px] uppercase text-ink font-semibold flex items-center gap-2">
@@ -385,6 +387,7 @@ export default function EditorialLayout({
                        </motion.div>
                      )}
                    </div>
+                   )}
                 </motion.div>
               )}
             </AnimatePresence>

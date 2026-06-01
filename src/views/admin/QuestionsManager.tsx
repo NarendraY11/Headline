@@ -149,7 +149,7 @@ export default function QuestionsManager() {
       subject_id: initialSubjectId,
       subcategory_id: initialSubId,
       ata: "",
-      difficulty: "standard",
+      difficulty: "standard" as "standard" | "complex" | "extreme",
       prompt: "",
       diagram_caption: "",
       choices: [
@@ -161,7 +161,7 @@ export default function QuestionsManager() {
       correct: "a",
       explanation: "",
       references: [],
-      status: "draft",
+      status: "draft" as "draft" | "published" | "archived",
     };
 
     setCurrentQuestion(nextPrompt);
@@ -419,7 +419,7 @@ export default function QuestionsManager() {
                 onClick={fetchData}
                 disabled={loading}
                 className="p-2 border border-rule hover:bg-bg-2 rounded-full transition-colors inline-flex justify-center items-center text-ink disabled:opacity-50 h-10 w-10 shrink-0"
-                title="Refresh database state"
+                aria-label="Refresh database state" title="Refresh database state"
               >
                 <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
               </button>
@@ -1019,7 +1019,7 @@ export default function QuestionsManager() {
                     }
 
                     return (
-                      <div
+                      <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                         key={choice.id}
                         className={`p-3.5 rounded-xl border flex items-center gap-3.5 transition-all text-left outline-none ${choiceStyle}`}
                         onClick={() => {

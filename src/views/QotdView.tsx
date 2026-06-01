@@ -69,7 +69,7 @@ export default function QotdView() {
   });
 
   // Check if answer is correct
-  const isCorrect = selectedOption === currentQ?.ans;
+  const isCorrect = selectedOption === currentQ?.correct;
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-12 space-y-8 font-sans">
@@ -114,17 +114,18 @@ export default function QotdView() {
 
           {/* Question Text */}
           <h2 className="font-serif text-lg sm:text-xl text-ink leading-relaxed">
-            {currentQ.text}
+            {currentQ.prompt}
           </h2>
 
           {/* Answer Options */}
           <div className="space-y-3 pt-2" id="qotdOptionsList">
-            {["a", "b", "c", "d"].map((optKey) => {
-              const optionText = currentQ[optKey as keyof Question] as string;
+            {currentQ.choices?.map((choice) => {
+              const optKey = choice.id;
+              const optionText = choice.label;
               if (!optionText) return null;
 
               const isSelected = selectedOption === optKey;
-              const isOptionCorrect = optKey === currentQ.ans;
+              const isOptionCorrect = optKey === currentQ.correct;
 
               let btnStyle = "border-rule bg-transparent text-ink hover:bg-bg/40";
               if (isSelected) {
@@ -199,7 +200,7 @@ export default function QotdView() {
                       You selected <strong className="uppercase">({selectedOption})</strong>. 
                       {isCorrect 
                         ? " Excellent alignment. Your airmanship calculations hold up." 
-                        : ` The correct answer was (${currentQ.ans}). Review the technical rationale below.`}
+                        : ` The correct answer was (${currentQ.correct}). Review the technical rationale below.`}
                     </p>
                   </div>
                 </div>
@@ -254,7 +255,7 @@ export default function QotdView() {
           <Button 
             id="qotdAuthRegisterCTA"
             variant="primary" 
-            onClick={() => openAuthModal("register")}
+            onClick={() => openAuthModal("signup")}
             className="w-full sm:w-auto h-11 px-6 rounded-full font-mono text-xs uppercase bg-white text-slate-900 hover:bg-slate-100 flex items-center justify-center gap-2 cursor-pointer shrink-0"
           >
             Access Free Simulator <ArrowRight size={14} />

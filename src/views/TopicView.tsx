@@ -19,6 +19,7 @@ import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { useUserProgress } from "../lib/progress";
 import { ProGate } from "../components/ProGate";
+import { useFeature } from "../hooks/useFeatureFlags";
 import ReadingProgress from "../components/ReadingProgress";
 
 export default function TopicView() {
@@ -28,6 +29,7 @@ export default function TopicView() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const { stats: progressStats } = useUserProgress();
+  const aiPracticeEnabled = useFeature("aiPractice");
 
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -416,17 +418,17 @@ export default function TopicView() {
                     <div className="font-mono text-[9px] uppercase tracking-widest text-muted-2 px-3 py-1.5 border border-dashed border-rule rounded">
                       Sign in to use AI coaching
                     </div>
-                  ) : (
+                  ) : aiPracticeEnabled ? (
                     <button
                       onClick={handleGeneratePractice}
                       disabled={isGenerating || selectedSub.questionCount === 0}
                       className={`flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest px-3 py-1.5 rounded border border-mint text-mint hover:bg-mint-soft transition-colors shadow-sm ${isGenerating || selectedSub.questionCount === 0 ? "opacity-50 cursor-not-allowed" : ""}`}
-                      title="Generate intelligent practice questions for this chapter"
+                      aria-label="Generate intelligent practice questions for this chapter" title="Generate intelligent practice questions for this chapter"
                     >
                       <Sparkles size={12} />
                       {isGenerating ? "Synthesizing..." : "AI Practice Set"}
                     </button>
-                  )}
+                  ) : null}
                 </div>
               </div>
 
@@ -599,6 +601,7 @@ export default function TopicView() {
               </p>
 
               {/* AI Action */}
+              {aiPracticeEnabled && (
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 <button
                   onClick={handleGeneratePractice}
@@ -612,6 +615,7 @@ export default function TopicView() {
                   EXPERIMENTAL
                 </Chip>
               </div>
+              )}
             </div>
 
             <div className="text-right shrink-0">

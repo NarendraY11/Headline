@@ -268,7 +268,7 @@ export default function SubcategoriesManager() {
             onClick={fetchData}
             disabled={loading}
             className="p-2 border border-rule hover:bg-bg-2 rounded-full transition-colors inline-flex justify-center items-center text-ink disabled:opacity-50 h-10 w-10 shrink-0"
-            title="Reload database metrics"
+            aria-label="Reload database metrics" title="Reload database metrics"
           >
             <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
           </button>
