@@ -242,7 +242,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         referralCode: referralCode || profile?.referral_code,
         referredBy: profile?.referred_by,
         newsletterOptIn: profile?.newsletter_opt_in ?? false,
-        onboardingCompleted: profile?.onboarding_completed ?? false,
+        // Fall back to the settings timestamp: if a direct column write ever
+        // failed and only the settings JSON persisted, still treat onboarding
+        // as complete so the user is not stuck on the onboarding screen.
+        onboardingCompleted: (profile?.onboarding_completed ?? false) || !!profile?.settings?.onboardingCompletedAt,
       };
 
       // 2. Fetch bookmarks
@@ -588,6 +591,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                };
                if (updatePayload.target_exam !== undefined) fallbackPayload.target_exam = updatePayload.target_exam;
                if (updatePayload.next_exam !== undefined) fallbackPayload.next_exam = updatePayload.next_exam;
+               // Preserve non-billing lifecycle flags in the fallback so a
+               // partial failure can't silently drop e.g. onboarding state.
+               if (updatePayload.onboarding_completed !== undefined) fallbackPayload.onboarding_completed = updatePayload.onboarding_completed;
+               if (updatePayload.newsletter_opt_in !== undefined) fallbackPayload.newsletter_opt_in = updatePayload.newsletter_opt_in;
                await supabase.from('profiles').update(fallbackPayload).eq('id', user.uid);
             }
         }
