@@ -72,6 +72,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: "Failed to grant trial." });
     }
 
+    try {
+      await admin.from("plan_changes").insert({
+        user_id: user.id,
+        old_plan: "free",
+        new_plan: "trial",
+        expires_at: expiresAt.toISOString(),
+        note: `${TRIAL_DAYS}-day free trial`,
+      });
+    } catch (auditErr) {
+      console.warn("plan_changes audit insert failed:", auditErr);
+    }
+
     console.log(`Granted ${TRIAL_DAYS}-day trial to user ${user.id}`);
     return res.status(200).json({
       success: true,

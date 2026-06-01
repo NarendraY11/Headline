@@ -55,10 +55,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const admin = getSupabaseAdmin();
+
+    const { data: prevProfile } = await admin
+      .from("profiles")
+      .select("plan")
+      .eq("id", user.id)
+      .maybeSingle();
+
     const { error } = await admin
       .from("profiles")
       .update({
         plan: "pro",
+        plan_status: "active",
         plan_started_at: startedAt,
         plan_expires_at: expiresAt.toISOString(),
       })
@@ -66,6 +74,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (error) {
       throw error;
+    }
+
+    // Audit trail (best-effort).
+    try {
+      await admin.from("plan_changes").insert({
+        user_id: user.id,
+        old_plan: prevProfile?.plan ?? null,
+        new_plan: "pro",
+        expires_at: expiresAt.toISOString(),
+        note: `razorpay payment ${razorpay_payment_id} (${verifiedInterval})`,
+      });
+    } catch (auditErr) {
+      console.warn("plan_changes audit insert failed:", auditErr);
     }
 
     await grantReferralRewards(admin, user.id, expiresAt);

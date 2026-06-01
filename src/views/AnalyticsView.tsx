@@ -21,7 +21,7 @@ import { useGlobalLoading } from "../contexts/LoadingContext";
 import { SubjectItem } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
-import { apiFetch } from "../lib/api";
+import { apiFetchRaw, readError } from "../lib/api";
 import { fetchMergedSubjects } from "../lib/content";
 import { useUserProgress } from "../lib/progress";
 import { trackEvent } from "../lib/track";
@@ -218,7 +218,7 @@ export default function AnalyticsView() {
 
     try {
       trackEvent("ai_used", { metadata: { feature: "diagnosis" } });
-      const response = await apiFetch("/api/instructor/diagnosis", {
+      const response = await apiFetchRaw("/api/instructor/diagnosis", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json"
@@ -226,14 +226,17 @@ export default function AnalyticsView() {
         body: JSON.stringify({ summary: JSON.stringify(summaryData) }),
       }, 60000); // streaming AI: allow up to 60s
 
-      if (!response) {
+      if (!response || !response.ok) {
+        const msg = response
+          ? await readError(response, "AI features are temporarily unavailable.")
+          : "AI features are temporarily unavailable.";
         showToast({
           type: "error",
-          title: "Service Offline",
-          message: "AI features are temporarily unavailable",
+          title: response?.status === 429 ? "Slow down" : response?.status === 403 ? "Upgrade required" : "Service Offline",
+          message: msg,
           duration: 5000,
         });
-        setInsight("AI features are temporarily unavailable.");
+        setInsight(msg);
         return;
       }
 

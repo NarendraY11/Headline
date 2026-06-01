@@ -82,6 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .from("profiles")
           .update({
             plan: "pro",
+            plan_status: "active",
             plan_started_at: startedAt,
             plan_expires_at: expiresAt.toISOString(),
           })
@@ -90,6 +91,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (error) {
           console.error(`Failed to update profile for user ${userId} on webhook event ${event}:`, error);
           return res.status(500).json({ error: "Database update failed" });
+        }
+        try {
+          await admin.from("plan_changes").insert({
+            user_id: userId,
+            new_plan: "pro",
+            expires_at: expiresAt.toISOString(),
+            note: `webhook ${event} (${interval})`,
+          });
+        } catch (auditErr) {
+          console.warn("plan_changes audit insert failed:", auditErr);
         }
         console.log(`Successfully updated user ${userId} to Pro plan via Webhook (${interval})`);
       }
@@ -112,6 +123,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .from("profiles")
           .update({
             plan: "free",
+            plan_status: "expired",
             plan_expires_at: new Date().toISOString()
           })
           .eq("id", userId);
@@ -119,6 +131,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (error) {
           console.error(`Failed to revoke Pro plan for user ${userId} on webhook event ${event}:`, error);
           return res.status(500).json({ error: "Database update failed" });
+        }
+        try {
+          await admin.from("plan_changes").insert({
+            user_id: userId,
+            new_plan: "free",
+            note: `webhook ${event} (downgrade)`,
+          });
+        } catch (auditErr) {
+          console.warn("plan_changes audit insert failed:", auditErr);
         }
         console.log(`Successfully downgraded canceled user ${userId} to Free plan via Webhook`);
       }

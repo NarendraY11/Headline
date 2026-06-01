@@ -5,7 +5,7 @@ import { Button, Chip } from "../components/Atoms";
 import { CheckCircle2, XCircle, Sparkles, Zap, RefreshCw } from "lucide-react";
 import { trackEvent } from "../lib/track";
 import { useAuth } from "../contexts/AuthContext";
-import { apiFetch } from "../lib/api";
+import { apiFetchRaw, readError } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 
 import { isPaidActive } from "../lib/plan";
@@ -120,7 +120,7 @@ export default function PricingView() {
         throw new Error("Unable to load Razorpay payment client. Please verify your connection.");
       }
 
-      const response = await apiFetch("/api/payment/create-order", {
+      const response = await apiFetchRaw("/api/payment/create-order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,6 +130,9 @@ export default function PricingView() {
 
       if (!response) {
         throw new Error("Unable to communicate with the payment server. Ensure you have network access.");
+      }
+      if (!response.ok) {
+        throw new Error(await readError(response, "Could not start checkout. Please try again."));
       }
 
       const orderData = await response.json();
@@ -164,7 +167,7 @@ export default function PricingView() {
               interval: billingInterval,
             };
 
-            const verifyRes = await apiFetch("/api/payment/verify", {
+            const verifyRes = await apiFetchRaw("/api/payment/verify", {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
@@ -174,6 +177,9 @@ export default function PricingView() {
 
             if (!verifyRes) {
               throw new Error("Local verification request timed out. Webhook will process signature in background.");
+            }
+            if (!verifyRes.ok) {
+              throw new Error(await readError(verifyRes, "Payment verification failed."));
             }
 
             const verifyData = await verifyRes.json();

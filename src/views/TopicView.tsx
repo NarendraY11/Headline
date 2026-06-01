@@ -17,7 +17,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { SubjectItem, rawSubjects } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
-import { apiFetch } from "../lib/api";
+import { apiFetchRaw, readError } from "../lib/api";
 import { fetchMergedSubjects } from "../lib/content";
 import { useUserProgress } from "../lib/progress";
 import { trackEvent } from "../lib/track";
@@ -172,7 +172,7 @@ export default function TopicView() {
     setGlobalLoading(true);
     try {
       trackEvent("ai_used", { metadata: { feature: "practice" } });
-      const response = await apiFetch("/api/instructor/practice", {
+      const response = await apiFetchRaw("/api/instructor/practice", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -180,11 +180,14 @@ export default function TopicView() {
         body: JSON.stringify({ topic: subject?.title, code: subject?.num }),
       }, 60000); // AI generation: allow up to 60s
 
-      if (!response) {
+      if (!response || !response.ok) {
+        const msg = response
+          ? await readError(response, "AI features are temporarily unavailable.")
+          : "AI features are temporarily unavailable.";
         showToast({
           type: "error",
-          title: "Service Offline",
-          message: "AI features are temporarily unavailable",
+          title: response?.status === 429 ? "Slow down" : response?.status === 403 ? "Upgrade required" : "Service Offline",
+          message: msg,
           duration: 5000,
         });
         return;

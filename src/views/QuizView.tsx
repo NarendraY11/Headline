@@ -12,7 +12,7 @@ import { Question } from "../data/questions";
 import { mockExams } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
-import { apiFetch } from "../lib/api";
+import { apiFetchRaw, readError } from "../lib/api";
 import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopic } from "../lib/content";
 import { submitQuestionAttempt } from "../lib/progress";
 import { getDueQuestionIds, recordAnswerProgress, trackAnswerForStreakAndGoal } from "../lib/spacedRepetition";
@@ -779,7 +779,7 @@ export default function QuizView() {
 
     try {
       trackEvent("ai_used", { metadata: { feature: "explain" } });
-      const response = await apiFetch("/api/instructor/explain", {
+      const response = await apiFetchRaw("/api/instructor/explain", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json"
@@ -791,17 +791,17 @@ export default function QuizView() {
         }),
       }, 60000); // streaming AI: allow up to 60s, don't truncate
 
-      if (!response) {
+      if (!response || !response.ok) {
+        const msg = response
+          ? await readError(response, "AI features are temporarily unavailable.")
+          : "AI features are temporarily unavailable.";
         showToast({
           type: "error",
-          title: "Service Offline",
-          message: "AI features are temporarily unavailable",
+          title: response?.status === 429 ? "Slow down" : response?.status === 403 ? "Upgrade required" : "Service Offline",
+          message: msg,
           duration: 5000,
         });
-        setAiExplanations((prev) => ({
-          ...prev,
-          [currentQ.id]: "AI features are temporarily unavailable.",
-        }));
+        setAiExplanations((prev) => ({ ...prev, [currentQ.id]: msg }));
         return;
       }
 
@@ -856,22 +856,25 @@ export default function QuizView() {
         if (answers[q.id] === q.correct) scores[q.ata].correct++;
       });
 
-      const response = await apiFetch("/api/instructor/coach", {
+      const response = await apiFetchRaw("/api/instructor/coach", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ scores }),
       }, 60000); // streaming AI: allow up to 60s
 
-      if (!response) {
+      if (!response || !response.ok) {
+        const msg = response
+          ? await readError(response, "AI features are temporarily unavailable.")
+          : "AI features are temporarily unavailable.";
         showToast({
           type: "error",
-          title: "Service Offline",
-          message: "AI features are temporarily unavailable",
+          title: response?.status === 429 ? "Slow down" : response?.status === 403 ? "Upgrade required" : "Service Offline",
+          message: msg,
           duration: 5000,
         });
-        setStudyPlan("AI features are temporarily unavailable.");
+        setStudyPlan(msg);
         return;
       }
 
