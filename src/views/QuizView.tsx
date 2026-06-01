@@ -789,7 +789,7 @@ export default function QuizView() {
           userAnswer: userAnswerLabel,
           correctAnswer: correctAnswerLabel,
         }),
-      });
+      }, 60000); // streaming AI: allow up to 60s, don't truncate
 
       if (!response) {
         showToast({
@@ -862,7 +862,7 @@ export default function QuizView() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ scores }),
-      });
+      }, 60000); // streaming AI: allow up to 60s
 
       if (!response) {
         showToast({

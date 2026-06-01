@@ -1,10 +1,26 @@
 import { supabase } from "./supabase";
 
-export async function apiFetch(path: string, options: RequestInit = {}): Promise<Response | null> {
+/**
+ * Authenticated fetch wrapper.
+ *
+ * @param path     API path.
+ * @param options  Standard fetch options.
+ * @param timeoutMs Abort after this many ms. Pass 0 to disable the timeout
+ *                  entirely — required for streaming AI endpoints whose
+ *                  responses can take much longer than a normal request.
+ *                  Defaults to 30s (was 6s, which truncated AI streams).
+ */
+export async function apiFetch(
+  path: string,
+  options: RequestInit = {},
+  timeoutMs = 30000
+): Promise<Response | null> {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-  }, 6000);
+  const timeoutId =
+    timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  const clear = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+  };
 
   try {
     const { data: { session } } = await supabase.auth.getSession();
@@ -17,24 +33,22 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
 
     const { signal, ...restOptions } = options;
 
-    let responseSignal = controller.signal;
     if (signal) {
-      // If there's an external signal, make our timeout controller listen to its abort event
-      signal.addEventListener("abort", () => {
-        controller.abort();
-      });
+      // Chain an external abort signal into our controller.
       if (signal.aborted) {
         controller.abort();
+      } else {
+        signal.addEventListener("abort", () => controller.abort());
       }
     }
 
     const response = await fetch(path, {
       ...restOptions,
       headers,
-      signal: responseSignal,
+      signal: controller.signal,
     });
 
-    clearTimeout(timeoutId);
+    clear();
 
     if (!response.ok) {
       console.warn(`apiFetch received non-200 status ${response.status} for ${path}`);
@@ -43,7 +57,7 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
 
     return response;
   } catch (err: any) {
-    clearTimeout(timeoutId);
+    clear();
     console.warn(`apiFetch error/timeout for ${path}:`, err.message || err);
     return null;
   }

@@ -19,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { prompt, userAnswer, correctAnswer } = req.body || {};
     
     const responseStream = await ai.models.generateContentStream({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: [
         { role: "user", parts: [{ text: `Question: ${prompt}\nUser's Answer: ${userAnswer}\nCorrect Answer: ${correctAnswer}` }] }
       ],

@@ -54,10 +54,11 @@ export async function checkRateLimit(uid: string): Promise<boolean> {
     return false;
   }
 
-  // 2. Precise Supabase backstop
+  // 2. Precise Supabase backstop. Must use the admin client: events SELECT is
+  // admin-only under RLS, so the anon client would always count 0.
   const oneHourAgoISO = new Date(oneHourAgo).toISOString();
   try {
-    const { count, error } = await supabase
+    const { count, error } = await getSupabaseAdmin()
       .from("events")
       .select("*", { count: "estimated", head: true })
       .eq("user_id", uid)
@@ -75,6 +76,18 @@ export async function checkRateLimit(uid: string): Promise<boolean> {
 
   timestamps.push(now);
   userRequestTimestamps.set(uid, timestamps);
+
+  // Authoritative server-side usage log so the DB backstop above actually
+  // has rows to count (client-side analytics events can be bypassed).
+  // Uses the admin client because the anon client has no auth context here.
+  try {
+    await getSupabaseAdmin()
+      .from("events")
+      .insert({ user_id: uid, event_type: "ai_used" });
+  } catch (logErr) {
+    console.warn("Failed to record ai_used event:", logErr);
+  }
+
   return true;
 }
 

@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const selectedBilling = plan || interval;
 
     // Support both monthly (₹499) and annual (₹2999)
-    const isYearly = selectedBilling === "yearly" || selectedBilling === "annual" || selectedBilling === "yearly";
+    const isYearly = selectedBilling === "yearly" || selectedBilling === "annual";
     const amount = isYearly ? 2999 * 100 : 499 * 100;
 
     const rz = getRazorpay();

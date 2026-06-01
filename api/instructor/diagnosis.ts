@@ -19,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { summary } = req.body || {};
     
     const responseStream = await ai.models.generateContentStream({
-      model: "gemini-3.5-flash",
+      model: "gemini-2.5-flash",
       contents: [
         { role: "user", parts: [{ text: `Here is the user's analytics summary:\n${summary}\n\nBased on this, write a 3-sentence diagnosis of the user's biggest risk area before their exam.` }] }
       ],

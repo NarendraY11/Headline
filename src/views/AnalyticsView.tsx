@@ -224,7 +224,7 @@ export default function AnalyticsView() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ summary: JSON.stringify(summaryData) }),
-      });
+      }, 60000); // streaming AI: allow up to 60s
 
       if (!response) {
         showToast({

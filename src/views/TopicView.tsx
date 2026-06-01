@@ -178,7 +178,7 @@ export default function TopicView() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ topic: subject?.title, code: subject?.num }),
-      });
+      }, 60000); // AI generation: allow up to 60s
 
       if (!response) {
         showToast({

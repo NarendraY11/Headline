@@ -412,7 +412,7 @@ async function startServer() {
       const { prompt, userAnswer, correctAnswer } = req.body;
       
       const responseStream = await ai.models.generateContentStream({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: [
           { role: "user", parts: [{ text: `Question: ${prompt}\nUser's Answer: ${userAnswer}\nCorrect Answer: ${correctAnswer}` }] }
         ],
@@ -462,7 +462,7 @@ async function startServer() {
       }
       
       const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: [
           { role: "user", parts: [{ text: `Topic: ${code} - ${topic}` }] }
         ],
@@ -551,7 +551,7 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
       ).join("\\n");
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: [
           { role: "user", parts: [{ text: `My pilot exam scores are:\n${scoresText}\n\nBased on these pilot exam scores, write a focused 7-day study plan prioritising the weakest ATA chapters/topics. For each day, suggest specific sub-topics or concepts to focus on. Ensure the response is concise and highly actionable. Under 250 words.` }] }
         ],
@@ -593,7 +593,7 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
       }
 
       const responseStream = await ai.models.generateContentStream({
-        model: "gemini-3.5-flash",
+        model: "gemini-2.5-flash",
         contents: [
           { role: "user", parts: [{ text: `Here is the user's analytics summary:\n${summary}\n\nBased on this, write a 3-sentence diagnosis of the user's biggest risk area before their exam.` }] }
         ],
