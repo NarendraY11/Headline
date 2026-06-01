@@ -127,6 +127,22 @@ export default function UsersAnalytics() {
         console.warn("Audit table logbook update error:", auditError);
       }
 
+      // Notify the affected user about their new plan.
+      try {
+        const isUpgrade = modalPlan === "pro" || modalPlan === "lifetime" || modalPlan === "trial";
+        await supabase.from("notifications").insert({
+          user_id: modalUser.id,
+          title: isUpgrade ? "🎉 Your plan was upgraded" : "Your plan was updated",
+          message: isUpgrade
+            ? `An administrator activated the ${modalPlan.toUpperCase()} plan on your account. Enjoy full access!`
+            : `Your plan was changed to ${modalPlan.toUpperCase()}.`,
+          type: "system",
+          read: false,
+        });
+      } catch (notifyError) {
+        console.warn("Failed to notify user of plan change:", notifyError);
+      }
+
       setModalSuccessMsg(`Plan successfully updated to ${modalPlan}!`);
       
       // Refresh list to update state across indicators immediately
@@ -163,6 +179,32 @@ export default function UsersAnalytics() {
 
   // Selected User for Detail Drawer
   const [selectedUser, setSelectedUser] = useState<EnrichedUser | null>(null);
+
+  // Plan-change / billing history for the selected user.
+  const [planHistory, setPlanHistory] = useState<any[]>([]);
+  const [planHistoryLoading, setPlanHistoryLoading] = useState(false);
+
+  useEffect(() => {
+    if (!selectedUser) {
+      setPlanHistory([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setPlanHistoryLoading(true);
+      const { data } = await supabase
+        .from("plan_changes")
+        .select("*")
+        .eq("user_id", selectedUser.id)
+        .order("created_at", { ascending: false })
+        .limit(25);
+      if (!cancelled) {
+        setPlanHistory(data || []);
+        setPlanHistoryLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedUser?.id]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -736,6 +778,45 @@ export default function UsersAnalytics() {
                   <Award size={14} />
                   <span>Configure User Plan</span>
                 </button>
+              </div>
+
+              {/* Plan / Billing History */}
+              <div className="space-y-2">
+                <h3 className="font-serif text-sm font-medium text-ink flex items-center gap-1.5">
+                  <Award size={13} className="text-muted" />
+                  <span>Plan &amp; Billing History ({planHistory.length})</span>
+                </h3>
+                {planHistoryLoading ? (
+                  <p className="font-mono text-[9px] uppercase tracking-wide text-muted py-2">Loading history…</p>
+                ) : planHistory.length === 0 ? (
+                  <div className="text-center py-6 border border-dashed border-rule rounded-lg">
+                    <p className="font-mono text-[9px] uppercase tracking-wider text-muted">No plan changes or purchases recorded.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {planHistory.map((h) => (
+                      <div key={h.id} className="flex items-start justify-between gap-2 border border-rule/60 rounded-lg px-3 py-2 bg-bg-2/40">
+                        <div className="min-w-0">
+                          <div className="font-mono text-[10px] text-ink">
+                            <span className="text-muted">{(h.old_plan || "—").toUpperCase()}</span>
+                            {" → "}
+                            <span className="font-bold">{(h.new_plan || "—").toUpperCase()}</span>
+                          </div>
+                          {h.note && <div className="font-sans text-[10px] text-muted truncate">{h.note}</div>}
+                          {h.changed_by_email && (
+                            <div className="font-mono text-[8.5px] text-muted-2 truncate">by {h.changed_by_email}</div>
+                          )}
+                          {h.expires_at && (
+                            <div className="font-mono text-[8.5px] text-rose-600">expires {new Date(h.expires_at).toLocaleDateString()}</div>
+                          )}
+                        </div>
+                        <span className="shrink-0 font-mono text-[8.5px] text-muted-2 whitespace-nowrap">
+                          {new Date(h.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Practiced Subjects lists */}

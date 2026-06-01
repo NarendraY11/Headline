@@ -5,6 +5,7 @@ import { Lock, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "./Atoms";
 import { isPaidActive } from "../lib/plan";
 import { supabase } from "../lib/supabase";
+import { useNotifications } from "../contexts/NotificationContext";
 
 interface ProGateProps {
   children: React.ReactNode;
@@ -15,6 +16,7 @@ interface ProGateProps {
 
 export function ProGate({ children, type, isUnlocked = false }: ProGateProps) {
   const { user, userData, openAuthModal, updateUserData } = useAuth();
+  const { addNotification } = useNotifications();
   const [isTrialLoading, setIsTrialLoading] = useState(false);
   
   // Expose pro plan or bypass if explicit unlock has been passed
@@ -70,6 +72,12 @@ export function ProGate({ children, type, isUnlocked = false }: ProGateProps) {
         trialStartedAt: new Date().toISOString(),
         trialUsed: true,
       });
+
+      addNotification(
+        "🎉 Trial Activated",
+        "Your 7-day Pro trial is live. Full access to AI coaching, mock exams and analytics is unlocked. Make it count!",
+        "system"
+      );
 
     } catch (err) {
       console.error("Failed starting trial:", err);

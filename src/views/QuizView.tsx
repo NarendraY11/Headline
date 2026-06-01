@@ -762,6 +762,13 @@ export default function QuizView() {
     if (unlocked) {
       setUnlockedMilestone(unlocked);
       addNotification(unlocked.title, unlocked.desc, "milestone");
+    } else {
+      const topicName = customTopic || questions[0]?.ata || "this module";
+      addNotification(
+        "Module Complete",
+        `You scored ${Math.round(currentAccuracy)}% on ${topicName}. Keep the momentum going!`,
+        "milestone"
+      );
     }
 
     setStatus("results");

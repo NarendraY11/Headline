@@ -7,6 +7,7 @@ import { trackEvent } from "../lib/track";
 import { useAuth } from "../contexts/AuthContext";
 import { apiFetchRaw, readError } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { useNotifications } from "../contexts/NotificationContext";
 
 import { isPaidActive } from "../lib/plan";
 
@@ -41,6 +42,7 @@ const loadRazorpayScript = () => {
 export default function PricingView() {
   const { user, userData, openAuthModal, updateUserData } = useAuth();
   const { showToast } = useToast();
+  const { addNotification } = useNotifications();
   
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -191,6 +193,12 @@ export default function PricingView() {
                 duration: 7000
               });
               
+              addNotification(
+                "🎉 Welcome to Pro!",
+                `Your Captain (Pro) ${billingInterval === "yearly" ? "yearly" : "monthly"} plan is active. Every feature is unlocked — happy flying!`,
+                "system"
+              );
+
               // Refresh or reload page to sync authentication state
               trackEvent("upgrade_pro_success", { metadata: { interval: billingInterval } });
               setTimeout(() => {

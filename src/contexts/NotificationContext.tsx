@@ -99,6 +99,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .select("*")
         .order("created_at", { ascending: false });
 
+      // DB column is `message`; the app uses `body`. Map between them.
+      const mapRows = (rows: any[]): NotificationItem[] =>
+        (rows || []).map((r) => ({
+          id: r.id,
+          user_id: r.user_id ?? null,
+          title: r.title,
+          body: r.body ?? r.message ?? "",
+          type: r.type,
+          read: !!r.read,
+          created_at: r.created_at,
+        }));
+
       if (error) {
         // Fallback to local storage if relation not enabled yet
         console.warn("Fall back to local notifications:", error.message);
@@ -130,7 +142,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           setNotifications(local);
         }
       } else {
-        setNotifications(data || []);
+        setNotifications(mapRows(data || []));
       }
     } catch (e) {
       console.warn("Unexpected database error for notifications. Using fallback.", e);
@@ -194,7 +206,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       const { error } = await supabase.from("notifications").insert({
         title,
-        body,
+        message: body, // DB column is `message`
         type,
         user_id: user.uid,
         read: false,
