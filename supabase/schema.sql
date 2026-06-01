@@ -811,3 +811,137 @@ create policy "Users can insert/update own active session"
   on public.active_sessions for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- =====================================================================
+-- 15. SCHEMA RECONCILIATION (drift catch-up)
+-- Idempotent block that brings an existing database up to the live
+-- shape. `create table if not exists` above never alters pre-existing
+-- tables, so these explicit ALTERs/policies are required for parity.
+-- =====================================================================
+
+-- 15.1 profiles: trial / onboarding lifecycle columns ----------------
+alter table public.profiles
+  add column if not exists next_exam text,
+  add column if not exists trial_started_at timestamptz,
+  add column if not exists trial_ends_at timestamptz,
+  add column if not exists trial_used boolean not null default false,
+  add column if not exists onboarding_completed boolean default false,
+  add column if not exists plan_status text default 'none'
+    check (plan_status in ('active', 'expired', 'none'));
+
+-- 15.2 subjects: license + exam_id (used throughout content.ts) ------
+alter table public.subjects
+  add column if not exists license text,
+  add column if not exists exam_id text;
+
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.constraint_column_usage
+    where table_schema = 'public' and table_name = 'subjects'
+      and constraint_name = 'subjects_license_check'
+  ) then
+    alter table public.subjects
+      add constraint subjects_license_check
+      check (license is null or license in ('PPL','CPL','ATPL','IR','TYPE','RECRUITMENT','OTHER'));
+  end if;
+end $$;
+
+-- 15.3 questions: topic_tags (QuestionsManager) ----------------------
+alter table public.questions
+  add column if not exists topic_tags text[] not null default '{}'::text[];
+
+-- 15.4 exams & mock_papers: RLS + read/write policies ----------------
+alter table public.exams enable row level security;
+alter table public.mock_papers enable row level security;
+
+drop policy if exists "Read published exams" on public.exams;
+create policy "Read published exams"
+  on public.exams for select
+  using (status = 'published' or public.is_admin());
+
+drop policy if exists "Write exams restriction" on public.exams;
+create policy "Write exams restriction"
+  on public.exams for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+drop policy if exists "Read published mock_papers" on public.mock_papers;
+create policy "Read published mock_papers"
+  on public.mock_papers for select
+  using (status = 'published' or public.is_admin());
+
+drop policy if exists "Write mock_papers restriction" on public.mock_papers;
+create policy "Write mock_papers restriction"
+  on public.mock_papers for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+-- 15.5 user_question_attempts (per-question answer log) --------------
+create table if not exists public.user_question_attempts (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade,
+  question_id text not null,
+  subcategory_id text not null,
+  subject_id text not null,
+  exam_id text,
+  is_correct boolean not null,
+  answered_at timestamptz default now()
+);
+
+alter table public.user_question_attempts enable row level security;
+create index if not exists idx_uqa_user on public.user_question_attempts(user_id);
+
+drop policy if exists "Users can only read their own attempts" on public.user_question_attempts;
+create policy "Users can only read their own attempts"
+  on public.user_question_attempts for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert their own attempts" on public.user_question_attempts;
+create policy "Users can insert their own attempts"
+  on public.user_question_attempts for insert
+  with check (auth.uid() = user_id);
+
+-- 15.6 plan_changes (admin billing audit log) -----------------------
+create table if not exists public.plan_changes (
+  id bigint generated always as identity primary key,
+  user_id uuid references auth.users(id) on delete set null,
+  changed_by_email text,
+  old_plan text,
+  new_plan text,
+  expires_at timestamptz,
+  note text,
+  created_at timestamptz default now() not null
+);
+
+alter table public.plan_changes enable row level security;
+
+drop policy if exists "Admins read plan_changes" on public.plan_changes;
+create policy "Admins read plan_changes"
+  on public.plan_changes for select
+  using (public.is_admin());
+
+drop policy if exists "Admins manage plan_changes" on public.plan_changes;
+create policy "Admins manage plan_changes"
+  on public.plan_changes for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
+-- 15.7 Harden SECURITY DEFINER functions ----------------------------
+-- Pin search_path and revoke client-side EXECUTE (these run only via
+-- triggers, RLS and pg_cron — never via PostgREST RPC).
+alter function public.reset_daily_goals() set search_path = public;
+alter function public.protect_primary_admin() set search_path = public;
+alter function public.protect_billing_fields() set search_path = public;
+
+revoke execute on function public.handle_new_user() from anon, authenticated, public;
+revoke execute on function public.is_admin() from anon, authenticated, public;
+revoke execute on function public.protect_billing_fields() from anon, authenticated, public;
+revoke execute on function public.protect_primary_admin() from anon, authenticated, public;
+revoke execute on function public.reset_daily_goals() from anon, authenticated, public;
+
+-- 15.8 Covering indexes for foreign keys ----------------------------
+create index if not exists idx_mock_papers_exam on public.mock_papers(exam_id);
+create index if not exists idx_plan_changes_user on public.plan_changes(user_id);
+create index if not exists idx_question_reports_user on public.question_reports(user_id);
+create index if not exists idx_referrals_referrer on public.referrals(referrer_id);
