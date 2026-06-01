@@ -934,8 +934,11 @@ alter function public.reset_daily_goals() set search_path = public;
 alter function public.protect_primary_admin() set search_path = public;
 alter function public.protect_billing_fields() set search_path = public;
 
+-- NOTE: is_admin() is intentionally NOT revoked: it is called inside RLS
+-- policies and must remain EXECUTE-able by anon/authenticated, otherwise
+-- every policy referencing it fails. The advisor flag for is_admin is a
+-- by-design false positive.
 revoke execute on function public.handle_new_user() from anon, authenticated, public;
-revoke execute on function public.is_admin() from anon, authenticated, public;
 revoke execute on function public.protect_billing_fields() from anon, authenticated, public;
 revoke execute on function public.protect_primary_admin() from anon, authenticated, public;
 revoke execute on function public.reset_daily_goals() from anon, authenticated, public;
