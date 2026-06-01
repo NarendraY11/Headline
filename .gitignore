@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local tooling / analysis artifacts
+.mcp.json
+.codegraph/
+.understand-anything/
+.vercel/
