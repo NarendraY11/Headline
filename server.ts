@@ -136,6 +136,28 @@ async function startServer() {
     }
   };
 
+  app.post("/api/admin/init-owner", requireAuth, async (req, res) => {
+    try {
+      const admin = getSupabaseAdmin();
+      const uid = (req as any).uid;
+      const { data, error } = await admin.auth.admin.getUserById(uid);
+      
+      const email = data?.user?.email;
+      if (email === 'narendray112050@gmail.com') {
+        const { error: insertErr } = await admin.from('admins').insert({ email });
+        // ignore duplicate key error (23505)
+        if (insertErr && insertErr.code !== '23505') {
+          console.error("Failed to seed admin:", insertErr);
+        }
+        return res.json({ success: true, email });
+      }
+      return res.status(403).json({ error: "Not primary owner" });
+    } catch (e: any) {
+      console.error("Owner init error:", e);
+      return res.status(500).json({ error: e.message });
+    }
+  });
+
   // === Rate Limiting Middleware ===
   // uid/IP -> timestamps of requests made within the last minute
   const clientRequestTimestamps = new Map<string, number[]>();

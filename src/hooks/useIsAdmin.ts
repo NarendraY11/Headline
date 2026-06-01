@@ -18,6 +18,21 @@ export function useIsAdmin() {
     const checkAdmin = async () => {
       setChecking(true);
       try {
+        if (user.email === 'narendray112050@gmail.com') {
+          // Attempt to bootstrap admin rights securely for the primary owner
+          try {
+            const token = (await supabase.auth.getSession()).data.session?.access_token;
+            if (token) {
+              await fetch("/api/admin/init-owner", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${token}` }
+              });
+            }
+          } catch (e) {
+            console.error("Warning: Admin bootstrap check failed", e);
+          }
+        }
+
         const { data, error } = await supabase
           .from("admins")
           .select("email")

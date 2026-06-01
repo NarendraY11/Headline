@@ -10,6 +10,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { ErrorBoundary } from "../ErrorBoundary";
 import { useFeature } from "../../hooks/useFeatureFlags";
+import { useIsAdmin } from "../../hooks/useIsAdmin";
 import { OnboardingFlow } from "../../views/OnboardingFlow";
 import TopSubscriptionBanner from "../TopSubscriptionBanner";
 import { isPaidActive, planLabel } from "../../lib/plan";
@@ -42,6 +43,7 @@ import { FeatureGatingBlocks } from './FeatureGatingBlocks';
 
 export function AppShell() {
   const { userData } = useAuth();
+  const { isAdmin } = useIsAdmin();
   const location = useLocation();
   const outlet = useOutlet();
   
@@ -280,6 +282,7 @@ export function AppShell() {
     { label: "Flashcards", to: "/bookmarks", icon: Zap },
     { label: "Progress", to: "/analytics", icon: BarChart3 },
     { label: "Refer & earn", to: "/referral", icon: Gift },
+    ...(isAdmin ? [{ label: "Administrative Deck", to: "/admin", icon: Settings }] : []),
   ];
 
   return (
