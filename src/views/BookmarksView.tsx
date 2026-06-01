@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { Bookmark, BookmarkMinus, Play } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Chip, Button, Card } from "../components/Atoms";
+import { Button, Card, Chip } from "../components/Atoms";
+import { useAuth } from "../contexts/AuthContext";
 import { Question } from "../data/questions";
 import { fetchQuestionsByIds } from "../lib/content";
-import { Bookmark, BookmarkMinus, Play } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
 
 export default function BookmarksView() {
   const { userData, updateUserData, loading } = useAuth();

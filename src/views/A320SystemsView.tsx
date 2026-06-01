@@ -1,6 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
 import { MoveRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button, Wordmark } from '../components/Atoms';
 import { FlightControlsDiagram } from '../components/SystemDiagram';
 import { useAuth } from '../contexts/AuthContext';

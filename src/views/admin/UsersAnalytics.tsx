@@ -1,25 +1,25 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase";
+import {
+    Activity,
+    AlertCircle,
+    Award,
+    Bookmark,
+    BookOpen,
+    Calendar,
+    CheckCircle,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    GraduationCap,
+    Mail,
+    RefreshCw,
+    Search,
+    Users,
+    X
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { Card } from "../../components/Atoms";
 import { planLabel } from "../../lib/plan";
-import { 
-  Users, 
-  GraduationCap, 
-  Calendar, 
-  Mail, 
-  Award, 
-  RefreshCw, 
-  AlertCircle, 
-  Search, 
-  Bookmark, 
-  Clock, 
-  CheckCircle, 
-  X, 
-  ChevronRight, 
-  BookOpen, 
-  Activity, 
-  ChevronLeft 
-} from "lucide-react";
+import { supabase } from "../../lib/supabase";
 
 interface Profile {
   id: string;

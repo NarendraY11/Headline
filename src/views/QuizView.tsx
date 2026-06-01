@@ -1,38 +1,35 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { trackEvent } from "../lib/track";
-import { useAuth } from "../contexts/AuthContext";
-import { useNotifications } from "../contexts/NotificationContext";
-import { useLogbook } from "../hooks/useLogbook";
-import { useToast } from "../components/ui/Toast";
-import { supabase } from "../lib/supabase";
-import { useGlobalLoading } from "../contexts/LoadingContext";
-import { useFeature } from "../hooks/useFeatureFlags";
-import { motion, AnimatePresence } from "motion/react";
-import { Wordmark, Chip, Button, CompassLogomark } from "../components/Atoms";
-import { Question } from "../data/questions";
-import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopic } from "../lib/content";
-import ShareableScorecard from "../components/ShareableScorecard";
-import { isPaidActive } from "../lib/plan";
-import { apiFetch } from "../lib/api";
-import { mockExams } from "../data/topics";
-import { recordAnswerProgress, trackAnswerForStreakAndGoal, getDueQuestionIds } from "../lib/spacedRepetition";
-import { submitQuestionAttempt } from "../lib/progress";
+import { CheckCircle2, Flame, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Button, CompassLogomark } from "../components/Atoms";
 import { ProGate } from "../components/ProGate";
-import { X, ArrowRight, Settings2, Sparkles, CheckCircle2, Flame } from "lucide-react";
-import { lazy, Suspense } from "react";
+import { useToast } from "../components/ui/Toast";
+import { useAuth } from "../contexts/AuthContext";
+import { useGlobalLoading } from "../contexts/LoadingContext";
+import { useNotifications } from "../contexts/NotificationContext";
+import { Question } from "../data/questions";
+import { mockExams } from "../data/topics";
+import { useFeature } from "../hooks/useFeatureFlags";
+import { useLogbook } from "../hooks/useLogbook";
+import { apiFetch } from "../lib/api";
+import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopic } from "../lib/content";
+import { submitQuestionAttempt } from "../lib/progress";
+import { getDueQuestionIds, recordAnswerProgress, trackAnswerForStreakAndGoal } from "../lib/spacedRepetition";
+import { supabase } from "../lib/supabase";
+import { trackEvent } from "../lib/track";
 
 const EditorialLayout = lazy(() => import("./quiz-layouts/EditorialLayout"));
 const SplitLayout = lazy(() => import("./quiz-layouts/SplitLayout"));
 const InstrumentLayout = lazy(() => import("./quiz-layouts/InstrumentLayout"));
 const FlashcardLayout = lazy(() => import("./quiz-layouts/FlashcardLayout"));
 
-import { formatTime } from "./quiz/utils";
-import { QuizMode, QuizStatus } from "./quiz/types";
-import QuizSetup from "./quiz/QuizSetup";
-import QuizResumePrompt from "./quiz/QuizResumePrompt";
 import { QuizLoading, QuizNoQuestions } from "./quiz/QuizLoaders";
 import QuizResults from "./quiz/QuizResults";
+import QuizResumePrompt from "./quiz/QuizResumePrompt";
+import QuizSetup from "./quiz/QuizSetup";
+import { QuizMode, QuizStatus } from "./quiz/types";
+import { formatTime } from "./quiz/utils";
 
 export default function QuizView() {
   const { topicId: routeTopicId } = useParams();
@@ -246,7 +243,6 @@ export default function QuizView() {
   // Store AI study plan
   const [studyPlan, setStudyPlan] = useState<string | null>(null);
   const [isCoachLoading, setIsCoachLoading] = useState(false);
-  const [showAllQs, setShowAllQs] = useState(false);
 
   // Toast state
   const [saveToastVisible, setSaveToastVisible] = useState(false);

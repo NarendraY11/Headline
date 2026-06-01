@@ -1,19 +1,19 @@
-import React, { useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
-import { AdSlot } from "../components/AdSlot";
-import { Card, Button } from "../components/Atoms";
-import { 
-  Shield, 
-  Clock, 
-  HelpCircle, 
-  CheckCircle, 
-  Award, 
-  FileText, 
-  ArrowRight,
-  BookMarked,
-  Info,
-  ChevronRight
+import {
+    ArrowRight,
+    Award,
+    BookMarked,
+    CheckCircle,
+    ChevronRight,
+    Clock,
+    FileText,
+    HelpCircle,
+    Info,
+    Shield
 } from "lucide-react";
+import { useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
+import { AdSlot } from "../components/AdSlot";
+import { Button, Card } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
 
 interface ExamDetails {

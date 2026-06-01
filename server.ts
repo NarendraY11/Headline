@@ -1,11 +1,10 @@
-import express from "express";
-import path from "path";
-import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
-import Razorpay from "razorpay";
-import { getRazorpay, getSupabaseAdmin, verifyWebhookSignature, grantReferralRewards } from "./api/_lib/utils.js";
+import express from "express";
+import path from "path";
+import { createServer as createViteServer } from "vite";
+import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature } from "./api/_lib/utils.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -140,7 +139,7 @@ async function startServer() {
     try {
       const admin = getSupabaseAdmin();
       const uid = (req as any).uid;
-      const { data, error } = await admin.auth.admin.getUserById(uid);
+      const { data } = await admin.auth.admin.getUserById(uid);
       
       const email = data?.user?.email;
       if (email === 'narendray112050@gmail.com') {
@@ -272,7 +271,7 @@ async function startServer() {
   app.post("/api/payment/verify", requireAuth, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("pricingCheckout", res))) return;
     try {
-      const { razorpay_payment_id, razorpay_order_id, razorpay_signature, interval } = req.body;
+      const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
       const signaturePayload = `${razorpay_order_id}|${razorpay_payment_id}`;
       
       const keySecret = process.env.RAZORPAY_KEY_SECRET;

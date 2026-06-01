@@ -1,40 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, NavLink, useOutlet, useNavigate } from "react-router-dom";
-import { trackEvent } from "./lib/track";
-import { useDocumentMeta } from "./hooks/useDocumentMeta";
-import { Wordmark, Button } from "./components/Atoms";
-import { 
-  Menu, 
-  X, 
-  ArrowUpRight, 
-  Moon, 
-  Sun, 
-  User as UserIcon, 
-  Settings, 
-  Search,
-  Flame,
-  Compass,
-  Layers,
-  LayoutGrid,
-  Plane,
-  Mic,
-  Zap,
-  BarChart3,
-  Pin,
-  PinOff,
-  MoveRight,
-  ChevronDown,
-  Check,
-  Gift
-} from "lucide-react";
-import { useAuth } from "./contexts/AuthContext";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { lazy, Suspense } from "react";
-import { useFeature } from "./hooks/useFeatureFlags";
 import { AlertCircle } from "lucide-react";
-import { OnboardingFlow } from "./views/OnboardingFlow";
-import TopSubscriptionBanner from "./components/TopSubscriptionBanner";
-import { isPaidActive, planLabel } from "./lib/plan";
+import { lazy } from "react";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useAuth } from "./contexts/AuthContext";
+import { useFeature } from "./hooks/useFeatureFlags";
 
 const HomeView = lazy(() => import("./views/HomeView"));
 const ModulesView = lazy(() => import("./views/ModulesView"));
@@ -60,8 +29,8 @@ const ReferralView = lazy(() => import("./views/ReferralView"));
 const A320SystemsView = lazy(() => import("./views/A320SystemsView"));
 
 import { AdminGuard } from "./components/AdminGuard";
-import { AuthGuard } from "./components/AuthGuard";
 import { AdminLayout } from "./components/AdminLayout";
+import { AuthGuard } from "./components/AuthGuard";
 
 const AdminDashboard = lazy(() => import("./views/admin/AdminDashboard"));
 const SubjectsManager = lazy(() => import("./views/admin/SubjectsManager"));
@@ -75,30 +44,14 @@ const AdminSettings = lazy(() => import("./views/admin/AdminSettings"));
 const FeatureControl = lazy(() => import("./views/admin/FeatureControl"));
 const BlogManager = lazy(() => import("./views/admin/BlogManager"));
 
-import SearchOverlay from "./views/SearchOverlay";
-import PricingView from "./views/PricingView";
-import NotificationCenter from "./components/NotificationCenter";
-import StreakWidget from "./components/StreakWidget";
-import { useLogbook } from "./hooks/useLogbook";
-import { HeaderAuth } from './components/layout/HeaderAuth';
-import { SidebarAuth } from './components/layout/SidebarAuth';
-import { DarkModeToggle } from './components/layout/DarkModeToggle';
-import { CustomDropdown } from './components/layout/CustomDropdown';
-import { CustomToggle } from './components/layout/CustomToggle';
-import { SettingsOverlay } from './components/layout/SettingsOverlay';
-import { ShortcutsOverlay } from './components/layout/ShortcutsOverlay';
-import { PublicLayout } from './components/layout/PublicLayout';
-import { LoadingFallback } from './components/layout/LoadingFallback';
-import { PageTransition } from './components/layout/PageTransition';
-import { AuthOnboardingHandler } from './components/layout/AuthOnboardingHandler';
-import { NextCheckWidget } from './components/layout/NextCheckWidget';
-import { AppShell } from './components/layout/AppShell';
-import { RouteMetaHelper } from './components/layout/RouteMetaHelper';
-import { AuthModalTrigger } from './components/layout/AuthModalTrigger';
-import { FeatureGatingBlocks } from './components/layout/FeatureGatingBlocks';
-import AuthModal from "./components/AuthModal";
 import { CookieConsent } from "./components/CookieConsent";
 import { GlobalToastListener } from "./components/GlobalToastListener";
+import { AppShell } from './components/layout/AppShell';
+import { AuthModalTrigger } from './components/layout/AuthModalTrigger';
+import { FeatureGatingBlocks } from './components/layout/FeatureGatingBlocks';
+import { PublicLayout } from './components/layout/PublicLayout';
+import { RouteMetaHelper } from './components/layout/RouteMetaHelper';
+import PricingView from "./views/PricingView";
 
 
 
@@ -109,7 +62,6 @@ import { GlobalToastListener } from "./components/GlobalToastListener";
 
 
 
-import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
 
 

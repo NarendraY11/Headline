@@ -1,6 +1,5 @@
-import React from "react";
-import { Link } from "react-router-dom";
 import { ArrowUpRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function TodayStops() {
   return (

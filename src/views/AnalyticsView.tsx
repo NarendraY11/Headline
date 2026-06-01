@@ -1,30 +1,30 @@
-import React, { useState, useEffect } from "react";
+import { Sparkles, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { trackEvent } from "../lib/track";
-import { Card, Chip, Button } from "../components/Atoms";
-import { TrendingUp, Sparkles } from "lucide-react";
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  ResponsiveContainer,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-  XAxis,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Line,
+    LineChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
 } from "recharts";
-import { SubjectItem } from "../data/topics";
-import { fetchMergedSubjects } from "../lib/content";
-import { apiFetch } from "../lib/api";
-import { useAuth } from "../contexts/AuthContext";
-import { useLogbook } from "../hooks/useLogbook";
-import { useUserProgress } from "../lib/progress";
-import { useGlobalLoading } from "../contexts/LoadingContext";
-import { useToast } from "../components/ui/Toast";
-import { useFeature } from "../hooks/useFeatureFlags";
-import { ProGate } from "../components/ProGate";
+import { Button, Card, Chip } from "../components/Atoms";
 import { MasterySunburst } from "../components/MasterySunburst";
+import { ProGate } from "../components/ProGate";
+import { useToast } from "../components/ui/Toast";
+import { useAuth } from "../contexts/AuthContext";
+import { useGlobalLoading } from "../contexts/LoadingContext";
+import { SubjectItem } from "../data/topics";
+import { useFeature } from "../hooks/useFeatureFlags";
+import { useLogbook } from "../hooks/useLogbook";
+import { apiFetch } from "../lib/api";
+import { fetchMergedSubjects } from "../lib/content";
+import { useUserProgress } from "../lib/progress";
+import { trackEvent } from "../lib/track";
 
 export default function AnalyticsView() {
   const { loading, user } = useAuth();

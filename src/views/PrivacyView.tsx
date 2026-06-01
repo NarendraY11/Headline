@@ -1,4 +1,3 @@
-import React from "react";
 import { HR } from "../components/Atoms";
 
 export default function PrivacyView() {

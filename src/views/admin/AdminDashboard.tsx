@@ -1,14 +1,13 @@
-import React from "react";
 import { RecentEventsAuditTable } from "./AdminActivity";
-import { useAdminAnalytics } from "./dashboard/useAdminAnalytics";
 import { AdminDashboardHeader } from "./dashboard/AdminDashboardHeader";
+import { AiUsageHardestQuestions } from "./dashboard/AiUsageHardestQuestions";
 import { KpiCards } from "./dashboard/KpiCards";
 import { MainCharts } from "./dashboard/MainCharts";
-import { SubjectHeatmapCharts } from "./dashboard/SubjectHeatmapCharts";
-import { AiUsageHardestQuestions } from "./dashboard/AiUsageHardestQuestions";
-import { RevenueSnapshot } from "./dashboard/RevenueSnapshot";
-import { RecentAttemptsLog } from "./dashboard/RecentAttemptsLog";
 import { QualityAuditReports } from "./dashboard/QualityAuditReports";
+import { RecentAttemptsLog } from "./dashboard/RecentAttemptsLog";
+import { RevenueSnapshot } from "./dashboard/RevenueSnapshot";
+import { SubjectHeatmapCharts } from "./dashboard/SubjectHeatmapCharts";
+import { useAdminAnalytics } from "./dashboard/useAdminAnalytics";
 
 export default function AdminDashboard() {
   const {

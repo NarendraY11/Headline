@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
 import { animate } from "motion/react";
+import { useEffect, useState } from "react";
 
 export function AnimatedCounter({
   value,

@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "motion/react";
 import FocusTrap from "focus-trap-react";
-import { Search, BookOpen, Clock } from "lucide-react";
+import { BookOpen, Clock, Search } from "lucide-react";
+import { motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { mockExams, SubjectItem } from "../data/topics";
 import { fetchMergedSubjects } from "../lib/content";
 

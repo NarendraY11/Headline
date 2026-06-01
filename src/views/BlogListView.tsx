@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { blogPosts, BlogPost } from "../data/blog";
-import { AdSlot } from "../components/AdSlot";
-import { Card, Button } from "../components/Atoms";
-import { supabase } from "../lib/supabase";
-import { 
-  Search, 
-  Clock, 
-  ChevronRight, 
-  Calendar, 
-  User, 
-  ArrowUpRight,
-  Target,
-  Sparkles
+import {
+    ArrowUpRight,
+    Calendar,
+    ChevronRight,
+    Clock,
+    Search,
+    Sparkles,
+    Target,
+    User
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { AdSlot } from "../components/AdSlot";
+import { Button, Card } from "../components/Atoms";
+import { BlogPost, blogPosts } from "../data/blog";
+import { supabase } from "../lib/supabase";
 
 export default function BlogListView() {
   const [searchTerm, setSearchTerm] = useState("");

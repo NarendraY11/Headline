@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase";
-import { Card } from "../../components/Atoms";
-import { 
-  Activity, 
-  RefreshCw, 
-  AlertCircle, 
-  Search, 
-  Calendar, 
-  Trash2, 
-  Edit2, 
-  Plus, 
-  UserPlus, 
-  FileText, 
-  ChevronLeft, 
-  ChevronRight, 
-  SlidersHorizontal,
-  Download
+import {
+    Activity,
+    AlertCircle,
+    Calendar,
+    ChevronLeft,
+    ChevronRight,
+    Download,
+    Edit2,
+    FileText,
+    Plus,
+    RefreshCw,
+    Search,
+    SlidersHorizontal,
+    Trash2,
+    UserPlus
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Card } from "../../components/Atoms";
+import { supabase } from "../../lib/supabase";
 
 interface EventRecord {
   id: number;

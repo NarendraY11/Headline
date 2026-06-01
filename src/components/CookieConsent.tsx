@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from "react";
+import { ShieldCheck, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from "motion/react";
 import { Button } from "./Atoms";
-import { X, ShieldCheck } from "lucide-react";
 
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);

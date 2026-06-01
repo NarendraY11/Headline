@@ -1,6 +1,5 @@
-import React from "react";
 import { Settings2 } from "lucide-react";
-import { Chip, Button } from "../../components/Atoms";
+import { Button, Chip } from "../../components/Atoms";
 import { ProGate } from "../../components/ProGate";
 import { QuizMode } from "./types";
 

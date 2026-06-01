@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Card } from './Atoms';
-import { Settings2, Plus, Minus, CheckCircle } from 'lucide-react';
+import { CheckCircle, Minus, Plus, Settings2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { Card } from './Atoms';
 
 export default function DailyStudyGoal() {
   const { userData, updateUserData } = useAuth();

@@ -1,45 +1,44 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Reorder } from "motion/react";
-import { Button } from "../components/Atoms";
 import {
-  Compass,
-  Flame,
-  ArrowUpRight,
-  Clock,
-  Award,
-  BookOpen,
-  TrendingUp,
+    Award,
+    BookOpen,
+    Clock,
+    Compass,
+    Flame,
+    TrendingUp
 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
-import { useLogbook } from "../hooks/useLogbook";
-import { useFeature } from "../hooks/useFeatureFlags";
-import { SubjectItem } from "../data/topics";
-import { fetchMergedSubjects } from "../lib/content";
-import { getDueQuestionIds } from "../lib/spacedRepetition";
-import { useUserProgress } from "../lib/progress";
+import { Reorder } from "motion/react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-  Area,
-  Line,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  ComposedChart,
+    Area,
+    CartesianGrid,
+    ComposedChart,
+    Line,
+    PolarAngleAxis,
+    PolarGrid,
+    PolarRadiusAxis,
+    Radar,
+    RadarChart,
+    Tooltip as RechartsTooltip,
+    ResponsiveContainer,
+    XAxis,
+    YAxis,
 } from "recharts";
+import { Button } from "../components/Atoms";
+import { useAuth } from "../contexts/AuthContext";
+import { SubjectItem } from "../data/topics";
+import { useFeature } from "../hooks/useFeatureFlags";
+import { useLogbook } from "../hooks/useLogbook";
+import { fetchMergedSubjects } from "../lib/content";
+import { useUserProgress } from "../lib/progress";
+import { getDueQuestionIds } from "../lib/spacedRepetition";
 
 import { AnimatedCounter } from "./today/AnimatedCounter";
-import { WeatherWidget } from "./today/WeatherWidget";
 import { CustomTooltip } from "./today/CustomTooltip";
 import { TodayLoader } from "./today/DashboardLoaders";
 import { TodayStops } from "./today/TodayStops";
 import { getPacingData } from "./today/utils";
+import { WeatherWidget } from "./today/WeatherWidget";
 
 export default function TodayView() {
   const { userData, user, loading, updateUserData } = useAuth();

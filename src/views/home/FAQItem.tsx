@@ -1,5 +1,5 @@
-import React, { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { useState } from "react";
 
 export function FAQItem({ question, answer }: { question: string, answer: string }) {
   const [open, setOpen] = useState(false);

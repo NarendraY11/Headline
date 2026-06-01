@@ -1,4 +1,3 @@
-import React from "react";
 import { Button } from "../../components/Atoms";
 import { QuizMode } from "./types";
 

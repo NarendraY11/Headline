@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { ArrowUpRight, CheckCircle2, MoveRight, User } from "lucide-react";
 import { motion } from "motion/react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button, Card, Chip, CompassLogomark, Wordmark } from "../components/Atoms";
-import { MoveRight, CheckCircle2, User, ArrowUpRight } from "lucide-react";
-import { FlightControlsDiagram } from "../components/SystemDiagram";
-import { Question } from "../data/questions";
-import { supabase } from "../lib/supabase";
-import { fetchPublishedQuestions, fetchMergedSubjects } from "../lib/content";
-import LeadCapture from "../components/LeadCapture";
-import { useAuth } from "../contexts/AuthContext";
 import DailyStudyGoal from "../components/DailyStudyGoal";
-import { LazyChartWrapper } from "./home/LazyChartWrapper";
+import LeadCapture from "../components/LeadCapture";
+import { FlightControlsDiagram } from "../components/SystemDiagram";
+import { useAuth } from "../contexts/AuthContext";
+import { Question } from "../data/questions";
+import { fetchMergedSubjects, fetchPublishedQuestions } from "../lib/content";
+import { supabase } from "../lib/supabase";
 import { FadeUp } from "./home/FadeUp";
 import { FAQItem } from "./home/FAQItem";
 import { InteractiveSampleQuestion } from "./home/InteractiveSampleQuestion";
+import { LazyChartWrapper } from "./home/LazyChartWrapper";
 
 export default function HomeView() {
   const { user, openAuthModal } = useAuth();

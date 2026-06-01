@@ -1,11 +1,11 @@
-import React, { useState } from "react";
-import { X, ArrowRight, Sparkles, CheckCircle2, Flame } from "lucide-react";
+import { ArrowRight, Flame, Sparkles, X } from "lucide-react";
 import { motion } from "motion/react";
-import { Wordmark, Button, CompassLogomark } from "../../components/Atoms";
+import { useState } from "react";
+import { Button, CompassLogomark, Wordmark } from "../../components/Atoms";
 import ShareableScorecard from "../../components/ShareableScorecard";
-import { formatTime } from "./utils";
 import { Question } from "../../data/questions";
 import { isPaidActive } from "../../lib/plan";
+import { formatTime } from "./utils";
 
 interface QuizResultsProps {
   questions: Question[];

@@ -11,7 +11,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!user) return; // Response is already written by getAuthenticatedUser on error
 
   try {
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature, interval } = req.body || {};
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body || {};
     
     if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
       return res.status(400).json({ error: "Missing required payment parameters." });

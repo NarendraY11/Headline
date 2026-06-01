@@ -1,17 +1,17 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useNotifications, NotificationItem } from "../contexts/NotificationContext";
-import { 
-  Bell, 
-  Award, 
-  Clock, 
-  Calendar, 
-  Zap, 
-  Check, 
-  Trash2, 
-  BellOff, 
-  CheckCircle2
+import {
+    Award,
+    Bell,
+    BellOff,
+    Calendar,
+    Check,
+    CheckCircle2,
+    Clock,
+    Trash2,
+    Zap
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { NotificationItem, useNotifications } from "../contexts/NotificationContext";
 
 export default function NotificationCenter() {
   const { 

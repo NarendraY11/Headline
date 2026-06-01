@@ -1,5 +1,4 @@
-import React from "react";
-import { CompassLogomark, Button } from "../../components/Atoms";
+import { Button, CompassLogomark } from "../../components/Atoms";
 
 interface QuizLoadingProps {
   isVivaRoute: boolean;

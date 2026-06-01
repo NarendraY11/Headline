@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
 import {
-  Sun,
-  Cloud,
-  CloudRain,
-  CloudLightning,
-  Snowflake,
-  Wind,
-  CloudFog,
-  CloudOff,
+    Cloud,
+    CloudFog,
+    CloudLightning,
+    CloudOff,
+    CloudRain,
+    Snowflake,
+    Sun,
+    Wind,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useGlobalLoading } from "../../contexts/LoadingContext";
 import { apiFetch } from "../../lib/api";

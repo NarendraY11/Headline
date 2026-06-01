@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import { ArrowRight, Check, Flame, MoveLeft, MoveRight, ShieldAlert, Sparkles } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "motion/react";
 import { Wordmark } from "../components/Atoms";
-import { Check, MoveRight, MoveLeft, Sparkles, Flame, ShieldAlert, ArrowRight } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { fetchExams, ExamInfo } from "../lib/content";
+import { ExamInfo, fetchExams } from "../lib/content";
 
 const stepsData = [
   {

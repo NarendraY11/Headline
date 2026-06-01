@@ -1,6 +1,5 @@
-import React from "react";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import { Bot } from "lucide-react";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 interface Props {
   aiUsageData: any[];

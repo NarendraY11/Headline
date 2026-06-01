@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { AlertTriangle, Sparkles, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'motion/react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, AlertTriangle, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { getUserPlanState } from '../lib/subscription';
-import { motion, AnimatePresence } from 'motion/react';
 
 export default function TopSubscriptionBanner() {
   const { userData, loading, user } = useAuth();

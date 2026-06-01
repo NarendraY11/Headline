@@ -1,5 +1,4 @@
-import React from "react";
-import { Card, HR, CompassLogomark } from "../components/Atoms";
+import { Card, CompassLogomark, HR } from "../components/Atoms";
 
 export default function AboutView() {
   return (

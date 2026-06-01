@@ -1,7 +1,6 @@
-import React from "react";
+import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/Atoms";
-import { ArrowLeft } from "lucide-react";
 
 export default function NotFoundView() {
   return (

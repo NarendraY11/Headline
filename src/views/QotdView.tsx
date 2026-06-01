@@ -1,18 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { fetchPublishedQuestions } from "../lib/content";
-import { Question } from "../data/questions";
+import {
+    ArrowRight,
+    BookOpen,
+    Calendar,
+    CheckCircle,
+    Compass,
+    HelpCircle,
+    XCircle
+} from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button, Card } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
+import { Question } from "../data/questions";
 import { useDocumentMeta } from "../hooks/useDocumentMeta";
-import { 
-  Calendar, 
-  CheckCircle, 
-  XCircle, 
-  Compass, 
-  HelpCircle, 
-  ArrowRight, 
-  BookOpen
-} from "lucide-react";
+import { fetchPublishedQuestions } from "../lib/content";
 
 export default function QotdView() {
   const { openAuthModal, user } = useAuth();

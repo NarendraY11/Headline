@@ -1,45 +1,45 @@
-import React, { useState, useEffect, Suspense, lazy } from "react";
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, NavLink, useOutlet, useNavigate } from "react-router-dom";
-import { Wordmark, Button } from "../Atoms";
-import { 
-  Menu, X, ArrowUpRight, Moon, Sun, User as UserIcon, Settings, Search,
-  Flame, Compass, Layers, LayoutGrid, Plane, Mic, Zap, BarChart3, Pin,
-  PinOff, MoveRight, ChevronDown, Check, Gift,
-  AlertCircle, Pencil
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import {
+    ArrowUpRight,
+    BarChart3,
+    Compass,
+    Flame,
+    Gift,
+    Layers, LayoutGrid,
+    Menu,
+    Mic,
+    Moon,
+    Pin,
+    PinOff,
+    Plane,
+    Search,
+    Settings,
+    Sun,
+    X,
+    Zap
 } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { Link, NavLink, useLocation, useOutlet } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { ErrorBoundary } from "../ErrorBoundary";
 import { useFeature } from "../../hooks/useFeatureFlags";
 import { useIsAdmin } from "../../hooks/useIsAdmin";
-import { OnboardingFlow } from "../../views/OnboardingFlow";
-import TopSubscriptionBanner from "../TopSubscriptionBanner";
-import { isPaidActive, planLabel } from "../../lib/plan";
+import { useLogbook } from "../../hooks/useLogbook";
 import SearchOverlay from "../../views/SearchOverlay";
+import { Button, Wordmark } from "../Atoms";
+import { ErrorBoundary } from "../ErrorBoundary";
 import NotificationCenter from "../NotificationCenter";
 import StreakWidget from "../StreakWidget";
-import { useLogbook } from "../../hooks/useLogbook";
-import { trackEvent } from "../../lib/track";
-import { useDocumentMeta } from "../../hooks/useDocumentMeta";
-import { motion, AnimatePresence, MotionConfig } from "framer-motion";
-import AuthModal from "../AuthModal";
-import { CookieConsent } from "../CookieConsent";
-import { GlobalToastListener } from "../GlobalToastListener";
+import TopSubscriptionBanner from "../TopSubscriptionBanner";
 
-import { HeaderAuth } from './HeaderAuth';
-import { SidebarAuth } from './SidebarAuth';
+import { AuthOnboardingHandler } from './AuthOnboardingHandler';
 import { DarkModeToggle } from './DarkModeToggle';
-import { CustomDropdown } from './CustomDropdown';
-import { CustomToggle } from './CustomToggle';
+import { HeaderAuth } from './HeaderAuth';
+import { LoadingFallback } from './LoadingFallback';
+import { NextCheckWidget } from './NextCheckWidget';
+import { PageTransition } from './PageTransition';
 import { SettingsOverlay } from './SettingsOverlay';
 import { ShortcutsOverlay } from './ShortcutsOverlay';
-import { PublicLayout } from './PublicLayout';
-import { LoadingFallback } from './LoadingFallback';
-import { PageTransition } from './PageTransition';
-import { AuthOnboardingHandler } from './AuthOnboardingHandler';
-import { NextCheckWidget } from './NextCheckWidget';
-import { RouteMetaHelper } from './RouteMetaHelper';
-import { AuthModalTrigger } from './AuthModalTrigger';
-import { FeatureGatingBlocks } from './FeatureGatingBlocks';
+import { SidebarAuth } from './SidebarAuth';
 
 export function AppShell() {
   const { userData } = useAuth();

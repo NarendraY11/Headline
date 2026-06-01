@@ -1,5 +1,5 @@
-import React, { useRef, useEffect, useState } from "react";
 import { Download, Sparkles, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Card } from "./Atoms";
 
 interface ShareableScorecardProps {

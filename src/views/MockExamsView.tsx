@@ -1,32 +1,32 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Card, Button } from "../components/Atoms";
-import { 
-  Timer, 
-  Clipboard, 
-  PlaneTakeoff, 
-  ArrowUpRight, 
-  ArrowLeft, 
-  Activity, 
-  TrendingUp, 
-  Layers,
-  Clock,
-  RefreshCw
+import {
+    Activity,
+    ArrowLeft,
+    ArrowUpRight,
+    Clipboard,
+    Clock,
+    Layers,
+    PlaneTakeoff,
+    RefreshCw,
+    Timer,
+    TrendingUp
 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
-import { supabase } from "../lib/supabase";
-import { Question } from "../data/questions";
-import { SubjectItem } from "../data/topics";
-import { 
-  fetchExams, 
-  fetchMockPapersForExam, 
-  fetchPublishedQuestions, 
-  fetchMergedSubjects,
-  ExamInfo,
-  MockPaperSpec
-} from "../lib/content";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button, Card } from "../components/Atoms";
 import { ProGate } from "../components/ProGate";
 import { useToast } from "../components/ui/Toast";
+import { useAuth } from "../contexts/AuthContext";
+import { Question } from "../data/questions";
+import { SubjectItem } from "../data/topics";
+import {
+    ExamInfo,
+    fetchExams,
+    fetchMergedSubjects,
+    fetchMockPapersForExam,
+    fetchPublishedQuestions,
+    MockPaperSpec
+} from "../lib/content";
+import { supabase } from "../lib/supabase";
 
 export default function MockExamsView() {
   const navigate = useNavigate();

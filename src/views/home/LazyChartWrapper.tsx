@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 const HomeProgressChart = lazy(() => import("../../components/HomeProgressChart"));
 

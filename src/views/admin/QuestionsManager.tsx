@@ -1,11 +1,18 @@
-import React, { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabase";
-import { Button } from "../../components/Atoms";
-import { 
-  Plus, Edit2, Trash2, Save, RefreshCw, AlertCircle, Eye, EyeOff, 
-  CheckCircle2, ChevronLeft, ChevronRight, Search, Sparkles 
+import {
+    AlertCircle,
+    CheckCircle2, ChevronLeft, ChevronRight,
+    Edit2,
+    Eye, EyeOff,
+    Plus,
+    RefreshCw,
+    Save,
+    Search, Sparkles,
+    Trash2
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "../../components/Atoms";
 import { FlightControlsDiagram } from "../../components/SystemDiagram";
+import { supabase } from "../../lib/supabase";
 import { trackEvent } from "../../lib/track";
 
 interface Subject {

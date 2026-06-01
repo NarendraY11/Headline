@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { Button, Card } from "../components/Atoms";
-import { supabase } from "../lib/supabase";
-import { useDocumentMeta } from "../hooks/useDocumentMeta";
-import { 
-  Users, 
-  Gift, 
-  Copy, 
-  Check, 
-  ShieldCheck, 
-  Clock
+import {
+    Check,
+    Clock,
+    Copy,
+    Gift,
+    ShieldCheck,
+    Users
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button, Card } from "../components/Atoms";
+import { useAuth } from "../contexts/AuthContext";
+import { useDocumentMeta } from "../hooks/useDocumentMeta";
+import { supabase } from "../lib/supabase";
 
 export default function ReferralView() {
   useDocumentMeta();

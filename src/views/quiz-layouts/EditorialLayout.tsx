@@ -1,10 +1,10 @@
-import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, XCircle, ArrowLeft, ArrowRight, Clock, Bookmark, Sparkles, X, Flag } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bookmark, CheckCircle2, Clock, Flag, Sparkles, X, XCircle } from "lucide-react";
+import { useState } from "react";
 import { Button, Chip, Wordmark } from "../../components/Atoms";
-import { QuizLayoutProps } from "./types";
-import { FlightControlsDiagram } from "../../components/SystemDiagram";
 import ReportQuestionModal from "../../components/ReportQuestionModal";
+import { FlightControlsDiagram } from "../../components/SystemDiagram";
+import { QuizLayoutProps } from "./types";
 
 export default function EditorialLayout({
   currentQ,

@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from "react";
+import { ArrowUpRight, ChevronDown, Compass, Lock, Milestone, Plus, Search, Target } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../components/Atoms";
-import { ArrowUpRight, Lock, Target, ChevronDown, Plus, Search } from "lucide-react";
-import { SubjectItem } from "../data/topics";
-import { fetchMergedSubjects } from "../lib/content";
-import { useLogbook } from "../hooks/useLogbook";
-import { getDailyReviewItems } from "../lib/logbook";
-import { useAuth } from "../contexts/AuthContext";
-import { useUserProgress } from "../lib/progress";
-import { Compass, Milestone } from "lucide-react";
 import { ProGate } from "../components/ProGate";
 import ReadingProgress from "../components/ReadingProgress";
+import { useAuth } from "../contexts/AuthContext";
+import { SubjectItem } from "../data/topics";
+import { useLogbook } from "../hooks/useLogbook";
+import { fetchMergedSubjects } from "../lib/content";
+import { getDailyReviewItems } from "../lib/logbook";
+import { useUserProgress } from "../lib/progress";
 
 export default function ModulesView() {
   const navigate = useNavigate();

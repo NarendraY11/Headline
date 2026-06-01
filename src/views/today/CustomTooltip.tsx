@@ -1,4 +1,3 @@
-import React from "react";
 
 export const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {

@@ -1,5 +1,4 @@
-import React from "react";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingDown, TrendingUp } from "lucide-react";
 import { TimeRangeType } from "./types";
 
 export function AdminTrend({ current, previous, isPercent = false, timeRange }: { current: number, previous: number, isPercent?: boolean, timeRange: TimeRangeType }) {

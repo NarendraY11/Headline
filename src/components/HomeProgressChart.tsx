@@ -1,5 +1,4 @@
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell } from "recharts";
+import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
 export default function HomeProgressChart() {
   return (

@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { supabase } from "../../lib/supabase";
+import { AlertTriangle, PowerOff, Save } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "../../components/Atoms";
 import { useToast } from "../../components/ui/Toast";
 import { defaultFlags, FlagKeys, Flags } from "../../hooks/useFeatureFlags";
-import { Save, AlertTriangle, PowerOff } from "lucide-react";
-import { Button } from "../../components/Atoms";
+import { supabase } from "../../lib/supabase";
 
 export default function FeatureControl() {
   const [flags, setFlags] = useState<Flags>(defaultFlags);

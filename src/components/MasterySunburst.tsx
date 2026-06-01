@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
+import { AlertTriangle, Archive, CheckCircle, Info, Star, Target } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { SubjectItem } from "../data/topics";
-import { Card, Button } from "./Atoms";
-import { Info, Archive, Star, Target, CheckCircle, AlertTriangle } from "lucide-react";
+import { Button, Card } from "./Atoms";
 
 interface MasterySunburstProps {
   subjectsList: SubjectItem[];

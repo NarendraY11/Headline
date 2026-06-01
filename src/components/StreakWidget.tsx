@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Flame, ArrowRight, X } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { ArrowRight, Flame, X } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useLogbook } from "../hooks/useLogbook";
-import { Link } from "react-router-dom";
 
 export default function StreakWidget() {
   const { userData } = useAuth();

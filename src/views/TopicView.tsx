@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
-import { trackEvent } from "../lib/track";
-import { SubjectItem, rawSubjects } from "../data/topics";
-import { fetchMergedSubjects } from "../lib/content";
-import { apiFetch } from "../lib/api";
-import { Chip, Card, Button } from "../components/Atoms";
 import {
-  ArrowLeft,
-  ArrowUpRight,
-  BookOpen,
-  Sparkles,
-  Search,
-  Lock,
+    ArrowLeft,
+    ArrowUpRight,
+    BookOpen,
+    Lock,
+    Search,
+    Sparkles,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Button, Card, Chip } from "../components/Atoms";
+import { ProGate } from "../components/ProGate";
+import ReadingProgress from "../components/ReadingProgress";
 import { FlightControlsDiagram } from "../components/SystemDiagram";
-import { useGlobalLoading } from "../contexts/LoadingContext";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
-import { useUserProgress } from "../lib/progress";
-import { ProGate } from "../components/ProGate";
+import { useGlobalLoading } from "../contexts/LoadingContext";
+import { SubjectItem, rawSubjects } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
-import ReadingProgress from "../components/ReadingProgress";
+import { apiFetch } from "../lib/api";
+import { fetchMergedSubjects } from "../lib/content";
+import { useUserProgress } from "../lib/progress";
+import { trackEvent } from "../lib/track";
 
 export default function TopicView() {
   const { id } = useParams();

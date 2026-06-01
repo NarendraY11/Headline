@@ -1,6 +1,5 @@
-import React from "react";
+import { Activity, Award, Calendar, DollarSign, FileText, HelpCircle, ShieldCheck, Users } from "lucide-react";
 import { Card } from "../../../components/Atoms";
-import { Users, Activity, FileText, ShieldCheck, DollarSign, Calendar, Award, HelpCircle } from "lucide-react";
 import { AdminTrend } from "./AdminTrend";
 import { AllTimeStats, KpiStats, TimeRangeType } from "./types";
 

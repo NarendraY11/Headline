@@ -1,5 +1,4 @@
-import React from "react";
-import { DollarSign, AlertCircle } from "lucide-react";
+import { AlertCircle, DollarSign } from "lucide-react";
 import { AllTimeStats, KpiStats } from "./types";
 
 interface Props {
