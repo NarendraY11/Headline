@@ -1,14 +1,85 @@
-import { AlertTriangle, PowerOff, Save } from "lucide-react";
+import { AlertTriangle, Eye, ImageOff, PowerOff, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../components/Atoms";
 import { useToast } from "../../components/ui/Toast";
 import { defaultFlags, FlagKeys, Flags } from "../../hooks/useFeatureFlags";
 import { supabase } from "../../lib/supabase";
+import { getFeatureMedia } from "./featureMedia";
+
+interface HoverState {
+  key: FlagKeys;
+  label: string;
+  caption: string;
+  x: number;
+  y: number;
+}
+
+// Floating preview that follows the cursor. Tries to load the feature's
+// preview asset; if it is missing, shows a styled placeholder telling the
+// admin where to drop the file.
+function FeaturePreview({ hover }: { hover: HoverState }) {
+  const media = getFeatureMedia(hover.key);
+  const [failed, setFailed] = useState(false);
+
+  // Reset the error state whenever the hovered feature changes.
+  useEffect(() => setFailed(false), [hover.key]);
+
+  const PANEL_W = 340;
+  const PANEL_H = 280;
+  const left = Math.min(hover.x + 24, window.innerWidth - PANEL_W - 12);
+  const top = Math.min(hover.y + 24, window.innerHeight - PANEL_H - 12);
+
+  return (
+    <div
+      className="fixed z-[1000] pointer-events-none rounded-xl border border-rule-strong bg-paper shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+      style={{ left, top, width: PANEL_W }}
+    >
+      <div className="px-3 py-2 border-b border-rule/60 bg-bg-2/60 flex items-center gap-1.5">
+        <Eye size={13} className="text-ink" />
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 truncate">
+          {hover.label}
+        </span>
+      </div>
+
+      <div className="w-full h-[190px] bg-bg-2 flex items-center justify-center">
+        {failed ? (
+          <div className="flex flex-col items-center justify-center text-center px-4">
+            <ImageOff size={22} className="text-muted-2 mb-2" />
+            <p className="font-sans text-[11px] text-muted-2">No preview asset yet.</p>
+            <p className="font-mono text-[9px] text-muted-2/70 mt-1 break-all">
+              add <span className="text-ink">public{media.src}</span>
+            </p>
+          </div>
+        ) : media.type === "video" ? (
+          <video
+            src={media.src}
+            autoPlay
+            muted
+            loop
+            playsInline
+            onError={() => setFailed(true)}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <img
+            src={media.src}
+            alt={`${hover.label} preview`}
+            onError={() => setFailed(true)}
+            className="w-full h-full object-cover"
+          />
+        )}
+      </div>
+
+      <p className="px-3 py-2.5 text-[11px] leading-snug text-muted font-sans">{media.caption}</p>
+    </div>
+  );
+}
 
 export default function FeatureControl() {
   const [flags, setFlags] = useState<Flags>(defaultFlags);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hover, setHover] = useState<HoverState | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -51,24 +122,36 @@ export default function FeatureControl() {
     }
   };
 
-  const renderToggle = (key: FlagKeys, label: string, description?: string) => (
-    <div className="flex items-center justify-between p-4 bg-paper border border-rule-strong rounded-lg mb-3">
-      <div>
-        <h4 className="text-sm font-semibold text-ink font-sans">{label}</h4>
-        {description && <p className="text-[11px] text-muted-2 mt-0.5">{description}</p>}
+  const renderToggle = (key: FlagKeys, label: string, description?: string) => {
+    const on = flags[key] as boolean;
+    return (
+      <div
+        onMouseEnter={(e) => setHover({ key, label, caption: "", x: e.clientX, y: e.clientY })}
+        onMouseMove={(e) => setHover((h) => (h && h.key === key ? { ...h, x: e.clientX, y: e.clientY } : h))}
+        onMouseLeave={() => setHover((h) => (h && h.key === key ? null : h))}
+        className="group flex items-center justify-between gap-3 p-4 bg-paper border border-rule-strong rounded-lg mb-3 transition-all hover:border-ink/40 hover:shadow-md cursor-help"
+      >
+        <div className="min-w-0">
+          <h4 className="text-sm font-semibold text-ink font-sans flex items-center gap-1.5">
+            {label}
+            <Eye size={12} className="text-muted-2 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </h4>
+          {description && <p className="text-[11px] text-muted-2 mt-0.5">{description}</p>}
+        </div>
+        <label className="relative inline-flex items-center cursor-pointer shrink-0">
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label={label}
+            className="sr-only peer"
+            checked={on}
+            onChange={(e) => handleChange(key, e.target.checked)}
+          />
+          <div className="w-11 h-6 bg-rule peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+        </label>
       </div>
-      <label className="relative inline-flex items-center cursor-pointer">
-        <input 
-          type="checkbox" 
-          role="switch"
-          className="sr-only peer" 
-          checked={flags[key] as boolean} 
-          onChange={(e) => handleChange(key, e.target.checked)} 
-        />
-        <div className="w-11 h-6 bg-rule peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-      </label>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return <div className="p-8 text-muted-2">Loading...</div>;
@@ -81,6 +164,9 @@ export default function FeatureControl() {
           <h1 className="text-3xl font-serif text-ink tracking-tight mb-2">Feature Control</h1>
           <p className="text-muted text-sm font-sans">
             Globally enable or disable app features. Disabled features will immediately hide from the UI and reject API requests.
+          </p>
+          <p className="text-[11px] text-muted-2 mt-1.5 flex items-center gap-1.5">
+            <Eye size={13} className="text-ink" /> Hover any feature to preview what it changes.
           </p>
         </div>
         <div className="flex gap-3">
@@ -149,6 +235,8 @@ export default function FeatureControl() {
           />
         </div>
       </section>
+
+      {hover && <FeaturePreview hover={hover} />}
     </div>
   );
 }
