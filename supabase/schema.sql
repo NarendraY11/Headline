@@ -945,3 +945,245 @@ create index if not exists idx_mock_papers_exam on public.mock_papers(exam_id);
 create index if not exists idx_plan_changes_user on public.plan_changes(user_id);
 create index if not exists idx_question_reports_user on public.question_reports(user_id);
 create index if not exists idx_referrals_referrer on public.referrals(referrer_id);
+
+-- =====================================================================
+-- 16. RLS PERFORMANCE CANONICALIZATION
+-- Supersedes the policies defined in sections 7-15. Two goals:
+--  (1) wrap auth.uid()/auth.role()/is_admin() in scalar subqueries so
+--      Postgres evaluates them once per statement (initplan), not per row.
+--  (2) replace broad `for all` policies with explicit per-command
+--      policies so no two permissive policies overlap for the same
+--      role+command. Access semantics are unchanged.
+-- =====================================================================
+
+-- ---------- CONTENT TABLES: public read published, admin write -------
+drop policy if exists "Write subjects restriction" on public.subjects;
+drop policy if exists "Read published subjects" on public.subjects;
+drop policy if exists "public read published subjects" on public.subjects;
+create policy "subjects_select" on public.subjects for select
+  using (status = 'published' or (select public.is_admin()));
+create policy "subjects_insert" on public.subjects for insert
+  with check ((select public.is_admin()));
+create policy "subjects_update" on public.subjects for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "subjects_delete" on public.subjects for delete
+  using ((select public.is_admin()));
+
+drop policy if exists "Write subcategories restriction" on public.subcategories;
+drop policy if exists "Read published subcategories" on public.subcategories;
+drop policy if exists "public read published subcategories" on public.subcategories;
+create policy "subcategories_select" on public.subcategories for select
+  using (status = 'published' or (select public.is_admin()));
+create policy "subcategories_insert" on public.subcategories for insert
+  with check ((select public.is_admin()));
+create policy "subcategories_update" on public.subcategories for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "subcategories_delete" on public.subcategories for delete
+  using ((select public.is_admin()));
+
+drop policy if exists "Write questions restriction" on public.questions;
+drop policy if exists "Read published questions" on public.questions;
+drop policy if exists "public read published questions" on public.questions;
+create policy "questions_select" on public.questions for select
+  using (status = 'published' or (select public.is_admin()));
+create policy "questions_insert" on public.questions for insert
+  with check ((select public.is_admin()));
+create policy "questions_update" on public.questions for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "questions_delete" on public.questions for delete
+  using ((select public.is_admin()));
+
+drop policy if exists "Write exams restriction" on public.exams;
+drop policy if exists "Read published exams" on public.exams;
+create policy "exams_select" on public.exams for select
+  using (status = 'published' or (select public.is_admin()));
+create policy "exams_insert" on public.exams for insert
+  with check ((select public.is_admin()));
+create policy "exams_update" on public.exams for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "exams_delete" on public.exams for delete
+  using ((select public.is_admin()));
+
+drop policy if exists "Write mock_papers restriction" on public.mock_papers;
+drop policy if exists "Read published mock_papers" on public.mock_papers;
+create policy "mock_papers_select" on public.mock_papers for select
+  using (status = 'published' or (select public.is_admin()));
+create policy "mock_papers_insert" on public.mock_papers for insert
+  with check ((select public.is_admin()));
+create policy "mock_papers_update" on public.mock_papers for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "mock_papers_delete" on public.mock_papers for delete
+  using ((select public.is_admin()));
+
+drop policy if exists "Write blog posts restriction" on public.blog_posts;
+drop policy if exists "Read published blog posts" on public.blog_posts;
+create policy "blog_posts_select" on public.blog_posts for select
+  using (status = 'published' or (select public.is_admin()));
+create policy "blog_posts_insert" on public.blog_posts for insert
+  with check ((select public.is_admin()));
+create policy "blog_posts_update" on public.blog_posts for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "blog_posts_delete" on public.blog_posts for delete
+  using ((select public.is_admin()));
+
+-- ---------- USER-OWNED TABLES ---------------------------------------
+drop policy if exists "Users read own profile" on public.profiles;
+drop policy if exists "Users insert own profile" on public.profiles;
+drop policy if exists "Users update own profile" on public.profiles;
+create policy "profiles_select" on public.profiles for select
+  using ((select auth.uid()) = id or (select public.is_admin()));
+create policy "profiles_insert" on public.profiles for insert
+  with check ((select auth.uid()) = id);
+create policy "profiles_update" on public.profiles for update
+  using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
+
+drop policy if exists "Users select own attempts" on public.attempts;
+drop policy if exists "Users create own attempts" on public.attempts;
+drop policy if exists "Users update/delete own attempts" on public.attempts;
+create policy "attempts_select" on public.attempts for select
+  using ((select auth.uid()) = user_id or (select public.is_admin()));
+create policy "attempts_insert" on public.attempts for insert
+  with check ((select auth.uid()) = user_id);
+create policy "attempts_update" on public.attempts for update
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "attempts_delete" on public.attempts for delete
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "Users select own bookmarks" on public.bookmarks;
+drop policy if exists "Users write own bookmarks" on public.bookmarks;
+create policy "bookmarks_select" on public.bookmarks for select
+  using ((select auth.uid()) = user_id or (select public.is_admin()));
+create policy "bookmarks_insert" on public.bookmarks for insert
+  with check ((select auth.uid()) = user_id);
+create policy "bookmarks_delete" on public.bookmarks for delete
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "Users view own question progress" on public.question_progress;
+drop policy if exists "Users insert own question progress" on public.question_progress;
+drop policy if exists "Users update own question progress" on public.question_progress;
+drop policy if exists "Users delete own question progress" on public.question_progress;
+create policy "question_progress_select" on public.question_progress for select
+  using ((select auth.uid()) = user_id or (select public.is_admin()));
+create policy "question_progress_insert" on public.question_progress for insert
+  with check ((select auth.uid()) = user_id);
+create policy "question_progress_update" on public.question_progress for update
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "question_progress_delete" on public.question_progress for delete
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "Users view own notifications" on public.notifications;
+drop policy if exists "Users update own notifications" on public.notifications;
+drop policy if exists "System insert notifications" on public.notifications;
+create policy "notifications_select" on public.notifications for select
+  using ((select auth.uid()) = user_id or (select public.is_admin()));
+create policy "notifications_insert" on public.notifications for insert
+  with check ((select auth.uid()) is not null);
+create policy "notifications_update" on public.notifications for update
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+
+drop policy if exists "Permit event insert logic" on public.events;
+drop policy if exists "Admins read metrics events" on public.events;
+create policy "events_insert" on public.events for insert
+  with check (
+    ((select auth.uid()) is not null and (select auth.uid()) = user_id)
+    or ((select auth.uid()) is null and user_id is null)
+  );
+create policy "events_select" on public.events for select
+  using ((select public.is_admin()));
+
+drop policy if exists "Users can view own active session" on public.active_sessions;
+drop policy if exists "Users can insert/update own active session" on public.active_sessions;
+create policy "active_sessions_select" on public.active_sessions for select
+  using ((select auth.uid()) = user_id);
+create policy "active_sessions_insert" on public.active_sessions for insert
+  with check ((select auth.uid()) = user_id);
+create policy "active_sessions_update" on public.active_sessions for update
+  using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
+create policy "active_sessions_delete" on public.active_sessions for delete
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "Users can only read their own attempts" on public.user_question_attempts;
+drop policy if exists "Users can insert their own attempts" on public.user_question_attempts;
+create policy "uqa_select" on public.user_question_attempts for select
+  using ((select auth.uid()) = user_id);
+create policy "uqa_insert" on public.user_question_attempts for insert
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "Users view own referrals" on public.referrals;
+drop policy if exists "Users insert own referrals" on public.referrals;
+drop policy if exists "Only admins manage referrals" on public.referrals;
+create policy "referrals_select" on public.referrals for select
+  using ((select auth.uid()) = referrer_id or (select auth.uid()) = referred_id or (select public.is_admin()));
+create policy "referrals_insert" on public.referrals for insert
+  with check ((select auth.uid()) = referred_id);
+create policy "referrals_update" on public.referrals for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "referrals_delete" on public.referrals for delete
+  using ((select public.is_admin()));
+
+-- ---------- ADMIN / PUBLIC-SUBMIT TABLES ----------------------------
+drop policy if exists "Admins view and self-manage admins roster" on public.admins;
+create policy "admins_all" on public.admins for all
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+
+drop policy if exists "Anyone can read app_settings" on public.app_settings;
+drop policy if exists "Only admins can update app_settings" on public.app_settings;
+create policy "app_settings_select" on public.app_settings for select
+  using (true);
+create policy "app_settings_insert" on public.app_settings for insert
+  with check ((select public.is_admin()));
+create policy "app_settings_update" on public.app_settings for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "app_settings_delete" on public.app_settings for delete
+  using ((select public.is_admin()));
+
+drop policy if exists "Anyone can submit lead" on public.leads;
+drop policy if exists "Only admins view leads" on public.leads;
+drop policy if exists "Only admins manage leads" on public.leads;
+create policy "leads_insert" on public.leads for insert
+  with check (true);
+create policy "leads_select" on public.leads for select
+  using ((select public.is_admin()));
+create policy "leads_update" on public.leads for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "leads_delete" on public.leads for delete
+  using ((select public.is_admin()));
+
+drop policy if exists "Anyone can submit reports" on public.question_reports;
+drop policy if exists "Only admins view reports" on public.question_reports;
+drop policy if exists "Only admins manage reports" on public.question_reports;
+create policy "question_reports_insert" on public.question_reports for insert
+  with check (true);
+create policy "question_reports_select" on public.question_reports for select
+  using ((select public.is_admin()));
+create policy "question_reports_update" on public.question_reports for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "question_reports_delete" on public.question_reports for delete
+  using ((select public.is_admin()));
+
+drop policy if exists "Admins read plan_changes" on public.plan_changes;
+drop policy if exists "Admins manage plan_changes" on public.plan_changes;
+create policy "plan_changes_select" on public.plan_changes for select
+  using ((select public.is_admin()));
+create policy "plan_changes_insert" on public.plan_changes for insert
+  with check ((select public.is_admin()));
+create policy "plan_changes_update" on public.plan_changes for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "plan_changes_delete" on public.plan_changes for delete
+  using ((select public.is_admin()));
+
+-- ---------- SERVICE-ROLE CACHE TABLES -------------------------------
+drop policy if exists "Anyone can view weather cache" on public.weather_cache;
+drop policy if exists "Only service role can update weather cache" on public.weather_cache;
+create policy "weather_cache_select" on public.weather_cache for select
+  using (true);
+create policy "weather_cache_insert" on public.weather_cache for insert
+  with check ((select auth.role()) = 'service_role');
+create policy "weather_cache_update" on public.weather_cache for update
+  using ((select auth.role()) = 'service_role') with check ((select auth.role()) = 'service_role');
+create policy "weather_cache_delete" on public.weather_cache for delete
+  using ((select auth.role()) = 'service_role');
+
+drop policy if exists "Only service role can update or read AI cache" on public.ai_cache;
+create policy "ai_cache_all" on public.ai_cache for all
+  using ((select auth.role()) = 'service_role') with check ((select auth.role()) = 'service_role');
