@@ -1141,7 +1141,11 @@ drop policy if exists "Anyone can submit lead" on public.leads;
 drop policy if exists "Only admins view leads" on public.leads;
 drop policy if exists "Only admins manage leads" on public.leads;
 create policy "leads_insert" on public.leads for insert
-  with check (true);
+  to anon, authenticated
+  with check (
+    char_length(email) between 3 and 320
+    and char_length(coalesce(resource, '')) <= 100
+  );
 create policy "leads_select" on public.leads for select
   using ((select public.is_admin()));
 create policy "leads_update" on public.leads for update
@@ -1153,7 +1157,12 @@ drop policy if exists "Anyone can submit reports" on public.question_reports;
 drop policy if exists "Only admins view reports" on public.question_reports;
 drop policy if exists "Only admins manage reports" on public.question_reports;
 create policy "question_reports_insert" on public.question_reports for insert
-  with check (true);
+  to anon, authenticated
+  with check (
+    char_length(question_id) between 1 and 200
+    and char_length(category) between 1 and 100
+    and char_length(comment) between 1 and 2000
+  );
 create policy "question_reports_select" on public.question_reports for select
   using ((select public.is_admin()));
 create policy "question_reports_update" on public.question_reports for update
