@@ -7,6 +7,14 @@ export interface AllTimeStats {
   totalAttempts: number;
 }
 
+export interface RevenueStats {
+  mrrInr: number;
+  totalCollectedInr: number;
+  periodCollectedInr: number;
+  churnPercent: number;
+  purchaseCount: number;
+}
+
 export interface KpiStats {
   currentSignups: number;
   prevSignups: number;

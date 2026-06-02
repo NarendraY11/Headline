@@ -189,22 +189,44 @@ export async function trackAnswerForStreakAndGoal(
     return `${year}-${month}-${day}`;
   };
 
+  const getOffsetString = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
   const today = getTodayString();
   const yesterday = getYesterdayString();
+  const dayBeforeYesterday = getOffsetString(2);
+
+  // Streak freeze: a user starts with a small reserve of "freezes" that
+  // protect the streak when exactly one day is missed, instead of resetting.
+  const DEFAULT_FREEZES = 2;
 
   if (user) {
     const lastActive = userData?.lastActivityDate ?? "";
     const currentStreak = userData?.streakCount ?? 0;
     const answeredToday = userData?.questionsAnsweredToday ?? 0;
+    const baseSettings = userData?.settings || {};
+    const freezes = typeof baseSettings.streakFreezes === "number" ? baseSettings.streakFreezes : DEFAULT_FREEZES;
 
     let nextStreak = currentStreak;
     let nextCount = answeredToday;
+    let nextFreezes = freezes;
 
     if (lastActive === today) {
       nextCount += count;
     } else if (lastActive === yesterday) {
       nextStreak += 1;
       nextCount = count;
+    } else if (lastActive === dayBeforeYesterday && currentStreak > 0 && freezes > 0) {
+      // Missed exactly one day — spend a freeze to keep the streak (no increment).
+      nextStreak = currentStreak;
+      nextCount = count;
+      nextFreezes = freezes - 1;
     } else {
       nextStreak = 1;
       nextCount = count;
@@ -214,6 +236,7 @@ export async function trackAnswerForStreakAndGoal(
       streakCount: nextStreak,
       questionsAnsweredToday: nextCount,
       lastActivityDate: today,
+      settings: { ...baseSettings, streakFreezes: nextFreezes },
     });
   } else {
     try {

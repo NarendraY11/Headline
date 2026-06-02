@@ -17,6 +17,7 @@ export default function AdminDashboard() {
     rpcWorking,
     allTimeStats,
     kpiStats,
+    revenueStats,
     signupsOverTime,
     conversionsOverTime,
     activeUsersOverTime,
@@ -77,6 +78,7 @@ export default function AdminDashboard() {
           <RevenueSnapshot
             allTimeStats={allTimeStats}
             kpiStats={kpiStats}
+            revenueStats={revenueStats}
           />
 
           <RecentAttemptsLog

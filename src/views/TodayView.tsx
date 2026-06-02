@@ -28,9 +28,13 @@ const PacingChart = lazy(() => import("./today/PacingChart"));
 
 const ChartFallback = () => <div className="w-full h-full min-h-[260px] bg-bg-2 animate-pulse rounded-md" />;
 import { WeatherWidget } from "./today/WeatherWidget";
+import { ResumeCard } from "./today/ResumeCard";
+import { ReferralWidget } from "./today/ReferralWidget";
+import { useNotifications } from "../contexts/NotificationContext";
 
 export default function TodayView() {
   const { userData, user, loading, updateUserData } = useAuth();
+  const { addNotification } = useNotifications();
   const weatherBriefingEnabled = useFeature("weatherBriefing");
   const { stats: progressStats } = useUserProgress();
   const [notificationStatus, setNotificationStatus] = useState<
@@ -40,6 +44,23 @@ export default function TodayView() {
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [dueCount, setDueCount] = useState<number>(0);
+
+  // Daily study reminder: if the user hasn't logged any activity today, drop a
+  // gentle nudge into their notifications (once per day).
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const lastActive = userData?.lastActivityDate || "";
+    const lastReminder = localStorage.getItem("heading_last_reminder_date") || "";
+    if (lastActive !== today && lastReminder !== today) {
+      addNotification(
+        "Keep your streak alive ✈️",
+        "You haven't logged any training today. A few questions keeps your streak and sharpness up.",
+        "reminder"
+      );
+      localStorage.setItem("heading_last_reminder_date", today);
+    }
+  }, [user, userData?.lastActivityDate]);
 
   useEffect(() => {
     async function fetchDueCount() {
@@ -677,6 +698,9 @@ export default function TodayView() {
             {tileOrder.map((tile) => renderTile(tile))}
           </Reorder.Group>
         </div>
+
+        <ResumeCard />
+        <ReferralWidget />
 
         {/* WEATHER & MASTERY HEATMAP ROW */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-10 w-full">

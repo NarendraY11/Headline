@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../../lib/supabase";
-import { TimeRangeType, AllTimeStats, KpiStats } from "./types";
+import { TimeRangeType, AllTimeStats, KpiStats, RevenueStats } from "./types";
 
 export function useAdminAnalytics() {
   const [timeRange, setTimeRange] = useState<TimeRangeType>("7d");
@@ -31,6 +31,14 @@ export function useAdminAnalytics() {
     prevTotalQuizSessions: 0,
     avgScore: 0,
     prevAvgScore: 0,
+  });
+
+  const [revenueStats, setRevenueStats] = useState<RevenueStats>({
+    mrrInr: 0,
+    totalCollectedInr: 0,
+    periodCollectedInr: 0,
+    churnPercent: 0,
+    purchaseCount: 0,
   });
 
   const [signupsOverTime, setSignupsOverTime] = useState<any[]>([]);
@@ -84,6 +92,37 @@ export function useAdminAnalytics() {
       const prevPeriodStart = nowMs - 2 * daysRange * msInDay;
 
       const limitStr = new Date(prevPeriodStart).toISOString();
+
+      // Revenue derived from the plan_changes audit trail. Purchases are the
+      // rows whose note came from the Razorpay verify/webhook path.
+      try {
+        const PRICE = { monthly: 499, yearly: 2999 };
+        const { data: planChanges } = await supabase
+          .from("plan_changes")
+          .select("new_plan, note, created_at");
+        let totalCollected = 0, periodCollected = 0, purchaseCount = 0, downgrades = 0;
+        (planChanges || []).forEach((pc: any) => {
+          const note = (pc.note || "").toLowerCase();
+          if (note.includes("razorpay")) {
+            const amt = note.includes("yearly") ? PRICE.yearly : PRICE.monthly;
+            totalCollected += amt;
+            purchaseCount += 1;
+            if (new Date(pc.created_at).getTime() >= currentPeriodStart) periodCollected += amt;
+          }
+          if (pc.new_plan === "free") downgrades += 1;
+        });
+        const proCount = absolutePro || 0;
+        const churn = proCount + downgrades > 0 ? (downgrades / (proCount + downgrades)) * 100 : 0;
+        setRevenueStats({
+          mrrInr: proCount * PRICE.monthly,
+          totalCollectedInr: totalCollected,
+          periodCollectedInr: periodCollected,
+          churnPercent: Math.round(churn * 10) / 10,
+          purchaseCount,
+        });
+      } catch (revErr) {
+        console.warn("Revenue computation failed:", revErr);
+      }
 
       const [profilesRes, attemptsRes, eventsRes] = await Promise.all([
         supabase.from("profiles").select("*").gte("created_at", limitStr),
@@ -390,6 +429,7 @@ export function useAdminAnalytics() {
     rpcWorking,
     allTimeStats,
     kpiStats,
+    revenueStats,
     signupsOverTime,
     conversionsOverTime,
     activeUsersOverTime,
