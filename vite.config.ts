@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 import Beasties from 'beasties';
 
 function beastiesPlugin() {
@@ -48,7 +49,77 @@ export default defineConfig(() => {
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
-    plugins: [react(), tailwindcss(), beastiesPlugin() as any],
+    plugins: [
+      react(),
+      tailwindcss(),
+      beastiesPlugin() as any,
+      VitePWA({
+        registerType: 'autoUpdate',
+        // New builds activate immediately so users never get stuck on a stale
+        // precached shell (important given the prerender + esbuild server pipeline).
+        includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'offline.html'],
+        manifest: {
+          name: 'Heading — Pilot Exam Prep',
+          short_name: 'Heading',
+          description:
+            'Premium pilot exam preparation — realistic DGCA, EASA & A320 mock exams, study diagnostics, and analytics.',
+          theme_color: '#14305a',
+          background_color: '#14305a',
+          display: 'standalone',
+          orientation: 'portrait',
+          start_url: '/',
+          scope: '/',
+          icons: [
+            { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
+            { src: '/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
+          // Some vendor chunks (recharts/motion) are large; lift the precache cap.
+          maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+          cleanupOutdatedCaches: true,
+          clientsClaim: true,
+          skipWaiting: true,
+          // App shell: SPA navigations fall back to the precached index.html so
+          // routes work offline. Never hijack API / SEO endpoints.
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/api\//, /^\/sitemap\.xml$/, /^\/robots\.txt$/],
+          runtimeCaching: [
+            // Supabase auth: NEVER cache tokens / session.
+            {
+              urlPattern: ({ url }) =>
+                url.hostname.endsWith('.supabase.co') && url.pathname.includes('/auth/'),
+              handler: 'NetworkOnly',
+            },
+            // Supabase data (REST/Realtime): Network First, short cache for offline reads.
+            {
+              urlPattern: ({ url }) =>
+                url.hostname.endsWith('.supabase.co') && !url.pathname.includes('/auth/'),
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'supabase-data',
+                networkTimeoutSeconds: 5,
+                expiration: { maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 },
+                cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            // Images & fonts: Stale While Revalidate.
+            {
+              urlPattern: ({ request }) =>
+                request.destination === 'image' || request.destination === 'font',
+              handler: 'StaleWhileRevalidate',
+              options: {
+                cacheName: 'static-assets',
+                expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              },
+            },
+          ],
+        },
+        devOptions: { enabled: false },
+      }),
+    ],
     build: {
       target: "esnext",
       rollupOptions: {
