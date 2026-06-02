@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { trackEvent } from '../lib/track';
 import { registerActiveSession, clearLocalSession, checkSessionValidity } from '../lib/sessionTracker';
+import { posthogIdentify, posthogReset } from '../lib/posthog';
 
 export interface UserData {
   attempts: any;
@@ -455,6 +456,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (lastUserId !== mappedUser.uid) {
           lastUserId = mappedUser.uid;
           setUser(mappedUser);
+          posthogIdentify(mappedUser.uid, { email: mappedUser.email, name: mappedUser.displayName });
           await fetchUserData(mappedUser.uid, mappedUser);
         }
         if (active) setLoading(false);
@@ -474,10 +476,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (lastUserId !== mappedUser.uid) {
           lastUserId = mappedUser.uid;
           setUser(mappedUser);
-          
+          posthogIdentify(mappedUser.uid, { email: mappedUser.email, name: mappedUser.displayName });
+
           // Execute sync/merge transition
           await syncWithServerAndMerge(mappedUser.uid);
-          
+
           // Retrieve profile details
           await fetchUserData(mappedUser.uid, mappedUser);
         } else {
@@ -487,6 +490,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         lastUserId = null;
         setUser(null);
         setUserData(null);
+        posthogReset();
         if (active) setLoading(false);
       }
     });
@@ -521,6 +525,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Clear all local auth contexts
       setUser(null);
       setUserData(null);
+      posthogReset();
 
       // Specifically remove all auth/session data from localStorage
       localStorage.removeItem("heading_bookmarks");

@@ -17,6 +17,11 @@ import { ToastProvider } from './components/ui/Toast.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import { FeatureFlagsProvider } from './hooks/useFeatureFlags';
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { initPostHog } from './lib/posthog';
+
+// Initialize product analytics (no-op until VITE_POSTHOG_KEY is set; capturing
+// stays opted out until cookie consent is accepted).
+initPostHog();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

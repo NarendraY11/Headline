@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useDocumentMeta } from "../../hooks/useDocumentMeta";
 import { trackEvent } from "../../lib/track";
+import { posthogPageview } from "../../lib/posthog";
 
 
 export function RouteMetaHelper() {
@@ -10,6 +11,7 @@ export function RouteMetaHelper() {
 
   useEffect(() => {
     trackEvent("page_view", { metadata: { path: location.pathname } });
+    posthogPageview(location.pathname);
 
     // Growth: Capture campaign referral codes (e.g., ?ref=PILOT123)
     const params = new URLSearchParams(location.search);
