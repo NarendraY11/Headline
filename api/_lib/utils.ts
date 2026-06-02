@@ -408,7 +408,13 @@ export const getSupabaseAdmin = () => {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
   let serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!serviceKey) {
-    console.warn("Warning: SUPABASE_SERVICE_ROLE_KEY is missing. Falling back to ANON_KEY. Admin operations may fail.");
+    // In production, never silently fall back to the anon key: admin paths
+    // (plan grants, admin authz lookups) would then run under RLS as anon and
+    // fail in confusing, security-relevant ways. Fail loudly instead.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SUPABASE_SERVICE_ROLE_KEY is required in production for admin operations.");
+    }
+    console.warn("Warning: SUPABASE_SERVICE_ROLE_KEY is missing. Falling back to ANON_KEY (dev only). Admin operations may fail.");
     serviceKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
   }
   if (!serviceKey) {

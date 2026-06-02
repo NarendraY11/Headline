@@ -45,12 +45,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const rz = getRazorpay();
     const order = await rz.orders.fetch(razorpay_order_id);
-    
+
+    // Authorization: the order must belong to the caller. create-order stamps
+    // the buyer's uid into notes.userId; a valid signature for someone else's
+    // order must not be replayable to upgrade a different account.
+    if (order?.notes?.userId && order.notes.userId !== user.id) {
+      return res.status(403).json({ error: "Order does not belong to this account." });
+    }
+
+    // Only grant on an actually-paid order.
+    if (order?.status !== "paid") {
+      return res.status(400).json({ error: "Order is not paid." });
+    }
+
+    const admin = getSupabaseAdmin();
+
+    // Idempotency: if this payment was already processed, return success without
+    // re-granting (prevents replay / double-submit from stacking entitlements).
+    const { data: priorGrant } = await admin
+      .from("plan_changes")
+      .select("id")
+      .eq("user_id", user.id)
+      .ilike("note", `%${razorpay_payment_id}%`)
+      .maybeSingle();
+    if (priorGrant) {
+      return res.status(200).json({ success: true, alreadyProcessed: true });
+    }
+
     const PLAN_PRICE_MONTHLY = 499 * 100;
     const PLAN_PRICE_YEARLY = 2999 * 100;
-    
+
     const paidAmount = order.amount;
-    
+
     let verifiedInterval = "monthly";
     if (paidAmount === PLAN_PRICE_YEARLY) {
       verifiedInterval = "yearly";
@@ -67,8 +93,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     } else {
       expiresAt.setMonth(expiresAt.getMonth() + 1);
     }
-
-    const admin = getSupabaseAdmin();
 
     const { data: prevProfile } = await admin
       .from("profiles")

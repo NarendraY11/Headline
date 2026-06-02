@@ -594,14 +594,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (data.nextExam !== undefined) updatePayload.next_exam = data.nextExam;
         if (data.newsletterOptIn !== undefined) updatePayload.newsletter_opt_in = data.newsletterOptIn;
         if (data.onboardingCompleted !== undefined) updatePayload.onboarding_completed = data.onboardingCompleted;
-        
-        if (data.plan !== undefined) updatePayload.plan = data.plan;
-        if (data.planStatus !== undefined) updatePayload.plan_status = data.planStatus;
-        if (data.planStartedAt !== undefined) updatePayload.plan_started_at = data.planStartedAt;
-        if (data.planExpiresAt !== undefined) updatePayload.plan_expires_at = data.planExpiresAt;
-        if (data.trialStartedAt !== undefined) updatePayload.trial_started_at = data.trialStartedAt;
-        if (data.trialEndsAt !== undefined) updatePayload.trial_ends_at = data.trialEndsAt;
-        if (data.trialUsed !== undefined) updatePayload.trial_used = data.trialUsed;
+
+        // NOTE: billing/plan/trial columns are deliberately NOT written from the
+        // client. They are server-authoritative (granted via the service role in
+        // /api/payment/* and /api/start-trial) and enforced read-only for clients
+        // by the protect_profile_billing_columns trigger. fetchUserData() below
+        // re-reads the authoritative values, so optimistic callers still converge.
 
         if (data.dailyGoal !== undefined) updatePayload.daily_goal = data.dailyGoal;
         if (data.streakCount !== undefined) updatePayload.streak_count = data.streakCount;

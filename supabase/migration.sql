@@ -16,26 +16,13 @@ end $$;
 alter table public.profiles drop constraint if exists profiles_plan_check;
 alter table public.profiles add constraint profiles_plan_check check (plan in ('free', 'trial', 'pro'));
 
--- 3. Create a BEFORE UPDATE trigger function on public.profiles that BLOCKS changes to the billing columns UNLESS the current role is the service_role
-create or replace function public.protect_billing_fields()
-returns trigger as $$
-begin
-  -- Only enforce this check for non-service roles
-  if auth.role() <> 'service_role' then
-    NEW.plan = OLD.plan;
-    NEW.plan_started_at = OLD.plan_started_at;
-    NEW.plan_expires_at = OLD.plan_expires_at;
-  end if;
-  return NEW;
-end;
-$$ language plpgsql security definer;
-
--- 4. Create trigger
-drop trigger if exists enforce_billing_security on public.profiles;
-create trigger enforce_billing_security
-  before update on public.profiles
-  for each row
-  execute function public.protect_billing_fields();
+-- 3. Billing-column protection (SUPERSEDED).
+--    The original enforce_billing_security / protect_billing_fields() trigger
+--    lived here. It was partial (covered only plan, plan_started_at,
+--    plan_expires_at), silently reverted instead of erroring, and skipped the
+--    guard when auth.role() was NULL. It has been DROPPED and replaced by
+--    trg_protect_profile_billing / protect_profile_billing_columns() — see
+--    migration-rls-ownership-hardening.sql. Do not re-create the old trigger.
 
 -- 5. Add ip_address column to active_sessions for server-side IP binding.
 --    Written by the service role via /api/session/check; users never set it.
