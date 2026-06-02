@@ -51,6 +51,12 @@ create trigger trg_protect_profile_billing
   before update on public.profiles
   for each row execute function public.protect_profile_billing_columns();
 
+-- This is a trigger-only function; it never needs to be called via the REST RPC
+-- surface. Triggers fire regardless of EXECUTE grants, so revoke the default
+-- public grant to keep it off the exposed API (clears the SECURITY DEFINER
+-- function advisor for it).
+revoke execute on function public.protect_profile_billing_columns() from public, anon, authenticated;
+
 -- Retire the legacy partial guard now that trg_protect_profile_billing is the
 -- single authoritative billing trigger. (Drop trigger first, then the function.)
 drop trigger if exists enforce_billing_security on public.profiles;
