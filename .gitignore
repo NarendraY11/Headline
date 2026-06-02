@@ -6,6 +6,12 @@ coverage/
 *.log
 .env*
 !.env.example
+!.env.test.example
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
 
 # Local tooling / analysis artifacts
 .mcp.json
