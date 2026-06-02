@@ -137,6 +137,12 @@ export default function ProfileView() {
   };
 
   const handleImageUpload = async (blobOrFile: Blob | File) => {
+    // Defense-in-depth: catch oversized blobs (e.g. camera captures) that
+    // bypass the file-input check.
+    if (blobOrFile.size > 5 * 1024 * 1024) {
+      setUploadError("Image is too large. Maximum size is 5 MB.");
+      return;
+    }
     setIsUploading(true);
     setUploadError("");
     setUploadSuccess(false);
@@ -198,10 +204,30 @@ export default function ProfileView() {
     }
   };
 
+  // Avatar upload constraints. `accept="image/*"` is only a UI hint; validate
+  // the real MIME type and size here so non-images / oversized files are
+  // rejected before they reach storage or the profile photoURL.
+  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+  const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
+
   const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleImageUpload(e.target.files[0]);
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setUploadError("Unsupported file type. Upload a JPEG, PNG, WebP, or GIF image.");
+      e.target.value = "";
+      return;
     }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setUploadError("Image is too large. Maximum size is 5 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setUploadError("");
+    handleImageUpload(file);
+    e.target.value = ""; // allow re-selecting the same file after an error
   };
 
   return (
