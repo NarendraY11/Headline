@@ -210,7 +210,7 @@ create table if not exists public.bookmarks (
 create table if not exists public.events (
   id bigint generated always as identity primary key,
   user_id uuid references auth.users on delete set null, -- Nullable to allow anonymous telemetry
-  event_type text not null,                              -- e.g. 'page_view', 'coach_consulted'
+  event_type text not null check (char_length(event_type) between 1 and 100), -- e.g. 'page_view', 'coach_consulted'
   subject_id text,
   subcategory_id text,
   question_id text,
@@ -703,7 +703,8 @@ create table if not exists public.referrals (
   referred_id uuid not null references auth.users(id) on delete cascade unique,
   status text not null default 'pending' check (status in ('pending', 'completed', 'rewarded')),
   reward_granted boolean default false not null,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now() not null,
+  constraint referrals_no_self check (referrer_id <> referred_id)
 );
 
 -- RLS for referrals

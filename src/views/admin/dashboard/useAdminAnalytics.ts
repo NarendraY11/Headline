@@ -50,6 +50,8 @@ export function useAdminAnalytics() {
   const [aiUsageData, setAiUsageData] = useState<any[]>([]);
   const [recentAttempts, setRecentAttempts] = useState<any[]>([]);
   const [reports, setReports] = useState<any[]>([]);
+  const [contactMessages, setContactMessages] = useState<any[]>([]);
+  const [leads, setLeads] = useState<any[]>([]);
   const [profilesMap, setProfilesMap] = useState<Record<string, any>>({});
 
   const fetchAllAnalytics = async (selectedRange: TimeRangeType) => {
@@ -80,6 +82,20 @@ export function useAdminAnalytics() {
         .order("created_at", { ascending: false })
         .limit(10);
       setReports(reportData || []);
+
+      const { data: contactData } = await supabase
+        .from("contact_messages")
+        .select("id, name, email, subject, message, status, created_at")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      setContactMessages(contactData || []);
+
+      const { data: leadData } = await supabase
+        .from("leads")
+        .select("id, email, resource, consent, created_at")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      setLeads(leadData || []);
 
       let daysRange = 7;
       if (selectedRange === "Today") daysRange = 1;
@@ -418,6 +434,20 @@ export function useAdminAnalytics() {
     }
   };
 
+  const handleResolveContact = async (messageId: string, currentStatus: string) => {
+    const nextStatus = currentStatus === "resolved" ? "open" : "resolved";
+    try {
+      const { error } = await supabase
+        .from("contact_messages")
+        .update({ status: nextStatus })
+        .eq("id", messageId);
+      if (error) throw error;
+      setContactMessages(prev => prev.map(m => m.id === messageId ? { ...m, status: nextStatus } : m));
+    } catch (e) {
+      console.error("Error setting contact message state:", e);
+    }
+  };
+
   useEffect(() => {
     fetchAllAnalytics(timeRange);
   }, [timeRange]);
@@ -439,8 +469,11 @@ export function useAdminAnalytics() {
     aiUsageData,
     recentAttempts,
     reports,
+    contactMessages,
+    leads,
     profilesMap,
     fetchAllAnalytics,
     handleResolveReport,
+    handleResolveContact,
   };
 }
