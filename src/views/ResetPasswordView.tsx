@@ -58,6 +58,15 @@ export default function ResetPasswordView() {
         throw error;
       }
 
+      // Invalidate every existing session after a password change: revoke all
+      // refresh tokens server-side (global scope) so any device using the old
+      // password is logged out. The user re-authenticates with the new one.
+      try {
+        await supabase.auth.signOut({ scope: "global" });
+      } catch (revokeErr) {
+        console.warn("Post-reset session revocation failed:", revokeErr);
+      }
+
       setSuccess(true);
       // Wait a moment and navigate or let them click
     } catch (err: any) {

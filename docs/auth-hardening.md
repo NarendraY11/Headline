@@ -114,6 +114,19 @@ Run for each table and confirm policies scope rows to `auth.uid()`:
 
 ---
 
+## Session-management requirements status
+
+| # | Requirement | Status | Where |
+|---|-------------|--------|-------|
+| 1 | Access token 15–30 min | **Dashboard** (set JWT expiry; default 1h) | Supabase → Auth → Sessions |
+| 2 | Refresh token 7–30 days | **Dashboard** (session timebox / inactivity) | Supabase → Auth → Sessions |
+| 3 | httpOnly/secure/sameSite cookies | **Not feasible** in browser-client model — see Part 1 | n/a |
+| 4 | Logout invalidates server-side | **Done** — explicit `signOut({ scope: "global" })` | `AuthContext.tsx` |
+| 5 | Password change kills all sessions | **Done** — global `signOut` after `updateUser` | `ResetPasswordView.tsx` |
+
+#1 and #2 cannot be set from application code or the Supabase MCP tools — they
+are project auth config (dashboard or Management API only).
+
 ## What stays as-is (already correct)
 - Password hashing: bcrypt, Supabase-managed. ✓
 - Backend token validation: `getAuthenticatedUser` calls
