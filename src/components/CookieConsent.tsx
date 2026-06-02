@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "./Atoms";
+import { posthogConsentGranted, posthogConsentDeclined } from "../lib/posthog";
 
 export function CookieConsent() {
   const [visible, setVisible] = useState(false);
@@ -28,6 +29,7 @@ export function CookieConsent() {
     } catch (e) {
       console.warn("Failed to write cookie consent state:", e);
     }
+    posthogConsentGranted();
     setVisible(false);
   };
 
@@ -37,6 +39,7 @@ export function CookieConsent() {
     } catch (e) {
       console.warn("Failed to write cookie consent state:", e);
     }
+    posthogConsentDeclined();
     setVisible(false);
   };
 
