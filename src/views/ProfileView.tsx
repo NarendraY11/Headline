@@ -6,7 +6,7 @@ import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, 
 import { supabase } from "../lib/supabase";
 
 export default function ProfileView() {
-  const { user, userData, logout, resetAccount, loading, openAuthModal, updateUserData } = useAuth();
+  const { user, userData, logout, logoutEverywhere, resetAccount, loading, openAuthModal, updateUserData } = useAuth();
   const navigate = useNavigate();
 
   const [isUploading, setIsUploading] = useState(false);
@@ -548,9 +548,20 @@ export default function ProfileView() {
           </Button>
         </div>
 
-        <div className="pt-4 flex justify-between border-t border-rule mt-8">
+        <div className="pt-4 flex flex-wrap gap-3 justify-between border-t border-rule mt-8">
           <Button variant="ghost" onClick={logout} className="gap-2 text-muted-2 hover:text-ink">
             <LogOut size={16} /> Sign out
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              if (window.confirm("Log out of all devices? This ends every active session, including this one.")) {
+                logoutEverywhere();
+              }
+            }}
+            className="gap-2 text-muted-2 hover:text-signal"
+          >
+            <LogOut size={16} /> Log out everywhere
           </Button>
         </div>
       </div>

@@ -67,6 +67,7 @@ interface AuthContextType {
   loading: boolean;
   signInWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
+  logoutEverywhere: () => Promise<void>;
   updateUserData: (data: Partial<UserData>) => Promise<void>;
   resetAccount: () => Promise<void>;
   authModalOpen: boolean;
@@ -554,6 +555,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // (3) Log out of every device: purge the user's active-session rows, then
+  // revoke all refresh tokens server-side (global) via the shared logout path.
+  const logoutEverywhere = async () => {
+    try {
+      if (user) {
+        await supabase.from('active_sessions').delete().eq('user_id', user.uid);
+      }
+    } catch (e) {
+      console.error("Failed to clear active sessions:", e);
+    }
+    await logout();
+  };
+
   const updateUserData = async (data: Partial<UserData>) => {
     if (!user) return;
     try {
@@ -694,6 +708,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       signInWithGoogle,
       logout,
+      logoutEverywhere,
       updateUserData,
       resetAccount,
       authModalOpen,

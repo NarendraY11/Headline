@@ -127,6 +127,26 @@ Run for each table and confirm policies scope rows to `auth.uid()`:
 #1 and #2 cannot be set from application code or the Supabase MCP tools — they
 are project auth config (dashboard or Management API only).
 
+## Session fixation / hijacking measures
+
+| # | Measure | Status | Where |
+|---|---------|--------|-------|
+| 1 | New session id per login | **Done** — Supabase rotates token each login; client session id regenerates after logout clears it | GoTrue + `sessionTracker.ts` |
+| 2 | Bind session to IP / UA | **Partial** — user-agent binding done client-side; sudden UA change forces logout. IP binding needs a server endpoint (browser can't read its own IP) | `sessionTracker.ts` |
+| 3 | Log out everywhere | **Done** — purges `active_sessions` rows + global `signOut` | `AuthContext.logoutEverywhere`, button in `ProfileView` |
+| 4 | `secure` flag on cookies | **N/A** — app uses no auth cookies; tokens live in localStorage and are sent as `Authorization: Bearer` | n/a |
+| 5 | `sameSite` on auth cookies | **N/A** — same reason; **CSRF is moot** because auth is not cookie/ambient-credential based | n/a |
+
+Notes:
+- #2 UA binding is a weak signal (UA rarely changes; spoofable). Real hijack
+  protection is preventing token theft (CSP + short TTL). True IP binding +
+  device list requires moving session checks server-side.
+- #4/#5: there are no cookies to flag. If the app ever adopts cookie-based
+  sessions (the BFF rewrite in Part 1), set `Secure`, `HttpOnly`, and
+  `SameSite=Lax` on them at that point.
+- `active_sessions` must have RLS scoping rows to `auth.uid()` for #2/#3 to be
+  trustworthy (a user must not read/delete others' session rows).
+
 ## What stays as-is (already correct)
 - Password hashing: bcrypt, Supabase-managed. ✓
 - Backend token validation: `getAuthenticatedUser` calls
