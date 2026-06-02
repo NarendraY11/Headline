@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Full-bleed background so the OS mask (circle/squircle) always lands on navy. -->
+  <rect width="512" height="512" fill="#14305a" />
+
+  <!-- Compass scaled to ~80% and centred to sit inside the maskable safe zone. -->
+  <g transform="translate(256,256) scale(0.8) translate(-256,-256)">
+    <circle cx="256" cy="256" r="180" fill="none" stroke="#f5f2ea" stroke-width="12" stroke-dasharray="1 10" />
+    <circle cx="256" cy="256" r="160" fill="none" stroke="#f5f2ea" stroke-width="4" opacity="0.4" />
+    <circle cx="256" cy="256" r="150" fill="none" stroke="#f5f2ea" stroke-width="2" opacity="0.2" />
+
+    <g stroke="#f5f2ea" stroke-width="6" stroke-linecap="round">
+      <line x1="256" y1="76" x2="256" y2="100" />
+      <line x1="256" y1="436" x2="256" y2="412" />
+      <line x1="436" y1="256" x2="412" y2="256" />
+      <line x1="76" y1="256" x2="100" y2="256" />
+    </g>
+
+    <polygon points="256,120 286,256 256,280" fill="#0c1d36" opacity="0.5" />
+    <polygon points="256,392 286,256 256,280" fill="#0c1d36" opacity="0.3" />
+
+    <polygon points="256,120 256,256 226,256" fill="#f5f2ea" />
+    <polygon points="256,120 286,256 256,256" fill="#ff4d4d" />
+
+    <polygon points="256,392 256,256 226,256" fill="#8a94a6" opacity="0.8" />
+    <polygon points="256,392 286,256 256,256" fill="#f5f2ea" opacity="0.9" />
+
+    <circle cx="256" cy="256" r="16" fill="#14305a" stroke="#f5f2ea" stroke-width="4" />
+    <circle cx="256" cy="256" r="6" fill="#ff4d4d" />
+  </g>
+</svg>
