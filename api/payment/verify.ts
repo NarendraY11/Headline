@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getRazorpay, getSupabaseAdmin, verifyWebhookSignature, grantReferralRewards } from "../_lib/utils";
+import { getAuthenticatedUser, getRazorpay, getSupabaseAdmin, verifyWebhookSignature, grantReferralRewards, isFeatureEnabled } from "../_lib/utils";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -9,6 +9,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const user = await getAuthenticatedUser(req, res);
   if (!user) return; // Response is already written by getAuthenticatedUser on error
+
+  if (!(await isFeatureEnabled("pricingCheckout"))) {
+    return res.status(403).json({ error: "Checkout is currently disabled." });
+  }
 
   try {
     const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body || {};

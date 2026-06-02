@@ -572,7 +572,7 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   app.post("/api/instructor/coach", requireAuth, requirePro, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("aiCoach", res))) return;
     try {
-      const { scores } = req.body;
+      const { scores = {} } = req.body;
       const uid = (req as any).uid;
       const payloadHash = crypto.createHash('sha256').update(JSON.stringify(scores)).digest('hex');
       const cacheKey = `coach_${uid}_${payloadHash}`;
@@ -586,9 +586,19 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
 
       // scores might look like { "ATA 27": { correct: 5, total: 8 }, "ATA 21": { correct: 2, total: 10 } }
       
-      const scoresText = Object.entries(scores).map(([topic, data]: [string, any]) => 
-        `${topic}: ${data.correct}/${data.total} (${Math.round((data.correct/data.total)*100)}%)`
-      ).join("\\n");
+      const scoresText = Object.entries(scores)
+        .map(([topic, data]: [string, any]) => {
+          const total = Number(data?.total) || 0;
+          const correct = Number(data?.correct) || 0;
+          if (total <= 0) return null; // skip empty topics; avoids divide-by-zero NaN
+          return `${topic}: ${correct}/${total} (${Math.round((correct / total) * 100)}%)`;
+        })
+        .filter(Boolean)
+        .join("\\n");
+
+      if (!scoresText) {
+        return res.status(400).json({ error: "No scored topics provided." });
+      }
 
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
@@ -670,7 +680,12 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
     if (!(await assertFeatureEnabled("weatherBriefing", res))) return;
     try {
       const { icao = "EGLL" } = req.body;
-      const cachedKey = icao.trim().toUpperCase();
+      const cachedKey = typeof icao === "string" ? icao.trim().toUpperCase() : "";
+      // ICAO station IDs are 3-4 alphanumerics. Validate before interpolating
+      // into the NOAA URL (prevents query-string injection / junk cache keys).
+      if (!/^[A-Z0-9]{3,4}$/.test(cachedKey)) {
+        return res.status(400).json({ error: "Invalid ICAO code." });
+      }
       
       const admin = getSupabaseAdmin();
 

@@ -186,7 +186,13 @@ create table if not exists public.attempts (
   duration_sec int not null,
   wrong_question_ids jsonb default '[]'::jsonb not null,
   data jsonb default '{}'::jsonb not null,             -- detailed timestamps or logs
-  created_at timestamptz default now() not null
+  created_at timestamptz default now() not null,
+  -- Integrity: clients self-report these via RLS insert; clamp to sane ranges.
+  constraint attempts_score_nonneg check (score >= 0),
+  constraint attempts_total_nonneg check (total >= 0),
+  constraint attempts_score_le_total check (score <= total),
+  constraint attempts_pct_range check (percentage between 0 and 100),
+  constraint attempts_duration_nonneg check (duration_sec >= 0)
 );
 
 create table if not exists public.bookmarks (
@@ -204,7 +210,7 @@ create table if not exists public.bookmarks (
 create table if not exists public.events (
   id bigint generated always as identity primary key,
   user_id uuid references auth.users on delete set null, -- Nullable to allow anonymous telemetry
-  event_type text not null,                              -- e.g. 'page_view', 'coach_consulted'
+  event_type text not null check (char_length(event_type) between 1 and 100), -- e.g. 'page_view', 'coach_consulted'
   subject_id text,
   subcategory_id text,
   question_id text,
@@ -454,7 +460,11 @@ create table if not exists public.question_progress (
   interval int not null default 0,
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null,
-  primary key (user_id, question_id)
+  primary key (user_id, question_id),
+  -- Integrity: self-reported via RLS insert; keep SR scheduler fields sane.
+  constraint qprog_seen_nonneg check (seen_count >= 0),
+  constraint qprog_interval_nonneg check (interval >= 0),
+  constraint qprog_ease_pos check (ease > 0)
 );
 
 -- Enable RLS on question_progress
@@ -580,6 +590,42 @@ create table if not exists public.question_reports (
   created_at timestamptz not null default now()
 );
 
+-- Contact Messages table (public contact form sink; admin-only read)
+create table if not exists public.contact_messages (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  email text not null,
+  subject text not null default 'support',
+  message text not null,
+  status text not null default 'open',
+  created_at timestamptz not null default now()
+);
+
+alter table public.contact_messages enable row level security;
+create index if not exists idx_contact_messages_status on public.contact_messages(status, created_at);
+
+drop policy if exists "contact_messages_insert" on public.contact_messages;
+create policy "contact_messages_insert" on public.contact_messages for insert
+  to anon, authenticated
+  with check (
+    char_length(name) between 1 and 200
+    and char_length(email) between 3 and 320
+    and char_length(subject) between 1 and 50
+    and char_length(message) between 1 and 5000
+  );
+
+drop policy if exists "contact_messages_select" on public.contact_messages;
+create policy "contact_messages_select" on public.contact_messages for select
+  using ((select public.is_admin()));
+
+drop policy if exists "contact_messages_update" on public.contact_messages;
+create policy "contact_messages_update" on public.contact_messages for update
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+
+drop policy if exists "contact_messages_delete" on public.contact_messages;
+create policy "contact_messages_delete" on public.contact_messages for delete
+  using ((select public.is_admin()));
+
 -- Enable RLS on question_reports
 alter table public.question_reports enable row level security;
 
@@ -657,7 +703,8 @@ create table if not exists public.referrals (
   referred_id uuid not null references auth.users(id) on delete cascade unique,
   status text not null default 'pending' check (status in ('pending', 'completed', 'rewarded')),
   reward_granted boolean default false not null,
-  created_at timestamptz default now() not null
+  created_at timestamptz default now() not null,
+  constraint referrals_no_self check (referrer_id <> referred_id)
 );
 
 -- RLS for referrals
@@ -1080,7 +1127,7 @@ drop policy if exists "System insert notifications" on public.notifications;
 create policy "notifications_select" on public.notifications for select
   using ((select auth.uid()) = user_id or (select public.is_admin()));
 create policy "notifications_insert" on public.notifications for insert
-  with check ((select auth.uid()) is not null);
+  with check ((select auth.uid()) = user_id or (select public.is_admin()));
 create policy "notifications_update" on public.notifications for update
   using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 
@@ -1225,6 +1272,13 @@ begin
     NEW.plan = OLD.plan;
     NEW.plan_started_at = OLD.plan_started_at;
     NEW.plan_expires_at = OLD.plan_expires_at;
+    -- Trial lifecycle: only the service role (start-trial / payment flows)
+    -- may mutate these. Without pinning, a user could reset trial_used to
+    -- false and re-grant themselves unlimited trials, or flip plan_status.
+    NEW.plan_status = OLD.plan_status;
+    NEW.trial_used = OLD.trial_used;
+    NEW.trial_started_at = OLD.trial_started_at;
+    NEW.trial_ends_at = OLD.trial_ends_at;
   end if;
   return NEW;
 end;

@@ -4,6 +4,7 @@ import { AiUsageHardestQuestions } from "./dashboard/AiUsageHardestQuestions";
 import { KpiCards } from "./dashboard/KpiCards";
 import { MainCharts } from "./dashboard/MainCharts";
 import { QualityAuditReports } from "./dashboard/QualityAuditReports";
+import { InboxPanel } from "./dashboard/InboxPanel";
 import { RecentAttemptsLog } from "./dashboard/RecentAttemptsLog";
 import { RevenueSnapshot } from "./dashboard/RevenueSnapshot";
 import { SubjectHeatmapCharts } from "./dashboard/SubjectHeatmapCharts";
@@ -27,9 +28,12 @@ export default function AdminDashboard() {
     aiUsageData,
     recentAttempts,
     reports,
+    contactMessages,
+    leads,
     profilesMap,
     fetchAllAnalytics,
     handleResolveReport,
+    handleResolveContact,
   } = useAdminAnalytics();
 
   // Premium editorial color scheme (Ink, Slate, Amber-Gold)
@@ -88,6 +92,12 @@ export default function AdminDashboard() {
           <QualityAuditReports
             reports={reports}
             handleResolveReport={handleResolveReport}
+          />
+
+          <InboxPanel
+            contactMessages={contactMessages}
+            leads={leads}
+            handleResolveContact={handleResolveContact}
           />
 
           {/* Real-time System Activity Table */}
