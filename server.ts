@@ -4,7 +4,7 @@ import crypto from "crypto";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload } from "./api/_lib/utils.js";
+import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload } from "./api/_lib/utils.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -284,6 +284,10 @@ async function startServer() {
   // === Razorpay Order Creation Endpoint ===
   app.post("/api/payment/create-order", requireAuth, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("pricingCheckout", res))) return;
+    const intervalError = validatePaymentInterval(req.body);
+    if (intervalError) {
+      return res.status(400).json({ error: intervalError });
+    }
     try {
       const { interval = "monthly" } = req.body;
       const isYearly = interval === "yearly" || interval === "annual";
@@ -311,6 +315,10 @@ async function startServer() {
   // === Razorpay Signature Verification Endpoint ===
   app.post("/api/payment/verify", requireAuth, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("pricingCheckout", res))) return;
+    const verifyError = validateVerifyPayload(req.body);
+    if (verifyError) {
+      return res.status(400).json({ error: verifyError });
+    }
     try {
       const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
       const signaturePayload = `${razorpay_order_id}|${razorpay_payment_id}`;

@@ -212,13 +212,44 @@ export function validateInstructorPayload(action: string, body: any): string | n
 }
 
 // Validates the admin broadcast body.
+const BROADCAST_TYPES = ["system", "promo", "alert", "update"];
 export function validateBroadcastPayload(body: any): string | null {
   const b = body || {};
   const err =
     checkString(b.title, "title", { max: 200 }) ||
     checkString(b.message, "message", { max: 2000 }) ||
     checkString(b.type, "type", { required: false, max: 50 });
-  return err;
+  if (err) return err;
+  if (b.type !== undefined && b.type !== null && b.type !== "" && !BROADCAST_TYPES.includes(b.type)) {
+    return `type must be one of: ${BROADCAST_TYPES.join(", ")}.`;
+  }
+  return null;
+}
+
+// Validates the create-order body. Both `interval` and `plan` are accepted as
+// the billing selector; if present it must be a known value.
+const BILLING_INTERVALS = ["monthly", "yearly", "annual"];
+export function validatePaymentInterval(body: any): string | null {
+  const b = body || {};
+  const selector = b.plan ?? b.interval;
+  if (selector === undefined || selector === null || selector === "") return null;
+  if (typeof selector !== "string") return "interval must be a string.";
+  if (!BILLING_INTERVALS.includes(selector)) {
+    return `interval must be one of: ${BILLING_INTERVALS.join(", ")}.`;
+  }
+  return null;
+}
+
+// Validates the payment verification body: the three Razorpay handshake fields
+// must be present and string-typed before signature verification.
+export function validateVerifyPayload(body: any): string | null {
+  const b = body || {};
+  for (const f of ["razorpay_payment_id", "razorpay_order_id", "razorpay_signature"]) {
+    if (typeof b[f] !== "string" || b[f].length === 0) {
+      return "Missing or invalid payment parameters.";
+    }
+  }
+  return null;
 }
 
 let razorpayClient: Razorpay | null = null;

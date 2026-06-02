@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getRazorpay, getSupabaseAdmin, verifyWebhookSignature, grantReferralRewards, isFeatureEnabled } from "../_lib/utils";
+import { getAuthenticatedUser, getRazorpay, getSupabaseAdmin, verifyWebhookSignature, grantReferralRewards, isFeatureEnabled, validateVerifyPayload } from "../_lib/utils";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -15,11 +15,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body || {};
-    
-    if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-      return res.status(400).json({ error: "Missing required payment parameters." });
+    const verifyError = validateVerifyPayload(req.body);
+    if (verifyError) {
+      return res.status(400).json({ error: verifyError });
     }
+    const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body || {};
 
     const signaturePayload = `${razorpay_order_id}|${razorpay_payment_id}`;
     
