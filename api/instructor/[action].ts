@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { ai, getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled } from "../_lib/utils";
+import { ai, getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled, validateInstructorPayload } from "../_lib/utils";
 
 // Per-action gating, mirroring server.ts (dev). `explain` is free; the rest
 // require an active Pro/Trial plan. Each maps to its app_settings feature flag.
@@ -165,6 +165,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (gate.requiresPro && !(await isProUser(user.id))) {
       return res.status(403).json({ error: "Access denied. Pro or active Trial subscription required." });
     }
+  }
+
+  const validationError = validateInstructorPayload(action as string, req.body);
+  if (validationError) {
+    return res.status(400).json({ error: validationError });
   }
 
   const allowed = await checkRateLimit(user.id);

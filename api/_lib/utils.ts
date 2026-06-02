@@ -142,6 +142,85 @@ export async function isFeatureEnabled(flagKey: string): Promise<boolean> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Request-body validators. Endpoints forward these payloads to Gemini / write
+// notifications, so reject malformed input up front instead of letting it
+// through. Each returns a human-readable error string, or null when valid.
+// ---------------------------------------------------------------------------
+
+function checkString(
+  val: unknown,
+  name: string,
+  { required = true, min = 1, max }: { required?: boolean; min?: number; max: number }
+): string | null {
+  if (val === undefined || val === null || val === "") {
+    return required ? `${name} is required.` : null;
+  }
+  if (typeof val !== "string") return `${name} must be a string.`;
+  const len = val.trim().length;
+  if (required && len < min) return `${name} must be at least ${min} character(s).`;
+  if (val.length > max) return `${name} must not exceed ${max} characters.`;
+  return null;
+}
+
+// Validates the body for each instructor action. Mirrors the per-action shape
+// in api/instructor/[action].ts and server.ts.
+export function validateInstructorPayload(action: string, body: any): string | null {
+  const b = body || {};
+  switch (action) {
+    case "explain": {
+      return (
+        checkString(b.prompt, "prompt", { max: 5000 }) ||
+        checkString(b.userAnswer, "userAnswer", { required: false, max: 2000 }) ||
+        checkString(b.correctAnswer, "correctAnswer", { required: false, max: 2000 })
+      );
+    }
+    case "practice": {
+      return (
+        checkString(b.topic, "topic", { max: 300 }) ||
+        checkString(b.code, "code", { max: 100 })
+      );
+    }
+    case "coach": {
+      const scores = b.scores;
+      if (typeof scores !== "object" || scores === null || Array.isArray(scores)) {
+        return "scores must be an object.";
+      }
+      const entries = Object.entries(scores);
+      if (entries.length === 0) return "scores must contain at least one topic.";
+      if (entries.length > 200) return "scores has too many topics.";
+      for (const [topic, data] of entries) {
+        if (topic.length > 200) return "scores topic name too long.";
+        const d: any = data;
+        if (typeof d !== "object" || d === null) return `scores['${topic}'] must be an object.`;
+        const correct = Number(d.correct);
+        const total = Number(d.total);
+        if (!Number.isFinite(correct) || !Number.isFinite(total)) {
+          return `scores['${topic}'] correct/total must be numbers.`;
+        }
+        if (total < 0 || total > 100000) return `scores['${topic}'] total out of range.`;
+        if (correct < 0 || correct > total) return `scores['${topic}'] correct out of range.`;
+      }
+      return null;
+    }
+    case "diagnosis": {
+      return checkString(b.summary, "summary", { max: 10000 });
+    }
+    default:
+      return null;
+  }
+}
+
+// Validates the admin broadcast body.
+export function validateBroadcastPayload(body: any): string | null {
+  const b = body || {};
+  const err =
+    checkString(b.title, "title", { max: 200 }) ||
+    checkString(b.message, "message", { max: 2000 }) ||
+    checkString(b.type, "type", { required: false, max: 50 });
+  return err;
+}
+
 let razorpayClient: Razorpay | null = null;
 
 export function getRazorpay(): Razorpay {

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getSupabaseAdmin } from "../_lib/utils";
+import { getAuthenticatedUser, getSupabaseAdmin, validateBroadcastPayload } from "../_lib/utils";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -21,10 +21,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .maybeSingle();
     if (!adminRow) return res.status(403).json({ error: "Admins only." });
 
-    const { title, message, type } = req.body || {};
-    if (!title || !message) {
-      return res.status(400).json({ error: "title and message are required." });
+    const validationError = validateBroadcastPayload(req.body);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
     }
+    const { title, message, type } = req.body || {};
 
     const { data: profiles, error } = await admin.from("profiles").select("id");
     if (error) throw error;
