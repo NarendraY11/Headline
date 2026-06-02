@@ -4,7 +4,7 @@ import crypto from "crypto";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity } from "./api/_lib/utils.js";
+import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity, ipNetworkPrefix } from "./api/_lib/utils.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -768,7 +768,9 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
         await admin.from("active_sessions").update({ ip_address: ip }).eq("user_id", uid);
         return res.json({ valid: true, bound: true });
       }
-      if (row.ip_address !== ip) return res.json({ valid: false, reason: "ip_changed" });
+      if (ipNetworkPrefix(row.ip_address) !== ipNetworkPrefix(ip)) {
+        return res.json({ valid: false, reason: "ip_changed" });
+      }
       return res.json({ valid: true });
     } catch (e) {
       console.warn("session/check failed (fail-open):", e);

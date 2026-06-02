@@ -331,6 +331,21 @@ export async function logAbuse(identity: string, formId: string, reason: string)
   }
 }
 
+// Network prefix of an IP for coarse session binding: IPv4 -> /24 (first three
+// octets), IPv6 -> /64 (first four hextets). Tolerates carrier/WiFi IP churn
+// within the same subnet while still catching a jump to a different network.
+// Unknown/non-IP values (e.g. "anonymous") are returned unchanged.
+export function ipNetworkPrefix(ip: string): string {
+  if (!ip) return ip;
+  if (ip.includes(".")) {
+    return ip.split(".").slice(0, 3).join(".");
+  }
+  if (ip.includes(":")) {
+    return ip.split(":").slice(0, 4).join(":");
+  }
+  return ip;
+}
+
 // Derives a rate-limit/log identity: authenticated user id when available,
 // else the first X-Forwarded-For IP, else "anonymous".
 export function getClientIdentity(req: VercelRequest, uid?: string | null): string {
