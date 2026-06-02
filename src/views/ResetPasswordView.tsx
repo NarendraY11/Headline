@@ -18,16 +18,33 @@ export default function ResetPasswordView() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Verify that we actually have a session or recovery parameters (optional, but good practice)
+  // (6) Validate the recovery token before showing the form. The reset link
+  // carries a code that the Supabase client exchanges for a recovery session
+  // (PKCE / detectSessionInUrl). Only render the form once that session
+  // exists; otherwise treat the link as invalid/expired.
+  const [tokenStatus, setTokenStatus] = useState<"checking" | "valid" | "invalid">("checking");
+
   useEffect(() => {
-    async function checkSession() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        // Let them know, but don't strictly block in case hash parsing is delayed
-        console.warn("No active recovery session found. The token might have expired or wasn't captured yet.");
+    let settled = false;
+    const markValid = () => { settled = true; setTokenStatus("valid"); };
+
+    // The recovery session may arrive asynchronously via URL code exchange.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || session) markValid();
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        markValid();
+      } else {
+        // Give the async URL exchange a moment, then fail closed.
+        setTimeout(() => {
+          if (!settled) setTokenStatus("invalid");
+        }, 2500);
       }
-    }
-    checkSession();
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -122,6 +139,34 @@ export default function ResetPasswordView() {
             </div>
           )}
 
+          {!success && tokenStatus === "checking" && (
+            <div className="py-8 flex flex-col items-center gap-3 text-muted">
+              <Loader2 size={24} className="animate-spin" />
+              <span className="font-sans text-xs">Verifying your reset link…</span>
+            </div>
+          )}
+
+          {!success && tokenStatus === "invalid" && (
+            <div className="space-y-4">
+              <div className="p-4 bg-signal-soft/50 border border-signal/20 text-signal text-xs rounded-lg flex items-start gap-2.5">
+                <AlertCircle size={18} className="flex-shrink-0" />
+                <div>
+                  <h3 className="font-bold text-sm mb-1">Reset link invalid or expired</h3>
+                  <p className="text-ink-2 font-normal leading-normal">
+                    This password reset link is no longer valid. Request a new one and try again.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                onClick={() => navigate("/")}
+                className="w-full justify-center"
+              >
+                Back to Homepage
+              </Button>
+            </div>
+          )}
+
           {success ? (
             <div className="space-y-4">
               <div className="p-4 bg-mint-soft/50 border border-mint/20 text-mint text-xs rounded-lg flex items-start gap-2.5">
@@ -141,7 +186,7 @@ export default function ResetPasswordView() {
                 Go to Homepage
               </Button>
             </div>
-          ) : (
+          ) : tokenStatus === "valid" ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
@@ -212,7 +257,7 @@ export default function ResetPasswordView() {
                 )}
               </Button>
             </form>
-          )}
+          ) : null}
         </Card>
       </motion.div>
     </div>

@@ -193,22 +193,26 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
     setError(null);
     setSuccessMsg(null);
 
+    // (5) Always show the same neutral message regardless of whether the email
+    // is registered — never reveal account existence. The only error surfaced
+    // is throttling, which does not leak existence.
+    const neutralMsg = "If an account exists for that email, we've sent a password reset link.";
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
-
-      if (error) {
-        throw error;
-      }
-
-      setSuccessMsg("We've sent a password reset link to your email address.");
+      setSuccessMsg(neutralMsg);
       setEmail("");
     } catch (err: any) {
       console.error("Password Reset Error:", err);
-      const msg = err.message || "Could not process password reset request.";
-      setError(msg);
-      showToast({ type: 'error', title: 'Reset Failed', message: msg });
+      if (err?.message && /rate|too many/i.test(err.message)) {
+        setError("Too many attempts. Please wait a minute and try again.");
+      } else {
+        // Swallow other errors: showing them could reveal whether the account
+        // exists. Present the same neutral confirmation.
+        setSuccessMsg(neutralMsg);
+        setEmail("");
+      }
     } finally {
       setLoading(false);
     }
