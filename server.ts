@@ -359,12 +359,33 @@ async function startServer() {
 
       const rz = getRazorpay();
       const order = await rz.orders.fetch(razorpay_order_id);
-      
+
+      // Authorization: order must belong to the caller (see api/payment/verify.ts).
+      if ((order as any)?.notes?.userId && (order as any).notes.userId !== (req as any).uid) {
+        return res.status(403).json({ error: "Order does not belong to this account." });
+      }
+      if ((order as any)?.status !== "paid") {
+        return res.status(400).json({ error: "Order is not paid." });
+      }
+
+      const admin = getSupabaseAdmin();
+
+      // Idempotency: skip re-granting if this payment was already processed.
+      const { data: priorGrant } = await admin
+        .from("plan_changes")
+        .select("id")
+        .eq("user_id", (req as any).uid)
+        .ilike("note", `%${razorpay_payment_id}%`)
+        .maybeSingle();
+      if (priorGrant) {
+        return res.json({ success: true, alreadyProcessed: true });
+      }
+
       const PLAN_PRICE_MONTHLY = 499 * 100;
       const PLAN_PRICE_YEARLY = 2999 * 100;
-      
+
       const paidAmount = order.amount;
-      
+
       let verifiedInterval = "monthly";
       if (paidAmount === PLAN_PRICE_YEARLY) {
         verifiedInterval = "yearly";
@@ -382,7 +403,6 @@ async function startServer() {
         expiresAt.setMonth(expiresAt.getMonth() + 1);
       }
 
-      const admin = getSupabaseAdmin();
       const { error } = await admin
         .from("profiles")
         .update({
@@ -394,6 +414,18 @@ async function startServer() {
 
       if (error) {
         throw error;
+      }
+
+      // Audit trail doubles as the idempotency record checked above.
+      try {
+        await admin.from("plan_changes").insert({
+          user_id: (req as any).uid,
+          new_plan: "pro",
+          expires_at: expiresAt.toISOString(),
+          note: `razorpay payment ${razorpay_payment_id} (${verifiedInterval})`,
+        });
+      } catch (auditErr) {
+        console.warn("plan_changes audit insert failed:", auditErr);
       }
 
       await grantReferralRewards(admin, (req as any).uid, expiresAt);
