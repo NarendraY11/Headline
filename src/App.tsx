@@ -43,6 +43,7 @@ const AdminActivity = lazy(() => import("./views/admin/AdminActivity"));
 const AdminSettings = lazy(() => import("./views/admin/AdminSettings"));
 const FeatureControl = lazy(() => import("./views/admin/FeatureControl"));
 const BlogManager = lazy(() => import("./views/admin/BlogManager"));
+const NotificationsManager = lazy(() => import("./views/admin/NotificationsManager"));
 
 import { CookieConsent } from "./components/CookieConsent";
 import { GlobalToastListener } from "./components/GlobalToastListener";
@@ -131,6 +132,7 @@ export default function App() {
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/features" element={<FeatureControl />} />
             <Route path="/admin/blog" element={<BlogManager />} />
+            <Route path="/admin/notifications" element={<NotificationsManager />} />
           </Route>
 
           {/* AUTHENTICATED APP ROUTES (With App Shell) */}
