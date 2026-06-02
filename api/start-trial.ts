@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getSupabaseAdmin } from "./_lib/utils";
+import { getAuthenticatedUser, getSupabaseAdmin, screenSubmission } from "./_lib/utils";
 
 const TRIAL_DAYS = 7;
 
@@ -11,6 +11,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const user = await getAuthenticatedUser(req, res);
   if (!user) return;
+
+  const screen = await screenSubmission({
+    formId: "start-trial",
+    identity: user.id,
+    body: req.body,
+  });
+  if (!screen.ok) {
+    return res.status(screen.status).json({ error: screen.error });
+  }
 
   try {
     const admin = getSupabaseAdmin();

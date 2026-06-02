@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabase";
+import { useHoneypot } from "./Honeypot";
 import { Button, Card } from "./Atoms";
 import { 
   Download, 
@@ -17,9 +18,17 @@ export default function LeadCapture() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorStatus, setErrorStatus] = useState("");
+  const honeypot = useHoneypot();
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Bot trap: silently feign success so the bot doesn't retry, write nothing.
+    if (honeypot.isBot) {
+      setSuccess(true);
+      return;
+    }
+
     setLoading(true);
     setErrorStatus("");
 
@@ -131,6 +140,7 @@ export default function LeadCapture() {
 
           {/* ACTIVE REGISTRATION FORM */}
           <form onSubmit={handleSubscribe} className="md:col-span-3 space-y-4" id="leadMagnetForm">
+            {honeypot.field}
             {errorStatus && (
               <div className="p-3 bg-orange-500/10 border border-orange-500/20 text-orange-900 rounded text-xs flex items-center gap-2">
                 <AlertCircle size={14} className="text-orange-600 shrink-0" />

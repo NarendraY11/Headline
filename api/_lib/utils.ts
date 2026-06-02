@@ -252,6 +252,126 @@ export function validateVerifyPayload(body: any): string | null {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Abuse screening. Three layers applied to form-style POST endpoints:
+//   1. Per-form rate limit (10/min per user-or-IP) -> 429.
+//   2. Attack-pattern detection on short structured fields -> 400.
+//   3. Honeypot field (hidden from real users; bots fill it) -> 400.
+// Blocked attempts are logged to console and the events table.
+// ---------------------------------------------------------------------------
+
+// Hidden form field. Real UIs render it visually hidden + aria-hidden with
+// autocomplete off; only bots populate it. Keep in sync with the client forms.
+export const HONEYPOT_FIELD = "website";
+
+export function isHoneypotTripped(body: any): boolean {
+  const v = body?.[HONEYPOT_FIELD];
+  return v !== undefined && v !== null && String(v).trim() !== "";
+}
+
+// Injection-specific patterns. Deliberately narrow so normal prose (which may
+// contain bare words like "select" or "table") does not trip them.
+const ATTACK_PATTERNS: { re: RegExp; label: string }[] = [
+  { re: /<\s*script\b/i, label: "script tag" },
+  { re: /javascript:/i, label: "js uri" },
+  { re: /\son\w+\s*=\s*["']?\s*\w/i, label: "event handler" },
+  { re: /\bunion\b\s+\bselect\b/i, label: "sql union" },
+  { re: /;\s*drop\s+table\b/i, label: "sql drop" },
+  { re: /\b(?:or|and)\b\s+['"]?\d+\s*=\s*\d+/i, label: "sql tautology" },
+  { re: /\/\*[\s\S]*?\*\//, label: "sql block comment" },
+];
+const MAX_STRUCTURED_FIELD_LEN = 5000;
+
+// Scans a single structured field value. Returns a user-facing error string
+// (the internal label is logged separately), or null when clean.
+export function detectAttackPattern(value: unknown, fieldName: string): { error: string; label: string } | null {
+  if (typeof value !== "string") return null;
+  if (value.length > MAX_STRUCTURED_FIELD_LEN) {
+    return { error: `${fieldName} is too long.`, label: "oversize" };
+  }
+  for (const p of ATTACK_PATTERNS) {
+    if (p.re.test(value)) {
+      return { error: `${fieldName} contains a disallowed pattern.`, label: p.label };
+    }
+  }
+  return null;
+}
+
+const formSubmissionTimestamps = new Map<string, number[]>();
+
+// Best-effort per-instance limiter. Mirrors the in-memory approach already used
+// by checkRateLimit; under serverless this is per-instance, not global.
+export function checkFormRateLimit(formId: string, identity: string, limit = 10, windowMs = 60_000): boolean {
+  const key = `${formId}:${identity}`;
+  const now = Date.now();
+  const cutoff = now - windowMs;
+  const ts = (formSubmissionTimestamps.get(key) || []).filter(t => t > cutoff);
+  if (ts.length >= limit) {
+    formSubmissionTimestamps.set(key, ts);
+    return false;
+  }
+  ts.push(now);
+  formSubmissionTimestamps.set(key, ts);
+  return true;
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function logAbuse(identity: string, formId: string, reason: string): Promise<void> {
+  console.warn(`[abuse] form=${formId} identity=${identity} reason=${reason}`);
+  // events.user_id is a uuid FK; only write when identity is an authenticated
+  // user id. IP-only attempts stay console-only to avoid FK violations.
+  if (!UUID_RE.test(identity)) return;
+  try {
+    await getSupabaseAdmin()
+      .from("events")
+      .insert({ user_id: identity, event_type: "abuse_blocked" });
+  } catch (e) {
+    console.warn("Failed to log abuse event:", e);
+  }
+}
+
+// Derives a rate-limit/log identity: authenticated user id when available,
+// else the first X-Forwarded-For IP, else "anonymous".
+export function getClientIdentity(req: VercelRequest, uid?: string | null): string {
+  if (uid) return uid;
+  const xff = req.headers["x-forwarded-for"];
+  const raw = Array.isArray(xff) ? xff[0] : xff || "";
+  const ip = raw.split(",")[0].trim();
+  return ip || "anonymous";
+}
+
+// Single entry point: honeypot -> rate limit -> attack scan. Returns ok, or a
+// status+error the handler should return directly.
+export async function screenSubmission(params: {
+  formId: string;
+  identity: string;
+  body: any;
+  structuredFields?: string[];
+}): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const { formId, identity, body, structuredFields = [] } = params;
+
+  if (isHoneypotTripped(body)) {
+    await logAbuse(identity, formId, "honeypot");
+    return { ok: false, status: 400, error: "Invalid submission." };
+  }
+
+  if (!checkFormRateLimit(formId, identity)) {
+    await logAbuse(identity, formId, "form_rate_limit");
+    return { ok: false, status: 429, error: "Too many submissions. Please wait a minute and try again." };
+  }
+
+  for (const f of structuredFields) {
+    const hit = detectAttackPattern(body?.[f], f);
+    if (hit) {
+      await logAbuse(identity, formId, `attack:${f}:${hit.label}`);
+      return { ok: false, status: 400, error: hit.error };
+    }
+  }
+
+  return { ok: true };
+}
+
 let razorpayClient: Razorpay | null = null;
 
 export function getRazorpay(): Razorpay {

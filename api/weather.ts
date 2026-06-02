@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled } from "./_lib/utils";
+import { getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled, screenSubmission } from "./_lib/utils";
 import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -16,6 +16,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   if (!(await isProUser(user.id))) {
     return res.status(403).json({ error: "Access denied. Pro or active Trial subscription required." });
+  }
+
+  const screen = await screenSubmission({
+    formId: "weather",
+    identity: user.id,
+    body: req.body,
+    structuredFields: ["icao"],
+  });
+  if (!screen.ok) {
+    return res.status(screen.status).json({ error: screen.error });
   }
 
   const allowed = await checkRateLimit(user.id);

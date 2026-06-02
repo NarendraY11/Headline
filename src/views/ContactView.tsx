@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Card, HR, Button } from "../components/Atoms";
 import { useToast } from "../components/ui/Toast";
+import { useHoneypot } from "../components/Honeypot";
 import { supabase } from "../lib/supabase";
 import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
 
@@ -14,9 +15,17 @@ export default function ContactView() {
   });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const honeypot = useHoneypot();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Bot trap: silently feign success, write nothing.
+    if (honeypot.isBot) {
+      setSubmitted(true);
+      return;
+    }
+
     if (!formData.name || !formData.email || !formData.message) {
       showToast({
         title: "Validation Error",
@@ -171,7 +180,8 @@ export default function ContactView() {
                   </div>
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-5">
-                    
+                    {honeypot.field}
+
                     <div className="space-y-1">
                       <h4 className="font-serif font-semibold text-lg text-ink">Transmit Briefing</h4>
                       <p className="text-xs text-muted font-sans font-light">Ensure your return email coordinates are configured precisely.</p>

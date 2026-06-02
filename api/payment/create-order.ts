@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getRazorpay, isFeatureEnabled, validatePaymentInterval } from "../_lib/utils";
+import { getAuthenticatedUser, getRazorpay, isFeatureEnabled, validatePaymentInterval, screenSubmission } from "../_lib/utils";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -12,6 +12,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (!(await isFeatureEnabled("pricingCheckout"))) {
     return res.status(403).json({ error: "Checkout is currently disabled." });
+  }
+
+  const screen = await screenSubmission({
+    formId: "payment:create-order",
+    identity: user.id,
+    body: req.body,
+    structuredFields: ["interval", "plan"],
+  });
+  if (!screen.ok) {
+    return res.status(screen.status).json({ error: screen.error });
   }
 
   const intervalError = validatePaymentInterval(req.body);

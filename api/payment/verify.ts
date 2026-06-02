@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getRazorpay, getSupabaseAdmin, verifyWebhookSignature, grantReferralRewards, isFeatureEnabled, validateVerifyPayload } from "../_lib/utils";
+import { getAuthenticatedUser, getRazorpay, getSupabaseAdmin, verifyWebhookSignature, grantReferralRewards, isFeatureEnabled, validateVerifyPayload, screenSubmission } from "../_lib/utils";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -15,6 +15,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    const screen = await screenSubmission({
+      formId: "payment:verify",
+      identity: user.id,
+      body: req.body,
+      structuredFields: ["razorpay_payment_id", "razorpay_order_id", "razorpay_signature"],
+    });
+    if (!screen.ok) {
+      return res.status(screen.status).json({ error: screen.error });
+    }
+
     const verifyError = validateVerifyPayload(req.body);
     if (verifyError) {
       return res.status(400).json({ error: verifyError });

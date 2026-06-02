@@ -4,7 +4,7 @@ import crypto from "crypto";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload } from "./api/_lib/utils.js";
+import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity } from "./api/_lib/utils.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -168,6 +168,14 @@ async function startServer() {
       const { data: adminRow } = await admin.from("admins").select("email").eq("email", email).maybeSingle();
       if (!adminRow) return res.status(403).json({ error: "Admins only." });
 
+      const broadcastScreen = await screenSubmission({
+        formId: "admin:broadcast",
+        identity: getClientIdentity(req as any, uid),
+        body: req.body,
+        structuredFields: ["title", "type"],
+      });
+      if (!broadcastScreen.ok) return res.status(broadcastScreen.status).json({ error: broadcastScreen.error });
+
       const broadcastError = validateBroadcastPayload(req.body);
       if (broadcastError) return res.status(400).json({ error: broadcastError });
       const { title, message, type } = req.body || {};
@@ -284,6 +292,14 @@ async function startServer() {
   // === Razorpay Order Creation Endpoint ===
   app.post("/api/payment/create-order", requireAuth, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("pricingCheckout", res))) return;
+    const orderScreen = await screenSubmission({
+      formId: "payment:create-order",
+      identity: getClientIdentity(req as any, (req as any).uid),
+      body: req.body,
+      structuredFields: ["interval", "plan"],
+    });
+    if (!orderScreen.ok) return res.status(orderScreen.status).json({ error: orderScreen.error });
+
     const intervalError = validatePaymentInterval(req.body);
     if (intervalError) {
       return res.status(400).json({ error: intervalError });
@@ -315,6 +331,14 @@ async function startServer() {
   // === Razorpay Signature Verification Endpoint ===
   app.post("/api/payment/verify", requireAuth, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("pricingCheckout", res))) return;
+    const verifyScreen = await screenSubmission({
+      formId: "payment:verify",
+      identity: getClientIdentity(req as any, (req as any).uid),
+      body: req.body,
+      structuredFields: ["razorpay_payment_id", "razorpay_order_id", "razorpay_signature"],
+    });
+    if (!verifyScreen.ok) return res.status(verifyScreen.status).json({ error: verifyScreen.error });
+
     const verifyError = validateVerifyPayload(req.body);
     if (verifyError) {
       return res.status(400).json({ error: verifyError });
@@ -384,6 +408,12 @@ async function startServer() {
   // === TIER & TRIAL MANAGEMENT ENDPOINT ===
   app.post("/api/start-trial", requireAuth, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("freeTrial", res))) return;
+    const trialScreen = await screenSubmission({
+      formId: "start-trial",
+      identity: getClientIdentity(req as any, (req as any).uid),
+      body: req.body,
+    });
+    if (!trialScreen.ok) return res.status(trialScreen.status).json({ error: trialScreen.error });
     try {
       const admin = getSupabaseAdmin();
       const userId = (req as any).uid;
@@ -458,6 +488,12 @@ async function startServer() {
   app.post("/api/instructor/explain", requireAuth, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("aiExplain", res))) return;
     try {
+      const explainScreen = await screenSubmission({
+        formId: "instructor:explain",
+        identity: getClientIdentity(req as any, (req as any).uid),
+        body: req.body,
+      });
+      if (!explainScreen.ok) return res.status(explainScreen.status).json({ error: explainScreen.error });
       const explainError = validateInstructorPayload("explain", req.body);
       if (explainError) return res.status(400).json({ error: explainError });
       const { prompt, userAnswer, correctAnswer } = req.body;
@@ -491,6 +527,13 @@ async function startServer() {
   app.post("/api/instructor/practice", requireAuth, requirePro, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("aiPractice", res))) return;
     try {
+      const practiceScreen = await screenSubmission({
+        formId: "instructor:practice",
+        identity: getClientIdentity(req as any, (req as any).uid),
+        body: req.body,
+        structuredFields: ["topic", "code"],
+      });
+      if (!practiceScreen.ok) return res.status(practiceScreen.status).json({ error: practiceScreen.error });
       const practiceError = validateInstructorPayload("practice", req.body);
       if (practiceError) return res.status(400).json({ error: practiceError });
       const { topic, code } = req.body;
@@ -585,6 +628,12 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   app.post("/api/instructor/coach", requireAuth, requirePro, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("aiCoach", res))) return;
     try {
+      const coachScreen = await screenSubmission({
+        formId: "instructor:coach",
+        identity: getClientIdentity(req as any, (req as any).uid),
+        body: req.body,
+      });
+      if (!coachScreen.ok) return res.status(coachScreen.status).json({ error: coachScreen.error });
       const coachError = validateInstructorPayload("coach", req.body);
       if (coachError) return res.status(400).json({ error: coachError });
       const { scores = {} } = req.body;
@@ -643,6 +692,12 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   app.post("/api/instructor/diagnosis", requireAuth, requirePro, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("aiDiagnosis", res))) return;
     try {
+      const diagnosisScreen = await screenSubmission({
+        formId: "instructor:diagnosis",
+        identity: getClientIdentity(req as any, (req as any).uid),
+        body: req.body,
+      });
+      if (!diagnosisScreen.ok) return res.status(diagnosisScreen.status).json({ error: diagnosisScreen.error });
       const diagnosisError = validateInstructorPayload("diagnosis", req.body);
       if (diagnosisError) return res.status(400).json({ error: diagnosisError });
       const { summary } = req.body;
@@ -695,6 +750,13 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   // === WEATHER METAR ENDPOINT (WITH SERVER CACHING) ===
   app.post("/api/weather", requireAuth, requirePro, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("weatherBriefing", res))) return;
+    const weatherScreen = await screenSubmission({
+      formId: "weather",
+      identity: getClientIdentity(req as any, (req as any).uid),
+      body: req.body,
+      structuredFields: ["icao"],
+    });
+    if (!weatherScreen.ok) return res.status(weatherScreen.status).json({ error: weatherScreen.error });
     try {
       const { icao = "EGLL" } = req.body;
       const cachedKey = typeof icao === "string" ? icao.trim().toUpperCase() : "";

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getSupabaseAdmin, validateBroadcastPayload } from "../_lib/utils";
+import { getAuthenticatedUser, getSupabaseAdmin, validateBroadcastPayload, screenSubmission } from "../_lib/utils";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -20,6 +20,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq("email", user.email)
       .maybeSingle();
     if (!adminRow) return res.status(403).json({ error: "Admins only." });
+
+    const screen = await screenSubmission({
+      formId: "admin:broadcast",
+      identity: user.id,
+      body: req.body,
+      structuredFields: ["title", "type"],
+    });
+    if (!screen.ok) {
+      return res.status(screen.status).json({ error: screen.error });
+    }
 
     const validationError = validateBroadcastPayload(req.body);
     if (validationError) {
