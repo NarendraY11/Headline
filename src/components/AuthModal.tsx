@@ -7,6 +7,7 @@ import FocusTrap from "focus-trap-react";
 import { X, Mail, Lock, User, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { Button, Card } from "./Atoms";
 import { useFeature } from "../hooks/useFeatureFlags";
+import { validatePasswordStrength, isPwnedPassword, tooManyPasswordAttempts } from "../lib/passwordSecurity";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -109,8 +110,9 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
       return;
     }
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    const strengthError = validatePasswordStrength(password);
+    if (strengthError) {
+      setError(strengthError);
       return;
     }
 
@@ -119,11 +121,24 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
       return;
     }
 
+    // (4) Throttle attempts to 5/min per email.
+    if (tooManyPasswordAttempts(`signup:${email.trim().toLowerCase()}`)) {
+      setError("Too many attempts. Please wait a minute and try again.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setSuccessMsg(null);
 
     try {
+      // (2) Reject passwords found in known breach corpora.
+      if (await isPwnedPassword(password)) {
+        setError("This password has appeared in a data breach. Please choose a different one.");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

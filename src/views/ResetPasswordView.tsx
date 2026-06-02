@@ -4,6 +4,7 @@ import { supabase } from "../lib/supabase";
 import { motion } from "motion/react";
 import { Lock, Loader2, AlertCircle, CheckCircle, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import { Button, Card } from "../components/Atoms";
+import { validatePasswordStrength, isPwnedPassword, tooManyPasswordAttempts } from "../lib/passwordSecurity";
 
 export default function ResetPasswordView() {
   const navigate = useNavigate();
@@ -36,8 +37,9 @@ export default function ResetPasswordView() {
       return;
     }
 
-    if (password.length < 8) {
-      setError("Your password must be at least 8 characters long.");
+    const strengthError = validatePasswordStrength(password);
+    if (strengthError) {
+      setError(strengthError);
       return;
     }
 
@@ -46,10 +48,23 @@ export default function ResetPasswordView() {
       return;
     }
 
+    // (4) Throttle attempts to 5/min.
+    if (tooManyPasswordAttempts("reset")) {
+      setError("Too many attempts. Please wait a minute and try again.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
+      // (2) Reject passwords found in known breach corpora.
+      if (await isPwnedPassword(password)) {
+        setError("This password has appeared in a data breach. Please choose a different one.");
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({
         password: password,
       });
