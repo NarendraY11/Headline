@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { trackEvent } from '../lib/track';
 import { registerActiveSession, clearLocalSession, checkSessionValidity } from '../lib/sessionTracker';
+import { apiFetch } from '../lib/api';
 import { posthogIdentify, posthogReset } from '../lib/posthog';
 
 export interface UserData {
@@ -105,20 +106,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Register the session
     registerActiveSession(user.uid);
 
-    // Periodically check if session is still active
+    // Periodically check if session is still active: client-side checks
+    // (another device / UA change) plus the server-side IP-binding endpoint
+    // (browser can't read its own IP). Either failing forces a logout.
     const interval = setInterval(async () => {
-      const isValid = await checkSessionValidity(user.uid);
+      const clientValid = await checkSessionValidity(user.uid);
 
-      if (!isValid) {
-        // Logged in somewhere else
+      let serverValid = true;
+      try {
+        const sessionId = localStorage.getItem("client_session_id") || "";
+        const res = await apiFetch("/api/session/check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+        // null = network failure -> fail open. Otherwise honor `valid`.
+        if (res) {
+          const body = await res.json();
+          serverValid = body?.valid !== false;
+        }
+      } catch {
+        serverValid = true; // fail open
+      }
+
+      if (!clientValid || !serverValid) {
         clearInterval(interval);
-        
-        // Dispatch custom event to trigger toast notification
+
         const event = new CustomEvent('force-logout-toast', {
-          detail: { message: "You've been logged out because your account was used on another device." }
+          detail: { message: "You've been logged out for your security (session changed device or network)." }
         });
         window.dispatchEvent(event);
-        
+
         await logout();
       }
     }, 30000);

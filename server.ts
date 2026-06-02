@@ -747,6 +747,35 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
     }
   });
 
+  // === SESSION IP-BINDING CHECK ===
+  app.post("/api/session/check", requireAuth, async (req, res) => {
+    const uid = (req as any).uid;
+    const sessionId = typeof req.body?.session_id === "string" ? req.body.session_id : "";
+    const ip = getClientIdentity(req as any); // IP only (no uid passed)
+    try {
+      const admin = getSupabaseAdmin();
+      const { data: row, error } = await admin
+        .from("active_sessions")
+        .select("session_id, ip_address")
+        .eq("user_id", uid)
+        .maybeSingle();
+
+      if (error || !row) return res.json({ valid: true });
+      if (sessionId && row.session_id && row.session_id !== sessionId) {
+        return res.json({ valid: false, reason: "superseded" });
+      }
+      if (!row.ip_address) {
+        await admin.from("active_sessions").update({ ip_address: ip }).eq("user_id", uid);
+        return res.json({ valid: true, bound: true });
+      }
+      if (row.ip_address !== ip) return res.json({ valid: false, reason: "ip_changed" });
+      return res.json({ valid: true });
+    } catch (e) {
+      console.warn("session/check failed (fail-open):", e);
+      return res.json({ valid: true });
+    }
+  });
+
   // === WEATHER METAR ENDPOINT (WITH SERVER CACHING) ===
   app.post("/api/weather", requireAuth, requirePro, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("weatherBriefing", res))) return;

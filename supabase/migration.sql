@@ -36,3 +36,8 @@ create trigger enforce_billing_security
   before update on public.profiles
   for each row
   execute function public.protect_billing_fields();
+
+-- 5. Add ip_address column to active_sessions for server-side IP binding.
+--    Written by the service role via /api/session/check; users never set it.
+alter table public.active_sessions
+  add column if not exists ip_address text;

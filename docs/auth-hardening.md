@@ -132,7 +132,7 @@ are project auth config (dashboard or Management API only).
 | # | Measure | Status | Where |
 |---|---------|--------|-------|
 | 1 | New session id per login | **Done** — Supabase rotates token each login; client session id regenerates after logout clears it | GoTrue + `sessionTracker.ts` |
-| 2 | Bind session to IP / UA | **Partial** — user-agent binding done client-side; sudden UA change forces logout. IP binding needs a server endpoint (browser can't read its own IP) | `sessionTracker.ts` |
+| 2 | Bind session to IP / UA | **Done** — UA binding client-side + server-side IP binding via `/api/session/check` (binds on first call, forces logout on IP change). Requires the `active_sessions.ip_address` migration | `sessionTracker.ts`, `api/session/check.ts`, `server.ts` |
 | 3 | Log out everywhere | **Done** — purges `active_sessions` rows + global `signOut` | `AuthContext.logoutEverywhere`, button in `ProfileView` |
 | 4 | `secure` flag on cookies | **N/A** — app uses no auth cookies; tokens live in localStorage and are sent as `Authorization: Bearer` | n/a |
 | 5 | `sameSite` on auth cookies | **N/A** — same reason; **CSRF is moot** because auth is not cookie/ambient-credential based | n/a |
