@@ -1,5 +1,14 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { ai, getAuthenticatedUser, checkRateLimit } from "../_lib/utils";
+import { ai, getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled } from "../_lib/utils";
+
+// Per-action gating, mirroring server.ts (dev). `explain` is free; the rest
+// require an active Pro/Trial plan. Each maps to its app_settings feature flag.
+const ACTION_GATES: Record<string, { flag: string; requiresPro: boolean }> = {
+  explain: { flag: "aiExplain", requiresPro: false },
+  practice: { flag: "aiPractice", requiresPro: true },
+  coach: { flag: "aiCoach", requiresPro: true },
+  diagnosis: { flag: "aiDiagnosis", requiresPro: true },
+};
 
 // Consolidated instructor AI endpoint. A single dynamic Serverless Function
 // (api/instructor/[action].ts) serves /api/instructor/{explain,practice,coach,
@@ -74,9 +83,19 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
 async function coach(req: VercelRequest, res: VercelResponse) {
   const { scores = {} } = req.body || {};
 
-  const scoresText = Object.entries(scores).map(([topic, data]: [string, any]) =>
-    `${topic}: ${data.correct}/${data.total} (${Math.round((data.correct / data.total) * 100)}%)`
-  ).join("\n");
+  const scoresText = Object.entries(scores)
+    .map(([topic, data]: [string, any]) => {
+      const total = Number(data?.total) || 0;
+      const correct = Number(data?.correct) || 0;
+      if (total <= 0) return null; // skip empty topics; avoids divide-by-zero NaN
+      return `${topic}: ${correct}/${total} (${Math.round((correct / total) * 100)}%)`;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  if (!scoresText) {
+    return res.status(400).json({ error: "No scored topics provided." });
+  }
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
@@ -137,6 +156,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const user = await getAuthenticatedUser(req, res);
   if (!user) return;
+
+  const gate = ACTION_GATES[action as string];
+  if (gate) {
+    if (!(await isFeatureEnabled(gate.flag))) {
+      return res.status(403).json({ error: "This feature is currently disabled." });
+    }
+    if (gate.requiresPro && !(await isProUser(user.id))) {
+      return res.status(403).json({ error: "Access denied. Pro or active Trial subscription required." });
+    }
+  }
 
   const allowed = await checkRateLimit(user.id);
   if (!allowed) {

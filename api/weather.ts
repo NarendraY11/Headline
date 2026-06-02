@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, checkRateLimit } from "./_lib/utils";
+import { getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled } from "./_lib/utils";
 import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -11,6 +11,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const user = await getAuthenticatedUser(req, res);
   if (!user) return;
 
+  if (!(await isFeatureEnabled("weatherBriefing"))) {
+    return res.status(403).json({ error: "This feature is currently disabled." });
+  }
+  if (!(await isProUser(user.id))) {
+    return res.status(403).json({ error: "Access denied. Pro or active Trial subscription required." });
+  }
+
   const allowed = await checkRateLimit(user.id);
   if (!allowed) {
     return res.status(429).json({ error: "Rate limit reached. Try again later." });
@@ -18,7 +25,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { icao = "EGLL" } = req.body || {};
-    const cachedKey = icao.trim().toUpperCase();
+    const cachedKey = typeof icao === "string" ? icao.trim().toUpperCase() : "";
+    // ICAO station IDs are 3-4 alphanumerics. Validate before interpolating
+    // into the NOAA URL (prevents query-string injection / junk cache keys).
+    if (!/^[A-Z0-9]{3,4}$/.test(cachedKey)) {
+      return res.status(400).json({ error: "Invalid ICAO code." });
+    }
 
     const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;

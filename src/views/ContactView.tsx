@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Card, HR, Button } from "../components/Atoms";
 import { useToast } from "../components/ui/Toast";
+import { supabase } from "../lib/supabase";
 import { Mail, Phone, MapPin, Send, CheckCircle2 } from "lucide-react";
 
 export default function ContactView() {
@@ -14,7 +15,7 @@ export default function ContactView() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.email || !formData.message) {
       showToast({
@@ -26,16 +27,31 @@ export default function ContactView() {
     }
 
     setLoading(true);
-    // Simulate API dispatch latency
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const { error } = await supabase.from("contact_messages").insert({
+        name: formData.name.trim().slice(0, 200),
+        email: formData.email.trim().toLowerCase().slice(0, 320),
+        subject: formData.subject,
+        message: formData.message.trim().slice(0, 5000),
+      });
+      if (error) throw error;
+
       setSubmitted(true);
       showToast({
         title: "Message Dispatched",
         message: "Your briefing report was successfully received. Our ground crew will contact you shortly.",
         type: "success"
       });
-    }, 1200);
+    } catch (err: any) {
+      console.error("Contact submission failed:", err);
+      showToast({
+        title: "Transmission Failed",
+        message: err?.message || "Could not send your message. Please try again.",
+        type: "error"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleReset = () => {

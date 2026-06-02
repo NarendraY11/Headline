@@ -91,6 +91,57 @@ export async function checkRateLimit(uid: string): Promise<boolean> {
   return true;
 }
 
+// Returns true if the user currently holds an active paid/trial plan.
+// Mirrors the requirePro middleware in server.ts so the prod serverless
+// functions enforce the same gate (they previously did not).
+export async function isProUser(uid: string): Promise<boolean> {
+  try {
+    const { data: profile } = await getSupabaseAdmin()
+      .from("profiles")
+      .select("plan, plan_expires_at")
+      .eq("id", uid)
+      .single();
+
+    if (!profile) return false;
+
+    const plan = profile.plan;
+    const planExpiresAt = profile.plan_expires_at;
+    const now = Date.now();
+
+    if (plan === "lifetime") return true;
+    if (plan === "pro") return !planExpiresAt || new Date(planExpiresAt).getTime() > now;
+    if (plan === "trial") return !!planExpiresAt && new Date(planExpiresAt).getTime() > now;
+    return false;
+  } catch (e) {
+    console.error("isProUser check failed:", e);
+    return false;
+  }
+}
+
+// Feature-flag check backed by app_settings.flags, cached 60s per instance.
+// Mirrors assertFeatureEnabled in server.ts. Fails open (returns true) on
+// error so a settings outage can't take down core features.
+let appSettingsCache: { flags: Record<string, boolean>; timestamp: number } | null = null;
+const FLAG_CACHE_TTL = 60 * 1000;
+
+export async function isFeatureEnabled(flagKey: string): Promise<boolean> {
+  try {
+    const now = Date.now();
+    if (!appSettingsCache || now - appSettingsCache.timestamp > FLAG_CACHE_TTL) {
+      const { data } = await getSupabaseAdmin()
+        .from("app_settings")
+        .select("flags")
+        .eq("id", 1)
+        .single();
+      appSettingsCache = { flags: (data && data.flags) || {}, timestamp: now };
+    }
+    return appSettingsCache.flags[flagKey] ?? true;
+  } catch (e) {
+    console.error("Feature flag check error:", e);
+    return true;
+  }
+}
+
 let razorpayClient: Razorpay | null = null;
 
 export function getRazorpay(): Razorpay {
