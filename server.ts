@@ -4,7 +4,7 @@ import crypto from "crypto";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature } from "./api/_lib/utils.js";
+import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload } from "./api/_lib/utils.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -168,8 +168,9 @@ async function startServer() {
       const { data: adminRow } = await admin.from("admins").select("email").eq("email", email).maybeSingle();
       if (!adminRow) return res.status(403).json({ error: "Admins only." });
 
+      const broadcastError = validateBroadcastPayload(req.body);
+      if (broadcastError) return res.status(400).json({ error: broadcastError });
       const { title, message, type } = req.body || {};
-      if (!title || !message) return res.status(400).json({ error: "title and message are required." });
 
       const { data: profiles, error } = await admin.from("profiles").select("id");
       if (error) throw error;
@@ -449,6 +450,8 @@ async function startServer() {
   app.post("/api/instructor/explain", requireAuth, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("aiExplain", res))) return;
     try {
+      const explainError = validateInstructorPayload("explain", req.body);
+      if (explainError) return res.status(400).json({ error: explainError });
       const { prompt, userAnswer, correctAnswer } = req.body;
       
       const responseStream = await ai.models.generateContentStream({
@@ -480,6 +483,8 @@ async function startServer() {
   app.post("/api/instructor/practice", requireAuth, requirePro, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("aiPractice", res))) return;
     try {
+      const practiceError = validateInstructorPayload("practice", req.body);
+      if (practiceError) return res.status(400).json({ error: practiceError });
       const { topic, code } = req.body;
       const admin = getSupabaseAdmin();
       
@@ -572,6 +577,8 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   app.post("/api/instructor/coach", requireAuth, requirePro, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("aiCoach", res))) return;
     try {
+      const coachError = validateInstructorPayload("coach", req.body);
+      if (coachError) return res.status(400).json({ error: coachError });
       const { scores = {} } = req.body;
       const uid = (req as any).uid;
       const payloadHash = crypto.createHash('sha256').update(JSON.stringify(scores)).digest('hex');
@@ -628,6 +635,8 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   app.post("/api/instructor/diagnosis", requireAuth, requirePro, rateLimiter, async (req, res) => {
     if (!(await assertFeatureEnabled("aiDiagnosis", res))) return;
     try {
+      const diagnosisError = validateInstructorPayload("diagnosis", req.body);
+      if (diagnosisError) return res.status(400).json({ error: diagnosisError });
       const { summary } = req.body;
       const uid = (req as any).uid;
       const today = new Date().toISOString().split('T')[0];
