@@ -4,32 +4,6 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
-import Beasties from 'beasties';
-
-function beastiesPlugin() {
-  return {
-    name: 'beasties',
-    apply: 'build',
-    async closeBundle() {
-      const fs = await import('fs/promises');
-      const htmlPath = path.resolve(process.cwd(), 'dist/index.html');
-      
-      try {
-        const html = await fs.readFile(htmlPath, 'utf8');
-        const beasties = new Beasties({
-          path: path.resolve(process.cwd(), 'dist'),
-          publicPath: '/',
-          pruneSource: false,
-        });
-        const processedHtml = await beasties.process(html);
-        await fs.writeFile(htmlPath, processedHtml);
-      } catch (e) {
-        console.warn('Beasties failed during closeBundle:', e);
-      }
-    }
-  };
-}
-
 
 export default defineConfig(() => {
   return {
@@ -53,7 +27,6 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
-      beastiesPlugin() as any,
       ...(process.env.ANALYZE ? [visualizer({ filename: 'dist/stats.json', template: 'raw-data' }) as any] : []),
       VitePWA({
         registerType: 'autoUpdate',
