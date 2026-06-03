@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getSupabaseAdmin, validateBroadcastPayload, screenSubmission } from "../_lib/utils";
+import { getSupabaseAdmin, validateBroadcastPayload, screenSubmission } from "../_lib/utils";
 import { logSecurityEvent, logAudit } from "../_lib/securityLog";
+import { authorizeRequest, requireAdmin } from "../_lib/guards";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -8,30 +9,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  const user = await getAuthenticatedUser(req, res);
+  // Universal guard: authenticate (401) + authorize as admin (403) + log the
+  // denied attempt. Replaces the manual admins lookup + inline 403 + log.
+  const user = await authorizeRequest(req, res, {
+    action: "admin.broadcast",
+    authorize: requireAdmin,
+  });
   if (!user) return;
 
   try {
     const admin = getSupabaseAdmin();
-
-    // Authorize: caller must be in the admins roster.
-    const { data: adminRow } = await admin
-      .from("admins")
-      .select("email")
-      .eq("email", user.email)
-      .maybeSingle();
-    if (!adminRow) {
-      void logSecurityEvent({
-        req,
-        eventType: "authz.denied",
-        severity: "warn",
-        userId: user.id,
-        actorEmail: user.email,
-        statusCode: 403,
-        metadata: { action: "admin.broadcast" },
-      });
-      return res.status(403).json({ error: "Admins only." });
-    }
 
     const screen = await screenSubmission({
       formId: "admin:broadcast",
