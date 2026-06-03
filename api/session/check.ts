@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getSupabaseAdmin, getClientIdentity, ipNetworkPrefix } from "../_lib/utils";
-import { logSecurityEvent } from "../_lib/securityLog";
+import { getAuthenticatedUser, getSupabaseAdmin, getClientIdentity, ipNetworkPrefix } from "../_lib/utils.js";
+import { logSecurityEvent } from "../_lib/securityLog.js";
 
 // Server-side IP binding for active sessions. The browser cannot read its own
 // public IP, so this endpoint captures it from X-Forwarded-For and binds it to

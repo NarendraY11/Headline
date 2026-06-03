@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled, screenSubmission } from "./_lib/utils";
+import { getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled, screenSubmission } from "./_lib/utils.js";
 import { createClient } from "@supabase/supabase-js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

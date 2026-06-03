@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getRazorpay, isFeatureEnabled, validatePaymentInterval, screenSubmission } from "../_lib/utils";
+import { getAuthenticatedUser, getRazorpay, isFeatureEnabled, validatePaymentInterval, screenSubmission } from "../_lib/utils.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getSupabaseAdmin, screenSubmission } from "./_lib/utils";
-import { logSecurityEvent, logAudit } from "./_lib/securityLog";
+import { getAuthenticatedUser, getSupabaseAdmin, screenSubmission } from "./_lib/utils.js";
+import { logSecurityEvent, logAudit } from "./_lib/securityLog.js";
 
 const TRIAL_DAYS = 7;
 

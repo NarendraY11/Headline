@@ -13,7 +13,7 @@
 // All writes are best-effort: a logging failure must never break the request.
 // ---------------------------------------------------------------------------
 import type { VercelRequest } from "@vercel/node";
-import { getSupabaseAdmin, getClientIdentity } from "./utils";
+import { getSupabaseAdmin, getClientIdentity } from "./utils.js";
 
 export type Severity = "info" | "warn" | "error" | "critical";
 
