@@ -72,13 +72,37 @@ async function startServer() {
       console.log(`Razorpay Webhook Event Received: ${event}`);
 
       if (event === "order.paid" || event === "payment.captured") {
-        const orderNotes = payload.payload?.order?.entity?.notes || {};
-        const paymentNotes = payload.payload?.payment?.entity?.notes || {};
-        
+        const orderEntity = payload.payload?.order?.entity || {};
+        const paymentEntity = payload.payload?.payment?.entity || {};
+        const orderNotes = orderEntity.notes || {};
+        const paymentNotes = paymentEntity.notes || {};
+
         const userId = orderNotes.userId || paymentNotes.userId;
         const interval = orderNotes.interval || paymentNotes.interval || "monthly";
 
         if (userId) {
+          const admin0 = getSupabaseAdmin();
+          // Durable payment ledger (best-effort). Unique razorpay_payment_id
+          // dedupes against the verify insert when both fire for one payment.
+          const razorpayPaymentId = paymentEntity.id;
+          if (razorpayPaymentId) {
+            try {
+              await admin0.from("payments").insert({
+                user_id: userId,
+                razorpay_payment_id: razorpayPaymentId,
+                razorpay_order_id: paymentEntity.order_id || orderEntity.id || null,
+                amount: paymentEntity.amount ?? orderEntity.amount ?? 0,
+                currency: paymentEntity.currency || orderEntity.currency || "INR",
+                status: paymentEntity.status || "captured",
+                interval,
+                source: "webhook",
+                notes: { ...orderNotes, ...paymentNotes },
+              });
+            } catch (payErr) {
+              console.warn("payments insert (webhook) skipped/failed:", payErr);
+            }
+          }
+
           const startedAt = new Date().toISOString();
           const expiresAt = new Date();
           if (interval === "yearly") {
@@ -370,14 +394,14 @@ async function startServer() {
 
       const admin = getSupabaseAdmin();
 
-      // Idempotency: skip re-granting if this payment was already processed.
-      const { data: priorGrant } = await admin
-        .from("plan_changes")
+      // Idempotency: skip re-granting if this payment was already recorded.
+      // Keyed on the unique payments.razorpay_payment_id.
+      const { data: priorPayment } = await admin
+        .from("payments")
         .select("id")
-        .eq("user_id", (req as any).uid)
-        .ilike("note", `%${razorpay_payment_id}%`)
+        .eq("razorpay_payment_id", razorpay_payment_id)
         .maybeSingle();
-      if (priorGrant) {
+      if (priorPayment) {
         return res.json({ success: true, alreadyProcessed: true });
       }
 
@@ -416,7 +440,24 @@ async function startServer() {
         throw error;
       }
 
-      // Audit trail doubles as the idempotency record checked above.
+      // Durable payment ledger + idempotency key checked above.
+      try {
+        await admin.from("payments").insert({
+          user_id: (req as any).uid,
+          razorpay_payment_id,
+          razorpay_order_id,
+          amount: paidAmount,
+          currency: order.currency || "INR",
+          status: order.status,
+          interval: verifiedInterval,
+          source: "verify",
+          notes: order.notes ?? null,
+        });
+      } catch (payErr) {
+        console.warn("payments insert failed:", payErr);
+      }
+
+      // Audit trail.
       try {
         await admin.from("plan_changes").insert({
           user_id: (req as any).uid,

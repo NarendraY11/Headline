@@ -974,6 +974,42 @@ create policy "Admins manage plan_changes"
   using (public.is_admin())
   with check (public.is_admin());
 
+-- 15.6b payments (durable Razorpay payment ledger) -----------------
+-- One row per verified/captured payment. Unique razorpay_payment_id is
+-- the idempotency key. Written only by the service-role admin client in
+-- api/payment/verify.ts and api/payment/webhook.ts; no client write policy.
+create table if not exists public.payments (
+  id bigint generated always as identity primary key,
+  user_id uuid references auth.users(id) on delete set null,
+  razorpay_payment_id text not null unique,
+  razorpay_order_id text,
+  amount integer not null,
+  currency text not null default 'INR',
+  status text not null default 'captured',
+  interval text,
+  source text not null default 'verify',
+  notes jsonb,
+  created_at timestamptz default now() not null
+);
+
+alter table public.payments enable row level security;
+
+drop policy if exists "Users read own payments" on public.payments;
+create policy "Users read own payments"
+  on public.payments for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Admins read payments" on public.payments;
+create policy "Admins read payments"
+  on public.payments for select
+  using (public.is_admin());
+
+drop policy if exists "Admins manage payments" on public.payments;
+create policy "Admins manage payments"
+  on public.payments for all
+  using (public.is_admin())
+  with check (public.is_admin());
+
 -- 15.7 Harden SECURITY DEFINER functions ----------------------------
 -- Pin search_path and revoke client-side EXECUTE (these run only via
 -- triggers, RLS and pg_cron — never via PostgREST RPC).
@@ -993,6 +1029,8 @@ revoke execute on function public.reset_daily_goals() from anon, authenticated, 
 -- 15.8 Covering indexes for foreign keys ----------------------------
 create index if not exists idx_mock_papers_exam on public.mock_papers(exam_id);
 create index if not exists idx_plan_changes_user on public.plan_changes(user_id);
+create index if not exists idx_payments_user on public.payments(user_id);
+create index if not exists idx_payments_order on public.payments(razorpay_order_id);
 create index if not exists idx_question_reports_user on public.question_reports(user_id);
 create index if not exists idx_referrals_referrer on public.referrals(referrer_id);
 

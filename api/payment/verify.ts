@@ -81,15 +81,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const admin = getSupabaseAdmin();
 
-    // Idempotency: if this payment was already processed, return success without
+    // Idempotency: if this payment was already recorded, return success without
     // re-granting (prevents replay / double-submit from stacking entitlements).
-    const { data: priorGrant } = await admin
-      .from("plan_changes")
+    // Keyed on the unique payments.razorpay_payment_id.
+    const { data: priorPayment } = await admin
+      .from("payments")
       .select("id")
-      .eq("user_id", user.id)
-      .ilike("note", `%${razorpay_payment_id}%`)
+      .eq("razorpay_payment_id", razorpay_payment_id)
       .maybeSingle();
-    if (priorGrant) {
+    if (priorPayment) {
       return res.status(200).json({ success: true, alreadyProcessed: true });
     }
 
@@ -133,6 +133,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (error) {
       throw error;
+    }
+
+    // Durable payment ledger. Unique razorpay_payment_id is the idempotency
+    // key; a duplicate (race with the webhook) surfaces as a conflict and is
+    // swallowed — the grant above is already idempotent via the pre-check.
+    try {
+      await admin.from("payments").insert({
+        user_id: user.id,
+        razorpay_payment_id,
+        razorpay_order_id,
+        amount: paidAmount,
+        currency: order.currency || "INR",
+        status: order.status,
+        interval: verifiedInterval,
+        source: "verify",
+        notes: order.notes ?? null,
+      });
+    } catch (payErr) {
+      console.warn("payments insert failed:", payErr);
     }
 
     // Audit trail (best-effort).

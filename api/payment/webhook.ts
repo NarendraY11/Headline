@@ -70,14 +70,38 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       event === "subscription.charged" ||
       event === "subscription.activated"
     ) {
-      const orderNotes = payload.payload?.order?.entity?.notes || {};
-      const paymentNotes = payload.payload?.payment?.entity?.notes || {};
+      const orderEntity = payload.payload?.order?.entity || {};
+      const paymentEntity = payload.payload?.payment?.entity || {};
+      const orderNotes = orderEntity.notes || {};
+      const paymentNotes = paymentEntity.notes || {};
       const subNotes = payload.payload?.subscription?.entity?.notes || {};
-      
+
       const userId = orderNotes.userId || paymentNotes.userId || subNotes.userId;
       const interval = orderNotes.interval || paymentNotes.interval || subNotes.interval || "monthly";
 
       if (userId) {
+        // Durable payment ledger (best-effort). Unique razorpay_payment_id
+        // dedupes against the verify.ts insert when both fire for one payment.
+        const razorpayPaymentId = paymentEntity.id;
+        if (razorpayPaymentId) {
+          try {
+            await admin.from("payments").insert({
+              user_id: userId,
+              razorpay_payment_id: razorpayPaymentId,
+              razorpay_order_id: paymentEntity.order_id || orderEntity.id || null,
+              amount: paymentEntity.amount ?? orderEntity.amount ?? 0,
+              currency: paymentEntity.currency || orderEntity.currency || "INR",
+              status: paymentEntity.status || "captured",
+              interval,
+              source: "webhook",
+              notes: { ...orderNotes, ...paymentNotes },
+            });
+          } catch (payErr) {
+            // Unique-violation = already recorded by verify.ts; that's fine.
+            console.warn("payments insert (webhook) skipped/failed:", payErr);
+          }
+        }
+
         const startedAt = new Date().toISOString();
         const expiresAt = new Date();
         if (interval === "yearly" || interval === "annual") {
