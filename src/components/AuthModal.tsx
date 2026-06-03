@@ -7,6 +7,7 @@ import { X, Mail, Lock, User, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } f
 import { Button, Card } from "./Atoms";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { validatePasswordStrength, isPwnedPassword, tooManyPasswordAttempts } from "../lib/passwordSecurity";
+import { logAuthEvent } from "../lib/authEvents";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -83,8 +84,10 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
         throw error;
       }
 
+      logAuthEvent("login_success", email);
       onClose(); // Close modal on success
     } catch (err: any) {
+      logAuthEvent("login_failed", email);
       console.error("Sign In Error:", err);
       // Map standard Firebase/Supabase style errors for better copy
       let msg = err.message || "An error occurred during sign in.";
@@ -154,6 +157,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
         throw error;
       }
 
+      logAuthEvent("signup", email);
       // Check if user is automatically logged in or needs verification
       if (data?.user && data.session) {
         // Logged in directly, close modal
@@ -200,6 +204,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
       await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
+      logAuthEvent("password_reset_requested", email);
       setSuccessMsg(neutralMsg);
       setEmail("");
     } catch (err: any) {
