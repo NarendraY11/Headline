@@ -467,6 +467,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let active = true;
     let lastUserId: string | null = null;
 
+    // Failsafe: never let the app hang on the auth skeleton. If getSession()
+    // stalls (e.g. a deadlocked auth lock in a standalone PWA), force loading
+    // off so public/unauthed UI can render. Auth state still updates later via
+    // onAuthStateChange once the call resolves.
+    const loadingFailsafe = setTimeout(() => {
+      if (active) setLoading(false);
+    }, 5000);
+
     // Check currently active session first
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!active) return;
@@ -516,6 +524,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       active = false;
+      clearTimeout(loadingFailsafe);
       subscription.unsubscribe();
     };
   }, []);
