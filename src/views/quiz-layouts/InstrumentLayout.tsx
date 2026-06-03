@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Bookmark, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button, Wordmark } from "../../components/Atoms";
@@ -27,6 +28,18 @@ export default function InstrumentLayout({
   customQuestions,
   navigate
 }: QuizLayoutProps) {
+
+  // Cockpit is always dark. The root .dark class alone doesn't reliably
+  // re-scope the theme CSS vars, so force `dark` on <html> while mounted and
+  // restore the user's prior theme on exit.
+  useEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains("dark");
+    root.classList.add("dark");
+    return () => {
+      if (!wasDark) root.classList.remove("dark");
+    };
+  }, []);
 
   let correctAnswers = 0;
   let totalAnswered = 0;

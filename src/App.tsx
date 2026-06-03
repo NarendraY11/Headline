@@ -157,9 +157,23 @@ export default function App() {
             <Route path="/bookmarks" element={<BookmarksView />} />
             <Route path="/profile" element={<ProfileView />} />
             <Route path="/referral" element={<ReferralView />} />
-            <Route path="/quiz/:topicId" element={<QuizView />} />
             <Route path="*" element={<NotFoundView />} />
           </Route>
+
+          {/* FULLSCREEN QUIZ (authed, NO App Shell — each quiz layout is its
+              own full-viewport takeover with its own header/footer. Nesting it
+              inside AppShell double-stacked the chrome, pushed the footer below
+              the fold, and broke the immersive cockpit theme.) */}
+          <Route
+            path="/quiz/:topicId"
+            element={
+              <AuthGuard>
+                <Suspense fallback={<LoadingFallback />}>
+                  <QuizView />
+                </Suspense>
+              </AuthGuard>
+            }
+          />
         </Routes>
       </ErrorBoundary>
     </Router>
