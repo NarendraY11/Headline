@@ -96,11 +96,29 @@ async function prerender() {
         // Wait for network to be idle to ensure JS has executed and #root is populated
         await page.goto(`http://localhost:${PORT}${route}`, {
           waitUntil: "networkidle2",
-          timeout: 10000
+          timeout: 15000
         });
 
-        // Wait an extra second for any animations or late rendering
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // CRITICAL: React 19's createRoot commits its initial render on a
+        // scheduler task AFTER network goes idle (supabase calls abort fast, so
+        // networkidle2 fires while React is still mounting). A fixed delay raced
+        // that commit and snapshotted an EMPTY #root — shipping a blank shell to
+        // prod, which is why FCP/LCP were ~4-7s (paint waited on the full JS
+        // bundle). Wait until React has actually committed real DOM into #root.
+        try {
+          await page.waitForFunction(
+            () => {
+              const r = document.getElementById("root");
+              return !!r && r.childElementCount > 0;
+            },
+            { timeout: 10000 }
+          );
+        } catch {
+          console.warn(`  #root never populated for ${route}; snapshot may be empty.`);
+        }
+
+        // Brief settle for any synchronous child renders after first commit.
+        await new Promise(resolve => setTimeout(resolve, 400));
 
         let html = await page.content();
         
