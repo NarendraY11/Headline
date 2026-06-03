@@ -153,7 +153,7 @@ export default function InstrumentLayout({
         </div>
       </header>
 
-      <div className="flex-1 w-full flex flex-row min-h-0 relative z-10 transition-all duration-300">
+      <div className="flex-1 w-full flex flex-col sm:flex-row min-h-0 relative z-10 transition-all duration-300">
         
         {/* LEFT RAIL (LADDER) */}
         <div className="w-16 md:w-20 border-r border-rule shrink-0 overflow-y-auto hidden sm:flex flex-col items-center bg-bg pt-8 pb-32 no-scrollbar">
