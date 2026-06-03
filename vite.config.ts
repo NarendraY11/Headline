@@ -79,6 +79,9 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
+          // Pull the Web Push handlers into the Workbox-generated SW. sw-push.js
+          // lives in public/ so it ships to the site root next to the SW.
+          importScripts: ['sw-push.js'],
           // Some vendor chunks (recharts/motion) are large; lift the precache cap.
           maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
           cleanupOutdatedCaches: true,
