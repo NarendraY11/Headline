@@ -1,4 +1,4 @@
-import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import {
     ArrowUpRight,
     BarChart3,
@@ -18,13 +18,12 @@ import {
     X,
     Zap
 } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useOutlet } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFeature } from "../../hooks/useFeatureFlags";
 import { useIsAdmin } from "../../hooks/useIsAdmin";
 import { useLogbook } from "../../hooks/useLogbook";
-import SearchOverlay from "../../views/SearchOverlay";
 import { Button, Wordmark } from "../Atoms";
 import { ErrorBoundary } from "../ErrorBoundary";
 import NotificationCenter from "../NotificationCenter";
@@ -37,9 +36,13 @@ import { HeaderAuth } from './HeaderAuth';
 import { LoadingFallback } from './LoadingFallback';
 import { NextCheckWidget } from './NextCheckWidget';
 import { PageTransition } from './PageTransition';
-import { SettingsOverlay } from './SettingsOverlay';
-import { ShortcutsOverlay } from './ShortcutsOverlay';
 import { SidebarAuth } from './SidebarAuth';
+
+// Overlays render only on user action (search/settings/shortcuts); lazy-load
+// them so their code stays out of the initial shell/entry chunk.
+const SearchOverlay = lazy(() => import("../../views/SearchOverlay"));
+const SettingsOverlay = lazy(() => import('./SettingsOverlay').then((m) => ({ default: m.SettingsOverlay })));
+const ShortcutsOverlay = lazy(() => import('./ShortcutsOverlay').then((m) => ({ default: m.ShortcutsOverlay })));
 
 export function AppShell() {
   const { userData } = useAuth();
@@ -291,11 +294,13 @@ export function AppShell() {
           id="app-shell"
           className="min-h-screen min-h-[100dvh] bg-bg text-ink flex flex-row overflow-x-hidden font-sans"
         >
-          <AnimatePresence>
-            {showShortcuts && <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />}
-            {showSettings && <SettingsOverlay onClose={() => setShowSettings(false)} />}
-            {showSearch && <SearchOverlay onClose={() => setShowSearch(false)} />}
-          </AnimatePresence>
+          <Suspense fallback={null}>
+            <AnimatePresence>
+              {showShortcuts && <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />}
+              {showSettings && <SettingsOverlay onClose={() => setShowSettings(false)} />}
+              {showSearch && <SearchOverlay onClose={() => setShowSearch(false)} />}
+            </AnimatePresence>
+          </Suspense>
           <AuthOnboardingHandler />
 
           {/* PERSISTENT LEFT SIDEBAR (Desktop) */}

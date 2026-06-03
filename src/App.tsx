@@ -53,7 +53,7 @@ import { AuthModalTrigger } from './components/layout/AuthModalTrigger';
 import { FeatureGatingBlocks } from './components/layout/FeatureGatingBlocks';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { RouteMetaHelper } from './components/layout/RouteMetaHelper';
-import PricingView from "./views/PricingView";
+const PricingView = lazy(() => import("./views/PricingView"));
 
 
 
