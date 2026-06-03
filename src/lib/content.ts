@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { Question } from "../data/questions";
 import { rawSubjects, SubjectItem } from "../data/topics";
+import { getCachedQuestions, getCachedQuestionsByIds, putQuestions } from "./offline/questionCache";
 
 const CACHE_TTL = 300000; // 5 minutes in milliseconds
 
@@ -45,9 +46,24 @@ export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
   // quiz resume) always get the questions they saved even when the DB is empty
   // or only partially seeded.
   const fillFromStatic = async (found: Question[]): Promise<Question[]> => {
-    const foundIds = new Set(found.map((q) => q.id));
-    const missing = ids.filter((id) => !foundIds.has(id));
+    let foundIds = new Set(found.map((q) => q.id));
+    let missing = ids.filter((id) => !foundIds.has(id));
     if (missing.length === 0) return found;
+
+    // Prefer the user's real cached questions (offline) over the generic
+    // static bank, then fall back to static for anything still missing.
+    try {
+      const cached = await getCachedQuestionsByIds(missing);
+      if (cached.length > 0) {
+        found = [...found, ...cached];
+        foundIds = new Set(found.map((q) => q.id));
+        missing = ids.filter((id) => !foundIds.has(id));
+        if (missing.length === 0) return found;
+      }
+    } catch {
+      /* ignore cache miss */
+    }
+
     try {
       const { staticQuestionBank } = await import("../data/staticQuestions");
       const byId = new Map(staticQuestionBank.map((q) => [q.id, q]));
@@ -95,6 +111,7 @@ export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
             : (typeof q.references === "string" ? JSON.parse(q.references) : []))),
       isAiGenerated: !!q.is_ai_generated,
     }));
+    void putQuestions(mapped);
     return fillFromStatic(mapped);
   } catch (err) {
     console.error("Exception fetching questions by IDs, using static fallback:", err);
@@ -164,20 +181,30 @@ export async function fetchQuizQuestionsForTopic(
       isAiGenerated: !!q.is_ai_generated,
     }));
 
-    // Static fallback: if the DB has no published questions for this topic,
-    // serve from the bundled bank so the quiz is never empty. Match the topic
-    // where possible, otherwise fall back to the whole bank.
+    // Write successful DB results through to the offline cache so this topic
+    // can be practised offline later.
+    if (questions.length > 0) void putQuestions(questions);
+
+    // Fallback when the DB has no published questions for this topic (no match,
+    // or offline): prefer the user's real cached questions, then the bundled
+    // static bank, so the quiz is never empty. Match the topic where possible.
     if (questions.length === 0) {
-      const { staticQuestionBank } = await import("../data/staticQuestions");
       const normalize = (s: string | undefined) => (s || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
       const normTarget = normalize(topicId);
-      const matched = staticQuestionBank.filter(
-        (q) =>
-          normalize(q.subcategoryId) === normTarget ||
-          normalize(q.subjectId) === normTarget ||
-          normalize(q.topicId) === normTarget
-      );
-      questions = matched.length > 0 ? matched : staticQuestionBank;
+      const matchesTopic = (q: Question) =>
+        normalize(q.subcategoryId) === normTarget ||
+        normalize(q.subjectId) === normTarget ||
+        normalize(q.topicId) === normTarget;
+
+      const cachedAll = await getCachedQuestions();
+      const cachedMatched = cachedAll.filter(matchesTopic);
+      if (cachedMatched.length > 0) {
+        questions = cachedMatched;
+      } else {
+        const { staticQuestionBank } = await import("../data/staticQuestions");
+        const matched = staticQuestionBank.filter(matchesTopic);
+        questions = matched.length > 0 ? matched : staticQuestionBank;
+      }
     }
 
     if (randomize) {
@@ -227,9 +254,12 @@ export async function fetchPublishedQuestions(options?: {
 
       const { data, error } = await query;
 
-      // Static fallback so the quiz is never empty when the DB has no
-      // published questions matching the requested filters.
+      // Fallback when the DB returns nothing (no match, or offline): prefer the
+      // user's real cached questions, then the bundled static bank so the quiz
+      // is never empty.
       const staticFallback = async (): Promise<Question[]> => {
+        const cached = await getCachedQuestions(options);
+        if (cached.length > 0) return cached;
         const { staticQuestionBank } = await import("../data/staticQuestions");
         let pool = staticQuestionBank;
         if (options.subjectId) pool = pool.filter((q) => q.subjectId === options.subjectId);
@@ -268,10 +298,16 @@ export async function fetchPublishedQuestions(options?: {
               : (typeof q.references === "string" ? JSON.parse(q.references) : []))),
         isAiGenerated: !!q.is_ai_generated,
       }));
-      return mapped.length > 0 ? mapped : staticFallback();
+      if (mapped.length > 0) {
+        void putQuestions(mapped);
+        return mapped;
+      }
+      return staticFallback();
     } catch (err) {
       console.warn("Exception fetching questions with options, using static fallback:", err);
       try {
+        const cached = await getCachedQuestions(options);
+        if (cached.length > 0) return cached;
         const { staticQuestionBank } = await import("../data/staticQuestions");
         const start = options.offset || 0;
         return options.limit !== undefined
@@ -292,9 +328,10 @@ export async function fetchPublishedQuestions(options?: {
       .eq("status", "published");
 
     if (error) {
-      console.warn("Error fetching questions, using static fallback:", error);
+      console.warn("Error fetching questions, using offline/static fallback:", error);
+      const cached = await getCachedQuestions();
       const { staticQuestionBank } = await import("../data/staticQuestions");
-      cachedQuestions = staticQuestionBank;
+      cachedQuestions = cached.length > 0 ? cached : staticQuestionBank;
     } else if (data && data.length > 0) {
       cachedQuestions = data.map((q: any) => ({
         id: q.id,
@@ -320,14 +357,17 @@ export async function fetchPublishedQuestions(options?: {
               : (typeof q.references === "string" ? JSON.parse(q.references) : []))),
         isAiGenerated: !!q.is_ai_generated,
       }));
+      void putQuestions(cachedQuestions);
     } else {
+      const cached = await getCachedQuestions();
       const { staticQuestionBank } = await import("../data/staticQuestions");
-      cachedQuestions = staticQuestionBank;
+      cachedQuestions = cached.length > 0 ? cached : staticQuestionBank;
     }
   } catch (err) {
-    console.warn("Exception fetching questions, using static fallback:", err);
+    console.warn("Exception fetching questions, using offline/static fallback:", err);
+    const cached = await getCachedQuestions();
     const { staticQuestionBank } = await import("../data/staticQuestions");
-    cachedQuestions = staticQuestionBank;
+    cachedQuestions = cached.length > 0 ? cached : staticQuestionBank;
   }
 
   if (!cachedQuestions) {

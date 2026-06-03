@@ -47,6 +47,7 @@ const NotificationsManager = lazy(() => import("./views/admin/NotificationsManag
 
 import { CookieConsent } from "./components/CookieConsent";
 import { GlobalToastListener } from "./components/GlobalToastListener";
+import { OfflineBanner } from "./components/OfflineBanner";
 import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
 import { AppShell } from './components/layout/AppShell';
 import { AuthModalTrigger } from './components/layout/AuthModalTrigger';
@@ -102,6 +103,7 @@ export default function App() {
       <CookieConsent />
       <GlobalToastListener />
       <PwaInstallPrompt />
+      <OfflineBanner />
       <ErrorBoundary>
         <Routes>
           {/* PUBLIC ROUTES (No App Shell) */}
