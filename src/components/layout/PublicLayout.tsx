@@ -1,4 +1,3 @@
-import { AnimatePresence, motion } from "motion/react";
 import {
     Menu,
     MoveRight,
@@ -57,14 +56,9 @@ export function PublicLayout() {
       )}
 
       {/* MOBILE MENU NAV DRAWER */}
-      <AnimatePresence>
-        {mobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 top-[calc(64px+var(--sat))] bg-bg/95 backdrop-blur-xl border-b border-rule flex flex-col overflow-y-auto pb-safe md:hidden"
+      {mobileMenuOpen && (
+          <div
+            className="anim-drawer fixed inset-0 z-40 top-[calc(64px+var(--sat))] bg-bg/95 backdrop-blur-xl border-b border-rule flex flex-col overflow-y-auto pb-safe md:hidden"
             style={{ height: 'calc(100dvh - 64px - var(--sat))' }}
           >
             <nav className="flex flex-col p-4 w-full gap-2 mt-4 font-sans text-xl">
@@ -88,19 +82,16 @@ export function PublicLayout() {
                  <DarkModeToggle />
                </div>
             </nav>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
 
       <main className="flex-1 w-full bg-bg text-ink shrink-0 relative flex flex-col">
         <Suspense fallback={<LoadingFallback />}>
-          <AnimatePresence mode="wait">
-            <PageTransition keyId={location.pathname}>
-              <ErrorBoundary>
-                {outlet}
-              </ErrorBoundary>
-            </PageTransition>
-          </AnimatePresence>
+          <PageTransition keyId={location.pathname}>
+            <ErrorBoundary>
+              {outlet}
+            </ErrorBoundary>
+          </PageTransition>
         </Suspense>
       </main>
       <footer 

@@ -1,5 +1,4 @@
 import { ShieldCheck, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "./Atoms";
@@ -44,14 +43,10 @@ export function CookieConsent() {
   };
 
   return (
-    <AnimatePresence>
+    <>
       {visible && (
-        <motion.div
-          initial={{ y: 50, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 50, opacity: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-          className="fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:max-w-md z-9999 origin-bottom-right"
+        <div
+          className="anim-pop fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:max-w-md z-9999 origin-bottom-right"
         >
           <div className="bg-paper dark:bg-zinc-900 border border-rule-strong shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-5 md:p-6 rounded-sm space-y-4 font-sans">
             <div className="flex items-start gap-3">
@@ -93,8 +88,8 @@ export function CookieConsent() {
               </button>
             </div>
           </div>
-        </motion.div>
+        </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }

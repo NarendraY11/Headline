@@ -1,5 +1,4 @@
 import { ArrowRight, Flame, X } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -93,15 +92,10 @@ export default function StreakWidget() {
       </button>
 
       {/* Popover pane */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
+      {isOpen && (
+          <div
             ref={popoverRef}
-            initial={{ opacity: 0, scale: 0.95, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 mt-2 w-80 bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.12)] py-4 px-5 z-50 origin-top-right text-left"
+            className="anim-pop absolute right-0 mt-2 w-80 bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.12)] py-4 px-5 z-50 origin-top-right text-left"
           >
             {/* Header row */}
             <div className="flex justify-between items-center mb-3">
@@ -246,9 +240,8 @@ export default function StreakWidget() {
                 ✓ Active today · streak secured
               </div>
             )}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

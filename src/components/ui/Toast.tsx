@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { X, AlertCircle, CheckCircle, Info } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
@@ -40,11 +39,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none">
-        <AnimatePresence>
-          {toasts.map((toast) => (
-            <ToastItem key={toast.id} toast={toast} onDismiss={() => dismissToast(toast.id)} />
-          ))}
-        </AnimatePresence>
+        {toasts.map((toast) => (
+          <ToastItem key={toast.id} toast={toast} onDismiss={() => dismissToast(toast.id)} />
+        ))}
       </div>
     </ToastContext.Provider>
   );
@@ -70,12 +67,8 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: () => void }> = ({ t
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 50, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.3, ease: 'easeOut' }}
-      className={`pointer-events-auto flex items-start gap-3 bg-paper border border-rule shadow-lg rounded-lg p-4 min-w-[300px] max-w-sm border-l-4 ${borders[toast.type]}`}
+    <div
+      className={`anim-toast pointer-events-auto flex items-start gap-3 bg-paper border border-rule shadow-lg rounded-lg p-4 min-w-[300px] max-w-sm border-l-4 ${borders[toast.type]}`}
     >
       {icons[toast.type]}
       <div className="flex-1">
@@ -88,6 +81,6 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: () => void }> = ({ t
       >
         <X size={16} />
       </button>
-    </motion.div>
+    </div>
   );
 }

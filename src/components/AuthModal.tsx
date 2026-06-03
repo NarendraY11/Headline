@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "./ui/Toast";
-import { motion, AnimatePresence } from "motion/react";
 import FocusTrap from "focus-trap-react";
 import { X, Mail, Lock, User, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { Button, Card } from "./Atoms";
@@ -232,27 +231,20 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
   };
 
   return (
-    <AnimatePresence>
+    <>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <FocusTrap focusTrapOptions={{ initialFocus: false, escapeDeactivates: false, clickOutsideDeactivates: false, returnFocusOnDeactivate: true }}>
             <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
               {/* Backdrop overlay */}
-              <motion.div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+              <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={loading ? undefined : onClose}
-                className="fixed inset-0 bg-ink/30 dark:bg-black/60 backdrop-blur-md pointer-events-auto"
+                className="anim-fade fixed inset-0 bg-ink/30 dark:bg-black/60 backdrop-blur-md pointer-events-auto"
               />
 
               {/* Modal body container */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.96, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 15 }}
-                transition={{ duration: 0.23, ease: "easeOut" }}
-                className="relative w-full max-w-md z-10 pointer-events-auto mx-4"
+              <div
+                className="anim-pop relative w-full max-w-md z-10 pointer-events-auto mx-4"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="modal-title"
@@ -617,11 +609,11 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
               </div>
             </div>
           </Card>
-        </motion.div>
+        </div>
       </div>
       </FocusTrap>
       </div>
       )}
-    </AnimatePresence>
+    </>
   );
 }
