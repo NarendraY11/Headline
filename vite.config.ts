@@ -4,32 +4,38 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
-import Beasties from 'beasties';
 
-function beastiesPlugin() {
+// Inject <link rel=preload> for the above-the-fold fonts so the hero text is
+// painted in the real face at FCP instead of swapping from a fallback (FOUT =
+// layout shift). Only the latin-400-normal subset of the two hero families
+// (geist-sans body, instrument-serif display); other weights/subsets still
+// lazy-load via the stylesheet. Runs in closeBundle so the hashed filenames
+// are known; the prerender step re-snapshots dist/index.html afterwards.
+function fontPreloadPlugin() {
+  const TARGETS = [/^geist-sans-latin-400-normal-.*\.woff2$/, /^instrument-serif-latin-400-normal-.*\.woff2$/];
   return {
-    name: 'beasties',
-    apply: 'build',
+    name: 'font-preload',
+    apply: 'build' as const,
     async closeBundle() {
       const fs = await import('fs/promises');
-      const htmlPath = path.resolve(process.cwd(), 'dist/index.html');
-      
+      const distDir = path.resolve(process.cwd(), 'dist');
       try {
+        const assets = await fs.readdir(path.join(distDir, 'assets'));
+        const fonts = TARGETS.map(re => assets.find(f => re.test(f))).filter(Boolean) as string[];
+        if (fonts.length === 0) return;
+        const links = fonts
+          .map(f => `    <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/${f}">`)
+          .join('\n');
+        const htmlPath = path.join(distDir, 'index.html');
         const html = await fs.readFile(htmlPath, 'utf8');
-        const beasties = new Beasties({
-          path: path.resolve(process.cwd(), 'dist'),
-          publicPath: '/',
-          pruneSource: false,
-        });
-        const processedHtml = await beasties.process(html);
-        await fs.writeFile(htmlPath, processedHtml);
+        if (html.includes('rel="preload" as="font"')) return; // idempotent
+        await fs.writeFile(htmlPath, html.replace('</head>', `${links}\n  </head>`));
       } catch (e) {
-        console.warn('Beasties failed during closeBundle:', e);
+        console.warn('font-preload plugin skipped:', e);
       }
-    }
+    },
   };
 }
-
 
 export default defineConfig(() => {
   return {
@@ -53,7 +59,7 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
-      beastiesPlugin() as any,
+      fontPreloadPlugin(),
       ...(process.env.ANALYZE ? [visualizer({ filename: 'dist/stats.json', template: 'raw-data' }) as any] : []),
       VitePWA({
         registerType: 'autoUpdate',
