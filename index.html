@@ -25,6 +25,20 @@
     <meta name="twitter:image" content="/og-image.png" />
 
     <title>Heading — DGCA, EASA &amp; A320 Exam Prep for Pilots</title>
+
+    <!-- Apply the persisted theme BEFORE first paint. Without this the `dark`
+         class is only added later by a React effect (and only when the toggle
+         mounts), causing a flash of the wrong theme + layout/contrast shift
+         (CLS) on load, and dark-mode users briefly seeing the light theme. -->
+    <script>
+      (function () {
+        try {
+          if (localStorage.getItem('heading_theme') === 'dark') {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <noscript>

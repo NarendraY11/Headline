@@ -465,7 +465,18 @@ export const verifyWebhookSignature = (body: string, signature: string, secret: 
   const shasum = crypto.createHmac("sha256", secret);
   shasum.update(body);
   const digest = shasum.digest("hex");
-  return digest === signature;
+  // Constant-time comparison. A plain `digest === signature` leaks, via timing,
+  // how many leading bytes a forged signature matched — enough to forge a valid
+  // HMAC byte-by-byte. timingSafeEqual requires equal-length Buffers, so guard
+  // the length first (and a non-hex/odd input would throw otherwise).
+  if (typeof signature !== "string" || signature.length !== digest.length) {
+    return false;
+  }
+  try {
+    return crypto.timingSafeEqual(Buffer.from(digest, "hex"), Buffer.from(signature, "hex"));
+  } catch {
+    return false;
+  }
 };
 
 export async function grantReferralRewards(admin: any, userId: string, expiresAt: Date) {

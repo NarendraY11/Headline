@@ -8,6 +8,25 @@ import { blogPosts } from "../src/data/blog";
 const PORT = 5555;
 const DIST_DIR = path.resolve(process.cwd(), "dist");
 
+// Resolve a local Chrome/Chromium executable. The serverless @sparticuz binary
+// is not present on dev machines, so prefer an explicit override or a common
+// system install before falling back to it.
+async function resolveLocalChrome(): Promise<string> {
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) return process.env.PUPPETEER_EXECUTABLE_PATH;
+  const candidates = [
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return chromium.executablePath();
+}
+
 // All public routes to prerender
 const routes = [
   "/",
@@ -57,9 +76,7 @@ async function prerender() {
           })
         : await puppeteerCore.launch({
             args: ["--no-sandbox", "--disable-setuid-sandbox"],
-            executablePath:
-              process.env.PUPPETEER_EXECUTABLE_PATH ||
-              (await chromium.executablePath()),
+            executablePath: await resolveLocalChrome(),
             headless: true
           });
 
@@ -106,8 +123,12 @@ async function prerender() {
 
       await browser.close();
     } catch (error) {
-      console.error("Prerender error:", error);
-      process.exit(1);
+      // Prerender is progressive SEO enhancement, not a core build step. A
+      // failure here (e.g. no local Chrome) must NOT abort the build chain and
+      // skip the esbuild server bundle. Warn and exit 0; the SPA still hydrates.
+      console.warn("Prerender skipped (non-fatal):", error instanceof Error ? error.message : error);
+      server.close();
+      process.exit(0);
     } finally {
       server.close();
       console.log("Prerender complete.");

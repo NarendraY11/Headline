@@ -5,7 +5,10 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAuth } from "./contexts/AuthContext";
 import { useFeature } from "./hooks/useFeatureFlags";
 
-const HomeView = lazy(() => import("./views/HomeView"));
+// Landing route is eager (not lazy): it's the LCP/entry page, so lazy-loading it
+// only adds a chunk round-trip and a Suspense skeleton->content swap that caused
+// a large layout shift (CLS ~0.96). Static import keeps it in the entry bundle.
+import HomeView from "./views/HomeView";
 const ModulesView = lazy(() => import("./views/ModulesView"));
 const MockExamsView = lazy(() => import("./views/MockExamsView"));
 const AnalyticsView = lazy(() => import("./views/AnalyticsView"));
