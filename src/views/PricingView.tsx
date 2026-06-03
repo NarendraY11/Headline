@@ -10,6 +10,7 @@ import { useToast } from "../components/ui/Toast";
 import { useNotifications } from "../contexts/NotificationContext";
 
 import { isPaidActive } from "../lib/plan";
+import PaymentSuccessCelebration from "../components/PaymentSuccessCelebration";
 
 // Scroll reveal helper
 const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: string }> = ({ children, delay = 0, className = "" }) => {
@@ -47,6 +48,7 @@ export default function PricingView() {
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [isTrialLoading, setIsTrialLoading] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
 
   const isPro = isPaidActive(userData);
 
@@ -193,24 +195,16 @@ export default function PricingView() {
 
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
-              showToast({
-                type: "success",
-                title: "Clearance Granted!",
-                message: "Aviation subscription successfully upgraded to Captain (Pro)!",
-                duration: 7000
-              });
-              
               addNotification(
                 "🎉 Welcome to Pro!",
                 `Your Captain (Pro) ${billingInterval === "yearly" ? "yearly" : "monthly"} plan is active. Every feature is unlocked — happy flying!`,
                 "system"
               );
 
-              // Refresh or reload page to sync authentication state
+              // Play the celebration overlay; its onDone reloads the page so the
+              // refreshed auth/plan state is picked up everywhere.
               trackEvent("upgrade_pro_success", { metadata: { interval: billingInterval } });
-              setTimeout(() => {
-                window.location.reload();
-              }, 2000);
+              setShowCelebration(true);
             } else {
               throw new Error(verifyData.error || "Payment verification failed.");
             }
@@ -272,6 +266,12 @@ export default function PricingView() {
 
   return (
     <div className="min-h-screen bg-bg relative">
+      {showCelebration && (
+        <PaymentSuccessCelebration
+          interval={billingInterval}
+          onDone={() => window.location.reload()}
+        />
+      )}
       <div className="absolute inset-0 blueprint pointer-events-none opacity-[0.03] z-0" />
       
       <section id="pricing" className="pt-10 pb-24 md:pt-16 md:pb-32 max-w-[1000px] mx-auto px-6 w-full relative z-10">

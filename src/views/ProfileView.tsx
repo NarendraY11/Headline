@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button, Card } from "../components/Atoms";
-import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2 } from "lucide-react";
+import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2, Sparkles, ShieldCheck, CalendarClock, ArrowRight } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { isPaidActive, daysLeft, planLabel } from "../lib/plan";
 
 export default function ProfileView() {
   const { user, userData, logout, logoutEverywhere, resetAccount, loading, openAuthModal, updateUserData } = useAuth();
@@ -75,6 +76,13 @@ export default function ProfileView() {
 
   const { targetExam = "DGCA CPL", streakCount = 0, photoURL: firestorePhotoURL } = userData || {};
   const currentPhotoURL = firestorePhotoURL || user.photoURL;
+
+  // Subscription / clearance details.
+  const isPro = isPaidActive(userData);
+  const subPlan: string = userData?.plan || "free";
+  const subDaysLeft = daysLeft(userData);
+  const fmtSubDate = (d?: string) =>
+    d ? new Date(d).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
   let daysDiff: number | null = null;
   let isPast = false;
@@ -350,6 +358,71 @@ export default function ProfileView() {
           </div>
         )}
       </div>
+
+      {/* Subscription / Clearance status */}
+      <Card
+        className={`p-6 md:p-8 mb-6 rounded-2xl relative overflow-hidden ${
+          isPro ? "bg-navy border-navy text-bg" : "bg-panel border-rule"
+        }`}
+      >
+        {isPro && (
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[#DF9D38]/10 blur-3xl rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
+        )}
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <span
+              className={`inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.2em] font-bold ${
+                isPro ? "text-[#DF9D38]" : "text-muted"
+              }`}
+            >
+              {isPro ? <Sparkles size={12} /> : <ShieldCheck size={12} />} Membership
+            </span>
+            <h3 className={`font-serif text-2xl md:text-3xl ${isPro ? "text-bg" : "text-ink"}`}>
+              {subPlan === "lifetime"
+                ? "Captain (Pro) · Lifetime"
+                : subPlan === "pro"
+                ? "Captain (Pro)"
+                : subPlan === "trial"
+                ? "Pro Trial"
+                : "Cadet (Free)"}
+            </h3>
+            <div className={`font-mono text-[11px] tracking-wider ${isPro ? "text-bg/70" : "text-muted"}`}>
+              {planLabel(userData)}
+            </div>
+          </div>
+
+          {isPro ? (
+            <div className="flex flex-wrap gap-6 md:gap-8 shrink-0">
+              <div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-bg/50 mb-1">Started</div>
+                <div className="font-sans text-sm font-semibold text-bg">{fmtSubDate(userData?.planStartedAt)}</div>
+              </div>
+              <div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-bg/50 mb-1">Renews / Expires</div>
+                <div className="font-sans text-sm font-semibold text-bg">
+                  {userData?.planExpiresAt ? fmtSubDate(userData.planExpiresAt) : "Never"}
+                </div>
+              </div>
+              {subDaysLeft !== null && (
+                <div>
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-bg/50 mb-1 flex items-center gap-1">
+                    <CalendarClock size={10} /> Days Left
+                  </div>
+                  <div className="font-sans text-sm font-semibold text-[#DF9D38]">{subDaysLeft}</div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Button
+              variant="primary"
+              onClick={() => navigate("/pricing")}
+              className="h-11 rounded-full font-mono text-[10px] uppercase tracking-wider px-6 shrink-0 gap-1.5 bg-navy text-bg hover:bg-navy/90"
+            >
+              Upgrade to Pro <ArrowRight size={14} />
+            </Button>
+          )}
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
         <Card className="bg-panel border-rule p-6">
