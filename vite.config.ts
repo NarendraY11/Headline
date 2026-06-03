@@ -126,14 +126,21 @@ export default defineConfig(() => {
       target: "esnext",
       rollupOptions: {
         output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-motion': ['motion', 'motion/react'],
-            'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-recharts': ['recharts'],
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            const n = id.replace(/\\/g, '/');
+            // react/jsx-runtime MUST land with react. If left to rollup it gets
+            // hoisted into whichever vendor chunk first imports it (was
+            // vendor-motion), so every JSX component statically pulls that chunk
+            // onto the critical path. Match react FIRST, before motion etc.
+            if (/\/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(n)) return 'vendor-react';
+            if (/\/node_modules\/(motion|framer-motion)\//.test(n)) return 'vendor-motion';
+            if (n.includes('/node_modules/@supabase/')) return 'vendor-supabase';
+            if (n.includes('/node_modules/recharts/')) return 'vendor-recharts';
             // d3 is only used by the lazy MasterySunburst (analytics route); keep
             // it isolated so it never leaks into the entry/critical chunk.
-            'vendor-d3': ['d3']
+            if (/\/node_modules\/d3(-[a-z]+)?\//.test(n)) return 'vendor-d3';
+            return undefined;
           }
         }
       }

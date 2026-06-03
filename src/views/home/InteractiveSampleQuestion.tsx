@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import { Button } from "../../components/Atoms";
 import { MoveRight, CheckCircle2, X, Clock } from "lucide-react";
 import { Question } from "../../data/questions";
@@ -161,10 +160,8 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
   };
 
   return (
-    <motion.div
-      className="bg-paper border border-rule rounded-2xl py-5 px-6 shadow-sm text-left relative overflow-hidden w-full max-w-[90vw] sm:max-w-sm md:max-w-md mx-auto md:mx-0 shrink-0 min-h-[450px] flex flex-col justify-between"
-      animate={shake ? { x: [-5, 5, -5, 5, 0] } : {}}
-      transition={{ duration: 0.4 }}
+    <div
+      className={`bg-paper border border-rule rounded-2xl py-5 px-6 shadow-sm text-left relative overflow-hidden w-full max-w-[90vw] sm:max-w-sm md:max-w-md mx-auto md:mx-0 shrink-0 min-h-[450px] flex flex-col justify-between ${shake ? "anim-shake" : ""}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -173,14 +170,9 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
         {getTopRightStamp(currentQ.ata)} REV 1
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
+        <div
           key={currentIndex}
-          initial={{ opacity: 0, x: 15 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -15 }}
-          transition={{ duration: 0.35, ease: "easeInOut" }}
-          className="flex-grow flex flex-col justify-between"
+          className="anim-q-slide flex-grow flex flex-col justify-between"
         >
           <div>
             <div className="flex justify-between items-start mb-4 relative z-10 w-full">
@@ -247,21 +239,13 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
               })}
             </div>
 
-            <AnimatePresence>
-              {submitted && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="mb-4 font-sans text-[13px] text-ink-2 bg-rule/30 p-3 rounded-lg border border-rule overflow-hidden"
-                >
-                  <span className="font-semibold text-ink">Explanation:</span> {currentQ.explanation.split('.')[0]}.
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {submitted && (
+              <div className="anim-fade mb-4 font-sans text-[13px] text-ink-2 bg-rule/30 p-3 rounded-lg border border-rule overflow-hidden">
+                <span className="font-semibold text-ink">Explanation:</span> {currentQ.explanation.split('.')[0]}.
+              </div>
+            )}
           </div>
-        </motion.div>
-      </AnimatePresence>
+        </div>
 
       <div className="flex items-center justify-between mt-auto border-t border-rule/20 pt-4 relative">
         <div className="flex gap-2 sm:gap-3 font-mono text-[8px] sm:text-[9px] text-muted-2 tracking-[0.1em] sm:tracking-[0.2em] uppercase">
@@ -272,19 +256,12 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
           <button onClick={() => handleToolbarClick("SKIP")} className="hover:text-ink transition-colors outline-none focus-visible:ring-2">SKIP</button>
         </div>
 
-        <AnimatePresence>
-          {showTooltip && (
-            <motion.div
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 5 }}
-              className="absolute bottom-14 left-0 font-sans text-xs bg-ink text-bg px-3 py-1.5 rounded shadow-lg whitespace-nowrap z-20"
-            >
-              {tooltipMessage}
-              <div className="absolute -bottom-1 left-4 w-2 h-2 bg-ink transform rotate-45"></div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {showTooltip && (
+          <div className="anim-pop absolute bottom-14 left-0 font-sans text-xs bg-ink text-bg px-3 py-1.5 rounded shadow-lg whitespace-nowrap z-20">
+            {tooltipMessage}
+            <div className="absolute -bottom-1 left-4 w-2 h-2 bg-ink transform rotate-45"></div>
+          </div>
+        )}
 
         <Button onClick={handleSubmit} variant="primary" className="h-9 sm:h-10 px-4 sm:px-5 bg-ink text-bg text-[13px] sm:text-[14px] rounded-full hover:bg-ink-2 shrink-0">
           {submitted ? (
@@ -294,6 +271,6 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
           )}
         </Button>
       </div>
-    </motion.div>
+    </div>
   );
 }
