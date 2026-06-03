@@ -142,7 +142,14 @@ export default function PricingView() {
         throw new Error(orderData.error);
       }
 
-      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_placeholderK";
+      // Prefer the key_id the server returns from create-order (authoritative,
+      // always matches the secret used to create the order). Fall back to the
+      // build-time Vite var only if the server omitted it. Never ship a bogus
+      // placeholder — an invalid key makes the modal fail to open.
+      const keyId = orderData.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID || "";
+      if (!keyId) {
+        throw new Error("Payment is not configured (missing Razorpay key). Please contact support.");
+      }
 
       const options = {
         key: keyId,
@@ -233,6 +240,23 @@ export default function PricingView() {
       };
 
       const rzPay = new (window as any).Razorpay(options);
+      // payment.failed fires when the bank/card declines or the gateway errors
+      // (distinct from the user dismissing the modal). No charge is made.
+      rzPay.on("payment.failed", (resp: any) => {
+        setPaymentLoading(false);
+        console.error("Razorpay payment.failed:", resp?.error);
+        trackEvent("upgrade_pro_failed", {
+          metadata: { interval: billingInterval, reason: resp?.error?.reason || resp?.error?.code },
+        });
+        showToast({
+          type: "error",
+          title: "Payment Failed",
+          message:
+            resp?.error?.description ||
+            "Your payment could not be processed. No charge was made — please try again.",
+          duration: 7000,
+        });
+      });
       rzPay.open();
     } catch (err: any) {
       console.error("Payment error:", err);
