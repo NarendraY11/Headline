@@ -548,21 +548,25 @@ export default function ProfileView() {
           </Button>
         </div>
 
-        <div className="pt-4 flex flex-wrap gap-3 justify-between border-t border-rule mt-8">
+        <div className="pt-4 border-t border-rule mt-8 space-y-3">
+          {/* Primary, everyday action. */}
           <Button variant="ghost" onClick={logout} className="gap-2 text-muted-2 hover:text-ink">
             <LogOut size={16} /> Sign out
           </Button>
-          <Button
-            variant="ghost"
+          {/* Security escape hatch (lost/stolen/shared device): revokes every
+              session server-side. Kept available but visually subordinate so it
+              doesn't read as a second, competing "sign out" button. */}
+          <button
+            type="button"
             onClick={() => {
               if (window.confirm("Log out of all devices? This ends every active session, including this one.")) {
                 logoutEverywhere();
               }
             }}
-            className="gap-2 text-muted-2 hover:text-signal"
+            className="block text-[11px] font-sans text-muted-2 hover:text-signal underline underline-offset-2 transition-colors"
           >
-            <LogOut size={16} /> Log out everywhere
-          </Button>
+            Lost a device? Sign out of all devices
+          </button>
         </div>
       </div>
     </div>

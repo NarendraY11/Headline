@@ -42,20 +42,27 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   }, [user, authLoading, navigate, location, showToast, openAuthModal]);
 
   if (authLoading || (!user && redirectTriggered.current)) {
+    // Two distinct states share this skeleton:
+    //  - redirecting: auth resolved, the user is NOT signed in -> redirect home.
+    //  - !redirecting (authLoading): auth state still resolving / a signed-in
+    //    user's profile is loading. Showing "Auth Required" here is wrong and
+    //    alarms users who just logged in successfully — use neutral copy.
+    const redirecting = !authLoading && !user && redirectTriggered.current;
     return (
       <div
         className="anim-fade AuthGuard min-h-[60vh] bg-bg flex flex-col items-center justify-center p-6 text-center relative border border-rule/50 rounded-2xl m-4 overflow-hidden"
       >
-        {/* Subtle 'Auth Required' Lock Icon Overlay inside the container */}
         <div
           className="anim-pop absolute inset-0 bg-paper/85 backdrop-blur-[4px] flex flex-col items-center justify-center z-10"
         >
           <div className="w-14 h-14 bg-navy/5 text-navy rounded-full flex items-center justify-center mb-4 border border-navy/15 shadow-sm animate-pulse">
             <Lock size={24} className="stroke-[1.7] text-ink" />
           </div>
-          <h3 className="font-serif text-lg font-medium text-ink">Auth Required</h3>
+          <h3 className="font-serif text-lg font-medium text-ink">
+            {redirecting ? "Auth Required" : "Signing you in"}
+          </h3>
           <p className="font-mono text-[9px] text-[#A66C23] tracking-widest mt-1 uppercase">
-            Securing Connection & Redirecting...
+            {redirecting ? "Securing Connection & Redirecting..." : "Loading your flight deck..."}
           </p>
         </div>
 
