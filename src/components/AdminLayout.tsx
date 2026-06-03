@@ -120,7 +120,7 @@ export function AdminLayout() {
             className="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-[11px] font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-mono uppercase tracking-wide transition-colors cursor-pointer select-none"
           >
             <LogOut size={13} />
-            <span>Sign logout</span>
+            <span>Sign out</span>
           </button>
         </div>
       </aside>
@@ -187,7 +187,7 @@ export function AdminLayout() {
                 className="w-full flex items-center gap-2 px-3 h-9 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-mono uppercase tracking-wide transition-colors"
               >
                 <LogOut size={13} />
-                <span>Sign Out Account</span>
+                <span>Sign out</span>
               </button>
             </div>
           </div>
