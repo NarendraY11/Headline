@@ -1,5 +1,5 @@
 import { AlertCircle } from "lucide-react";
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAuth } from "./contexts/AuthContext";
@@ -32,8 +32,12 @@ const ReferralView = lazy(() => import("./views/ReferralView"));
 const A320SystemsView = lazy(() => import("./views/A320SystemsView"));
 
 import { AdminGuard } from "./components/AdminGuard";
-import { AdminLayout } from "./components/AdminLayout";
 import { AuthGuard } from "./components/AuthGuard";
+// AppShell (authed) and AdminLayout (admin) are never on the public/landing
+// critical path, but were statically imported into the entry chunk. Lazy them
+// so their trees (sidebar, widgets, notifications, admin nav) leave the entry
+// bundle and load only when an authed/admin route mounts.
+const AdminLayout = lazy(() => import("./components/AdminLayout").then(m => ({ default: m.AdminLayout })));
 
 const AdminDashboard = lazy(() => import("./views/admin/AdminDashboard"));
 const SubjectsManager = lazy(() => import("./views/admin/SubjectsManager"));
@@ -52,11 +56,12 @@ import { CookieConsent } from "./components/CookieConsent";
 import { GlobalToastListener } from "./components/GlobalToastListener";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
-import { AppShell } from './components/layout/AppShell';
 import { AuthModalTrigger } from './components/layout/AuthModalTrigger';
 import { FeatureGatingBlocks } from './components/layout/FeatureGatingBlocks';
+import { LoadingFallback } from './components/layout/LoadingFallback';
 import { PublicLayout } from './components/layout/PublicLayout';
 import { RouteMetaHelper } from './components/layout/RouteMetaHelper';
+const AppShell = lazy(() => import('./components/layout/AppShell').then(m => ({ default: m.AppShell })));
 const PricingView = lazy(() => import("./views/PricingView"));
 
 
@@ -127,7 +132,7 @@ export default function App() {
           </Route>
 
           {/* LOCKED ADMINISTRATIVE AREA */}
-          <Route element={<AdminGuard><AdminLayout /></AdminGuard>}>
+          <Route element={<AdminGuard><Suspense fallback={<LoadingFallback />}><AdminLayout /></Suspense></AdminGuard>}>
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/subjects" element={<SubjectsManager />} />
             <Route path="/admin/exams" element={<ExamsManager />} />
@@ -143,7 +148,7 @@ export default function App() {
           </Route>
 
           {/* AUTHENTICATED APP ROUTES (With App Shell) */}
-          <Route element={<AuthGuard><AppShell /></AuthGuard>}>
+          <Route element={<AuthGuard><Suspense fallback={<LoadingFallback />}><AppShell /></Suspense></AuthGuard>}>
             <Route path="/today" element={<TodayView />} />
             <Route path="/modules" element={<ModulesView />} />
             <Route path="/topic/:id" element={<TopicView />} />
