@@ -20,8 +20,8 @@
 // ---------------------------------------------------------------------------
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type { User } from "@supabase/supabase-js";
-import { getAuthenticatedUser, getSupabaseAdmin, isProUser } from "./utils";
-import { logSecurityEvent, type Severity } from "./securityLog";
+import { getAuthenticatedUser, getSupabaseAdmin, isProUser } from "./utils.js";
+import { logSecurityEvent, type Severity } from "./securityLog.js";
 
 export interface AuthzContext {
   user: User;

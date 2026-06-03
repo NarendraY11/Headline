@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getSupabaseAdmin, verifyWebhookSignature } from "../_lib/utils";
-import { logSecurityEvent } from "../_lib/securityLog";
+import { getSupabaseAdmin, verifyWebhookSignature } from "../_lib/utils.js";
+import { logSecurityEvent } from "../_lib/securityLog.js";
 
 export const config = {
   api: {

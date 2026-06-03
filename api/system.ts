@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getSupabaseAdmin, checkFormRateLimit, getClientIdentity } from "./_lib/utils";
-import { logSecurityEvent, type Severity } from "./_lib/securityLog";
+import { getSupabaseAdmin, checkFormRateLimit, getClientIdentity } from "./_lib/utils.js";
+import { logSecurityEvent, type Severity } from "./_lib/securityLog.js";
 
 // Consolidated public "system" function. Serves /api/health and /api/auth-event
 // from ONE serverless function to stay under the Hobby-plan 12-function cap

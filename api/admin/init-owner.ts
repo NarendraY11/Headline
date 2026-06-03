@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuthenticatedUser, getSupabaseAdmin } from "../_lib/utils";
-import { logSecurityEvent } from "../_lib/securityLog";
+import { getAuthenticatedUser, getSupabaseAdmin } from "../_lib/utils.js";
+import { logSecurityEvent } from "../_lib/securityLog.js";
 
 const PRIMARY_OWNER_EMAIL = "narendray112050@gmail.com";
 

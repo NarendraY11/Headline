@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { ai, getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled, validateInstructorPayload, screenSubmission } from "../_lib/utils";
-import { logSecurityEvent } from "../_lib/securityLog";
+import { ai, getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled, validateInstructorPayload, screenSubmission } from "../_lib/utils.js";
+import { logSecurityEvent } from "../_lib/securityLog.js";
 
 // Per-action gating, mirroring server.ts (dev). `explain` is free; the rest
 // require an active Pro/Trial plan. Each maps to its app_settings feature flag.

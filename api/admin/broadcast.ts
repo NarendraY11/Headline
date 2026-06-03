@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getSupabaseAdmin, validateBroadcastPayload, screenSubmission } from "../_lib/utils";
-import { logSecurityEvent, logAudit } from "../_lib/securityLog";
-import { authorizeRequest, requireAdmin } from "../_lib/guards";
+import { getSupabaseAdmin, validateBroadcastPayload, screenSubmission } from "../_lib/utils.js";
+import { logSecurityEvent, logAudit } from "../_lib/securityLog.js";
+import { authorizeRequest, requireAdmin } from "../_lib/guards.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
