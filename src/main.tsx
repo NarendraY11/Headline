@@ -22,6 +22,10 @@ import { FeatureFlagsProvider } from './hooks/useFeatureFlags';
 const SpeedInsights = lazy(() =>
   import("@vercel/speed-insights/react").then((m) => ({ default: m.SpeedInsights }))
 );
+// Analytics is also lazy-loaded to avoid blocking first paint.
+const Analytics = lazy(() =>
+  import("@vercel/analytics/react").then((m) => ({ default: m.Analytics }))
+);
 
 // Defer product analytics init until the browser is idle after first paint, so
 // it doesn't add startup main-thread cost. (No-op until VITE_POSTHOG_KEY is set;
@@ -47,6 +51,7 @@ createRoot(document.getElementById('root')!).render(
               <App />
               <Suspense fallback={null}>
                 <SpeedInsights />
+                <Analytics />
               </Suspense>
             </LoadingProvider>
           </ToastProvider>

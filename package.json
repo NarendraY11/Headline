@@ -25,6 +25,7 @@
     "@sparticuz/chromium": "^149.0.0",
     "@supabase/supabase-js": "^2.106.1",
     "@tailwindcss/vite": "^4.1.14",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "@vitejs/plugin-react": "^5.0.4",
     "d3": "^7.9.0",
