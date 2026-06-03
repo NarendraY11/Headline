@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getSupabaseAdmin, verifyWebhookSignature } from "../_lib/utils";
+import { logSecurityEvent } from "../_lib/securityLog";
 
 export const config = {
   api: {
@@ -43,6 +44,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const isValid = verifyWebhookSignature(rawBody, signature, webhookSecret);
       if (!isValid) {
         console.error("Webhook signature mismatch.");
+        void logSecurityEvent({
+          req,
+          eventType: "payment.webhook_signature_invalid",
+          severity: "critical",
+          statusCode: 400,
+          metadata: { note: "razorpay webhook signature mismatch" },
+        });
         return res.status(400).json({ error: "Invalid signature" });
       }
     } else {
@@ -102,6 +110,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (auditErr) {
           console.warn("plan_changes audit insert failed:", auditErr);
         }
+        // profiles UPDATE is audited by the audit_profiles_change DB trigger;
+        // this security event records the webhook trigger + source IP.
+        void logSecurityEvent({
+          req,
+          eventType: "payment.webhook_upgrade",
+          severity: "info",
+          userId,
+          statusCode: 200,
+          metadata: { event, interval },
+        });
         console.log(`Successfully updated user ${userId} to Pro plan via Webhook (${interval})`);
       }
     }
@@ -141,6 +159,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         } catch (auditErr) {
           console.warn("plan_changes audit insert failed:", auditErr);
         }
+        void logSecurityEvent({
+          req,
+          eventType: "payment.webhook_downgrade",
+          severity: "info",
+          userId,
+          statusCode: 200,
+          metadata: { event },
+        });
         console.log(`Successfully downgraded canceled user ${userId} to Free plan via Webhook`);
       }
     }

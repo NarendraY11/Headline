@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAuthenticatedUser, getSupabaseAdmin, getClientIdentity, ipNetworkPrefix } from "../_lib/utils";
+import { logSecurityEvent } from "../_lib/securityLog";
 
 // Server-side IP binding for active sessions. The browser cannot read its own
 // public IP, so this endpoint captures it from X-Forwarded-For and binds it to
@@ -35,6 +36,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // A newer session from another device superseded this one.
     if (sessionId && row.session_id && row.session_id !== sessionId) {
+      void logSecurityEvent({
+        req,
+        eventType: "session.superseded",
+        severity: "info",
+        userId: user.id,
+        actorEmail: user.email,
+        metadata: { reason: "newer_device_session" },
+      });
       return res.status(200).json({ valid: false, reason: "superseded" });
     }
 
@@ -47,6 +56,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Compare by network prefix (/24 v4, /64 v6) so normal IP churn within the
     // same subnet does not evict; only a jump to a different network trips it.
     if (ipNetworkPrefix(row.ip_address) !== ipNetworkPrefix(ip)) {
+      // Network jump on an established session: possible token replay/hijack.
+      void logSecurityEvent({
+        req,
+        eventType: "session.ip_changed",
+        severity: "warn",
+        userId: user.id,
+        actorEmail: user.email,
+        metadata: { from_prefix: ipNetworkPrefix(row.ip_address), to_prefix: ipNetworkPrefix(ip) },
+      });
       return res.status(200).json({ valid: false, reason: "ip_changed" });
     }
 

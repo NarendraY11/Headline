@@ -3,6 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import Razorpay from "razorpay";
 import crypto from "crypto";
+import { logSecurityEvent } from "./securityLog";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -23,6 +24,13 @@ export const ai = new GoogleGenAI({
 export async function getAuthenticatedUser(req: VercelRequest, res: VercelResponse) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    void logSecurityEvent({
+      req,
+      eventType: "auth.failed",
+      severity: "warn",
+      statusCode: 401,
+      metadata: { reason: "missing_token" },
+    });
     res.status(401).json({ error: "Unauthorized: Missing authentication token." });
     return null;
   }
@@ -35,7 +43,15 @@ export async function getAuthenticatedUser(req: VercelRequest, res: VercelRespon
     }
     return user;
   } catch (error) {
-    console.error("Error verifying Supabase token:", error);
+    // Note: the token is never logged — only the failure reason.
+    void logSecurityEvent({
+      req,
+      eventType: "auth.failed",
+      severity: "warn",
+      statusCode: 401,
+      metadata: { reason: "invalid_or_expired_token" },
+    });
+    console.error("Error verifying Supabase token (token redacted).");
     res.status(401).json({ error: "Unauthorized: Invalid or expired authentication token." });
     return null;
   }
@@ -317,8 +333,24 @@ export function checkFormRateLimit(formId: string, identity: string, limit = 10,
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function logAbuse(identity: string, formId: string, reason: string): Promise<void> {
+export async function logAbuse(
+  identity: string,
+  formId: string,
+  reason: string,
+  req?: VercelRequest
+): Promise<void> {
   console.warn(`[abuse] form=${formId} identity=${identity} reason=${reason}`);
+
+  // Durable security-log entry (append-only, admin-only read). Captures IP/UA
+  // when the request is available. This is the authoritative abuse record.
+  void logSecurityEvent({
+    req,
+    eventType: "abuse.blocked",
+    severity: "warn",
+    userId: UUID_RE.test(identity) ? identity : null,
+    metadata: { form: formId, reason, identity: UUID_RE.test(identity) ? undefined : identity },
+  });
+
   // events.user_id is a uuid FK; only write when identity is an authenticated
   // user id. IP-only attempts stay console-only to avoid FK violations.
   if (!UUID_RE.test(identity)) return;
@@ -363,23 +395,24 @@ export async function screenSubmission(params: {
   identity: string;
   body: any;
   structuredFields?: string[];
+  req?: VercelRequest;
 }): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
-  const { formId, identity, body, structuredFields = [] } = params;
+  const { formId, identity, body, structuredFields = [], req } = params;
 
   if (isHoneypotTripped(body)) {
-    await logAbuse(identity, formId, "honeypot");
+    await logAbuse(identity, formId, "honeypot", req);
     return { ok: false, status: 400, error: "Invalid submission." };
   }
 
   if (!checkFormRateLimit(formId, identity)) {
-    await logAbuse(identity, formId, "form_rate_limit");
+    await logAbuse(identity, formId, "form_rate_limit", req);
     return { ok: false, status: 429, error: "Too many submissions. Please wait a minute and try again." };
   }
 
   for (const f of structuredFields) {
     const hit = detectAttackPattern(body?.[f], f);
     if (hit) {
-      await logAbuse(identity, formId, `attack:${f}:${hit.label}`);
+      await logAbuse(identity, formId, `attack:${f}:${hit.label}`, req);
       return { ok: false, status: 400, error: hit.error };
     }
   }

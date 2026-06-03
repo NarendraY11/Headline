@@ -19,6 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     identity: user.id,
     body: req.body,
     structuredFields: ["interval", "plan"],
+    req,
   });
   if (!screen.ok) {
     return res.status(screen.status).json({ error: screen.error });

@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAuthenticatedUser, getRazorpay, getSupabaseAdmin, verifyWebhookSignature, grantReferralRewards, isFeatureEnabled, validateVerifyPayload, screenSubmission } from "../_lib/utils";
+import { logSecurityEvent, logAudit } from "../_lib/securityLog";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -20,6 +21,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       identity: user.id,
       body: req.body,
       structuredFields: ["razorpay_payment_id", "razorpay_order_id", "razorpay_signature"],
+      req,
     });
     if (!screen.ok) {
       return res.status(screen.status).json({ error: screen.error });
@@ -40,6 +42,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const isValid = verifyWebhookSignature(signaturePayload, razorpay_signature, keySecret);
     if (!isValid) {
+      // Forged/invalid signature on a payment is a high-signal security event.
+      void logSecurityEvent({
+        req,
+        eventType: "payment.signature_invalid",
+        severity: "critical",
+        userId: user.id,
+        actorEmail: user.email,
+        statusCode: 400,
+        metadata: { order_id: razorpay_order_id, payment_id: razorpay_payment_id },
+      });
       return res.status(400).json({ error: "Signature verification failed." });
     }
 
@@ -50,6 +62,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // the buyer's uid into notes.userId; a valid signature for someone else's
     // order must not be replayable to upgrade a different account.
     if (order?.notes?.userId && order.notes.userId !== user.id) {
+      void logSecurityEvent({
+        req,
+        eventType: "payment.order_owner_mismatch",
+        severity: "critical",
+        userId: user.id,
+        actorEmail: user.email,
+        statusCode: 403,
+        metadata: { order_id: razorpay_order_id, order_owner: order.notes.userId },
+      });
       return res.status(403).json({ error: "Order does not belong to this account." });
     }
 
@@ -129,6 +150,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     await grantReferralRewards(admin, user.id, expiresAt);
 
+    void logSecurityEvent({
+      req,
+      eventType: "payment.verified",
+      severity: "info",
+      userId: user.id,
+      actorEmail: user.email,
+      statusCode: 200,
+      metadata: { interval: verifiedInterval, payment_id: razorpay_payment_id, amount: paidAmount },
+    });
+    void logAudit({
+      req,
+      actorUserId: user.id,
+      actorEmail: user.email,
+      action: "plan.grant",
+      tableName: "profiles",
+      recordId: user.id,
+      oldValue: { plan: prevProfile?.plan ?? null },
+      newValue: { plan: "pro", interval: verifiedInterval, expires_at: expiresAt.toISOString() },
+      source: "api",
+    });
     return res.status(200).json({ success: true });
   } catch (error: any) {
     console.error("Payment verification failed in serverless function:", error);

@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { ai, getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled, validateInstructorPayload, screenSubmission } from "../_lib/utils";
+import { logSecurityEvent } from "../_lib/securityLog";
 
 // Per-action gating, mirroring server.ts (dev). `explain` is free; the rest
 // require an active Pro/Trial plan. Each maps to its app_settings feature flag.
@@ -163,6 +164,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(403).json({ error: "This feature is currently disabled." });
     }
     if (gate.requiresPro && !(await isProUser(user.id))) {
+      void logSecurityEvent({
+        req,
+        eventType: "authz.denied",
+        severity: "info",
+        userId: user.id,
+        actorEmail: user.email,
+        statusCode: 403,
+        metadata: { action: `instructor.${action}`, reason: "pro_required" },
+      });
       return res.status(403).json({ error: "Access denied. Pro or active Trial subscription required." });
     }
   }
@@ -172,6 +182,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     identity: user.id,
     body: req.body,
     structuredFields: action === "practice" ? ["topic", "code"] : [],
+    req,
   });
   if (!screen.ok) {
     return res.status(screen.status).json({ error: screen.error });
@@ -184,6 +195,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const allowed = await checkRateLimit(user.id);
   if (!allowed) {
+    void logSecurityEvent({
+      req,
+      eventType: "ratelimit.exceeded",
+      severity: "warn",
+      userId: user.id,
+      actorEmail: user.email,
+      statusCode: 429,
+      metadata: { scope: `instructor.${action}` },
+    });
     return res.status(429).json({ error: "Rate limit reached. Try again later." });
   }
 

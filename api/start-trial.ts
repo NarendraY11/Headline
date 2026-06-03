@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAuthenticatedUser, getSupabaseAdmin, screenSubmission } from "./_lib/utils";
+import { logSecurityEvent, logAudit } from "./_lib/securityLog";
 
 const TRIAL_DAYS = 7;
 
@@ -16,6 +17,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     formId: "start-trial",
     identity: user.id,
     body: req.body,
+    req,
   });
   if (!screen.ok) {
     return res.status(screen.status).json({ error: screen.error });
@@ -93,6 +95,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.warn("plan_changes audit insert failed:", auditErr);
     }
 
+    void logSecurityEvent({
+      req,
+      eventType: "trial.granted",
+      severity: "info",
+      userId: user.id,
+      actorEmail: user.email,
+      statusCode: 200,
+      metadata: { days: TRIAL_DAYS },
+    });
+    void logAudit({
+      req,
+      actorUserId: user.id,
+      actorEmail: user.email,
+      action: "plan.grant",
+      tableName: "profiles",
+      recordId: user.id,
+      oldValue: { plan: "free" },
+      newValue: { plan: "trial", expires_at: expiresAt.toISOString() },
+      source: "api",
+    });
     console.log(`Granted ${TRIAL_DAYS}-day trial to user ${user.id}`);
     return res.status(200).json({
       success: true,

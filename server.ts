@@ -779,6 +779,30 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
     }
   });
 
+  // === AUTH EVENT BREADCRUMB (public; client reports auth attempts) ===
+  // Dev parity for api/auth-event.ts. Server stamps IP/UA into security_log.
+  app.post("/api/auth-event", async (req, res) => {
+    const ALLOWED: Record<string, string> = {
+      login_success: "info", login_failed: "warn", signup: "info",
+      password_reset_requested: "info", logout: "info",
+    };
+    const type = typeof req.body?.type === "string" ? req.body.type : "";
+    const severity = ALLOWED[type];
+    if (!severity) return res.status(204).end();
+    const xff = req.headers["x-forwarded-for"];
+    const ip = (Array.isArray(xff) ? xff[0] : xff || "").split(",")[0].trim() || req.ip || "anonymous";
+    const ua = String(req.headers["user-agent"] || "").slice(0, 500);
+    const rawEmail = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+    const email = /^[^\s@]{1,200}@[^\s@]{1,200}\.[^\s@]{1,20}$/.test(rawEmail) ? rawEmail : null;
+    try {
+      await getSupabaseAdmin().from("security_log").insert({
+        event_type: `auth.${type}`, severity, actor_email: email,
+        ip, user_agent: ua, route: "/api/auth-event", http_method: "POST",
+      });
+    } catch { /* best-effort */ }
+    return res.status(204).end();
+  });
+
   // === SESSION IP-BINDING CHECK ===
   app.post("/api/session/check", requireAuth, async (req, res) => {
     const uid = (req as any).uid;
@@ -890,6 +914,22 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
       console.error("Error in weather handler:", e);
       res.status(500).json({ error: "Failed to fetch weather." });
     }
+  });
+
+  // === HEALTH PROBE (public; uptime monitors / status page) ===
+  app.get("/api/health", async (_req, res) => {
+    const startedAt = Date.now();
+    let db = false;
+    try {
+      const { error } = await getSupabaseAdmin()
+        .from("app_settings").select("id", { head: true, count: "estimated" }).limit(1);
+      db = !error;
+    } catch { db = false; }
+    res.setHeader("Cache-Control", "no-store");
+    res.status(db ? 200 : 503).json({
+      status: db ? "ok" : "degraded", db, dbLatencyMs: Date.now() - startedAt,
+      timestamp: new Date().toISOString(),
+    });
   });
 
   // === DYNAMIC SITEMAP ENGINE ===
