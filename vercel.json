@@ -33,6 +33,8 @@
   "rewrites": [
     { "source": "/sitemap.xml", "destination": "/api/sitemap.xml" },
     { "source": "/robots.txt", "destination": "/api/robots.txt" },
+    { "source": "/api/health", "destination": "/api/system?fn=health" },
+    { "source": "/api/auth-event", "destination": "/api/system?fn=auth-event" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
