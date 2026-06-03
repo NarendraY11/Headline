@@ -1,5 +1,4 @@
 import { CheckCircle, Minus, Plus, Settings2 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Card } from './Atoms';
@@ -53,11 +52,7 @@ export default function DailyStudyGoal() {
 
       <div className="flex flex-col items-center justify-center flex-1 py-2 w-full">
         {isEditing ? (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center justify-center w-full h-full"
-          >
+          <div className="anim-pop flex flex-col items-center justify-center w-full h-full">
             <div className="flex items-center gap-4 mb-8">
               <button 
                 onClick={() => saveGoal(Math.max(10, goal - 10))}
@@ -87,13 +82,9 @@ export default function DailyStudyGoal() {
             >
               Save Goal
             </button>
-          </motion.div>
+          </div>
         ) : (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="flex flex-col items-center relative w-full h-full justify-center"
-          >
+          <div className="anim-pop flex flex-col items-center relative w-full h-full justify-center">
              <div className="relative w-36 h-36 flex items-center justify-center mb-6">
               <svg className="w-full h-full transform -rotate-90">
                 <circle
@@ -139,7 +130,7 @@ export default function DailyStudyGoal() {
                  <div className={`h-full rounded-full transition-all ${isComplete ? 'bg-mint' : 'bg-navy'}`} style={{ width: `${percentage}%` }} />
                </div>
             </div>
-          </motion.div>
+          </div>
         )}
       </div>
     </Card>

@@ -1,5 +1,4 @@
 import { ArrowUpRight, CheckCircle2, MoveRight, User } from "lucide-react";
-import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, Card, Chip, CompassLogomark, Wordmark } from "../components/Atoms";
@@ -116,14 +115,9 @@ export default function HomeView() {
 
         {/* BIG BACKGROUND COMPASS */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[200px] md:w-[300px] xl:w-[560px] aspect-square pointer-events-none" style={{ zIndex: 2 }}>
-          <motion.div
-            initial={{ rotate: -15, scale: 0.9 }}
-            animate={{ rotate: 0, scale: 1 }}
-            transition={{ type: "spring", stiffness: 30, damping: 20 }}
-            className="w-full h-full"
-          >
+          <div className="anim-compass-intro w-full h-full">
             <CompassLogomark size="100%" spin="rotate" spinDuration={32} className="text-rule opacity-[0.13]" />
-          </motion.div>
+          </div>
         </div>
         
         {/* CONTENT ENVELOPE */}

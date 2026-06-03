@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "motion/react";
 import { Copy, X, Printer } from "lucide-react";
 
 const SPECS: Record<string, { title: string; desc: string }> = {
@@ -227,17 +226,18 @@ export function FlightControlsDiagram() {
                         style={!blueprintMode && isHoveredPath ? { filter: 'drop-shadow(0 0 6px var(--sky))' } : {}}
                      />
                      {!blueprintMode && (
-                       <motion.path
+                       <path
                           d={p.d}
                           stroke={highlightColor}
                           strokeWidth={isSimulatedActive ? "3.5" : "3"}
                           fill="none"
                           strokeDasharray={isSimulatedActive ? "8 16" : "6 12"}
-                          initial={{ strokeDashoffset: isSimulatedActive ? 24 : 18 }}
-                          animate={{ strokeDashoffset: 0 }}
-                          transition={{ duration: isSimulatedActive ? 0.3 : 0.6, repeat: Infinity, ease: "linear" }}
-                          className="pointer-events-none"
-                          style={isHoveredPath || isSimulatedActive ? { filter: `drop-shadow(0 0 ${isSimulatedActive ? '12px' : '8px'} ${highlightColor})` } : {}}
+                          className="dash-flow pointer-events-none"
+                          style={{
+                            ['--dash-start' as string]: isSimulatedActive ? 24 : 18,
+                            ['--dash-dur' as string]: isSimulatedActive ? '0.3s' : '0.6s',
+                            ...(isHoveredPath || isSimulatedActive ? { filter: `drop-shadow(0 0 ${isSimulatedActive ? '12px' : '8px'} ${highlightColor})` } : {})
+                          }}
                        />
                      )}
                    </>
@@ -269,10 +269,9 @@ export function FlightControlsDiagram() {
             }
 
             return (
-              <motion.g 
+              <g
                 key={node.id}
                 transform={`translate(${node.x}, ${node.y})`}
-                whileHover={{ scale: 1.05 }}
                 onMouseEnter={() => handleEnter(node.id)}
                 onMouseLeave={handleLeave}
                 onClick={(e) => togglePin(node.id, e as any)}
@@ -298,13 +297,12 @@ export function FlightControlsDiagram() {
                 >
                   {node.label}
                 </text>
-              </motion.g>
+              </g>
             )
           })}
         </svg>
 
         <div className="absolute inset-0 pointer-events-none">
-          <AnimatePresence>
             {[...new Set([...pinned, ...hoveredNodes])].filter(Boolean).map((id) => {
               const node = NODES.find(n => n.id === id);
               if (!node) return null;
@@ -322,13 +320,9 @@ export function FlightControlsDiagram() {
               const transformY = isAbove ? 'calc(-100% - 24px)' : '24px';
 
               return (
-                <motion.div
+                <div
                   key={`tt-${id}`}
-                  initial={{ opacity: 0, y: isAbove ? 10 : -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.2 }}
-                  className={`absolute z-30 pointer-events-auto rounded-xl p-4 shadow-xl backdrop-blur-md ${blueprintMode ? 'bg-white border-2 border-ink' : 'bg-bg/95 border border-sky/30'}`}
+                  className={`anim-fade absolute z-30 pointer-events-auto rounded-xl p-4 shadow-xl backdrop-blur-md ${blueprintMode ? 'bg-white border-2 border-ink' : 'bg-bg/95 border border-sky/30'}`}
                   style={{
                     left: `${left}%`,
                     top: `${top}%`,
@@ -354,10 +348,9 @@ export function FlightControlsDiagram() {
                     </div>
                   </div>
                   <p className={`font-sans text-[11px] leading-relaxed ${blueprintMode ? 'text-ink font-mono' : 'text-ink-2'}`}>{spec.desc}</p>
-                </motion.div>
+                </div>
               );
             })}
-          </AnimatePresence>
         </div>
       </div>
     </div>

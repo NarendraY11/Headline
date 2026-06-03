@@ -335,6 +335,52 @@ html, body {
   .page-enter, .anim-pop, .anim-drawer, .anim-fade, .anim-toast { animation: none; }
 }
 
+/* Landing-page CSS animations — replace the motion runtime on the marketing
+   route (HomeView + sub-views) so the public landing page never fetches
+   vendor-motion. Scroll reveals use IntersectionObserver + .fade-up. */
+.fade-up {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.21, 0.47, 0.32, 0.98),
+              transform 0.6s cubic-bezier(0.21, 0.47, 0.32, 0.98);
+  will-change: opacity, transform;
+}
+.fade-up-in { opacity: 1; transform: translateY(0); }
+
+@keyframes anim-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+.anim-shake { animation: anim-shake 0.4s ease-in-out; }
+
+@keyframes anim-q-slide {
+  from { opacity: 0; transform: translateX(15px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.anim-q-slide { animation: anim-q-slide 0.35s ease-in-out; }
+
+@keyframes anim-compass-intro {
+  from { transform: rotate(-15deg) scale(0.9); }
+  to   { transform: rotate(0deg) scale(1); }
+}
+.anim-compass-intro { animation: anim-compass-intro 1.2s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* SVG signal-trace flow (SystemDiagram) — animates stroke-dashoffset.
+   Per-path start offset + duration passed via --dash-start / --dash-dur. */
+@keyframes dash-flow {
+  from { stroke-dashoffset: var(--dash-start, 18); }
+  to   { stroke-dashoffset: 0; }
+}
+.dash-flow { animation: dash-flow var(--dash-dur, 0.6s) linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up { opacity: 1; transform: none; transition: none; }
+  .anim-shake, .anim-q-slide, .anim-compass-intro, .dash-flow { animation: none; }
+}
+
 /* Wordmark heading micro-interactions */
 @keyframes heading-nav-pulse {
   0%, 100% {
