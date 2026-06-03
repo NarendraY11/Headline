@@ -141,7 +141,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }, 30000);
 
-    return () => clearInterval(interval);
+    // Instant kick: when another device takes over this user's single active
+    // session row, Postgres Realtime delivers the change here immediately, so
+    // the old device signs out at once instead of waiting up to 30s for the
+    // poll above (which stays as the fallback if Realtime is unavailable or the
+    // socket is asleep). RLS (auth.uid() = user_id) limits the stream to this
+    // user's own row.
+    const channel = supabase
+      .channel(`active_session:${user.uid}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "active_sessions",
+          filter: `user_id=eq.${user.uid}`,
+        },
+        (payload) => {
+          const newRow = payload.new as { session_id?: string } | null;
+          const localId = localStorage.getItem("client_session_id");
+          // A different session_id now owns the slot -> superseded by another
+          // device. (Our own register/upsert sets session_id === localId, so
+          // this never self-triggers.)
+          if (newRow?.session_id && localId && newRow.session_id !== localId) {
+            clearInterval(interval);
+            supabase.removeChannel(channel);
+            window.dispatchEvent(
+              new CustomEvent('force-logout-toast', {
+                detail: { message: "You've been signed out because your account was used on another device." },
+              })
+            );
+            void logout();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+    };
   }, [user?.uid]);
 
   const openAuthModal = (defaultTab: 'signin' | 'signup' | 'forgot' = 'signin') => {
