@@ -97,6 +97,47 @@ The sweep no-ops while the webhook is the placeholder. To enable:
 workflow, or swap `notify_slack` to `net.http_post` an email API (Resend/SES)
 — store that key in Vault the same way.
 
+### Channels & what else gets pushed to Slack
+`notify_slack(message, channel)` routes by channel to a per-channel Vault
+webhook, **falling back to `slack_security_webhook`** when a channel has none —
+so you can run everything in one channel or split them.
+
+| Channel | Vault secret | Vercel env (instant) | Carries |
+|---|---|---|---|
+| `security` | `slack_security_webhook` | `SLACK_WEBHOOK_SECURITY` | Suspicious-activity sweep (§2) |
+| `revenue` | `slack_revenue_webhook` | `SLACK_WEBHOOK_REVENUE` | New Pro, renewals, downgrades |
+| `ops` | `slack_ops_webhook` | `SLACK_WEBHOOK_OPS` | Abuse / rate-limit / eviction bursts |
+| `digest` | `slack_digest_webhook` | — | Daily 24h business pulse |
+
+Two delivery paths:
+- **Instant (serverless)** — `api/_lib/slack.ts` `notifySlack()` posts on the
+  request path. Wired into `api/payment/verify.ts` and `api/payment/webhook.ts`:
+  every new Pro subscription, webhook renewal, and downgrade pings `#revenue`
+  the moment it happens (no sweep lag). Reads the `SLACK_WEBHOOK_*` **Vercel
+  env vars** (not Vault). Double-post is avoided: `verify.ts` pings once via its
+  idempotency pre-check, the webhook pings only when it was the row's recorder.
+- **Batched (in-DB)** — `pg_cron` jobs reuse `notify_slack` (Vault webhooks):
+  - `ops-sweep` (every 5 min) → `run_ops_sweep()`: abuse-block burst (>20/5min),
+    rate-limit burst (>50/5min), session-eviction spike (>30/5min) → `#ops`.
+  - `daily-digest` (03:00 UTC / 08:30 IST) → `run_daily_digest()`: 24h revenue,
+    new Pro, downgrades, signups, trials started, active subscribers, critical
+    security events, abuse blocked → `#digest`.
+
+Add a per-channel webhook (example for revenue):
+```sql
+select vault.create_secret(
+  'https://hooks.slack.com/services/XXX/YYY/ZZZ',
+  'slack_revenue_webhook', 'revenue alerts');
+```
+Then mirror the same URL into the matching `SLACK_WEBHOOK_*` Vercel env var for
+the instant payment pings. Smoke-test a channel:
+```sql
+select public.notify_slack(':white_check_mark: revenue channel live.', 'revenue');
+select public.run_daily_digest();  -- fire the digest on demand
+```
+Files: `supabase/migrations/20260603180000_slack_notifications_expansion.sql`,
+`api/_lib/slack.ts`.
+
 ---
 
 ## 3. Health monitoring & error tracking
@@ -132,6 +173,9 @@ Only the cron owner / service role can run it (not callable via the API).
 ## 5. Operator checklist
 
 - [ ] Set the real Slack webhook in Vault (§2) and smoke-test `notify_slack`.
+- [ ] (Optional) Add `slack_revenue_webhook` / `slack_ops_webhook` /
+      `slack_digest_webhook` in Vault + matching `SLACK_WEBHOOK_*` Vercel env
+      vars to split channels (else all fall back to `#security`).
 - [ ] Add an UptimeRobot/Better Stack monitor on `/api/health` → Slack.
 - [ ] (Recommended) Wire Sentry for error-rate + latency alerts.
 - [ ] Tune the 401/403 baseline (default 100/5 min) once you see normal volume.
