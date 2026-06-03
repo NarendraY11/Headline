@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { trackEvent } from '../lib/track';
-import { registerActiveSession, clearLocalSession, checkSessionValidity } from '../lib/sessionTracker';
+import { registerActiveSession, clearLocalSession, checkSessionValidity, isSameDevice } from '../lib/sessionTracker';
 import { apiFetch } from '../lib/api';
 import { posthogIdentify, posthogReset } from '../lib/posthog';
 
@@ -158,12 +158,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           filter: `user_id=eq.${user.uid}`,
         },
         (payload) => {
-          const newRow = payload.new as { session_id?: string } | null;
+          const newRow = payload.new as { session_id?: string; device_info?: string } | null;
           const localId = localStorage.getItem("client_session_id");
           // A different session_id now owns the slot -> superseded by another
           // device. (Our own register/upsert sets session_id === localId, so
-          // this never self-triggers.)
-          if (newRow?.session_id && localId && newRow.session_id !== localId) {
+          // this never self-triggers.) Tolerate the same physical device: the
+          // installed PWA and the browser keep separate ids but share a UA, so
+          // they must not kick each other.
+          if (
+            newRow?.session_id &&
+            localId &&
+            newRow.session_id !== localId &&
+            !isSameDevice(newRow.device_info)
+          ) {
             clearInterval(interval);
             supabase.removeChannel(channel);
             window.dispatchEvent(

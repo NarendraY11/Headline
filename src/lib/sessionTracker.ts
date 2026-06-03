@@ -12,6 +12,14 @@ function currentUA(): string {
   return typeof navigator !== "undefined" ? navigator.userAgent : "Unknown";
 }
 
+// Device identity is the user-agent fingerprint. The installed PWA and the
+// browser on one physical device keep separate session ids in separate storage
+// partitions, so an id mismatch alone must NOT evict — only a different device
+// (different UA) should. Returns true when `deviceInfo` is this same device.
+export function isSameDevice(deviceInfo?: string | null): boolean {
+  return !!deviceInfo && deviceInfo === currentUA();
+}
+
 // (1) Establish a session record. The id is generated fresh whenever none
 // exists locally — and logout clears it — so each new login binds a new id
 // (anti-fixation). A persisted id is reused across tabs/reloads of the same
@@ -58,11 +66,13 @@ export async function checkSessionValidity(userId: string): Promise<boolean> {
 
   if (!data) return true; // no server row yet; don't evict
 
-  // Another device registered a newer session.
-  if (data.session_id !== clientId) return false;
+  // Same physical device (installed PWA vs browser vs multi-tab) keeps the
+  // session even when the random id differs — device identity is the UA.
+  if (isSameDevice(data.device_info)) return true;
 
-  // User-agent binding: a sudden change signals a hijacked/replayed session.
-  if (data.device_info && data.device_info !== currentUA()) return false;
+  // Legacy rows without device_info: fall back to the session-id match.
+  if (!data.device_info && data.session_id === clientId) return true;
 
-  return true;
+  // A different device took over the single active slot.
+  return false;
 }
