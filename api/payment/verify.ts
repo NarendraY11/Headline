@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getAuthenticatedUser, getRazorpay, getSupabaseAdmin, verifyWebhookSignature, grantReferralRewards, isFeatureEnabled, validateVerifyPayload, screenSubmission } from "../_lib/utils.js";
 import { logSecurityEvent, logAudit } from "../_lib/securityLog.js";
+import { notifySlack, formatRupees } from "../_lib/slack.js";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== "POST") {
@@ -189,6 +190,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       newValue: { plan: "pro", interval: verifiedInterval, expires_at: expiresAt.toISOString() },
       source: "api",
     });
+    // Instant revenue ping. The priorPayment early-return above guarantees this
+    // fires once per payment (no double with the webhook for the same id).
+    void notifySlack(
+      `:money_with_wings: *New Pro subscription* — ₹${formatRupees(paidAmount)} (${verifiedInterval}) from ${user.email ?? user.id}.`,
+      "revenue",
+    );
     return res.status(200).json({ success: true });
   } catch (error: any) {
     console.error("Payment verification failed in serverless function:", error);

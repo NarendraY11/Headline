@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getSupabaseAdmin, verifyWebhookSignature } from "../_lib/utils.js";
 import { logSecurityEvent } from "../_lib/securityLog.js";
+import { notifySlack, formatRupees } from "../_lib/slack.js";
 
 export const config = {
   api: {
@@ -83,19 +84,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // Durable payment ledger (best-effort). Unique razorpay_payment_id
         // dedupes against the verify.ts insert when both fire for one payment.
         const razorpayPaymentId = paymentEntity.id;
+        const paidAmount = paymentEntity.amount ?? orderEntity.amount ?? 0;
+        // Only ping Slack when WE recorded the payment, so a webhook firing for
+        // an id verify.ts already inserted (unique-violation) doesn't double-post.
+        let newlyRecorded = false;
         if (razorpayPaymentId) {
           try {
             await admin.from("payments").insert({
               user_id: userId,
               razorpay_payment_id: razorpayPaymentId,
               razorpay_order_id: paymentEntity.order_id || orderEntity.id || null,
-              amount: paymentEntity.amount ?? orderEntity.amount ?? 0,
+              amount: paidAmount,
               currency: paymentEntity.currency || orderEntity.currency || "INR",
               status: paymentEntity.status || "captured",
               interval,
               source: "webhook",
               notes: { ...orderNotes, ...paymentNotes },
             });
+            newlyRecorded = true;
           } catch (payErr) {
             // Unique-violation = already recorded by verify.ts; that's fine.
             console.warn("payments insert (webhook) skipped/failed:", payErr);
@@ -144,6 +150,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           statusCode: 200,
           metadata: { event, interval },
         });
+        if (newlyRecorded) {
+          void notifySlack(
+            `:money_with_wings: *New Pro (webhook ${event})* — ₹${formatRupees(paidAmount)} (${interval}) user ${userId}.`,
+            "revenue",
+          );
+        }
         console.log(`Successfully updated user ${userId} to Pro plan via Webhook (${interval})`);
       }
     }
@@ -191,6 +203,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           statusCode: 200,
           metadata: { event },
         });
+        void notifySlack(
+          `:arrow_down: *Subscription ended (${event})* — user ${userId} downgraded to Free.`,
+          "revenue",
+        );
         console.log(`Successfully downgraded canceled user ${userId} to Free plan via Webhook`);
       }
     }
