@@ -1,4 +1,3 @@
-import { AnimatePresence, MotionConfig, motion } from "framer-motion";
 import {
     ArrowUpRight,
     BarChart3,
@@ -18,13 +17,12 @@ import {
     X,
     Zap
 } from "lucide-react";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, NavLink, useLocation, useOutlet } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFeature } from "../../hooks/useFeatureFlags";
 import { useIsAdmin } from "../../hooks/useIsAdmin";
 import { useLogbook } from "../../hooks/useLogbook";
-import SearchOverlay from "../../views/SearchOverlay";
 import { Button, Wordmark } from "../Atoms";
 import { ErrorBoundary } from "../ErrorBoundary";
 import NotificationCenter from "../NotificationCenter";
@@ -37,9 +35,13 @@ import { HeaderAuth } from './HeaderAuth';
 import { LoadingFallback } from './LoadingFallback';
 import { NextCheckWidget } from './NextCheckWidget';
 import { PageTransition } from './PageTransition';
-import { SettingsOverlay } from './SettingsOverlay';
-import { ShortcutsOverlay } from './ShortcutsOverlay';
 import { SidebarAuth } from './SidebarAuth';
+
+// Overlays render only on user action (search/settings/shortcuts); lazy-load
+// them so their code stays out of the initial shell/entry chunk.
+const SearchOverlay = lazy(() => import("../../views/SearchOverlay"));
+const SettingsOverlay = lazy(() => import('./SettingsOverlay').then((m) => ({ default: m.SettingsOverlay })));
+const ShortcutsOverlay = lazy(() => import('./ShortcutsOverlay').then((m) => ({ default: m.ShortcutsOverlay })));
 
 export function AppShell() {
   const { userData } = useAuth();
@@ -286,16 +288,15 @@ export function AppShell() {
   ];
 
   return (
-    <MotionConfig reducedMotion={reduceMotion}>
-        <div 
+        <div
           id="app-shell"
           className="min-h-screen min-h-[100dvh] bg-bg text-ink flex flex-row overflow-x-hidden font-sans"
         >
-          <AnimatePresence>
+          <Suspense fallback={null}>
             {showShortcuts && <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />}
             {showSettings && <SettingsOverlay onClose={() => setShowSettings(false)} />}
             {showSearch && <SearchOverlay onClose={() => setShowSearch(false)} />}
-          </AnimatePresence>
+          </Suspense>
           <AuthOnboardingHandler />
 
           {/* PERSISTENT LEFT SIDEBAR (Desktop) */}
@@ -432,12 +433,9 @@ export function AppShell() {
           <div className="flex-1 flex flex-col min-w-0 min-h-screen">
             
             {/* SLIM TOP BAR */}
-            <motion.header 
+            <header
               id="app-header"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-              className={`h-[calc(64px+var(--sat))] pt-[var(--sat)] flex items-center justify-between px-6 sticky top-0 z-30 transition-all duration-300 border-b ${isScrolled ? 'bg-bg/40 backdrop-blur-2xl border-rule/50 shadow-[0_4px_24px_rgba(0,0,0,0.02)]' : 'bg-bg/95 backdrop-blur-md border-rule'}`}
+              className={`anim-fade h-[calc(64px+var(--sat))] pt-[var(--sat)] flex items-center justify-between px-6 sticky top-0 z-30 transition-all duration-300 border-b ${isScrolled ? 'bg-bg/40 backdrop-blur-2xl border-rule/50 shadow-[0_4px_24px_rgba(0,0,0,0.02)]' : 'bg-bg/95 backdrop-blur-md border-rule'}`}
             >
               {/* Left side: Breadcrumb tracker, Tracker Dropdown, Status, Reading Time */}
               <div className="flex items-center gap-2 text-xs font-sans text-muted select-none min-w-0 flex-shrink mr-2 relative">
@@ -452,14 +450,9 @@ export function AppShell() {
                   >
                     /
                   </button>
-                  <AnimatePresence>
-                    {showHistory && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 4, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute top-full left-1/2 -translate-x-1/2 mt-1 w-56 bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.06)] overflow-hidden py-1.5 z-50 origin-top"
+                  {showHistory && (
+                      <div
+                        className="anim-pop absolute top-full left-1/2 -translate-x-1/2 mt-1 w-56 bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.06)] overflow-hidden py-1.5 z-50 origin-top"
                       >
                         <div className="px-3 py-1.5 mb-1 font-mono text-[9px] text-muted-2 uppercase tracking-[0.2em] border-b border-rule/30">Recent Flights</div>
                         {history.length > 0 ? history.map((h, i) => (
@@ -474,9 +467,8 @@ export function AppShell() {
                         )) : (
                            <div className="px-3 py-2 text-[13px] text-muted">No history yet</div>
                         )}
-                      </motion.div>
+                      </div>
                     )}
-                  </AnimatePresence>
                 </div>
                 <h2 className="text-ink font-medium tracking-tight truncate m-0 text-sm ml-1">{getBreadcrumbTitle()}</h2>
                 <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest bg-rule/50 px-1.5 py-0.5 rounded-[4px] ml-1 whitespace-nowrap hidden md:inline">
@@ -536,18 +528,13 @@ export function AppShell() {
                   {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
                 </button>
               </div>
-            </motion.header>
+            </header>
 
             {/* MOBILE MENU NAV DRAWER */}
-            <AnimatePresence>
-              {mobileMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  transition={{ duration: 0.18, ease: "easeOut" }}
+            {mobileMenuOpen && (
+                <div
                   id="mobile-nav-drawer"
-                  className="md:hidden fixed top-[64px] left-0 right-0 z-40 bg-paper border-b border-rule shadow-2xl rounded-b-2xl px-4 py-4 flex flex-col gap-4"
+                  className="anim-drawer md:hidden fixed top-[64px] left-0 right-0 z-40 bg-paper border-b border-rule shadow-2xl rounded-b-2xl px-4 py-4 flex flex-col gap-4"
                   style={{
                     borderColor: "var(--rule)",
                     maxHeight: "calc(100vh - 4.5rem)",
@@ -611,9 +598,8 @@ export function AppShell() {
                       </Button>
                     </Link>
                   </div>
-                </motion.div>
+                </div>
               )}
-            </AnimatePresence>
 
             {/* TRIAL & SUBSCRIPTION STATUS BANNER */}
             <TopSubscriptionBanner />
@@ -626,13 +612,11 @@ export function AppShell() {
               {/* View insertion slot */}
               <div className="flex-grow">
                 <Suspense fallback={<LoadingFallback />}>
-                  <AnimatePresence mode="wait">
-                    <PageTransition keyId={location.pathname}>
-                      <ErrorBoundary>
-                        {outlet}
-                      </ErrorBoundary>
-                    </PageTransition>
-                  </AnimatePresence>
+                  <PageTransition keyId={location.pathname}>
+                    <ErrorBoundary>
+                      {outlet}
+                    </ErrorBoundary>
+                  </PageTransition>
                 </Suspense>
               </div>
             </main>
@@ -663,6 +647,5 @@ export function AppShell() {
 
           </div>
         </div>
-      </MotionConfig>
   );
 }

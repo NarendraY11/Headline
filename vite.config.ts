@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { visualizer } from 'rollup-plugin-visualizer';
 import Beasties from 'beasties';
 
 function beastiesPlugin() {
@@ -53,6 +54,7 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       beastiesPlugin() as any,
+      ...(process.env.ANALYZE ? [visualizer({ filename: 'dist/stats.json', template: 'raw-data' }) as any] : []),
       VitePWA({
         registerType: 'autoUpdate',
         // New builds activate immediately so users never get stuck on a stale
@@ -128,7 +130,10 @@ export default defineConfig(() => {
             'vendor-react': ['react', 'react-dom', 'react-router-dom'],
             'vendor-motion': ['motion', 'motion/react'],
             'vendor-supabase': ['@supabase/supabase-js'],
-            'vendor-recharts': ['recharts']
+            'vendor-recharts': ['recharts'],
+            // d3 is only used by the lazy MasterySunburst (analytics route); keep
+            // it isolated so it never leaks into the entry/critical chunk.
+            'vendor-d3': ['d3']
           }
         }
       }

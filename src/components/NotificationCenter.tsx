@@ -9,7 +9,6 @@ import {
     Trash2,
     Zap
 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { NotificationItem, useNotifications } from "../contexts/NotificationContext";
 
@@ -103,14 +102,9 @@ export default function NotificationCenter() {
       </button>
 
       {/* Dropdown Pane */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 8 }}
-            transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute right-0 mt-2.5 w-80 sm:w-96 bg-paper border border-rule rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.1)] overflow-hidden z-50 origin-top-right text-left"
+      {isOpen && (
+          <div
+            className="anim-pop absolute right-0 mt-2.5 w-80 sm:w-96 bg-paper border border-rule rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.1)] overflow-hidden z-50 origin-top-right text-left"
           >
             {/* Header */}
             <div className="px-4 py-3 bg-bg border-b border-rule flex items-center justify-between">
@@ -214,9 +208,8 @@ export default function NotificationCenter() {
             <div className="px-4 py-2 bg-panel/30 border-t border-rule text-center">
               <span className="font-mono text-[8px] text-muted uppercase tracking-widest">Aviation Standards Compliant</span>
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </div>
   );
 }

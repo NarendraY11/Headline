@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { CheckCircle2, XCircle, ArrowLeft, ArrowRight, Clock, Bookmark, Sparkles, X, Flag } from "lucide-react";
 import { Button, Chip, Wordmark } from "../../components/Atoms";
 import { QuizLayoutProps } from "./types";

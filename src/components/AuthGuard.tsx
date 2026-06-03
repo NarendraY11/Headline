@@ -4,7 +4,6 @@ import { Button } from "./Atoms";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Lock, ArrowLeft } from "lucide-react";
 import { useToast } from "./ui/Toast";
-import { motion } from "motion/react";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { user, openAuthModal, loading: authLoading } = useAuth();
@@ -44,18 +43,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
 
   if (authLoading || (!user && redirectTriggered.current)) {
     return (
-      <motion.div 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        className="AuthGuard min-h-[60vh] bg-bg flex flex-col items-center justify-center p-6 text-center relative border border-rule/50 rounded-2xl m-4 overflow-hidden"
+      <div
+        className="anim-fade AuthGuard min-h-[60vh] bg-bg flex flex-col items-center justify-center p-6 text-center relative border border-rule/50 rounded-2xl m-4 overflow-hidden"
       >
         {/* Subtle 'Auth Required' Lock Icon Overlay inside the container */}
-        <motion.div 
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
-          className="absolute inset-0 bg-paper/85 backdrop-blur-[4px] flex flex-col items-center justify-center z-10"
+        <div
+          className="anim-pop absolute inset-0 bg-paper/85 backdrop-blur-[4px] flex flex-col items-center justify-center z-10"
         >
           <div className="w-14 h-14 bg-navy/5 text-navy rounded-full flex items-center justify-center mb-4 border border-navy/15 shadow-sm animate-pulse">
             <Lock size={24} className="stroke-[1.7] text-ink" />
@@ -64,7 +57,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
           <p className="font-mono text-[9px] text-[#A66C23] tracking-widest mt-1 uppercase">
             Securing Connection & Redirecting...
           </p>
-        </motion.div>
+        </div>
 
         {/* Muted background skeleton representing the page contents under the lock */}
         <div className="w-full max-w-xl space-y-4 opacity-15 select-none pointer-events-none">
@@ -76,7 +69,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
             <div className="h-16 bg-ink/20 rounded"></div>
           </div>
         </div>
-      </motion.div>
+      </div>
     );
   }
 
@@ -84,11 +77,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   if (!user) {
     return (
       <div className="AuthGuard min-h-screen bg-bg flex flex-col items-center justify-center p-6">
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: "easeOut" }}
-          className="max-w-md w-full bg-panel border border-rule-strong rounded-2xl p-8 shadow-sm flex flex-col items-center text-center relative overflow-hidden"
+        <div
+          className="anim-pop max-w-md w-full bg-panel border border-rule-strong rounded-2xl p-8 shadow-sm flex flex-col items-center text-center relative overflow-hidden"
         >
           {/* Subtle 'Auth Required' lock icon overlay inside the container */}
           <div className="absolute top-4 right-4 text-emerald-600/10">
@@ -125,7 +115,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
               <ArrowLeft size={14} /> Return to Home
             </Button>
           </div>
-        </motion.div>
+        </div>
       </div>
     );
   }

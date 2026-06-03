@@ -294,6 +294,47 @@ html, body {
   animation-delay: 2s;
 }
 
+/* Route enter transition (replaces a framer-motion wrapper on the critical path). */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.page-enter {
+  animation: page-enter 0.25s ease-out;
+}
+
+/* Shared CSS enter animations — let always-mounted shell components (header,
+   drawers, dropdowns, toasts) animate WITHOUT pulling the motion runtime into
+   the critical-path bundle. Exit animations are intentionally dropped (instant
+   unmount) for these transient UI surfaces. */
+@keyframes anim-pop {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.anim-pop { animation: anim-pop 0.15s ease-out; }
+
+@keyframes anim-drawer {
+  from { opacity: 0; transform: translateY(-15px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim-drawer { animation: anim-drawer 0.18s ease-out; }
+
+@keyframes anim-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.anim-fade { animation: anim-fade 0.5s ease-out; }
+
+@keyframes anim-toast {
+  from { opacity: 0; transform: translateX(50px) scale(0.95); }
+  to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+.anim-toast { animation: anim-toast 0.3s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter, .anim-pop, .anim-drawer, .anim-fade, .anim-toast { animation: none; }
+}
+
 /* Wordmark heading micro-interactions */
 @keyframes heading-nav-pulse {
   0%, 100% {

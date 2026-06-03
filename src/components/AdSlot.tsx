@@ -10,6 +10,31 @@ declare global {
   }
 }
 
+// Load the AdSense library on demand — only the first time an ad-eligible slot
+// actually mounts — instead of eagerly in index.html for every visitor. This
+// keeps the heavy third-party script off the initial load / main thread.
+let adsenseScriptPromise: Promise<void> | null = null;
+function ensureAdsenseLoaded(): Promise<void> {
+  if (adsenseScriptPromise) return adsenseScriptPromise;
+  adsenseScriptPromise = new Promise<void>((resolve, reject) => {
+    const client = import.meta.env.VITE_ADSENSE_CLIENT;
+    const existing = document.querySelector('script[data-adsbygoogle-loader]');
+    if (existing) {
+      resolve();
+      return;
+    }
+    const s = document.createElement("script");
+    s.async = true;
+    s.crossOrigin = "anonymous";
+    s.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js${client ? `?client=${client}` : ""}`;
+    s.setAttribute("data-adsbygoogle-loader", "true");
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("AdSense script failed to load"));
+    document.head.appendChild(s);
+  });
+  return adsenseScriptPromise;
+}
+
 interface AdSlotProps {
   className?: string;
   slotId?: string;
@@ -32,13 +57,15 @@ export const AdSlot: React.FC<AdSlotProps> = ({
   const showAd = isEnabled && (!user || !isPaidActive(user));
 
   useEffect(() => {
-    if (showAd && adsContainerRef.current) {
-      try {
+    if (!showAd || !adsContainerRef.current) return;
+    let cancelled = false;
+    ensureAdsenseLoaded()
+      .then(() => {
+        if (cancelled) return;
         (window.adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (err) {
-        console.error("AdSense error:", err);
-      }
-    }
+      })
+      .catch((err) => console.error("AdSense error:", err));
+    return () => { cancelled = true; };
   }, [showAd]);
 
   if (!showAd) {

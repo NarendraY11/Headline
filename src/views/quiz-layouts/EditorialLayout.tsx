@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, ArrowRight, Bookmark, CheckCircle2, Clock, Flag, Sparkles, X, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Button, Chip, Wordmark } from "../../components/Atoms";

@@ -1,5 +1,4 @@
 import { AlertTriangle, Sparkles, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'motion/react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -56,22 +55,15 @@ export default function TopSubscriptionBanner() {
         )}
       </div>
 
-      <AnimatePresence>
-        {showModal && (
+      {showModal && (
           <div className="relative z-[100]" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-bg/80 backdrop-blur-sm"
+            <div
+              className="anim-fade fixed inset-0 bg-bg/80 backdrop-blur-sm"
               aria-hidden="true"
             />
             <div className="fixed inset-0 flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="mx-auto max-w-sm w-full bg-paper border border-rule rounded-[24px] p-6 shadow-xl relative text-left"
+              <div
+                className="anim-pop mx-auto max-w-sm w-full bg-paper border border-rule rounded-[24px] p-6 shadow-xl relative text-left"
               >
                 <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-muted hover:text-ink cursor-pointer">
                   <X size={16} />
@@ -92,11 +84,10 @@ export default function TopSubscriptionBanner() {
                 >
                   View Pricing Plans
                 </button>
-              </motion.div>
+              </div>
             </div>
           </div>
         )}
-      </AnimatePresence>
     </>
   );
 }
