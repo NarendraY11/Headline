@@ -312,7 +312,7 @@ export default function PricingView() {
                   <h3 className="font-sans font-semibold text-[22px] text-ink mb-2">Cadet (Free)</h3>
                   <p className="font-sans text-[13px] text-muted mb-8 font-light">Test the flight controls. Basic sandbox access.</p>
                   
-                  <div className="font-serif text-[54px] md:text-[60px] leading-none text-ink text-opacity-80 mb-10 flex items-end">
+                  <div className="font-serif text-[40px] md:text-[44px] leading-none text-muted mb-10 flex items-end">
                     Free
                   </div>
                   
@@ -366,10 +366,10 @@ export default function PricingView() {
                   <ul className="space-y-4 font-sans text-[14px] text-ink-2 mb-10 flex-1 relative z-10 border-t border-rule/50 pt-8">
                     <li className="flex items-center gap-4 font-medium text-navy"><CheckCircle2 size={18} className="text-navy shrink-0" /> Full 6,940+ questions database</li>
                     <li className="flex items-center gap-4 font-medium text-navy"><CheckCircle2 size={18} className="text-navy shrink-0" /> Unlimited DGCA & EASA Mock Exams</li>
-                    <li className="flex items-center gap-4 font-medium text-navy"><Sparkles size={18} className="text-[#DF9D38] shrink-0" /> AI Ground Instructor explanation on demand</li>
+                    <li className="flex items-center gap-4 font-semibold text-navy"><Sparkles size={18} className="text-[#DF9D38] shrink-0" /> AI Ground Instructor explanation on demand</li>
                     <li className="flex items-center gap-4 font-medium text-navy"><CheckCircle2 size={18} className="text-navy shrink-0" /> Viva oral board preparation module</li>
                     <li className="flex items-center gap-4 font-medium text-navy"><CheckCircle2 size={18} className="text-navy shrink-0" /> Interactive weak-area heatmap & analytics</li>
-                    <li className="flex items-center gap-4 font-medium text-navy"><Sparkles size={18} className="text-[#DF9D38] shrink-0" /> AI Weakness Coach & 7-day study plan creators</li>
+                    <li className="flex items-center gap-4 font-semibold text-navy"><Sparkles size={18} className="text-[#DF9D38] shrink-0" /> AI Weakness Coach & 7-day study plan creators</li>
                   </ul>
                   
                   <div className="relative z-10 space-y-3">
