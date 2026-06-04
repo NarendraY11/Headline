@@ -239,8 +239,8 @@ export default function ProfileView() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-12 md:py-24 px-4 w-full">
-      <div className="mb-12 border-b border-rule pb-10">
+    <div className="max-w-4xl mx-auto py-10 md:py-16 px-4 w-full">
+      <div className="mb-8 border-b border-rule pb-8">
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
           <div className="relative group">
             <div className="w-24 h-24 rounded-full border-2 border-rule overflow-hidden bg-navy flex items-center justify-center relative shadow-sm">
@@ -361,12 +361,12 @@ export default function ProfileView() {
 
       {/* Subscription / Clearance status */}
       <Card
-        className={`p-6 md:p-8 mb-6 rounded-2xl relative overflow-hidden ${
+        className={`p-6 md:p-8 mb-8 rounded-2xl relative overflow-hidden ${
           isPro
             ? "bg-navy border-navy text-bg"
             : subPlan === "trial"
-            ? "bg-paper border-l-4 border-l-amber"
-            : "bg-paper border-l-4 border-l-navy"
+            ? "bg-panel border-l-4 border-l-amber"
+            : "bg-panel border-l-4 border-l-navy"
         }`}
       >
         {isPro && (
@@ -433,34 +433,40 @@ export default function ProfileView() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <Card className="bg-paper p-6">
-          <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Target Clearance</div>
-          <div className="font-serif text-3xl text-ink">{targetExam}</div>
-        </Card>
-        <Card className="bg-paper p-6">
-          <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Consecutive Days</div>
-          <div className="font-serif text-3xl text-ink flex items-end gap-2">
-            {streakCount} <span className="font-sans text-xs font-semibold text-muted pb-1">DAY STREAK</span>
+      {/* Account Overview — the three vitals unified into one divided strip so
+          they read as a connected snapshot, not three sparse islands. */}
+      <Card className="bg-paper p-0 mb-8 overflow-hidden">
+        <div className="px-6 pt-5 pb-3 border-b border-rule">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-bold">Account Overview</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-rule">
+          <div className="p-6">
+            <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Target Clearance</div>
+            <div className="font-serif text-3xl text-ink">{targetExam}</div>
           </div>
-        </Card>
-        <Card className="bg-paper p-6 relative group">
-          <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1 flex justify-between items-center">
-            <span>Time-to-Exam</span>
-            {savedDate && !isEditingExamDate && (
-              <button 
-                onClick={() => {
-                  setTempExamDate(savedDate);
-                  setIsEditingExamDate(true);
-                }}
-                className="text-muted-2 hover:text-sky transition-colors cursor-pointer"
-                title="Change Exam Date"
-              >
-                <Edit2 size={11} />
-              </button>
-            )}
+          <div className="p-6">
+            <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Consecutive Days</div>
+            <div className="font-serif text-3xl text-ink flex items-end gap-2">
+              {streakCount} <span className="font-sans text-xs font-semibold text-muted pb-1">DAY STREAK</span>
+            </div>
           </div>
-          
+          <div className="p-6 relative group">
+            <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1 flex justify-between items-center">
+              <span>Time-to-Exam</span>
+              {savedDate && !isEditingExamDate && (
+                <button
+                  onClick={() => {
+                    setTempExamDate(savedDate);
+                    setIsEditingExamDate(true);
+                  }}
+                  className="text-muted-2 hover:text-sky transition-colors cursor-pointer"
+                  title="Change Exam Date"
+                >
+                  <Edit2 size={11} />
+                </button>
+              )}
+            </div>
+
           {isEditingExamDate ? (
             <div className="space-y-2 mt-2">
               <input 
@@ -530,125 +536,142 @@ export default function ProfileView() {
               </Button>
             </div>
           )}
+          </div>
+        </div>
+      </Card>
+
+      {/* Lower section uses two columns on desktop so the bottom half fills
+          horizontal space instead of stacking full-width. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-stretch">
+        {/* Notification Preferences — both toggles grouped into one scannable
+            card: label · short desc · toggle per row. */}
+        <Card className="bg-paper p-0 overflow-hidden flex flex-col">
+          <div className="px-6 pt-5 pb-3 border-b border-rule">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-bold">Notification Preferences</span>
+          </div>
+          <div className="divide-y divide-rule flex-1">
+            <div className="flex items-center justify-between gap-4 px-6 py-4">
+              <div className="min-w-0">
+                <h3 className="font-sans text-sm font-semibold text-ink">Spaced Review Reminders</h3>
+                <p className="font-mono text-[10px] tracking-wide text-muted-2 mt-1 uppercase">Gentle digests when recall is due</p>
+              </div>
+              <div className="shrink-0 flex items-center gap-2.5">
+                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-muted-2 hidden sm:block">
+                  {userData?.settings?.remindersEnabled ? "OPTED IN" : "MUTED"}
+                </span>
+                <button
+                  aria-label="Toggle spaced review reminder emails"
+                  onClick={() => {
+                    const currentSettings = userData?.settings || {};
+                    const currentStatus = !!currentSettings.remindersEnabled;
+                    updateUserData({
+                      settings: {
+                        ...currentSettings,
+                        remindersEnabled: !currentStatus
+                      }
+                    });
+                  }}
+                  className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none cursor-pointer ${userData?.settings?.remindersEnabled ? 'bg-mint' : 'bg-rule-strong'}`}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.settings?.remindersEnabled ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+                </button>
+              </div>
+            </div>
+            <div className="flex items-center justify-between gap-4 px-6 py-4">
+              <div className="min-w-0">
+                <h3 className="font-sans text-sm font-semibold text-ink flex items-center gap-1.5">
+                  <Mail size={14} className="text-navy shrink-0" /> Weekly Tips & QOTD
+                </h3>
+                <p className="font-mono text-[10px] tracking-wide text-muted-2 mt-1 uppercase">Question of the day + hiring bulletins</p>
+              </div>
+              <div className="shrink-0 flex items-center gap-2.5">
+                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-muted-2 hidden sm:block">
+                  {userData?.newsletterOptIn ? "SUBSCRIBED" : "OPTED OUT"}
+                </span>
+                <button
+                  id="newsletterOptInToggleBtn"
+                  aria-label="Toggle weekly tips newsletter"
+                  onClick={() => {
+                    const currentStatus = !!userData?.newsletterOptIn;
+                    updateUserData({
+                      newsletterOptIn: !currentStatus
+                    });
+                  }}
+                  className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none cursor-pointer ${userData?.newsletterOptIn ? 'bg-mint' : 'bg-rule-strong'}`}
+                >
+                  <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.newsletterOptIn ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {/* Referral CTA */}
+        <Card className="bg-emerald-500/5 border border-emerald-500/10 p-6 md:p-8 flex flex-col justify-between gap-4 rounded-2xl">
+          <div className="space-y-1">
+            <span className="block font-mono text-[9px] uppercase tracking-widest text-[#10B981] font-bold">PILOT COOP</span>
+            <h3 className="font-serif text-xl font-bold text-ink flex items-center gap-2">
+              <Gift size={18} className="text-emerald-600" /> Refer a Cadet & Earn
+            </h3>
+            <p className="font-sans text-xs text-muted leading-relaxed font-light">
+              Share your dispatch URL. When your referred peer upgrades, you both get <strong className="text-[#10B981]">30 days of free Pro</strong> credited immediately.
+            </p>
+          </div>
+          <Button
+            id="profileReferEarnBtn"
+            variant="ghost"
+            onClick={() => navigate("/referral")}
+            className="h-10 rounded-full font-mono text-[10px] uppercase tracking-wider px-6 border-emerald-600/20 hover:bg-emerald-500/10 text-emerald-700 bg-transparent self-start"
+          >
+            Dispatch Invites
+          </Button>
         </Card>
       </div>
 
-      <Card className="bg-paper p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
-        <div className="space-y-1 max-w-lg text-center md:text-left">
-          <span className="block font-mono text-[9px] uppercase tracking-widest text-mint font-bold">RE-ENGAGEMENT</span>
-          <h3 className="font-serif text-xl font-bold text-ink">Spaced Review Reminder Emails</h3>
-          <p className="font-sans text-xs text-muted leading-relaxed font-light">
-            Receive precise, gentle alert digests when review questions inside your spaced telemetry are due for optimal recall. Zero marketing, zero spam, zero guilt triggers.
+      {/* Account actions + Danger Zone, paired on desktop. Sign-out is no
+          longer a bare button buried under Danger Zone. */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+        <div className="border border-rule-strong rounded-xl bg-paper p-6 flex flex-col gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-bold">Account</span>
+          <p className="font-sans text-sm text-ink-2 font-light leading-relaxed">
+            Sign out of this device, or end every active session at once.
           </p>
-        </div>
-        <div className="shrink-0 flex items-center gap-3 bg-bg border border-rule px-4 py-2.5 rounded-xl self-stretch md:self-auto justify-between md:justify-start">
-          <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-muted-2">
-            {userData?.settings?.remindersEnabled ? "OPTED IN" : "MUTED"}
-          </span>
-          <button
-            onClick={() => {
-              const currentSettings = userData?.settings || {};
-              const currentStatus = !!currentSettings.remindersEnabled;
-              updateUserData({
-                settings: {
-                  ...currentSettings,
-                  remindersEnabled: !currentStatus
+          <div className="mt-auto flex flex-col gap-3 pt-2">
+            {/* Primary, everyday action — promoted to a visible bordered button. */}
+            <Button variant="ghost" onClick={logout} className="gap-2 justify-center border border-rule-strong text-ink hover:bg-bg-2">
+              <LogOut size={16} /> Sign out
+            </Button>
+            {/* Security escape hatch (lost/stolen/shared device): revokes every
+                session server-side. Kept subordinate so it doesn't compete. */}
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("Log out of all devices? This ends every active session, including this one.")) {
+                  logoutEverywhere();
                 }
-              });
-            }}
-            className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none cursor-pointer ${userData?.settings?.remindersEnabled ? 'bg-mint' : 'bg-rule'}`}
-          >
-            <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.settings?.remindersEnabled ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-          </button>
+              }}
+              className="text-[11px] font-sans text-muted-2 hover:text-signal underline underline-offset-2 transition-colors self-center"
+            >
+              Lost a device? Sign out of all devices
+            </button>
+          </div>
         </div>
-      </Card>
 
-      <Card className="bg-paper p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
-        <div className="space-y-1 max-w-lg text-center md:text-left">
-          <span className="block font-mono text-[9px] uppercase tracking-widest text-mint font-bold">AVIATION ACADEMY</span>
-          <h3 className="font-serif text-xl font-bold text-ink flex items-center gap-2 justify-center md:justify-start">
-            <Mail size={18} className="text-navy" /> Weekly Tips & Question of the Day
-          </h3>
-          <p className="font-sans text-xs text-muted leading-relaxed font-light">
-            Receive mock aviation questions of the day, recent airline hiring bulletins, and deep dives on complex general navigation / meteorology logic once a week. 
-          </p>
-        </div>
-        <div className="shrink-0 flex items-center gap-3 bg-bg border border-rule px-4 py-2.5 rounded-xl self-stretch md:self-auto justify-between md:justify-start">
-          <span className="font-mono text-[10px] uppercase font-bold tracking-widest text-muted-2">
-            {userData?.newsletterOptIn ? "SUBSCRIBED" : "OPTED OUT"}
-          </span>
-          <button
-            id="newsletterOptInToggleBtn"
-            onClick={() => {
-              const currentStatus = !!userData?.newsletterOptIn;
-              updateUserData({
-                newsletterOptIn: !currentStatus
-              });
-            }}
-            className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none cursor-pointer ${userData?.newsletterOptIn ? 'bg-mint' : 'bg-rule'}`}
-          >
-            <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.newsletterOptIn ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-          </button>
-        </div>
-      </Card>
-
-      <Card className="bg-emerald-500/5 border border-emerald-500/10 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-12 rounded-2xl">
-        <div className="space-y-1 max-w-lg text-center md:text-left">
-          <span className="block font-mono text-[9px] uppercase tracking-widest text-[#10B981] font-bold">PILOT COOP</span>
-          <h3 className="font-serif text-xl font-bold text-ink flex items-center gap-2 justify-center md:justify-start">
-            <Gift size={18} className="text-emerald-600" /> Refer a Cadet Partner & Earn
-          </h3>
-          <p className="font-sans text-xs text-muted leading-relaxed font-light">
-            Share your custom flight deck dispatch URL. When your referred peer upgrades to premium, you both get <strong className="text-[#10B981]">30 Days of Free Pro membership</strong> credited immediately!
-          </p>
-        </div>
-        <Button
-          id="profileReferEarnBtn"
-          variant="ghost"
-          onClick={() => navigate("/referral")}
-          className="h-10 rounded-full font-mono text-[10px] uppercase tracking-wider px-6 border-emerald-600/20 hover:bg-emerald-500/10 text-emerald-700 bg-transparent flex-shrink-0"
-        >
-          Dispatch Invites
-        </Button>
-      </Card>
-
-      <div className="space-y-8">
-        <div className="border border-signal-soft rounded-xl bg-bg p-8 flex flex-col items-start gap-4">
+        <div className="border border-signal-soft rounded-xl bg-bg p-6 flex flex-col items-start gap-3">
           <div className="flex items-center gap-3 text-signal">
-            <AlertCircle size={24} />
+            <AlertCircle size={22} />
             <span className="font-sans font-semibold text-lg text-ink">Danger Zone</span>
           </div>
-          <p className="font-sans text-sm text-ink-2 font-light leading-relaxed max-w-md">
-            Wiping your logbook will permanently erase all mock exam attempts, study history, and telemetry. This cannot be reversed.
+          <p className="font-sans text-sm text-ink-2 font-light leading-relaxed">
+            Wiping your logbook permanently erases all mock attempts, study history, and telemetry. This cannot be reversed.
           </p>
-          <Button variant="ghost" className="text-signal hover:bg-signal-soft border border-signal-soft" onClick={() => {
+          <Button variant="ghost" className="mt-auto text-signal hover:bg-signal-soft border border-signal-soft" onClick={() => {
               if (window.confirm("Are you sure you want to permanently erase all records?")) {
                   resetAccount();
               }
           }}>
             Wipe Logbook & Progress
           </Button>
-        </div>
-
-        <div className="pt-4 border-t border-rule mt-8 space-y-3">
-          {/* Primary, everyday action. */}
-          <Button variant="ghost" onClick={logout} className="gap-2 text-muted-2 hover:text-ink">
-            <LogOut size={16} /> Sign out
-          </Button>
-          {/* Security escape hatch (lost/stolen/shared device): revokes every
-              session server-side. Kept available but visually subordinate so it
-              doesn't read as a second, competing "sign out" button. */}
-          <button
-            type="button"
-            onClick={() => {
-              if (window.confirm("Log out of all devices? This ends every active session, including this one.")) {
-                logoutEverywhere();
-              }
-            }}
-            className="block text-[11px] font-sans text-muted-2 hover:text-signal underline underline-offset-2 transition-colors"
-          >
-            Lost a device? Sign out of all devices
-          </button>
         </div>
       </div>
     </div>
