@@ -111,7 +111,7 @@ export default function ContactView() {
 
               {/* EDIT THESE - Contact card info */}
               <div className="border border-dashed border-rule-strong p-6 bg-panel/30 space-y-5 rounded-sm">
-                <span className="font-mono text-[10px] tracking-widest text-[#DF9D38] block font-semibold uppercase">
+                <span className="font-mono text-[10px] tracking-widest text-amber block font-semibold uppercase">
                   ⚙️ OPERATOR CONTACT DIRECTORY (EDIT THESE DETAILS)
                 </span>
                 

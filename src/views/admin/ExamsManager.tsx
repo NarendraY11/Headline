@@ -267,19 +267,19 @@ export default function ExamsManager() {
       )}
 
       {loading ? (
-        <div className="h-[250px] flex flex-col items-center justify-center bg-white border border-rule rounded-xl">
+        <div className="h-[250px] flex flex-col items-center justify-center bg-paper border border-rule rounded-xl">
           <div className="w-10 h-10 border-4 border-ink border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="font-mono text-xs text-muted tracking-widest uppercase">Synchronizing exams index...</p>
         </div>
       ) : exams.length === 0 ? (
-        <div className="text-center py-20 bg-white border border-dashed border-rule rounded-xl">
+        <div className="text-center py-20 bg-paper border border-dashed border-rule rounded-xl">
           <AlertCircle className="mx-auto text-muted mb-3" size={32} />
           <h3 className="font-serif text-lg font-medium text-ink mb-1">No Custom Exams Defined</h3>
           <p className="text-xs text-muted max-w-sm mx-auto mb-6">Create exam definitions mapping to syllabus templates.</p>
           <Button variant="primary" onClick={openNewModal}>Configure Exam</Button>
         </div>
       ) : (
-        <div className="bg-white border border-rule rounded-xl overflow-x-auto shadow-sm">
+        <div className="bg-paper border border-rule rounded-xl overflow-x-auto shadow-sm">
           <table className="w-full text-left border-collapse font-sans text-xs">
             <thead>
               <tr className="border-b border-rule font-mono uppercase tracking-wide text-muted text-[10px] bg-bg-2/50">
@@ -367,7 +367,7 @@ export default function ExamsManager() {
 
       {isEditing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-sm">
-          <div className="bg-white border border-rule-strong rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-paper border border-rule-strong rounded-2xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
             
             {/* Modal Header */}
             <div className="p-6 border-b border-rule flex justify-between items-center bg-bg-2/30">
@@ -592,7 +592,7 @@ export default function ExamsManager() {
                           type="text"
                           value={editingMock.title || ""}
                           onChange={(e) => setEditingMock(p => p ? ({ ...p, title: e.target.value }) : null)}
-                          className="w-full text-xs p-2 bg-white border border-rule rounded focus:outline-none focus:border-rule-strong text-ink font-semibold"
+                          className="w-full text-xs p-2 bg-paper border border-rule rounded focus:outline-none focus:border-rule-strong text-ink font-semibold"
                           placeholder="e.g. Mock Study Paper One"
                           required
                         />
@@ -603,7 +603,7 @@ export default function ExamsManager() {
                           type="number"
                           value={editingMock.pass_mark ?? 75}
                           onChange={(e) => setEditingMock(p => p ? ({ ...p, pass_mark: Number(e.target.value) }) : null)}
-                          className="w-full font-mono text-xs p-2 bg-white border border-rule rounded focus:outline-none/strong font-semibold"
+                          className="w-full font-mono text-xs p-2 bg-paper border border-rule rounded focus:outline-none/strong font-semibold"
                           required
                         />
                       </div>
@@ -616,7 +616,7 @@ export default function ExamsManager() {
                           type="number"
                           value={editingMock.total_questions ?? 100}
                           onChange={(e) => setEditingMock(p => p ? ({ ...p, total_questions: Number(e.target.value) }) : null)}
-                          className="w-full font-mono text-xs p-2 bg-white border border-rule rounded font-semibold"
+                          className="w-full font-mono text-xs p-2 bg-paper border border-rule rounded font-semibold"
                           required
                         />
                       </div>
@@ -626,7 +626,7 @@ export default function ExamsManager() {
                           type="number"
                           value={editingMock.duration_min ?? 120}
                           onChange={(e) => setEditingMock(p => p ? ({ ...p, duration_min: Number(e.target.value) }) : null)}
-                          className="w-full font-mono text-xs p-2 bg-white border border-rule rounded font-semibold"
+                          className="w-full font-mono text-xs p-2 bg-paper border border-rule rounded font-semibold"
                           required
                         />
                       </div>
@@ -636,7 +636,7 @@ export default function ExamsManager() {
                           type="number"
                           value={editingMock.neg_marking_percent ?? 0}
                           onChange={(e) => setEditingMock(p => p ? ({ ...p, neg_marking_percent: Number(e.target.value) }) : null)}
-                          className="w-full font-mono text-xs p-2 bg-white border border-rule rounded font-semibold"
+                          className="w-full font-mono text-xs p-2 bg-paper border border-rule rounded font-semibold"
                         />
                       </div>
                     </div>
@@ -654,7 +654,7 @@ export default function ExamsManager() {
                             const newRule = { subject_id: currentExam.subject_ids?.[0] || "", count: 10 };
                             setEditingMock(p => p ? ({ ...p, rules: [...(p.rules || []), newRule] }) : null);
                           }}
-                          className="font-mono text-[8px] uppercase tracking-wider text-navy bg-white hover:bg-bg-2 border border-blue/20 rounded px-2 py-0.5 cursor-pointer flex items-center gap-1 font-bold"
+                          className="font-mono text-[8px] uppercase tracking-wider text-navy bg-paper hover:bg-bg-2 border border-blue/20 rounded px-2 py-0.5 cursor-pointer flex items-center gap-1 font-bold"
                         >
                           <Plus size={10} /> Add draw rule
                         </button>
@@ -664,7 +664,7 @@ export default function ExamsManager() {
                         {(editingMock.rules || []).map((rule, idx) => {
                           const subcats = subcategoriesList.filter(sc => sc.subject_id === rule.subject_id);
                           return (
-                            <div key={idx} className="flex gap-2 items-center bg-white p-2 border border-rule/50 rounded-lg">
+                            <div key={idx} className="flex gap-2 items-center bg-paper p-2 border border-rule/50 rounded-lg">
                               <select
                                 value={rule.subject_id}
                                 onChange={(e) => {
@@ -728,7 +728,7 @@ export default function ExamsManager() {
                           );
                         })}
                         {(editingMock.rules || []).length === 0 && (
-                          <div className="text-center py-4 bg-white rounded border border-rule border-dashed">
+                          <div className="text-center py-4 bg-paper rounded border border-rule border-dashed">
                             <Sliders size={18} className="mx-auto text-muted opacity-50 mb-1" />
                             <p className="font-mono text-[9px] text-muted uppercase tracking-wider select-none">No active draw rules defined. Draws will fall back to general exam weights.</p>
                           </div>
@@ -755,7 +755,7 @@ export default function ExamsManager() {
                         <select
                           value={editingMock.status || "draft"}
                           onChange={(e) => setEditingMock(p => p ? ({ ...p, status: e.target.value as any }) : null)}
-                          className="w-full font-mono text-xs p-1.5 bg-white border border-rule rounded"
+                          className="w-full font-mono text-xs p-1.5 bg-paper border border-rule rounded"
                         >
                           <option value="draft">DRAFT</option>
                           <option value="published">PUBLISHED</option>
@@ -842,7 +842,7 @@ export default function ExamsManager() {
                     ) : (
                       <div className="space-y-2.5">
                         {mockPapers.map((mock) => (
-                          <div key={mock.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-rule/80 hover:border-rule rounded-xl p-3.5 bg-white shadow-sm transition-all gap-3">
+                          <div key={mock.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between border border-rule/80 hover:border-rule rounded-xl p-3.5 bg-paper shadow-sm transition-all gap-3">
                             <div>
                               <div className="font-serif font-semibold text-xs text-ink">{mock.title}</div>
                               <div className="font-mono text-[8.5px] text-muted uppercase tracking-wider mt-0.5 space-x-2">

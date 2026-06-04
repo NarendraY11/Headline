@@ -22,7 +22,7 @@ export function MainCharts({ signupsOverTime, conversionsOverTime, activeUsersOv
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
       {/* Signups over time */}
-      <div className="bg-white border border-rule rounded-xl p-6 flex flex-col h-[320px] shadow-sm">
+      <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col h-[320px] shadow-sm">
         <div className="mb-4">
           <h3 className="font-serif text-lg font-medium text-ink">New Signups Timeline</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Cohort growth trajectory over selected range</p>
@@ -42,7 +42,7 @@ export function MainCharts({ signupsOverTime, conversionsOverTime, activeUsersOv
       </div>
 
       {/* Paid conversions */}
-      <div className="bg-white border border-rule rounded-xl p-6 flex flex-col h-[320px] shadow-sm">
+      <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col h-[320px] shadow-sm">
         <div className="mb-4">
           <h3 className="font-serif text-lg font-medium text-teal-850">Paid License Acquisitions</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Success of upgrade_pro upgrade cycles</p>
@@ -68,7 +68,7 @@ export function MainCharts({ signupsOverTime, conversionsOverTime, activeUsersOv
       </div>
 
       {/* Daily active users */}
-      <div className="bg-white border border-rule rounded-xl p-6 flex flex-col h-[320px] shadow-sm">
+      <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col h-[320px] shadow-sm">
         <div className="mb-4">
           <h3 className="font-serif text-lg font-medium text-ink">Active User Frequency</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Daily distinct active pilots (DAU timeline)</p>

@@ -421,7 +421,7 @@ export default function UsersAnalytics() {
       )}
 
       {loading ? (
-        <div className="h-[300px] flex flex-col items-center justify-center bg-white border border-rule rounded-xl shadow-sm">
+        <div className="h-[300px] flex flex-col items-center justify-center bg-paper border border-rule rounded-xl shadow-sm">
           <div className="w-8 h-8 border-4 border-ink border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="font-mono text-xs text-muted tracking-widest uppercase">Fetching enregistered student catalog...</p>
         </div>
@@ -429,7 +429,7 @@ export default function UsersAnalytics() {
         <>
           {/* Top Quick Analysis Indicators */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <Card className="p-5 flex items-center gap-4 bg-white border border-rule shadow-sm">
+            <Card className="p-5 flex items-center gap-4 bg-paper border border-rule shadow-sm">
               <div className="p-3 bg-ink/5 rounded-full text-ink"><Users size={18} /></div>
               <div>
                 <div className="font-mono text-[9px] uppercase tracking-wider text-muted">Total Active Roster</div>
@@ -437,7 +437,7 @@ export default function UsersAnalytics() {
               </div>
             </Card>
 
-            <Card className="p-5 flex items-center gap-4 bg-white border border-rule shadow-sm">
+            <Card className="p-5 flex items-center gap-4 bg-paper border border-rule shadow-sm">
               <div className="p-3 bg-teal-50 text-teal-800 rounded-full"><Award size={18} /></div>
               <div>
                 <div className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Pro Active licenses</div>
@@ -445,7 +445,7 @@ export default function UsersAnalytics() {
               </div>
             </Card>
 
-            <Card className="p-5 flex items-center gap-4 bg-white border border-rule shadow-sm">
+            <Card className="p-5 flex items-center gap-4 bg-paper border border-rule shadow-sm">
               <div className="p-3 bg-amber-50 text-amber-800 rounded-full"><GraduationCap size={18} /></div>
               <div>
                 <div className="font-mono text-[9px] uppercase tracking-wider text-muted">Free Standard tier</div>
@@ -453,7 +453,7 @@ export default function UsersAnalytics() {
               </div>
             </Card>
 
-            <Card className="p-5 flex items-center gap-4 bg-white border border-rule shadow-sm">
+            <Card className="p-5 flex items-center gap-4 bg-paper border border-rule shadow-sm">
               <div className="p-3 bg-emerald-50 text-emerald-800 rounded-full"><CheckCircle size={18} /></div>
               <div>
                 <div className="font-mono text-[9px] uppercase tracking-wider text-muted">Cohort Avg Accuracy</div>
@@ -463,7 +463,7 @@ export default function UsersAnalytics() {
           </div>
 
           {/* Filtering Bar Panel */}
-          <div className="bg-white border border-rule rounded-xl p-5 shadow-sm space-y-4">
+          <div className="bg-paper border border-rule rounded-xl p-5 shadow-sm space-y-4">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               
               {/* Search */}
@@ -490,7 +490,7 @@ export default function UsersAnalytics() {
                       setPlanFilter(e.target.value as any);
                       setCurrentPage(1);
                     }}
-                    className="bg-white border border-rule text-xs px-3 py-1.5 rounded-lg outline-none cursor-pointer focus:ring-1 focus:ring-sky/50"
+                    className="bg-paper border border-rule text-xs px-3 py-1.5 rounded-lg outline-none cursor-pointer focus:ring-1 focus:ring-sky/50"
                   >
                     <option value="all">All Plan Tiers</option>
                     <option value="free">Free Tier</option>
@@ -508,7 +508,7 @@ export default function UsersAnalytics() {
                       setSortField(e.target.value as any);
                       setCurrentPage(1);
                     }}
-                    className="bg-white border border-rule text-xs px-3 py-1.5 rounded-lg outline-none cursor-pointer focus:ring-1 focus:ring-sky/50"
+                    className="bg-paper border border-rule text-xs px-3 py-1.5 rounded-lg outline-none cursor-pointer focus:ring-1 focus:ring-sky/50"
                   >
                     <option value="lastActive">Last Active (Newest First)</option>
                     <option value="created_at">Signup Date (Newest First)</option>
@@ -523,14 +523,14 @@ export default function UsersAnalytics() {
           </div>
 
           {/* Roster Database Table */}
-          <div className="bg-white border border-rule rounded-xl overflow-hidden shadow-sm">
+          <div className="bg-paper border border-rule rounded-xl overflow-hidden shadow-sm">
             <div className="p-5 border-b border-rule bg-bg-2/20 flex justify-between items-center flex-wrap gap-2">
               <h3 className="font-serif text-lg font-medium text-ink">Active Cohorts Registry ({filteredUsers.length})</h3>
               <span className="font-mono text-[9px] text-muted uppercase tracking-wider">Double-click or click any row to inspect logbook diagnostics</span>
             </div>
 
             {paginatedUsers.length === 0 ? (
-              <div className="text-center py-20 bg-white">
+              <div className="text-center py-20 bg-paper">
                 <Users className="mx-auto text-muted mb-3" size={32} />
                 <h3 className="font-serif text-lg font-medium text-ink mb-1">No Student Match Logged</h3>
                 <p className="text-xs text-muted">Try re-calibrating search criteria.</p>
@@ -653,7 +653,7 @@ export default function UsersAnalytics() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="p-1 px-3 border border-rule hover:bg-bg-1 rounded-md transition-colors disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                    className="p-1 px-3 border border-rule hover:bg-bg-2 rounded-md transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
                   >
                     <ChevronLeft size={12} />
                     <span>Previous</span>
@@ -662,7 +662,7 @@ export default function UsersAnalytics() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="p-1 px-3 border border-rule hover:bg-bg-1 rounded-md transition-colors disabled:opacity-40 cursor-pointer flex items-center gap-1"
+                    className="p-1 px-3 border border-rule hover:bg-bg-2 rounded-md transition-colors disabled:opacity-50 cursor-pointer flex items-center gap-1"
                   >
                     <span>Next</span>
                     <ChevronRight size={12} />
@@ -679,7 +679,7 @@ export default function UsersAnalytics() {
         <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-xs animate-fadeIn" onClick={() => setSelectedUser(null)}>
           <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} 
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg bg-white border-l border-rule h-screen flex flex-col shadow-2xl relative animate-slideLeft overflow-hidden"
+            className="w-full max-w-lg bg-paper border-l border-rule h-screen flex flex-col shadow-2xl relative animate-slideLeft overflow-hidden"
           >
             {/* Header identity display */}
             <div className="p-6 border-b border-rule bg-bg-2/30 flex justify-between items-start">
@@ -901,7 +901,7 @@ export default function UsersAnalytics() {
       {/* 'MANAGE PLAN' MODAL DIALOG */}
       {isPlanModalOpen && modalUser && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full border border-rule overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-paper rounded-2xl max-w-sm w-full border border-rule overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200">
             <div className="p-5 border-b border-rule bg-bg-2/30 flex items-center justify-between">
               <div>
                 <h2 className="font-serif text-base font-bold text-ink">Manage Student Plan</h2>
@@ -950,7 +950,7 @@ export default function UsersAnalytics() {
                   <select
                     value={modalPlan}
                     onChange={(e) => handleModalPlanSelector(e.target.value as any)}
-                    className="w-full bg-white border border-rule text-xs p-2.5 rounded-xl outline-none cursor-pointer focus:ring-1 focus:ring-navy/30"
+                    className="w-full bg-paper border border-rule text-xs p-2.5 rounded-xl outline-none cursor-pointer focus:ring-1 focus:ring-navy/30"
                   >
                     <option value="free">Free Tier</option>
                     <option value="trial">Trial Tier (7 Days)</option>
@@ -969,7 +969,7 @@ export default function UsersAnalytics() {
                       type="date"
                       value={modalExpiresAt}
                       onChange={(e) => setModalExpiresAt(e.target.value)}
-                      className="w-full bg-white border border-rule text-xs p-2.5 rounded-xl outline-none focus:ring-1 focus:ring-navy/30"
+                      className="w-full bg-paper border border-rule text-xs p-2.5 rounded-xl outline-none focus:ring-1 focus:ring-navy/30"
                     />
                   </div>
                 )}

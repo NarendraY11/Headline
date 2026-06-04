@@ -254,7 +254,7 @@ export default function SubcategoriesManager() {
           <select
             value={selectedSubjectFilter}
             onChange={(e) => setSelectedSubjectFilter(e.target.value)}
-            className="font-mono text-xs p-2 bg-white border border-rule rounded-full focus:outline-none focus:border-rule-strong mr-2 px-4 h-10 select-none text-ink font-semibold"
+            className="font-mono text-xs p-2 bg-paper border border-rule rounded-full focus:outline-none focus:border-rule-strong mr-2 px-4 h-10 select-none text-ink font-semibold"
           >
             <option value="all">View All Subjects</option>
             {subjects.map((s) => (
@@ -294,19 +294,19 @@ export default function SubcategoriesManager() {
       )}
 
       {loading ? (
-        <div className="h-[250px] flex flex-col items-center justify-center bg-white border border-rule rounded-xl">
+        <div className="h-[250px] flex flex-col items-center justify-center bg-paper border border-rule rounded-xl">
           <div className="w-10 h-10 border-4 border-ink border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="font-mono text-xs text-muted tracking-widest uppercase">Fetching Subcategory Map...</p>
         </div>
       ) : filteredSubcategories.length === 0 ? (
-        <div className="text-center py-20 bg-white border border-dashed border-rule rounded-xl">
+        <div className="text-center py-20 bg-paper border border-dashed border-rule rounded-xl">
           <AlertCircle className="mx-auto text-muted mb-3" size={32} />
           <h3 className="font-serif text-lg font-medium text-ink mb-1">No Subcategories Found</h3>
           <p className="text-xs text-muted max-w-sm mx-auto mb-6">Create subcategories linked to subjects to enable granular aviation syllabi.</p>
           <Button variant="primary" onClick={openNewModal}>Add Subcategory</Button>
         </div>
       ) : (
-        <div className="bg-white border border-rule rounded-xl overflow-x-auto shadow-sm">
+        <div className="bg-paper border border-rule rounded-xl overflow-x-auto shadow-sm">
           <table className="w-full text-left border-collapse font-sans text-xs">
             <thead>
               <tr className="border-b border-rule font-mono uppercase tracking-wide text-muted text-[10px] bg-bg-2/50">
@@ -390,7 +390,7 @@ export default function SubcategoriesManager() {
       {/* Editing Dialog Modal */}
       {isEditing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 backdrop-blur-sm">
-          <div className="bg-white border border-rule-strong rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+          <div className="bg-paper border border-rule-strong rounded-2xl w-full max-w-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-rule flex justify-between items-center bg-bg-2/30">
               <h3 className="font-serif text-lg font-medium text-ink">
                 {isNew ? "New Sub-category Form" : "Edit Sub-category Entry"}

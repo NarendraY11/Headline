@@ -11,7 +11,7 @@ const inr = (n: number) => `₹${(n || 0).toLocaleString("en-IN")}`;
 
 export function RevenueSnapshot({ allTimeStats, revenueStats }: Props) {
   return (
-    <div className="bg-white border-2 border-rule-strong rounded-xl p-6 shadow-sm">
+    <div className="bg-paper border-2 border-rule-strong rounded-xl p-6 shadow-sm">
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b border-rule pb-4 mb-4">
         <div>
           <h3 className="font-serif text-xl font-medium text-ink flex items-center gap-2">

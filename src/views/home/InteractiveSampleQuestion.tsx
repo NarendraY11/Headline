@@ -165,8 +165,8 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Top right stamp */}
-      <div className="absolute top-6 right-2 transform rotate-12 opacity-30 font-mono text-[10px] tracking-widest pointer-events-none select-none text-ink">
+      {/* Top right stamp — decorative faux document-revision mark */}
+      <div aria-hidden="true" className="absolute top-6 right-2 transform rotate-12 opacity-30 font-mono text-[10px] tracking-widest pointer-events-none select-none text-ink">
         {getTopRightStamp(currentQ.ata)} REV 1
       </div>
 

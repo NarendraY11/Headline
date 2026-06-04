@@ -1185,7 +1185,7 @@ export default function QuizView() {
               </div>
               <button 
                 onClick={() => setDismissedSavePrompt(true)}
-                className="text-white/40 hover:text-white transition-colors p-1"
+                className="text-white/70 hover:text-white transition-colors p-1"
                 title="Continue as guest"
               >
                 <X size={14} />
@@ -1194,7 +1194,7 @@ export default function QuizView() {
             <div className="flex gap-2.5 justify-end">
               <button
                 onClick={() => setDismissedSavePrompt(true)}
-                className="font-mono text-[9px] uppercase tracking-widest text-white/50 hover:text-white transition-colors px-3 py-1.5"
+                className="font-mono text-[9px] uppercase tracking-widest text-white/75 hover:text-white transition-colors px-3 py-1.5"
               >
                 Keep practicing
               </button>

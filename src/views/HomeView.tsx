@@ -87,7 +87,7 @@ export default function HomeView() {
       <header className="h-[72px] flex items-center justify-between px-4 sm:px-6 lg:px-10 bg-bg z-50 absolute top-0 w-full left-0 right-0 border-b border-rule/50">
         <Link to="/" className="hover:opacity-90 transition-opacity flex items-center gap-3">
           <Wordmark compassSize={24} />
-          <span className="hidden sm:inline-block font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase border border-rule px-1.5 py-0.5 rounded-[4px] mt-0.5 opacity-80">FL · 380</span>
+          <span className="hidden sm:inline-block font-mono text-[9px] text-muted tracking-[0.2em] uppercase border border-rule px-1.5 py-0.5 rounded-[4px] mt-0.5">FL · 380</span>
         </Link>
         <nav className="hidden lg:flex items-center gap-8 font-sans text-[13px] tracking-wide text-ink-2" aria-label="Primary site navigation">
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">Question bank</Link>
@@ -357,7 +357,7 @@ export default function HomeView() {
            {/* Left */}
            <div>
              <FadeUp>
-               <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase mb-12">
+               <div className="font-mono text-[10px] text-paper/70 tracking-[0.2em] uppercase mb-12">
                  § 02 / METHOD
                </div>
                <h2 className="font-serif text-[52px] md:text-[72px] leading-[0.95] tracking-tight mb-8 drop-shadow-md">
@@ -379,7 +379,7 @@ export default function HomeView() {
              ].map((row, i) => (
                 <FadeUp key={row.id} delay={i * 100} className="w-full">
                   <div className="py-8 border-b border-paper/10 flex flex-col md:flex-row md:items-start gap-6 group hover:bg-white/5 transition-colors -mx-6 px-6 cursor-default">
-                    <span className="font-mono text-[11px] text-paper/40 tracking-widest pt-2 w-12">{row.id}</span>
+                    <span className="font-mono text-[11px] text-paper/70 tracking-widest pt-2 w-12">{row.id}</span>
                     <div className="flex-1">
                       <h3 className="font-serif text-[28px] text-paper mb-2">{row.t}</h3>
                       <p className="font-sans font-light text-[15px] text-paper/60 leading-relaxed max-w-md">{row.d}</p>
@@ -408,7 +408,7 @@ export default function HomeView() {
                <Card className="bg-paper border border-rule rounded-[24px] p-8 md:p-12 shadow-sm h-full flex flex-col justify-center relative group">
                  <div className="flex justify-between items-center mb-8">
                     <div className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase">MASTERY · BY SYLLABUS HEADING</div>
-                    <Chip variant="solid" className="bg-signal-soft text-signal border-signal/20 text-[9px] uppercase tracking-widest font-semibold px-2">3 ACTIONS PENDING</Chip>
+                    <Chip variant="signal" className="border-signal/20 text-[9px] uppercase tracking-widest font-semibold px-2">3 ACTIONS PENDING</Chip>
                  </div>
                  <h3 className="font-serif text-[32px] text-ink mb-12 tracking-tight">Strengthen your alignment.</h3>
                  

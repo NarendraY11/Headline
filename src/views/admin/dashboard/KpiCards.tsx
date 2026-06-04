@@ -13,7 +13,7 @@ export function KpiCards({ allTimeStats, kpiStats, timeRange }: KpiCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Total Users */}
-      <Card className="p-5 flex flex-col justify-between h-[150px] bg-white border border-rule hover:shadow-sm transition-all">
+      <Card className="p-5 flex flex-col justify-between h-[150px] bg-paper border border-rule hover:shadow-sm transition-all">
         <div className="flex justify-between items-start">
           <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Total Enregistered</span>
           <div className="p-2 bg-bg-2 rounded-full text-ink"><Users size={15} /></div>
@@ -30,7 +30,7 @@ export function KpiCards({ allTimeStats, kpiStats, timeRange }: KpiCardsProps) {
       </Card>
 
       {/* Pro Users */}
-      <Card className="p-5 flex flex-col justify-between h-[150px] bg-white border border-rule hover:shadow-sm transition-all">
+      <Card className="p-5 flex flex-col justify-between h-[150px] bg-paper border border-rule hover:shadow-sm transition-all">
         <div className="flex justify-between items-start">
           <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Pro Active Tier</span>
           <div className="p-2 bg-teal-50 rounded-full text-teal-800"><Award size={15} /></div>
@@ -47,7 +47,7 @@ export function KpiCards({ allTimeStats, kpiStats, timeRange }: KpiCardsProps) {
       </Card>
 
       {/* Conversion Rate */}
-      <Card className="p-5 flex flex-col justify-between h-[150px] bg-white border border-rule hover:shadow-sm transition-all">
+      <Card className="p-5 flex flex-col justify-between h-[150px] bg-paper border border-rule hover:shadow-sm transition-all">
         <div className="flex justify-between items-start">
           <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Conversions Ratio</span>
           <div className="p-2 bg-bg-2 rounded-full text-ink"><DollarSign size={15} /></div>
@@ -64,7 +64,7 @@ export function KpiCards({ allTimeStats, kpiStats, timeRange }: KpiCardsProps) {
       </Card>
 
       {/* Active Today */}
-      <Card className="p-5 flex flex-col justify-between h-[150px] bg-white border border-rule hover:shadow-sm transition-all">
+      <Card className="p-5 flex flex-col justify-between h-[150px] bg-paper border border-rule hover:shadow-sm transition-all">
         <div className="flex justify-between items-start">
           <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Daily Active (DAU)</span>
           <div className="p-2 bg-bg-2 rounded-full text-ink"><Activity size={15} /></div>
@@ -81,7 +81,7 @@ export function KpiCards({ allTimeStats, kpiStats, timeRange }: KpiCardsProps) {
       </Card>
 
       {/* Active This Week */}
-      <Card className="p-5 flex flex-col justify-between h-[150px] bg-white border border-rule hover:shadow-sm transition-all">
+      <Card className="p-5 flex flex-col justify-between h-[150px] bg-paper border border-rule hover:shadow-sm transition-all">
         <div className="flex justify-between items-start">
           <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Weekly Active (WAU)</span>
           <div className="p-2 bg-bg-2 rounded-full text-ink"><Calendar size={15} /></div>
@@ -98,7 +98,7 @@ export function KpiCards({ allTimeStats, kpiStats, timeRange }: KpiCardsProps) {
       </Card>
 
       {/* Total Questions Answered */}
-      <Card className="p-5 flex flex-col justify-between h-[150px] bg-white border border-rule hover:shadow-sm transition-all">
+      <Card className="p-5 flex flex-col justify-between h-[150px] bg-paper border border-rule hover:shadow-sm transition-all">
         <div className="flex justify-between items-start">
           <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Questions Evaluated</span>
           <div className="p-2 bg-bg-2 rounded-full text-ink"><FileText size={15} /></div>
@@ -117,7 +117,7 @@ export function KpiCards({ allTimeStats, kpiStats, timeRange }: KpiCardsProps) {
       </Card>
 
       {/* Total Quiz Sessions */}
-      <Card className="p-5 flex flex-col justify-between h-[150px] bg-white border border-rule hover:shadow-sm transition-all">
+      <Card className="p-5 flex flex-col justify-between h-[150px] bg-paper border border-rule hover:shadow-sm transition-all">
         <div className="flex justify-between items-start">
           <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Simulations Logged</span>
           <div className="p-2 bg-bg-2 rounded-full text-ink"><ShieldCheck size={15} /></div>
@@ -134,7 +134,7 @@ export function KpiCards({ allTimeStats, kpiStats, timeRange }: KpiCardsProps) {
       </Card>
 
       {/* Avg Score */}
-      <Card className="p-5 flex flex-col justify-between h-[150px] bg-white border border-rule hover:shadow-sm transition-all">
+      <Card className="p-5 flex flex-col justify-between h-[150px] bg-paper border border-rule hover:shadow-sm transition-all">
         <div className="flex justify-between items-start">
           <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-bold">Cohort Avg Accuracy</span>
           <div className="p-2 bg-bg-2 rounded-full text-ink"><HelpCircle size={15} /></div>

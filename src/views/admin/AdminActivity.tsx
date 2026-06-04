@@ -96,7 +96,7 @@ export function RecentEventsAuditTable({ profiles }: RecentEventsAuditTableProps
   };
 
   return (
-    <Card className="p-5 bg-white border border-rule shadow-sm space-y-4">
+    <Card className="p-5 bg-paper border border-rule shadow-sm space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-rule pb-4">
         <div>
           <h2 className="font-serif text-lg font-medium tracking-tight text-ink flex items-center gap-2">
@@ -423,7 +423,7 @@ export default function AdminActivity() {
           <button
             onClick={handleExportToCSV}
             disabled={filteredEvents.length === 0}
-            className="flex items-center gap-1.5 px-4 py-2 border border-rule hover:bg-bg-2 rounded-full font-sans text-xs text-ink transition-colors disabled:opacity-40 cursor-pointer h-10 shrink-0 font-semibold bg-emerald-500/5 hover:bg-emerald-500/15 border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+            className="flex items-center gap-1.5 px-4 py-2 border border-rule hover:bg-bg-2 rounded-full font-sans text-xs text-ink transition-colors disabled:opacity-50 cursor-pointer h-10 shrink-0 font-semibold bg-emerald-500/5 hover:bg-emerald-500/15 border-emerald-500/20 text-emerald-700 dark:text-emerald-400"
             aria-label="Export currently filtered audit logs to CSV format" title="Export currently filtered audit logs to CSV format"
           >
             <Download size={13} />
@@ -464,7 +464,7 @@ export default function AdminActivity() {
               setCurrentPage(1);
             }}
             placeholder="Search by catalog ID, administrator, details, action..."
-            className="w-full text-xs p-3 pl-10 bg-white border border-rule rounded-xl focus:outline-none focus:border-rule-strong text-ink font-semibold"
+            className="w-full text-xs p-3 pl-10 bg-paper border border-rule rounded-xl focus:outline-none focus:border-rule-strong text-ink font-semibold"
           />
         </div>
 
@@ -477,7 +477,7 @@ export default function AdminActivity() {
               setCategoryFilter(e.target.value as any);
               setCurrentPage(1);
             }}
-            className="w-full text-xs p-3 pl-10 bg-white border border-rule rounded-xl focus:outline-none focus:border-rule-strong text-ink font-semibold h-[42px] appearance-none cursor-pointer"
+            className="w-full text-xs p-3 pl-10 bg-paper border border-rule rounded-xl focus:outline-none focus:border-rule-strong text-ink font-semibold h-[42px] appearance-none cursor-pointer"
           >
             <option value="all">All Operations</option>
             <option value="admin_only">Admin Actions Only</option>
@@ -497,7 +497,7 @@ export default function AdminActivity() {
               setDatePageLimit(e.target.value as any);
               setCurrentPage(1);
             }}
-            className="w-full text-xs p-3 pl-10 bg-white border border-rule rounded-xl focus:outline-none focus:border-rule-strong text-ink font-semibold h-[42px] appearance-none cursor-pointer"
+            className="w-full text-xs p-3 pl-10 bg-paper border border-rule rounded-xl focus:outline-none focus:border-rule-strong text-ink font-semibold h-[42px] appearance-none cursor-pointer"
           >
             <option value="all">Total Cumulative Logs</option>
             <option value="today">Today Only</option>
@@ -508,7 +508,7 @@ export default function AdminActivity() {
       </div>
 
       {loading ? (
-        <div className="h-[300px] flex flex-col items-center justify-center bg-white border border-rule rounded-2xl">
+        <div className="h-[300px] flex flex-col items-center justify-center bg-paper border border-rule rounded-2xl">
           <div className="w-10 h-10 border-4 border-ink border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="font-mono text-xs text-muted tracking-widest uppercase">Fetching audit trail registers...</p>
         </div>
@@ -530,7 +530,7 @@ export default function AdminActivity() {
         </Card>
       ) : (
         <div className="space-y-4">
-          <div className="bg-white border border-rule rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-paper border border-rule rounded-2xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse font-sans text-xs">
                 <thead>

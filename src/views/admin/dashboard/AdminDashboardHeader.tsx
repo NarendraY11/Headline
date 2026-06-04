@@ -34,7 +34,7 @@ export function AdminDashboardHeader({ rpcWorking, timeRange, setTimeRange, load
               className={`px-4 py-1.5 text-xs font-mono rounded-md font-medium uppercase tracking-wide transition-colors ${
                 timeRange === range
                   ? "bg-ink text-bg shadow-sm"
-                  : "text-muted hover:text-ink hover:bg-bg-1"
+                  : "text-muted hover:text-ink hover:bg-bg-2"
               }`}
             >
               {range}

@@ -363,7 +363,7 @@ function OnboardingDiagnostic({
             type="button"
             disabled={!selectedChoice}
             onClick={onSubmitAnswer}
-            className="h-11 px-6 font-sans font-medium text-sm bg-ink text-bg rounded-xl hover:bg-ink-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            className="h-11 px-6 font-sans font-medium text-sm bg-ink text-bg rounded-xl hover:bg-ink-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             Lock Check
           </button>
@@ -417,7 +417,7 @@ function FinalDebrief({
         </div>
 
         <div className="flex justify-between items-start mb-6 border-b border-white/10 pb-4">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-white/50 font-semibold">
+          <span className="font-mono text-[9px] uppercase tracking-widest text-white/75 font-semibold">
             TELEMETRY ANALYSIS · DIAGNOSED
           </span>
           <span className="font-mono text-[9px] uppercase tracking-widest font-bold text-mint bg-mint/10 border border-mint/20 px-2 py-0.5 rounded-full">
@@ -428,13 +428,13 @@ function FinalDebrief({
         <div className="flex items-center gap-6 mb-6">
           <div className="relative flex items-center justify-center w-20 h-20 bg-white/5 rounded-full border border-white/10 shrink-0">
             <span className="font-serif text-3xl font-bold text-white">{score}</span>
-            <span className="font-serif text-sm text-white/50 absolute bottom-1 right-2 w-max">/5</span>
+            <span className="font-serif text-sm text-white/75 absolute bottom-1 right-2 w-max">/5</span>
           </div>
           <div>
             <h3 className="font-serif text-lg font-semibold text-white leading-tight mb-1">
               {feedbackTitle}
             </h3>
-            <p className="font-mono text-[10px] text-white/50 uppercase tracking-widest">
+            <p className="font-mono text-[10px] text-white/75 uppercase tracking-widest">
               DIAGNOSTIC SCORE: {Math.round((score / 5) * 100)}% ACCURACY
             </p>
           </div>

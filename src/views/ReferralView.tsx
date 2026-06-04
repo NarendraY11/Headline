@@ -85,7 +85,7 @@ export default function ReferralView() {
         </div>
 
         <div className="relative max-w-xl space-y-4">
-          <span className="font-mono text-[9px] text-[#DF9D38] border border-[#DF9D38]/30 bg-[#DF9D38]/10 px-2.5 py-1 rounded uppercase tracking-widest font-bold inline-flex items-center gap-1.5">
+          <span className="font-mono text-[9px] text-amber border border-amber/30 bg-amber-soft px-2.5 py-1 rounded uppercase tracking-widest font-bold inline-flex items-center gap-1.5">
             <Gift size={11} /> Double Sided Reward Program
           </span>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold tracking-tight text-white leading-tight">

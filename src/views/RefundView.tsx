@@ -36,7 +36,7 @@ export default function RefundView() {
 
           {/* EDIT THESE - Business configuration coordinator */}
           <div className="border border-dashed border-rule-strong p-6 bg-panel/30 space-y-4 rounded-sm">
-            <span className="font-mono text-[10px] tracking-widest text-[#DF9D38] block font-semibold uppercase">
+            <span className="font-mono text-[10px] tracking-widest text-amber block font-semibold uppercase">
               ⚙️ OPERATOR CONFIGURATION CARD (EDIT THESE DETAILS)
             </span>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono text-muted">

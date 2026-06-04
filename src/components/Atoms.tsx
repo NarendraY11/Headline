@@ -313,10 +313,12 @@ export function Chip({ variant = "default", children, className = "", style, ...
       variantStyles = "bg-ink text-paper";
       break;
     case "signal":
-      variantStyles = "bg-signal-soft text-signal border border-signal/10";
+      // Light: deepen red text — base --signal is only 3.8:1 on signal-soft. Dark token already passes.
+      variantStyles = "bg-signal-soft text-[#a83020] dark:text-signal border border-signal/10";
       break;
     case "amber":
-      variantStyles = "bg-amber-soft text-amber border border-amber/10";
+      // Light: deepen amber text — base --amber is only 4.2:1 on amber-soft. Dark token already passes.
+      variantStyles = "bg-amber-soft text-[#855807] dark:text-amber border border-amber/10";
       break;
     case "mint":
       variantStyles = "bg-mint-soft text-mint border border-mint/10";

@@ -53,9 +53,9 @@
   --signal-soft: #f0d9d3;
   --amber: #946108; /* Fixed from #c98a2b for 4.5:1 contrast on light bg */
   --amber-soft: #f1e2c1;
-  --mint: #2c6e54;
+  --mint: #1f5d44; /* darkened from #2c6e54 for AA (4.5:1) as small text on bg/mint-soft */
   --mint-soft: #d4e6dc;
-  --sky: #4173a8;
+  --sky: #2f6098; /* darkened from #4173a8 — old value was 4.48:1 on bg (sub-AA) */
   --sky-soft: #d5e1ee;
   --ring-green: #9ee29a;
   
@@ -74,14 +74,14 @@
   --ink: #f5f2ea;
   --ink-2: #ebe7dc;
   --navy: #e8e3d3;
-  --navy-soft: #8a94a6;
+  --navy-soft: #a3adbd; /* raised from #8a94a6 — old value was 4.25:1 on bg-2/paper (sub-AA) */
   --rule: rgba(245, 242, 234, 0.10);
   --rule-strong: rgba(245, 242, 234, 0.25);
   --muted: #cbd5e1;
   --muted-2: #94a3b8;
-  --signal: #e85d4a; /* Added to fix 4.5:1 contrast on dark bg */
+  --signal: #f07060; /* lightened from #e85d4a — old failed (3.9-4.1:1) on elevated panels/signal-soft */
   --signal-soft: #4a1913;
-  --amber: #c98a2b; /* Original amber works well on dark bg (6:1) */
+  --amber: #e0a040; /* lightened from #c98a2b — old failed (3.7:1) on amber-soft chips */
   --amber-soft: #52370e;
   --mint: #4ade80; /* Added to fix 4.5:1 contrast on dark bg */
   --mint-soft: #0d2e21;

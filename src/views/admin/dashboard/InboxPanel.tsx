@@ -15,7 +15,7 @@ export function InboxPanel({ contactMessages, leads, handleResolveContact }: Pro
   return (
     <div className="space-y-8">
       {/* Contact messages */}
-      <div className="bg-white border border-rule rounded-xl p-6 shadow-sm">
+      <div className="bg-paper border border-rule rounded-xl p-6 shadow-sm">
         <div className="flex justify-between items-center border-b border-rule pb-4 mb-4">
           <div>
             <h3 className="font-serif text-lg font-medium text-ink">Ground Crew Dispatch Inbox</h3>
@@ -88,7 +88,7 @@ export function InboxPanel({ contactMessages, leads, handleResolveContact }: Pro
       </div>
 
       {/* Newsletter / lead-magnet signups */}
-      <div className="bg-white border border-rule rounded-xl p-6 shadow-sm">
+      <div className="bg-paper border border-rule rounded-xl p-6 shadow-sm">
         <div className="flex justify-between items-center border-b border-rule pb-4 mb-4">
           <div>
             <h3 className="font-serif text-lg font-medium text-ink">Lead Capture & Newsletter Roster</h3>

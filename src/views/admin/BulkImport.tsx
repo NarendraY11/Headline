@@ -341,7 +341,7 @@ export default function BulkImport() {
       )}
 
       {loading ? (
-        <div className="h-[250px] flex flex-col items-center justify-center bg-white border border-rule rounded-xl">
+        <div className="h-[250px] flex flex-col items-center justify-center bg-paper border border-rule rounded-xl">
           <div className="w-10 h-10 border-4 border-ink border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="font-mono text-xs text-muted tracking-widest uppercase">Initializing Schema Validators...</p>
         </div>
@@ -357,7 +357,7 @@ export default function BulkImport() {
               onDragOver={handleDragOver}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-rule hover:border-ink rounded-2xl p-8 bg-white cursor-pointer transition-colors text-center flex flex-col justify-center items-center h-52 group select-none"
+              className="border-2 border-dashed border-rule hover:border-ink rounded-2xl p-8 bg-paper cursor-pointer transition-colors text-center flex flex-col justify-center items-center h-52 group select-none"
             >
               <input
                 type="file"
@@ -422,7 +422,7 @@ export default function BulkImport() {
             </div>
 
             {reports.length === 0 ? (
-              <div className="border border-rule rounded-xl bg-white p-12 text-center font-mono select-none flex flex-col items-center justify-center h-52">
+              <div className="border border-rule rounded-xl bg-paper p-12 text-center font-mono select-none flex flex-col items-center justify-center h-52">
                 <AlertTriangle className="text-muted-2 mb-2" size={28} />
                 <p className="text-[10px] text-muted-2 uppercase tracking-widest">Awaiting CSV Source Upload...</p>
                 <p className="text-[8px] text-muted mt-2 max-w-sm uppercase leading-relaxed">
@@ -430,7 +430,7 @@ export default function BulkImport() {
                 </p>
               </div>
             ) : (
-              <div className="bg-white border border-rule rounded-xl overflow-auto shadow-sm max-h-[500px]">
+              <div className="bg-paper border border-rule rounded-xl overflow-auto shadow-sm max-h-[500px]">
                 <table className="w-full text-left border-collapse font-sans text-xs">
                   <thead>
                     <tr className="border-b border-rule font-mono uppercase tracking-wide text-muted text-[9px] bg-bg-2/50 sticky top-0">
