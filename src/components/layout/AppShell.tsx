@@ -318,7 +318,7 @@ export function AppShell() {
               {isSidebarExpanded && windowWidth >= 1024 && (
                 <button 
                   onClick={() => setIsSidebarPinned(!isSidebarPinned)}
-                  className="text-muted hover:text-ink transition-colors p-3 -m-1.5 rounded-md hover:bg-rule z-50 flex-shrink-0 ml-auto focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none"
+                  className="text-muted hover:text-ink transition-colors p-3 -m-1.5 rounded-md hover:bg-bg-2 z-50 flex-shrink-0 ml-auto focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none"
                   title={isSidebarPinned ? "Unpin sidebar" : "Pin sidebar"}
                 >
                   {isSidebarPinned ? <PinOff size={14} /> : <Pin size={14} />}

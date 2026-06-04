@@ -112,7 +112,7 @@ export function RecentEventsAuditTable({ profiles }: RecentEventsAuditTableProps
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="text-xs p-2 bg-bg border border-rule rounded-lg focus:outline-none focus:border-rule-strong font-mono font-bold text-ink-2 appearance-none pr-8 relative cursor-pointer min-w-[170px]"
+            className="text-xs p-2 bg-bg border border-rule-strong rounded-lg focus:outline-none focus:border-ink font-mono font-bold text-ink-2 appearance-none pr-8 relative cursor-pointer min-w-[170px]"
           >
             <option value="all">⚡ All event types</option>
             {uniqueEventTypes.map((t) => (

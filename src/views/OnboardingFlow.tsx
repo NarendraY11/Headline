@@ -256,7 +256,7 @@ function Step2Pacing({
               setCustomDate(e.target.value);
               setTargetDatePreset("custom");
             }}
-            className="w-full h-11 bg-bg border border-rule rounded-[12px] px-4 font-sans text-ink focus:outline-none focus:border-ink transition-all text-sm"
+            className="w-full h-11 bg-bg border border-rule-strong rounded-[12px] px-4 font-sans text-ink focus:outline-none focus:border-ink transition-all text-sm"
           />
         </div>
       </div>

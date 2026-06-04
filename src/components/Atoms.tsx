@@ -267,7 +267,7 @@ export function Button({
   style,
   ...props
 }: ButtonProps) {
-  let baseStyles = "Button h-[44px] rounded-full font-sans font-medium text-[14px] px-6 select-none flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2";
+  let baseStyles = "Button h-[44px] rounded-full font-sans font-medium text-[14px] px-6 select-none flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg";
   
   let variantStyles = "";
   if (variant === "primary") {
@@ -314,17 +314,17 @@ export function Chip({ variant = "default", children, className = "", style, ...
       break;
     case "signal":
       // Light: deepen red text — base --signal is only 3.8:1 on signal-soft. Dark token already passes.
-      variantStyles = "bg-signal-soft text-[#a83020] dark:text-signal border border-signal/10";
+      variantStyles = "bg-signal-soft text-[#a83020] dark:text-signal border border-signal/10 dark:border-signal/25";
       break;
     case "amber":
       // Light: deepen amber text — base --amber is only 4.2:1 on amber-soft. Dark token already passes.
-      variantStyles = "bg-amber-soft text-[#855807] dark:text-amber border border-amber/10";
+      variantStyles = "bg-amber-soft text-[#855807] dark:text-amber border border-amber/10 dark:border-amber/25";
       break;
     case "mint":
-      variantStyles = "bg-mint-soft text-mint border border-mint/10";
+      variantStyles = "bg-mint-soft text-mint border border-mint/10 dark:border-mint/25";
       break;
     case "sky":
-      variantStyles = "bg-sky-soft text-sky border border-sky/10";
+      variantStyles = "bg-sky-soft text-sky border border-sky/10 dark:border-sky/25";
       break;
     case "default":
     default:

@@ -467,7 +467,7 @@ export default function ProfileView() {
                 type="date" 
                 value={tempExamDate}
                 onChange={(e) => setTempExamDate(e.target.value)}
-                className="w-full bg-bg border border-rule rounded-md text-xs px-2 py-1 outline-none text-ink text-center"
+                className="w-full bg-bg border border-rule-strong rounded-md text-xs px-2 py-1 outline-none focus:border-ink text-ink text-center transition-colors"
               />
               <div className="flex gap-2">
                 <Button 
