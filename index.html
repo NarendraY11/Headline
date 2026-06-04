@@ -39,6 +39,42 @@
         } catch (e) {}
       })();
     </script>
+
+    <!-- Instant boot splash. #root is otherwise empty until the entry chunk
+         downloads, parses, and auth resolves (up to ~5s on a cold PWA), so the
+         viewport painted the navy theme-color as a black void. This paints a
+         branded spinner before any JS runs. React's createRoot replaces #root's
+         children on mount, so the splash removes itself automatically. Styles
+         are inline because index.css ships inside the JS bundle and isn't
+         available this early. -->
+    <style>
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f5f2ea;
+        z-index: 9999;
+      }
+      html.dark #app-splash { background: #0d1a2d; }
+      #app-splash .spin {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid rgba(20, 48, 90, 0.18);
+        border-top-color: #14305a;
+        animation: appsplashspin 0.8s linear infinite;
+      }
+      html.dark #app-splash .spin {
+        border-color: rgba(245, 242, 234, 0.18);
+        border-top-color: #f5f2ea;
+      }
+      @keyframes appsplashspin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        #app-splash .spin { animation: none; }
+      }
+    </style>
   </head>
   <body>
     <noscript>
@@ -56,7 +92,7 @@
         <p><a href="/blog">Read our Flight Theory Blog</a></p>
       </div>
     </noscript>
-    <div id="root"></div>
+    <div id="root"><div id="app-splash"><div class="spin"></div></div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
