@@ -2,7 +2,7 @@ import {
     Moon, Sun,
     X
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { isPaidActive, planLabel } from "../../lib/plan";
@@ -11,9 +11,43 @@ import { Button } from "../Atoms";
 import { CustomDropdown } from './CustomDropdown';
 import { CustomToggle } from './CustomToggle';
 
+type SettingsTab = "quiz" | "appearance" | "account";
+
+const QUIZ_MODES = [
+  { id: "practice", title: "Practice", desc: "Immediate feedback, explanations" },
+  { id: "viva", title: "Viva Flashcard", desc: "Self-eval, reveal answers" },
+  { id: "exam", title: "Exam Simulator", desc: "Timed, strict evaluation" },
+] as const;
+
+// Serif sub-head with trailing hairline — the established section marker, reused
+// so every group inside a tab reads the same way.
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-4 mb-3.5">
+      <h3 className="font-serif font-medium text-lg text-ink">{children}</h3>
+      <div className="h-px bg-rule-strong flex-1" />
+    </div>
+  );
+}
+
+// Label + description on the left, control slotted on the right.
+function ControlRow({ title, desc, children }: { title: string; desc: string; children: ReactNode }) {
+  return (
+    <div className="flex justify-between items-center gap-4 py-2">
+      <div className="min-w-0">
+        <span className="block text-sm font-sans font-medium text-ink">{title}</span>
+        <span className="block text-xs font-mono tracking-wide text-muted-2 mt-1">{desc}</span>
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  );
+}
+
 export function SettingsOverlay({ onClose }: { onClose: () => void }) {
   const { userData, updateUserData, resetAccount } = useAuth();
-  
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>("quiz");
+
   // Use Auth settings if available, fallback to local storage
   const [preferredMode, setPreferredMode] = useState(() => userData?.settings?.defaultMode || localStorage.getItem("heading_preferred_mode") || "practice");
   const [isDark, setIsDark] = useState(() => {
@@ -49,7 +83,7 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
     setReduceMotion(next);
     updateUserData({ settings: { ...userData?.settings, defaultMode: preferredMode, reduceMotion: next, negativeMarking } });
   };
-  
+
   const handleToggleNegativeMarking = () => {
     const next = !negativeMarking;
     setNegativeMarking(next);
@@ -72,155 +106,123 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/30 dark:bg-ink/50 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
-      <div className="bg-paper border border-rule shadow-2xl rounded-xl w-full max-w-lg relative max-h-[85vh] flex flex-col">
-        <div className="flex-shrink-0 p-8 pb-6 bg-paper rounded-t-xl z-10 sticky top-0 border-b border-transparent">
-          <button onClick={onClose} className="absolute top-8 right-8 text-muted-2 hover:text-ink transition-colors"><X size={24} /></button>
-          <h2 className="font-serif text-[32px] text-ink m-0 leading-none">Settings</h2>
-        </div>
-        
-        <div className="p-8 pt-2 overflow-y-auto sidebar-nav-scroll pb-[32px]">
-          <div className="space-y-[24px]">
-            {/* Subscription / Plan Management */}
-            <div>
-               <div className="flex items-center gap-4 mb-4">
-                  <h3 className="font-serif font-medium text-lg text-ink">Flight Clearance Plan</h3>
-                  <div className="h-px bg-rule flex-1" />
-               </div>
-               <div className="bg-panel border border-rule rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="space-y-1 text-center sm:text-left">
-                     <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 font-sans">
-                        <span className="font-sans font-semibold text-[15px] text-ink">
-                           {userData?.plan === "lifetime" ? "Captain (Lifetime Pro)" : 
-                            userData?.plan === "pro" ? "Captain (Pro Access)" : 
-                            userData?.plan === "trial" ? "Co-Pilot (7-Day Trial)" : "Cadet (Free Account)"}
-                        </span>
-                        {isPaidActive(userData) && (
-                           <span className="bg-mint text-bg font-mono font-bold text-[8px] tracking-wider uppercase px-1.5 py-0.5 rounded leading-none shrink-0" title={planLabel(userData)}>
-                              ACTIVE
-                           </span>
-                        )}
-                     </div>
-                     <p className="font-sans text-[11px] font-mono text-muted uppercase">
-                        {planLabel(userData)}
-                     </p>
-                     {isPaidActive(userData) ? (
-                        <p className="font-sans text-xs text-muted leading-relaxed">
-                           Operational clearance active. Full cockpit access enabled. Thank you for your support, Captain!
-                        </p>
-                     ) : (
-                        <p className="font-sans text-xs text-muted leading-relaxed">
-                           Limited operational sandbox. Gated access on simulated models and ground instructor coaching.
-                        </p>
-                     )}
-                  </div>
-                  <Link to="/pricing" onClick={onClose} className="shrink-0 w-full sm:w-auto">
-                     <Button variant="primary" className="w-full sm:w-auto h-9 text-xs px-4 bg-navy hover:bg-navy-dark text-bg rounded-md">
-                        {isPaidActive(userData) ? "Manage Subscription" : "Upgrade to Pro"}
-                     </Button>
-                  </Link>
-               </div>
-            </div>
+  const handleResetSetup = () => {
+    if (userData) {
+      updateUserData({ onboardingCompleted: false }).finally(() => {
+        localStorage.removeItem("heading_onboarding_completed");
+        window.location.reload();
+      });
+    } else {
+      localStorage.removeItem("heading_onboarding_completed");
+      window.location.reload();
+    }
+  };
 
-            {/* Toggles */}
-            <div className="space-y-3">
-               <div className="flex justify-between items-center bg-transparent py-2">
-                  <div>
-                     <span className="block text-sm font-sans font-medium text-ink">Negative Marking</span>
-                     <span className="block text-xs font-mono tracking-wide text-muted-2 mt-1">Deduct points in timed mode</span>
-                  </div>
-                  <CustomToggle isOn={negativeMarking} onToggle={handleToggleNegativeMarking} />
-               </div>
-               
-               <div className="border-t border-rule" />
-               
-               <div className="flex justify-between items-center bg-transparent py-2">
-                  <div>
-                     <span className="block text-sm font-sans font-medium text-ink">Reduce Motion</span>
-                     <span className="block text-xs font-mono tracking-wide text-muted-2 mt-1">Disable non-essential animations</span>
-                  </div>
-                  <CustomToggle isOn={reduceMotion} onToggle={handleToggleReduceMotion} />
-               </div>
+  const planTitle =
+    userData?.plan === "lifetime" ? "Captain (Lifetime Pro)" :
+    userData?.plan === "pro" ? "Captain (Pro Access)" :
+    userData?.plan === "trial" ? "Co-Pilot (7-Day Trial)" : "Cadet (Free Account)";
+
+  const tabs: { id: SettingsTab; label: string }[] = [
+    { id: "quiz", label: "Quiz" },
+    { id: "appearance", label: "Appearance" },
+    { id: "account", label: "Account" },
+  ];
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/40 dark:bg-ink/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+      <div className="bg-paper border border-rule-strong shadow-2xl rounded-xl w-full max-w-lg relative max-h-[85vh] flex flex-col">
+
+        {/* Header */}
+        <div className="flex-shrink-0 px-8 pt-7 pb-5">
+          <button onClick={onClose} aria-label="Close settings" className="absolute top-7 right-7 text-muted-2 hover:text-ink transition-colors"><X size={24} /></button>
+          <h2 className="font-serif text-[30px] text-ink m-0 leading-none mb-5">Settings</h2>
+
+          {/* Plan strip — status, kept compact on one row so it never eats a section */}
+          <div className="bg-panel border border-rule-strong rounded-xl px-4 py-3 flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-sans font-semibold text-sm text-ink truncate">{planTitle}</span>
+              {isPaidActive(userData) && (
+                <span className="bg-mint text-bg font-mono font-bold text-[8px] tracking-wider uppercase px-1.5 py-0.5 rounded leading-none shrink-0" title={planLabel(userData)}>
+                  ACTIVE
+                </span>
+              )}
             </div>
-            
-            {/* Default Quiz Mode */}
-            <div>
-              <div className="flex items-center gap-4 mb-4">
-                 <h3 className="font-serif font-medium text-lg text-ink">Default Quiz Mode</h3>
-                 <div className="h-px bg-rule flex-1" />
+            <Link to="/pricing" onClick={onClose} className="shrink-0">
+              <Button variant="primary" className="h-8 text-[11px] px-3.5 bg-navy hover:bg-navy/90 text-bg rounded-md font-mono uppercase tracking-wider">
+                {isPaidActive(userData) ? "Manage" : "Upgrade"}
+              </Button>
+            </Link>
+          </div>
+
+          {/* Segmented tabs */}
+          <div className="bg-panel border border-rule-strong p-1 rounded-full flex gap-1" role="tablist" aria-label="Settings sections">
+            {tabs.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={activeTab === t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`flex-1 px-3 py-2 rounded-full text-[11px] font-mono uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-panel ${
+                  activeTab === t.id ? "bg-navy text-bg font-semibold shadow-sm" : "text-muted hover:text-ink"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Tab body */}
+        <div className="px-8 pb-8 pt-1 overflow-y-auto sidebar-nav-scroll">
+
+          {/* ── QUIZ ── */}
+          {activeTab === "quiz" && (
+            <div className="space-y-6 animate-[fadeIn_0.15s_ease-out]">
+              <div>
+                <SectionLabel>Default Mode</SectionLabel>
+                <div className="flex flex-col gap-2.5">
+                  {QUIZ_MODES.map((m) => {
+                    const active = preferredMode === m.id;
+                    return (
+                      <label
+                        key={m.id}
+                        className={`block w-full text-left p-3.5 rounded-lg border-[1.5px] cursor-pointer transition-all ${
+                          active ? "border-ink bg-bg-2" : "border-rule bg-paper hover:border-rule-strong"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="quizMode"
+                          checked={active}
+                          onChange={() => handleModeChange(m.id)}
+                          className="sr-only"
+                        />
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className={`block font-sans text-[14px] font-bold ${active ? "text-ink" : "text-ink-2"}`}>{m.title}</span>
+                            <span className="block font-mono text-[10px] text-muted-2 uppercase tracking-tight mt-1">{m.desc}</span>
+                          </div>
+                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ml-4 ${active ? "border-ink" : "border-rule-strong"}`}>
+                            {active && <div className="w-2.5 h-2.5 rounded-full bg-ink" />}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="flex flex-col gap-3">
-                <label className={`block w-full text-left p-[16px] rounded-lg border-[1.5px] cursor-pointer transition-all ${preferredMode === "practice" ? 'border-[#0F1E3C] dark:border-[#4A7FA5] bg-[#FDFCF8] dark:bg-sky-soft dark:bg-opacity-20' : 'border-rule bg-paper hover:border-rule-strong'}`}>
-                  <input 
-                    type="radio" 
-                    name="quizMode" 
-                    checked={preferredMode === "practice"} 
-                    onChange={() => handleModeChange("practice")}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center justify-between">
-                     <div>
-                       <span className={`block font-sans text-[15px] font-bold ${preferredMode === "practice" ? 'text-ink' : 'text-ink-2'}`}>Practice</span>
-                       <span className="block font-mono text-[11px] text-muted-2 uppercase tracking-tight mt-1.5">Immediate feedback, explanations</span>
-                     </div>
-                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ml-4 ${preferredMode === "practice" ? 'border-[#0F1E3C] dark:border-[#4A7FA5]' : 'border-rule'}`}>
-                        {preferredMode === "practice" && <div className="w-2.5 h-2.5 rounded-full bg-[#0F1E3C] dark:bg-[#4A7FA5]" />}
-                     </div>
-                  </div>
-                </label>
-                
-                <label className={`block w-full text-left p-[16px] rounded-lg border-[1.5px] cursor-pointer transition-all ${preferredMode === "viva" ? 'border-[#0F1E3C] dark:border-[#4A7FA5] bg-[#FDFCF8] dark:bg-sky-soft dark:bg-opacity-20' : 'border-rule bg-paper hover:border-rule-strong'}`}>
-                  <input 
-                    type="radio" 
-                    name="quizMode" 
-                    checked={preferredMode === "viva"} 
-                    onChange={() => handleModeChange("viva")}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center justify-between">
-                     <div>
-                       <span className={`block font-sans text-[15px] font-bold ${preferredMode === "viva" ? 'text-ink' : 'text-ink-2'}`}>Viva Flashcard</span>
-                       <span className="block font-mono text-[11px] text-muted-2 uppercase tracking-tight mt-1.5">Self-eval, reveal answers</span>
-                     </div>
-                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ml-4 ${preferredMode === "viva" ? 'border-[#0F1E3C] dark:border-[#4A7FA5]' : 'border-rule'}`}>
-                        {preferredMode === "viva" && <div className="w-2.5 h-2.5 rounded-full bg-[#0F1E3C] dark:bg-[#4A7FA5]" />}
-                     </div>
-                  </div>
-                </label>
-                
-                <label className={`block w-full text-left p-[16px] rounded-lg border-[1.5px] cursor-pointer transition-all ${preferredMode === "exam" ? 'border-[#0F1E3C] dark:border-[#4A7FA5] bg-[#FDFCF8] dark:bg-sky-soft dark:bg-opacity-20' : 'border-rule bg-paper hover:border-rule-strong'}`}>
-                  <input 
-                    type="radio" 
-                    name="quizMode" 
-                    checked={preferredMode === "exam"} 
-                    onChange={() => handleModeChange("exam")}
-                    className="sr-only"
-                  />
-                  <div className="flex items-center justify-between">
-                     <div>
-                       <span className={`block font-sans text-[15px] font-bold ${preferredMode === "exam" ? 'text-ink' : 'text-ink-2'}`}>Exam Simulator</span>
-                       <span className="block font-mono text-[11px] text-muted-2 uppercase tracking-tight mt-1.5">Timed, strict evaluation</span>
-                     </div>
-                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ml-4 ${preferredMode === "exam" ? 'border-[#0F1E3C] dark:border-[#4A7FA5]' : 'border-rule'}`}>
-                        {preferredMode === "exam" && <div className="w-2.5 h-2.5 rounded-full bg-[#0F1E3C] dark:bg-[#4A7FA5]" />}
-                     </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-            
-            {/* Layout Overrides */}
-            <div>
-               <div className="flex items-center gap-4 mb-4">
-                  <h3 className="font-serif font-medium text-lg text-ink">Quiz Layout</h3>
-                  <div className="h-px bg-rule flex-1" />
-               </div>
-               <div className="space-y-4">
-                 <div className="flex justify-between items-center bg-transparent py-1">
-                    <span className="font-sans text-[15px] text-ink font-medium">Practice Mode</span>
-                    <CustomDropdown 
-                      value={userData?.settings?.practiceLayout || 'auto'} 
+
+              <ControlRow title="Negative Marking" desc="Deduct points in timed mode">
+                <CustomToggle isOn={negativeMarking} onToggle={handleToggleNegativeMarking} />
+              </ControlRow>
+
+              <div>
+                <SectionLabel>Layout</SectionLabel>
+                <div className="space-y-2">
+                  <ControlRow title="Practice Mode" desc="Editorial / split view">
+                    <CustomDropdown
+                      value={userData?.settings?.practiceLayout || 'auto'}
                       options={[
                         { value: 'auto', label: 'Auto' },
                         { value: 'editorial', label: 'Editorial' },
@@ -228,12 +230,10 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
                       ]}
                       onChange={(val) => updateUserData({ settings: { ...userData?.settings, defaultMode: preferredMode, reduceMotion, negativeMarking, practiceLayout: val as any } })}
                     />
-                 </div>
-                 
-                 <div className="flex justify-between items-center bg-transparent py-1">
-                    <span className="font-sans text-[15px] text-ink font-medium">Timed Mode</span>
-                    <CustomDropdown 
-                      value={userData?.settings?.timedLayout || 'auto'} 
+                  </ControlRow>
+                  <ControlRow title="Timed Mode" desc="Instrument / editorial view">
+                    <CustomDropdown
+                      value={userData?.settings?.timedLayout || 'auto'}
                       options={[
                         { value: 'auto', label: 'Auto' },
                         { value: 'instrument', label: 'Instrument' },
@@ -241,12 +241,10 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
                       ]}
                       onChange={(val) => updateUserData({ settings: { ...userData?.settings, defaultMode: preferredMode, reduceMotion, negativeMarking, timedLayout: val as any } })}
                     />
-                 </div>
-                 
-                 <div className="flex justify-between items-center bg-transparent py-1">
-                    <span className="font-sans text-[15px] text-ink font-medium">Viva Mode</span>
-                    <CustomDropdown 
-                      value={userData?.settings?.vivaLayout || 'auto'} 
+                  </ControlRow>
+                  <ControlRow title="Viva Mode" desc="Flashcard / editorial view">
+                    <CustomDropdown
+                      value={userData?.settings?.vivaLayout || 'auto'}
                       options={[
                         { value: 'auto', label: 'Auto' },
                         { value: 'flashcard', label: 'Flashcard' },
@@ -254,96 +252,95 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
                       ]}
                       onChange={(val) => updateUserData({ settings: { ...userData?.settings, defaultMode: preferredMode, reduceMotion, negativeMarking, vivaLayout: val as any } })}
                     />
-                 </div>
-               </div>
+                  </ControlRow>
+                </div>
+              </div>
             </div>
-            
-            {/* Theme Toggle */}
-            <div>
-               <div className="flex items-center gap-4 mb-4 mt-2">
-                  <h3 className="font-serif font-medium text-lg text-ink">Night Mode</h3>
-                  <div className="h-px bg-rule flex-1" />
-               </div>
-               <div className="space-y-4">
-                 <div className="flex justify-between items-center py-1">
-                    <div>
-                       <span className="block text-sm font-sans font-medium text-ink">Night Mode</span>
-                       <span className="block text-xs font-mono tracking-wide text-muted-2 mt-1">Dark theme for low light environments</span>
-                     </div>
-                    <button 
-                      onClick={handleThemeToggle}
-                      className="px-5 py-2.5 text-sm font-sans font-medium bg-panel border-2 border-rule rounded-full text-ink hover:border-rule-strong hover:bg-bg-2 transition-colors flex items-center gap-2 shadow-sm"
-                    >
-                      {isDark ? <Sun size={15} /> : <Moon size={15} />} {isDark ? 'Switch to Light' : 'Switch to Dark'}
-                    </button>
-                 </div>
-                 
-                 <div className="flex items-center gap-4 py-4">
-                    <div className="h-px bg-rule flex-1" />
-                 </div>
-                 
-                 <div className="flex justify-between items-center py-1">
-                    <div>
-                       <span className="block text-sm font-sans font-medium text-ink">Reset Setup</span>
-                       <span className="block text-xs font-mono tracking-wide text-muted-2 mt-1">Replay the onboarding flow</span>
-                     </div>
-                    <button 
-                      onClick={() => {
-                         if (userData) {
-                           updateUserData({ onboardingCompleted: false }).finally(() => {
-                             localStorage.removeItem("heading_onboarding_completed");
-                             window.location.reload();
-                           });
-                         } else {
-                           localStorage.removeItem("heading_onboarding_completed");
-                           window.location.reload();
-                         }
-                      }}
-                      className="px-5 py-2.5 text-sm font-sans font-medium bg-panel border-2 border-rule rounded-full text-ink hover:border-rule-strong transition-colors flex items-center gap-2 shadow-sm"
-                    >
-                      Reset Setup
-                    </button>
-                 </div>
-                 
-                 <div className="flex justify-between items-center pt-2 relative">
-                    <div>
-                       <span className="block text-sm font-sans font-medium text-signal">Danger Zone</span>
-                       <span className="block text-xs font-mono tracking-wide text-muted-2 mt-1">Permanently remove all data</span>
-                     </div>
-                    <button 
-                      onClick={() => setShowWipeConfirm(true)}
-                      className="px-5 py-2.5 text-sm font-sans font-medium bg-signal/5 border-2 border-signal/30 rounded-full text-signal hover:bg-signal/10 transition-colors flex items-center gap-2 shadow-sm"
-                    >
-                      Wipe Data
-                    </button>
-                    {showWipeConfirm && (
-                      <div className="absolute right-0 bottom-full mb-4 w-72 bg-paper border border-signal/30 shadow-2xl rounded-xl p-4 z-50 animate-[fadeIn_0.2s_ease-out]">
-                         <div className="flex gap-3 items-start mb-3">
-                           <div className="w-8 h-8 rounded-full bg-signal/10 flex items-center justify-center shrink-0">
-                             <span className="text-signal font-serif text-lg leading-none">!</span>
-                           </div>
-                           <div>
-                             <h4 className="font-sans font-medium text-ink text-sm mb-1">Confirm Quick Reset</h4>
-                             <p className="font-sans text-xs text-ink-2 leading-relaxed">
-                               This will permanently erase all your mock exam attempts, study history, and telemetry logs. This cannot be undone.
-                             </p>
-                           </div>
-                         </div>
-                         <div className="flex gap-2 justify-end">
-                           <button onClick={() => setShowWipeConfirm(false)} className="px-3 py-1.5 font-sans text-xs font-medium text-ink bg-bg hover:bg-rule rounded-md transition-colors">
-                             Cancel
-                           </button>
-                           <button onClick={async () => { await resetAccount(); onClose(); }} className="px-3 py-1.5 font-sans text-xs font-medium text-bg bg-signal hover:bg-signal/80 rounded-md transition-colors">
-                             Wipe Data
-                           </button>
-                         </div>
+          )}
+
+          {/* ── APPEARANCE ── */}
+          {activeTab === "appearance" && (
+            <div className="space-y-4 animate-[fadeIn_0.15s_ease-out]">
+              <SectionLabel>Display</SectionLabel>
+              <div className="flex justify-between items-center gap-4 py-2">
+                <div className="min-w-0">
+                  <span className="block text-sm font-sans font-medium text-ink flex items-center gap-2">
+                    {isDark ? <Moon size={14} className="text-muted" /> : <Sun size={14} className="text-muted" />} Night Mode
+                  </span>
+                  <span className="block text-xs font-mono tracking-wide text-muted-2 mt-1">Dark theme for low-light environments</span>
+                </div>
+                <CustomToggle isOn={isDark} onToggle={handleThemeToggle} />
+              </div>
+
+              <div className="border-t border-rule" />
+
+              <ControlRow title="Reduce Motion" desc="Disable non-essential animations">
+                <CustomToggle isOn={reduceMotion} onToggle={handleToggleReduceMotion} />
+              </ControlRow>
+
+              <div className="border-t border-rule" />
+
+              <ControlRow title="Reset Setup" desc="Replay the onboarding flow">
+                <button
+                  onClick={handleResetSetup}
+                  className="px-4 py-2 text-xs font-mono uppercase tracking-wider font-medium bg-panel border border-rule-strong rounded-full text-ink hover:border-ink/40 hover:bg-bg-2 transition-colors shadow-sm"
+                >
+                  Reset
+                </button>
+              </ControlRow>
+            </div>
+          )}
+
+          {/* ── ACCOUNT ── */}
+          {activeTab === "account" && (
+            <div className="space-y-4 animate-[fadeIn_0.15s_ease-out]">
+              <SectionLabel>Danger Zone</SectionLabel>
+
+              {/* Destructive actions get their own framed, signal-bordered panel —
+                  fully separated from routine settings. */}
+              <div className="border-[1.5px] border-signal/30 bg-signal/5 rounded-xl p-5 relative">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <span className="block text-sm font-sans font-bold text-signal">Wipe All Data</span>
+                    <span className="block text-xs font-sans text-ink-2 leading-relaxed mt-1">
+                      Permanently erase every mock attempt, study history entry, and telemetry log. This cannot be undone.
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setShowWipeConfirm(true)}
+                    className="shrink-0 px-4 py-2 text-xs font-mono uppercase tracking-wider font-bold bg-signal/10 border border-signal/40 rounded-full text-signal hover:bg-signal hover:text-bg transition-colors shadow-sm"
+                  >
+                    Wipe Data
+                  </button>
+                </div>
+
+                {showWipeConfirm && (
+                  <div className="mt-4 pt-4 border-t border-signal/20 animate-[fadeIn_0.2s_ease-out]">
+                    <div className="flex gap-3 items-start mb-3">
+                      <div className="w-8 h-8 rounded-full bg-signal/10 flex items-center justify-center shrink-0">
+                        <span className="text-signal font-serif text-lg leading-none">!</span>
                       </div>
-                    )}
-                 </div>
-               </div>
+                      <div>
+                        <h4 className="font-sans font-bold text-ink text-sm mb-1">Confirm permanent wipe</h4>
+                        <p className="font-sans text-xs text-ink-2 leading-relaxed">
+                          Type-rated double-check: this is irreversible. All progress is lost.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => setShowWipeConfirm(false)} className="px-3 py-1.5 font-sans text-xs font-medium text-ink bg-bg hover:bg-bg-2 rounded-md transition-colors">
+                        Cancel
+                      </button>
+                      <button onClick={async () => { await resetAccount(); onClose(); }} className="px-3 py-1.5 font-sans text-xs font-bold text-bg bg-signal hover:bg-signal/80 rounded-md transition-colors">
+                        Wipe Data
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-            
-          </div>
+          )}
+
         </div>
       </div>
     </div>
