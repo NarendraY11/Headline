@@ -848,17 +848,21 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   app.post("/api/session/check", requireAuth, async (req, res) => {
     const uid = (req as any).uid;
     const sessionId = typeof req.body?.session_id === "string" ? req.body.session_id : "";
+    const ua = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
     const ip = getClientIdentity(req as any); // IP only (no uid passed)
     try {
       const admin = getSupabaseAdmin();
       const { data: row, error } = await admin
         .from("active_sessions")
-        .select("session_id, ip_address")
+        .select("session_id, ip_address, device_info")
         .eq("user_id", uid)
         .maybeSingle();
 
       if (error || !row) return res.json({ valid: true });
-      if (sessionId && row.session_id && row.session_id !== sessionId) {
+      // Different session id owns the slot, but tolerate the same physical
+      // device (installed PWA vs browser keep separate ids yet share a UA).
+      const sameDevice = !!row.device_info && !!ua && row.device_info === ua;
+      if (sessionId && row.session_id && row.session_id !== sessionId && !sameDevice) {
         return res.json({ valid: false, reason: "superseded" });
       }
       if (!row.ip_address) {

@@ -20,13 +20,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!user) return;
 
   const sessionId = typeof req.body?.session_id === "string" ? req.body.session_id : "";
+  const ua = typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : "";
   const ip = getClientIdentity(req); // first X-Forwarded-For IP, else "anonymous"
 
   try {
     const admin = getSupabaseAdmin();
     const { data: row, error } = await admin
       .from("active_sessions")
-      .select("session_id, ip_address")
+      .select("session_id, ip_address, device_info")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -34,8 +35,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ valid: true }); // nothing to compare yet
     }
 
-    // A newer session from another device superseded this one.
-    if (sessionId && row.session_id && row.session_id !== sessionId) {
+    // A newer session from another device superseded this one — but tolerate
+    // the same physical device (installed PWA vs browser keep separate session
+    // ids in separate storage yet share a user-agent).
+    const sameDevice = !!row.device_info && !!ua && row.device_info === ua;
+    if (sessionId && row.session_id && row.session_id !== sessionId && !sameDevice) {
       void logSecurityEvent({
         req,
         eventType: "session.superseded",
