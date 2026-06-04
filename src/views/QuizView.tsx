@@ -514,7 +514,9 @@ export default function QuizView() {
   };
 
   const handleSelectOption = (choiceId: string) => {
-    const qId = questions[currentIndex].id;
+    const currentQuestion = questions[currentIndex];
+    if (!currentQuestion) return;
+    const qId = currentQuestion.id;
     if (mode === "practice" && submittedIds.has(qId)) return;
 
     setSelectedOptionId(choiceId);
@@ -523,7 +525,7 @@ export default function QuizView() {
       setAnswers((prev) => ({ ...prev, [qId]: choiceId }));
 
       // Track question_answered telemetry for timed mode
-      const isCorrect = choiceId === questions[currentIndex].correct;
+      const isCorrect = choiceId === currentQuestion.correct;
       const timeSec = Math.max(0, timeElapsed - questionTimeStart);
       trackEvent("question_answered", {
         questionId: qId,
@@ -533,13 +535,14 @@ export default function QuizView() {
   };
 
   const handleSubmitPractice = () => {
-    const qId = questions[currentIndex].id;
-    if (!selectedOptionId) return;
+    const currentQ = questions[currentIndex];
+    if (!currentQ || !selectedOptionId) return;
+    const qId = currentQ.id;
     setAnswers((prev) => ({ ...prev, [qId]: selectedOptionId }));
     setSubmittedIds((prev) => new Set(prev).add(qId));
 
     // Track question_answered telemetry for practice mode
-    const isCorrect = selectedOptionId === questions[currentIndex].correct;
+    const isCorrect = selectedOptionId === currentQ.correct;
     const timeSec = Math.max(0, timeElapsed - questionTimeStart);
     trackEvent("question_answered", {
       questionId: qId,
@@ -547,7 +550,6 @@ export default function QuizView() {
     });
 
     // Record question performance for spacing/review
-    const currentQ = questions[currentIndex];
     recordAnswerProgress(user?.uid || null, qId, isCorrect, currentQ.topicId);
     
     // Single source of truth analytics
@@ -564,7 +566,9 @@ export default function QuizView() {
   };
 
   const trackQuestionTime = () => {
-    const qId = questions[currentIndex].id;
+    const q = questions[currentIndex];
+    if (!q) return;
+    const qId = q.id;
     const timeSpent = timeElapsed - questionTimeStart;
     setTimePerQuestion((prev) => ({
       ...prev,
