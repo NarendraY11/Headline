@@ -1,4 +1,5 @@
 import { SubjectItem } from "../data/topics";
+import { normalizeSlug } from "./slug";
 
 export function getSubjectMastery(
   logbook: any[],
@@ -22,11 +23,10 @@ export function getSubjectMastery(
 
   // Create a normalized set of topic IDs for this subject
   const subjectTopics = new Set<string>();
-  const normalize = (s: string) => s.replace(/[^a-z0-9]/gi, "").toLowerCase();
 
-  subjectTopics.add(normalize(subject.id));
+  subjectTopics.add(normalizeSlug(subject.id));
   if (subject.subTopics) {
-    subject.subTopics.forEach(st => subjectTopics.add(normalize(st.id)));
+    subject.subTopics.forEach(st => subjectTopics.add(normalizeSlug(st.id)));
   }
 
   let correctCount = 0;
@@ -34,7 +34,7 @@ export function getSubjectMastery(
 
   Object.values(progressMap).forEach((prog: any) => {
     if (prog.topic_id) {
-      const normalizedTopic = normalize(prog.topic_id);
+      const normalizedTopic = normalizeSlug(prog.topic_id);
       let isMatch = subjectTopics.has(normalizedTopic);
       if (!isMatch) {
         // Match base/parent prefix (e.g. subtopics of nested hierarchies)
