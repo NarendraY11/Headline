@@ -422,7 +422,15 @@ export default function AnalyticsView() {
                 <TrendingUp size={16} /> ATA Mastery
               </h2>
             </div>
-            <div className="h-[220px] sm:h-[260px] md:h-[300px] w-full border border-rule rounded-lg p-2 sm:p-4 bg-paper">
+            <div
+              className="h-[220px] sm:h-[260px] md:h-[300px] w-full border border-rule rounded-lg p-2 sm:p-4 bg-paper"
+              role="img"
+              aria-label={`ATA mastery bar chart. Weakest: ${masteries.filter(m => m.score !== null).slice(0,2).map(m => `${m.title} ${m.score}%`).join(', ')}. Overall average: ${avgScore}%.`}
+            >
+              <span className="sr-only">
+                Bar chart showing mastery percentage per ATA subject. Bars below 50% are highlighted. Weakest subjects: {masteries.filter(m => m.score !== null && m.score < 50).map(m => `${m.title} at ${m.score}%`).join(', ') || 'none'}.
+                Strongest subjects: {[...masteries].filter(m => m.score !== null).sort((a,b) => (b.score||0)-(a.score||0)).slice(0,2).map(m => `${m.title} at ${m.score}%`).join(', ') || 'none'}.
+              </span>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={masteries.map(m => ({
@@ -475,7 +483,10 @@ export default function AnalyticsView() {
               Intensity Grid
             </h2>
             <Card className="bg-paper border border-rule p-5 sm:p-6 h-[calc(100%-48px)] flex flex-col items-center justify-center">
-              <div className="grid grid-cols-7 gap-1 sm:gap-2 w-full max-w-sm">
+              <span className="sr-only">
+                28-day study intensity grid. Active days in the last 4 weeks: {heatmapDays.filter(v => v > 0).length} out of 28.
+              </span>
+              <div className="grid grid-cols-7 gap-1 sm:gap-2 w-full max-w-sm" role="img" aria-label="28-day study intensity heatmap">
                 {["S", "M", "T", "W", "T", "F", "S"].map((d, idx) => (
                   <div
                     key={`day-${idx}`}
@@ -528,7 +539,11 @@ export default function AnalyticsView() {
             </h2>
             <Card className="bg-paper border border-rule py-6 px-4 h-[300px]">
               {mockChartData.length > 0 ? (
-                <div style={{ width: "100%", minHeight: 250, height: "100%" }} role="img" aria-label="Mock exam trends chart tracing score progress over time">
+                <div style={{ width: "100%", minHeight: 250, height: "100%" }} role="img" aria-label={`Mock exam trends chart. ${MOCK_EXAM_HISTORY.length} attempts. Latest score: ${MOCK_EXAM_HISTORY[MOCK_EXAM_HISTORY.length - 1]?.score ?? 0}%. Pass mark: 70%.`}>
+                  <span className="sr-only">
+                    Line chart showing mock exam score over {MOCK_EXAM_HISTORY.length} attempts. Pass mark is 70%. {MOCK_EXAM_HISTORY.slice(-3).map(m => `${m.name}: ${m.score}%`).join(', ')}.
+                    {MOCK_EXAM_HISTORY.filter(m => m.passed).length} of {MOCK_EXAM_HISTORY.length} attempts passed.
+                  </span>
                   <ResponsiveContainer width="100%" height={250}>
                     <LineChart
                       data={mockChartData}

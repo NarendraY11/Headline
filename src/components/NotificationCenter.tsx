@@ -37,26 +37,26 @@ export default function NotificationCenter() {
   const getIcon = (type: NotificationItem["type"]) => {
     switch (type) {
       case "milestone":
-        return <Award size={15} className="text-amber-500 shrink-0" />;
+        return <Award size={15} className="text-amber shrink-0" />;
       case "countdown":
-        return <Calendar size={15} className="text-rose-500 shrink-0" />;
+        return <Calendar size={15} className="text-signal shrink-0" />;
       case "reminder":
-        return <Clock size={15} className="text-sky-500 shrink-0" />;
+        return <Clock size={15} className="text-sky shrink-0" />;
       default:
-        return <Zap size={15} className="text-emerald-500 shrink-0" />;
+        return <Zap size={15} className="text-mint shrink-0" />;
     }
   };
 
   const getTypeBadgeStyle = (type: NotificationItem["type"]) => {
     switch (type) {
       case "milestone":
-        return "bg-amber-50 border-amber-100 text-amber-700 dark:bg-amber-500/10 dark:border-amber-500/20 dark:text-amber-400";
+        return "bg-amber-soft text-amber border border-amber/20";
       case "countdown":
-        return "bg-rose-50 border-rose-100 text-rose-700 dark:bg-rose-500/10 dark:border-rose-500/20 dark:text-rose-400";
+        return "bg-signal-soft text-signal border border-signal/20";
       case "reminder":
-        return "bg-sky-50 border-sky-100 text-sky-700 dark:bg-sky-500/10 dark:border-sky-500/20 dark:text-sky-400";
+        return "bg-sky-soft text-sky border border-sky/20";
       default:
-        return "bg-emerald-50 border-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400";
+        return "bg-mint-soft text-mint border border-mint/20";
     }
   };
 
@@ -90,7 +90,9 @@ export default function NotificationCenter() {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="p-2 sm:p-2.5 text-muted hover:text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none relative cursor-pointer"
-        aria-label="Notification Center"
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+        aria-expanded={isOpen}
+        aria-haspopup="true"
         title="Notifications"
       >
         <Bell size={18} />
@@ -183,7 +185,7 @@ export default function NotificationCenter() {
                             markAsRead(item.id);
                           }}
                           title="Mark as read"
-                          className="p-1 text-muted hover:text-emerald-600 hover:bg-bg rounded transition-colors cursor-pointer"
+                          className="p-1 text-muted hover:text-mint hover:bg-bg rounded transition-colors cursor-pointer"
                         >
                           <Check size={13} />
                         </button>

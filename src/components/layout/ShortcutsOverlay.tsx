@@ -14,9 +14,15 @@ export function ShortcutsOverlay({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/30 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/30 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Keyboard shortcuts"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div className="bg-paper border border-rule shadow-2xl rounded-xl w-full max-w-md p-8 relative">
-        <button onClick={onClose} className="absolute top-4 right-4 text-muted hover:text-ink"><X size={20} /></button>
+        <button onClick={onClose} aria-label="Close shortcuts" className="absolute top-4 right-4 text-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none rounded"><X size={20} /></button>
         <h2 className="font-serif text-3xl text-ink mb-6">Keyboard Binding</h2>
         <div className="space-y-4">
           <div className="flex justify-between items-center border-b border-rule pb-3">

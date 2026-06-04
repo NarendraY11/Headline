@@ -130,7 +130,13 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/40 dark:bg-ink/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/40 dark:bg-ink/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Settings"
+    >
       <div className="bg-paper border border-rule-strong shadow-2xl rounded-xl w-full max-w-lg relative max-h-[85vh] flex flex-col">
 
         {/* Header */}
