@@ -41,7 +41,7 @@ export default function DailyStudyGoal() {
         <div className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase">DAILY · TARGET</div>
         <button 
           onClick={() => setIsEditing(!isEditing)}
-          className="text-muted opacity-50 group-hover:opacity-100 transition-opacity p-1 rounded-md"
+          className="text-muted opacity-50 group-hover:opacity-100 transition-opacity flex items-center justify-center min-h-[44px] min-w-[44px] -m-2 rounded-md"
           aria-label="Edit goal"
         >
           <Settings2 size={16} />

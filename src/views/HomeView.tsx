@@ -84,10 +84,10 @@ export default function HomeView() {
       </script>
 
       {/* MARKETING TOP NAV */}
-      <header className="h-[72px] flex items-center justify-between px-6 lg:px-10 bg-bg z-50 absolute top-0 w-full left-0 right-0 border-b border-rule/50">
+      <header className="h-[72px] flex items-center justify-between px-4 sm:px-6 lg:px-10 bg-bg z-50 absolute top-0 w-full left-0 right-0 border-b border-rule/50">
         <Link to="/" className="hover:opacity-90 transition-opacity flex items-center gap-3">
           <Wordmark compassSize={24} />
-          <span className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase border border-rule px-1.5 py-0.5 rounded-[4px] mt-0.5 opacity-80">FL · 380</span>
+          <span className="hidden sm:inline-block font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase border border-rule px-1.5 py-0.5 rounded-[4px] mt-0.5 opacity-80">FL · 380</span>
         </Link>
         <nav className="hidden lg:flex items-center gap-8 font-sans text-[13px] tracking-wide text-ink-2" aria-label="Primary site navigation">
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">Question bank</Link>
@@ -101,13 +101,13 @@ export default function HomeView() {
             <>
               <Link to="/today" className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors hidden sm:block">Dashboard</Link>
               <Link to="/today">
-                <Button variant="primary" className="h-[38px] px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Resume studying <MoveRight size={14} className="ml-1.5" /></Button>
+                <Button variant="primary" className="h-[38px] px-4 sm:px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Resume studying <MoveRight size={14} className="ml-1.5" /></Button>
               </Link>
             </>
           ) : (
             <>
-              <button onClick={() => openAuthModal("signin")} className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors cursor-pointer">Sign in</button>
-              <Button onClick={() => openAuthModal("signup")} variant="primary" className="h-[38px] px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Start studying <MoveRight size={14} className="ml-1.5" /></Button>
+              <button onClick={() => openAuthModal("signin")} className="hidden sm:block text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors cursor-pointer">Sign in</button>
+              <Button onClick={() => openAuthModal("signup")} variant="primary" className="h-[38px] px-4 sm:px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Start studying <MoveRight size={14} className="ml-1.5" /></Button>
             </>
           )}
         </div>
