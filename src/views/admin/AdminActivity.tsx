@@ -145,6 +145,7 @@ export function RecentEventsAuditTable({ profiles }: RecentEventsAuditTableProps
       ) : filteredEvents.length === 0 ? (
         <p className="text-center text-xs text-muted-2 py-6">No recent events match this filter category.</p>
       ) : (
+        <>
         <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-left border-collapse font-sans text-xs">
             <thead>
@@ -218,6 +219,7 @@ export function RecentEventsAuditTable({ profiles }: RecentEventsAuditTableProps
             );
           })}
         </div>
+        </>
       )}
     </Card>
   );

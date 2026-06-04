@@ -223,6 +223,7 @@ export default function HomeView() {
                <span>Akasa Air</span>
                <span>Air Arabia</span>
                <span>Emirates (Transition)</span>
+              </div>
             </div>
          </div>
       </div>
