@@ -324,7 +324,7 @@ export default function AnalyticsView() {
             <h1 className="text-[48px] md:text-[64px] text-ink leading-[1.0] tracking-tight mb-2 font-serif flex items-center gap-3">
               Detailed Analytics.
               <div
-                className="relative group inline-flex items-center justify-center w-6 h-6 rounded-full bg-rule/50 text-muted hover:bg-rule transition-colors cursor-help"
+                className="relative group inline-flex items-center justify-center w-6 h-6 rounded-full bg-rule/50 text-muted hover:bg-bg-2 transition-colors cursor-help"
                 title="Mastery percentage is calculated by dividing your total correct answers by the total questions attempted for each specific ATA subject area over all time."
               >
                 <div className="font-sans text-[12px] font-bold">?</div>

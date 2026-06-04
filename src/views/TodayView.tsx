@@ -383,7 +383,7 @@ export default function TodayView() {
             </div>
             {hasStreak ? (
               <>
-                <div className="font-serif text-3xl text-ink leading-none mt-2">
+                <div className="font-serif text-[26px] text-ink leading-none mt-2">
                   <AnimatedCounter value={displayedStreak} />
                   <span className="font-sans text-xl font-normal lowercase text-muted tracking-normal">
                     d
@@ -435,7 +435,7 @@ export default function TodayView() {
                   Q'S ANSWERED
                 </span>
               </div>
-              <div className="font-serif text-3xl text-ink leading-none mt-2 flex items-baseline justify-between overflow-hidden">
+              <div className="font-serif text-[26px] text-ink leading-none mt-2 flex items-baseline justify-between overflow-hidden">
                 <div>
                   <AnimatedCounter value={answeredToday} />
                   <span className="font-sans text-xs text-muted-2 ml-1">
@@ -482,7 +482,7 @@ export default function TodayView() {
                 </span>
               </div>
               <div
-                className={`font-serif text-3xl leading-none mt-2 ${getScoreColor(avgScore)}`}
+                className={`font-serif text-[26px] leading-none mt-2 ${getScoreColor(avgScore)}`}
               >
                 <AnimatedCounter value={avgScore} />
                 <span className="font-sans text-xl text-muted font-normal tracking-normal">
@@ -507,7 +507,7 @@ export default function TodayView() {
                   HOURS (WK)
                 </span>
               </div>
-              <div className="font-serif text-3xl text-ink leading-none mt-2">
+              <div className="font-serif text-[26px] text-ink leading-none mt-2">
                 {hasAttempts ? <AnimatedCounter value={hoursStudied} /> : 0}{" "}
                 <span className="font-sans text-xl text-muted font-normal lowercase tracking-normal">
                   hrs
@@ -563,30 +563,22 @@ export default function TodayView() {
           </h1>
         </div>
 
-        {/* Due For Review Alert CTA Banner */}
+        {/* Due For Review — secondary alert (kept lighter so the Readiness card
+            below remains the single primary focus of the viewport) */}
         {dueCount > 0 && (
           <div className="motion-div" style={{ animation: "fadeIn 0.5s" }}>
-            <div className="bg-signal-soft border border-signal/20 rounded-[14px] p-4 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative overflow-hidden">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-signal/15 flex items-center justify-center text-signal">
-                  <Flame size={16} />
-                </div>
-                <div>
-                  <h3 className="font-serif text-base text-ink font-bold leading-tight">
-                    Spaced Repetition Review Ready
-                  </h3>
-                  <p className="font-mono text-[11px] text-muted-2 tracking-normal uppercase">
-                    {dueCount} {dueCount === 1 ? "question is" : "questions are"} due for spaced review
-                  </p>
-                </div>
+            <div className="bg-signal-soft/60 border border-signal/15 rounded-[12px] px-3.5 py-2.5 mb-4 flex items-center justify-between gap-3 relative overflow-hidden">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <Flame size={15} className="text-signal shrink-0" />
+                <p className="font-mono text-[11px] text-ink-2 tracking-normal uppercase truncate">
+                  {dueCount} {dueCount === 1 ? "question" : "questions"} due for spaced review
+                </p>
               </div>
-              <Link to="/quiz/review" className="w-full sm:w-auto">
-                <Button
-                  variant="primary"
-                  className="w-full sm:w-auto bg-signal text-bg hover:bg-signal/80 px-4 py-2 h-9 rounded-lg font-mono text-[11px] font-bold tracking-wider uppercase flex items-center justify-center gap-1 border-0 shadow-none"
-                >
-                  Start Review ({dueCount}) →
-                </Button>
+              <Link
+                to="/quiz/review"
+                className="shrink-0 font-mono text-[11px] font-bold tracking-wider uppercase text-signal hover:opacity-70 transition-opacity flex items-center gap-1"
+              >
+                Start →
               </Link>
             </div>
           </div>
@@ -702,8 +694,22 @@ export default function TodayView() {
         <ResumeCard />
         <ReferralWidget />
 
+        {/* SECTION HEAD — gives the analytics blocks a real mid-level heading
+            (kicker = mono label, title = serif) instead of only tiny in-card
+            mono labels, so the page has scannable section separation. */}
+        <div className="flex items-baseline justify-between gap-4 mb-4 mt-2">
+          <div>
+            <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase mb-1.5">
+              § 02 · TELEMETRY
+            </div>
+            <h2 className="font-serif text-[28px] text-ink leading-none tracking-tight">
+              Your analytics
+            </h2>
+          </div>
+        </div>
+
         {/* WEATHER & MASTERY HEATMAP ROW */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-10 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 w-full">
           {weatherBriefingEnabled && <WeatherWidget />}
 
           <div className={`bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-1 ${weatherBriefingEnabled ? 'md:col-span-2' : 'md:col-span-3'} flex flex-col justify-between overflow-hidden relative min-h-[220px]`}>
@@ -712,7 +718,8 @@ export default function TodayView() {
                 <TrendingUp size={14} className="text-ink" />
                 <span>MASTERY HEATMAP (RADAR)</span>
               </div>
-              <span className="font-mono text-[9px] text-mint uppercase tracking-widest bg-mint/10 border border-mint/20 px-2 py-0.5 rounded-full">
+              <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-mint rounded-full inline-block" />
                 Telemetry Active
               </span>
             </div>
@@ -743,7 +750,7 @@ export default function TodayView() {
             </div>
             <div className="flex items-center gap-4">
               {savedDate ? (
-                <span className="font-mono text-[9px] text-navy uppercase tracking-widest bg-navy/5 border border-navy/10 px-2.5 py-0.5 rounded-full">
+                <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest">
                   Exam Clear: {new Date(savedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </span>
               ) : (

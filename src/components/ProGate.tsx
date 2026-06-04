@@ -137,7 +137,7 @@ export function ProGate({ children, type, isUnlocked = false }: ProGateProps) {
 
       {/* Premium Gate Overlay Card */}
       <div className="absolute inset-0 bg-bg/60 backdrop-blur-[2px] flex items-center justify-center p-6 sm:p-8 z-20">
-        <div className="w-full max-w-md bg-paper border border-rule shadow-[0_8px_30px_rgb(13,26,45,0.08)] rounded-2xl p-6 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-full max-w-md bg-paper border border-rule-strong shadow-[0_1px_2px_rgba(13,26,45,0.04),0_12px_32px_-8px_rgba(13,26,45,0.16)] rounded-2xl p-6 text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
           <div className="flex justify-center">
             <div className="p-3 bg-[#fbfaf6] text-navy border border-amber/30 rounded-xl relative">
               <Lock size={22} className="text-navy" />

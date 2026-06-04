@@ -20,7 +20,7 @@ export default function TopSubscriptionBanner() {
         state === 'trial' && daysLeft <= 2 
           ? "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-200 dark:border-rose-900/40 font-semibold" 
           : state === 'trial' 
-          ? "bg-panel text-muted hover:text-ink border-rule"
+          ? "bg-amber-soft/50 text-ink-2 hover:text-ink border-amber/20 dark:bg-amber-soft/30"
           : "bg-red-50 text-red-800 border-red-200 dark:bg-rose-950/60 dark:text-rose-100 font-medium"
       }`}>
         <div className="flex items-center gap-2">

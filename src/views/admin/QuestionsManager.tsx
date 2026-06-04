@@ -699,7 +699,7 @@ export default function QuestionsManager() {
               <Button 
                 variant="ghost" 
                 onClick={() => handleSaveQuestion("draft")} 
-                className="h-10 text-xs hover:bg-rule font-semibold text-ink border border-rule/80 px-4"
+                className="h-10 text-xs hover:bg-bg-2 font-semibold text-ink border border-rule/80 px-4"
               >
                 Save as Draft
               </Button>

@@ -244,7 +244,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
               {/* Backdrop overlay */}
               <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={loading ? undefined : onClose}
-                className="anim-fade fixed inset-0 bg-ink/30 dark:bg-black/60 backdrop-blur-md pointer-events-auto"
+                className="anim-fade fixed inset-0 bg-ink/40 dark:bg-black/60 backdrop-blur-md pointer-events-auto"
               />
 
               {/* Modal body container */}

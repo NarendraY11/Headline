@@ -138,7 +138,7 @@ export default function SplitLayout({
           <Button 
             variant="ghost"
             onClick={() => setShowAbortPrompt(true)}
-            className="h-7 px-3 flex items-center gap-1.5 text-[10px] font-sans text-ink border border-rule rounded-full bg-transparent hover:bg-rule"
+            className="h-7 px-3 flex items-center gap-1.5 text-[10px] font-sans text-ink border border-rule rounded-full bg-transparent hover:bg-bg-2"
           >
             Exit <X size={12} strokeWidth={2} />
           </Button>
@@ -367,7 +367,7 @@ export default function SplitLayout({
                              <p className="font-sans text-xs text-ink-2 leading-relaxed">
                                Need more details? Get a precise technical breakdown from our AI Chief Ground Instructor.
                              </p>
-                             <Button variant="ghost" className="w-fit border border-rule hover:bg-rule text-[11px] h-8" onClick={handleExplainDeeper}>
+                             <Button variant="ghost" className="w-fit border border-rule hover:bg-bg-2 text-[11px] h-8" onClick={handleExplainDeeper}>
                                Explain it differently / I still don't get it
                              </Button>
                            </div>

@@ -186,11 +186,11 @@ export default function HomeView() {
                 <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">SUBJECTS COVERED</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="font-serif text-[28px] lg:text-[36px] text-navy tracking-tight leading-none">{platformAnsweredCount.toLocaleString()}</span>
+                <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{platformAnsweredCount.toLocaleString()}</span>
                 <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">PLATFORM RESPONSES</span>
               </div>
               <div className="flex flex-col gap-1">
-                <span className="font-serif text-[28px] lg:text-[36px] text-[#A66C23] tracking-tight leading-none">{activePilotsCount}</span>
+                <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{activePilotsCount}</span>
                 <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">PILOTS ENROLLED</span>
               </div>
             </div>
@@ -226,16 +226,16 @@ export default function HomeView() {
       </div>
 
       {/* 2. SEC: BUILT AROUND */}
-      <section className="py-12 md:py-20 w-full max-w-[1400px] mx-auto px-6">
+      <section className="py-24 md:py-32 w-full max-w-[1400px] mx-auto px-6">
         <FadeUp>
-          <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-transparent pb-4">
+          <div className="mb-10">
+            <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase mb-4">
+              § 01 / MODULES
+            </div>
             <h2 className="font-serif text-[42px] md:text-[64px] text-ink leading-[1.0] tracking-tight">
               Built around how pilots <br className="hidden sm:block" />
               <span className="italic">actually</span> study.
             </h2>
-            <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase pb-2 md:pb-4">
-              § 01 / MODULES
-            </div>
           </div>
         </FadeUp>
 
@@ -394,13 +394,13 @@ export default function HomeView() {
 
       {/* 4. SEC: ANALYTICS */}
       <section className="py-24 md:py-32 max-w-[1400px] mx-auto px-6 w-full">
-         <FadeUp className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-16">
+         <FadeUp className="pb-16">
+            <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase mb-4">
+              § 03 / ANALYTICS
+            </div>
             <h2 className="font-serif text-[48px] md:text-[64px] text-ink leading-[1.0] tracking-tight">
               See exactly <span className="italic">how</span> you can<br/>improve.
             </h2>
-            <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase pb-2">
-              § 03 / ANALYTICS
-            </div>
          </FadeUp>
 
          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -410,7 +410,7 @@ export default function HomeView() {
                     <div className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase">MASTERY · BY SYLLABUS HEADING</div>
                     <Chip variant="signal" className="border-signal/20 text-[9px] uppercase tracking-widest font-semibold px-2">3 ACTIONS PENDING</Chip>
                  </div>
-                 <h3 className="font-serif text-[32px] text-ink mb-12 tracking-tight">Strengthen your alignment.</h3>
+                 <h3 className="font-serif text-[26px] text-ink mb-12 tracking-tight">Strengthen your alignment.</h3>
                  
                  <div className="space-y-6">
                     {[
@@ -435,7 +435,7 @@ export default function HomeView() {
             <FadeUp delay={200} className="w-full">
                <Card className="bg-paper border border-rule rounded-[24px] p-8 md:p-12 shadow-sm h-full flex flex-col justify-center">
                  <div className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase mb-8">PROGRESS · LAST 7 SESSIONS</div>
-                 <h3 className="font-serif text-[32px] text-ink mb-12 tracking-tight">Consistent upward trend.</h3>
+                 <h3 className="font-serif text-[26px] text-ink mb-12 tracking-tight">Consistent upward trend.</h3>
                  
                  <LazyChartWrapper />
                  
@@ -493,6 +493,23 @@ export default function HomeView() {
              ))}
            </div>
         </FadeUp>
+      </section>
+
+      {/* 4.75 MID-PAGE SECONDARY CTA — bridges the long gap between the hero
+          CTA and the final CTA. Kept to link weight so it never competes with
+          the two primary buttons. */}
+      <section className="bg-paper w-full border-b border-rule">
+        <div className="max-w-[1000px] mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <p className="font-serif text-[22px] md:text-[26px] text-ink tracking-tight">
+            Seen enough? Fly a paper before you commit.
+          </p>
+          <Link
+            to="/quiz/ata27"
+            className="shrink-0 inline-flex items-center gap-2 font-sans text-[15px] font-medium text-ink hover:text-navy transition-colors"
+          >
+            Take a free mock <MoveRight size={16} />
+          </Link>
+        </div>
       </section>
 
       {/* 5. TESTIMONIALS */}

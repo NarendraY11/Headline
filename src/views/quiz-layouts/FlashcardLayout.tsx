@@ -50,7 +50,7 @@ export default function FlashcardLayout({
                 Are you sure you want to exit? Your progress for this session will be lost.
               </p>
               <div className="flex justify-end gap-3">
-                <Button variant="ghost" className="border border-rule text-ink hover:bg-rule" onClick={() => setShowAbortPrompt(false)}>
+                <Button variant="ghost" className="border border-rule text-ink hover:bg-bg-2" onClick={() => setShowAbortPrompt(false)}>
                   Cancel
                 </Button>
                 <Button variant="ghost" className="border border-signal text-signal hover:bg-signal-soft" onClick={() => {
@@ -92,7 +92,7 @@ export default function FlashcardLayout({
           <Button 
             variant="ghost"
             onClick={() => setShowAbortPrompt(true)}
-            className="h-8 px-3 flex items-center gap-1.5 text-[10px] md:text-[11px] font-mono border border-rule rounded-full bg-transparent hover:bg-rule uppercase tracking-widest text-ink transition-colors"
+            className="h-8 px-3 flex items-center gap-1.5 text-[10px] md:text-[11px] font-mono border border-rule rounded-full bg-transparent hover:bg-bg-2 uppercase tracking-widest text-ink transition-colors"
           >
             Exit <X size={14} strokeWidth={1.5} className="mt-[-1px]" />
           </Button>
@@ -176,7 +176,7 @@ export default function FlashcardLayout({
              <Button
                variant="ghost"
                onClick={() => toggleBookmark(currentQ)}
-               className={`h-11 px-4 sm:px-5 rounded-full border bg-paper shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center gap-2 ${isBookmarked ? 'border-transparent text-paper bg-signal hover:bg-signal-strong shadow-md' : 'border-rule text-ink hover:bg-rule'}`}
+               className={`h-11 px-4 sm:px-5 rounded-full border bg-paper shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center gap-2 ${isBookmarked ? 'border-transparent text-paper bg-signal hover:bg-signal-strong shadow-md' : 'border-rule text-ink hover:bg-bg-2'}`}
              >
                <Bookmark size={15} strokeWidth={isBookmarked ? 2.5 : 1.5} fill={isBookmarked ? "currentColor" : "none"} className={isBookmarked ? 'mb-px' : ''} /> Save
              </Button>
@@ -195,7 +195,7 @@ export default function FlashcardLayout({
              <Button
                variant="ghost"
                onClick={handleNext}
-               className="h-11 px-5 sm:px-6 rounded-full border border-rule bg-paper hover:bg-rule text-ink shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center"
+               className="h-11 px-5 sm:px-6 rounded-full border border-rule bg-paper hover:bg-bg-2 text-ink shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center"
              >
                Skip
              </Button>

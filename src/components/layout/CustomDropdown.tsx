@@ -19,7 +19,7 @@ export function CustomDropdown({ value, options, onChange }: { value: string, op
   };
 
   return (
-    <div className="relative w-36" onBlur={(e) => {
+    <div className="relative w-40" onBlur={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget)) {
             setIsOpen(false);
         }
@@ -31,16 +31,16 @@ export function CustomDropdown({ value, options, onChange }: { value: string, op
         tabIndex={0}
         onClick={() => setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
-        className="flex items-center justify-between bg-bg border border-rule rounded-md text-ink px-4 py-3 cursor-pointer select-none font-mono text-xs shadow-sm hover:bg-rule/30 transition-all focus:outline-none focus:ring-2 focus:ring-navy/40 focus:border-navy"
+        className={`flex items-center justify-between bg-paper border rounded-md text-ink px-4 py-3 cursor-pointer select-none font-mono text-xs shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-navy/40 focus:border-navy hover:bg-bg-2 ${isOpen ? 'border-navy ring-2 ring-navy/30' : 'border-rule-strong hover:border-ink/40'}`}
         aria-label={`Select option, current is ${selectedLabel}`}
       >
         <span className="uppercase tracking-wider">{selectedLabel}</span>
-        <ChevronDown size={14} className="text-muted ml-3" />
+        <ChevronDown size={14} className={`text-ink-2 ml-3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
       {isOpen && (
         <div 
           role="listbox"
-          className="absolute top-full right-0 mt-1.5 bg-paper border border-rule rounded-md shadow-md z-10 w-full overflow-hidden"
+          className="absolute top-full right-0 mt-1.5 bg-paper border border-rule-strong rounded-md shadow-lg z-10 w-full overflow-hidden"
         >
           {options.map((opt) => (
             <div
