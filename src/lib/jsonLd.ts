@@ -17,7 +17,13 @@ export function buildFaqSchema(qnas: {question: string, answer: string}[]) {
 
 export function generateJsonLd(path: string): object[] {
   // @ts-ignore
-  const baseUrl = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_PUBLIC_URL) || "https://www.heading.com";
+  const envUrl = typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_APP_PUBLIC_URL;
+  // Prefer an explicit public URL, then the actual origin we're served from,
+  // and only fall back to a literal as a last resort (was wrongly www.heading.com).
+  const baseUrl =
+    envUrl ||
+    (typeof window !== "undefined" && window.location?.origin) ||
+    "https://headline-blush.vercel.app";
   
   const orgSchema = {
     "@context": "https://schema.org",

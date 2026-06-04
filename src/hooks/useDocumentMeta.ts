@@ -36,7 +36,8 @@ export function useDocumentMeta() {
     setElementAttr("meta", 'meta[property="og:title"]', "property", "og:title", "content", title);
     setElementAttr("meta", 'meta[property="og:description"]', "property", "og:description", "content", description);
     setElementAttr("meta", 'meta[property="og:url"]', "property", "og:url", "content", canonicalUrl);
-    setElementAttr("meta", 'meta[property="og:type"]', "property", "og:type", "content", "article");
+    const ogType = /^\/blog\/.+/.test(path) ? "article" : "website";
+    setElementAttr("meta", 'meta[property="og:type"]', "property", "og:type", "content", ogType);
     setElementAttr("meta", 'meta[property="og:image"]', "property", "og:image", "content", ogImage.startsWith("http") ? ogImage : `${origin}${ogImage}`);
 
     // Twitter card tags

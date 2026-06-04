@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Bind Tailwind's `dark:` variant to the `.dark` class instead of the
+   default `prefers-color-scheme` media query. The app toggles theme via a
+   `.dark` class on <html>; without this, `dark:` utilities keyed off the OS
+   setting and could conflict with the class-based token system (e.g. dark
+   background + light-mode `--ink` text → invisible). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   button, a, [role="button"], input, select, textarea {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg;

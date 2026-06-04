@@ -1,6 +1,6 @@
 import { AlertCircle } from "lucide-react";
-import { lazy, Suspense } from "react";
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAuth } from "./contexts/AuthContext";
 import { useFeature } from "./hooks/useFeatureFlags";
@@ -85,6 +85,18 @@ const PricingView = lazy(() => import("./views/PricingView"));
 
 
 
+// Handles the /login deep link. Logged-out users see the home page with the
+// sign-in modal opened; logged-in users are routed into the app so the URL
+// never lands on the catch-all 404.
+function LoginRoute() {
+  const { user, openAuthModal } = useAuth();
+  useEffect(() => {
+    if (!user) openAuthModal("signin");
+  }, [user, openAuthModal]);
+  if (user) return <Navigate to="/today" replace />;
+  return <HomeView />;
+}
+
 export default function App() {
   const maintenanceMode = useFeature("maintenanceMode");
   const { userData } = useAuth();
@@ -117,6 +129,11 @@ export default function App() {
           {/* PUBLIC ROUTES (No App Shell) */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<HomeView />} />
+            {/* /login: open the auth modal over home when logged out; once
+                authenticated, send to the app instead of 404-ing on /login. */}
+            <Route path="/login" element={<LoginRoute />} />
+            {/* Common bookmark/alias → real authenticated home. */}
+            <Route path="/dashboard" element={<Navigate to="/today" replace />} />
             <Route path="/about" element={<AboutView />} />
             <Route path="/pricing" element={<PricingView />} />
             <Route path="/reset-password" element={<ResetPasswordView />} />

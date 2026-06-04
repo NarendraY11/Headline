@@ -1,4 +1,4 @@
-import { blogPosts } from "../data/blog";
+import { blogPosts } from "../data/blog.js";
 
 interface SiteMapConfig {
   priority: string;

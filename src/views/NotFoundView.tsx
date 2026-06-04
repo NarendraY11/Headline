@@ -1,8 +1,21 @@
 import { ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/Atoms";
 
 export default function NotFoundView() {
+  // SPA can't return a real 404 HTTP status, so at least keep crawlers from
+  // indexing unknown routes as valid pages (mitigates the soft-404 problem).
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex, follow";
+    document.head.appendChild(meta);
+    return () => {
+      document.head.removeChild(meta);
+    };
+  }, []);
+
   return (
     <div className="relative min-h-[80vh] flex items-center justify-center p-4">
       <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
