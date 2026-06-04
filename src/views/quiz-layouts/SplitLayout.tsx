@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import FocusTrap from "focus-trap-react";
 import { CheckCircle2, XCircle, ArrowLeft, ArrowRight, Clock, Bookmark, Sparkles, X, Flag } from "lucide-react";
 import { Button, Chip, Wordmark } from "../../components/Atoms";
 import { QuizLayoutProps } from "./types";
@@ -41,46 +40,6 @@ export default function SplitLayout({
   const [isReportOpen, setIsReportOpen] = useState(false);
   return (
     <div className="flex flex-col h-screen h-[100dvh] bg-bg">
-      <AnimatePresence>
-        {showAbortPrompt && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/20 backdrop-blur-sm"
-          >
-            <FocusTrap>
-            <motion.div
-              initial={{ scale: 0.95, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 10 }}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="abort-dialog-title-split"
-              className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
-            >
-              <h3 id="abort-dialog-title-split" className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
-              <p className="font-sans text-sm text-ink-2 mb-6">
-                Are you sure you want to exit? Your progress for this session will be lost.
-              </p>
-              <div className="flex justify-end gap-3">
-                <Button variant="ghost" className="border border-signal text-signal hover:bg-signal-soft" onClick={() => {
-                   setShowAbortPrompt(false);
-                   localStorage.removeItem(storageKey);
-                   navigate('/modules');
-                }}>
-                  Abort
-                </Button>
-                <Button variant="ghost" className="border border-rule text-ink" onClick={() => setShowAbortPrompt(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </motion.div>
-            </FocusTrap>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* SHARED TOP BAR */}
       <header className="h-auto min-h-[calc(64px+var(--sat))] pt-[var(--sat)] border-b border-rule bg-bg shrink-0 px-4 md:px-8 flex flex-col md:flex-row md:items-center justify-between sticky top-0 z-40 py-3 md:py-0">
         

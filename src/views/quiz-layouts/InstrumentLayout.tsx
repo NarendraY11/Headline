@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import FocusTrap from "focus-trap-react";
 import { Bookmark, ArrowLeft, ArrowRight } from "lucide-react";
 import { Button, Wordmark } from "../../components/Atoms";
 import { QuizLayoutProps } from "./types";
@@ -61,46 +60,6 @@ export default function InstrumentLayout({
 
   return (
     <div className="dark flex flex-col h-screen h-[100dvh] overflow-hidden bg-bg text-ink selection:bg-mint/30">
-      <AnimatePresence>
-        {showAbortPrompt && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#050a12]/80 backdrop-blur-sm"
-          >
-            <FocusTrap>
-            <motion.div
-              initial={{ scale: 0.95, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 10 }}
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="abort-dialog-title-inst"
-              className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
-            >
-              <h3 id="abort-dialog-title-inst" className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
-              <p className="font-sans text-sm text-ink-2 mb-6">
-                Are you sure you want to exit? Your progress for this mock exam will be lost.
-              </p>
-              <div className="flex justify-end gap-3">
-                <Button variant="ghost" className="border border-signal text-signal hover:bg-signal-soft" onClick={() => {
-                   setShowAbortPrompt(false);
-                   localStorage.removeItem(storageKey);
-                   navigate('/modules');
-                }}>
-                  Abort
-                </Button>
-                <Button variant="ghost" className="border border-rule text-ink" onClick={() => setShowAbortPrompt(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </motion.div>
-            </FocusTrap>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* TOP BAR */}
       <header className="h-[calc(64px+var(--sat))] pt-[var(--sat)] border-b border-rule shrink-0 px-4 md:px-8 flex items-center justify-between z-40 bg-bg">
         <div className="flex items-center gap-4">
