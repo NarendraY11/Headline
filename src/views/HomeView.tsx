@@ -191,7 +191,7 @@ export default function HomeView() {
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-[#A66C23] tracking-tight leading-none">{activePilotsCount}</span>
-                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">PILOTS ACTIVE LIVE</span>
+                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">PILOTS ENROLLED</span>
               </div>
             </div>
           </FadeUp>
