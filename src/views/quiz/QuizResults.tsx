@@ -141,7 +141,7 @@ export default function QuizResults({
         </button>
       </header>
 
-      <div className="relative z-10 max-w-5xl mx-auto py-12 px-4 space-y-6">
+      <div className="relative z-10 max-w-5xl xl:max-w-6xl mx-auto py-12 px-4 space-y-6">
         {unlockedMilestone && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -178,7 +178,7 @@ export default function QuizResults({
               </span>
             </div>
 
-            <h1 className="font-serif text-[48px] md:text-[64px] text-ink leading-[1] tracking-tight mb-5">
+            <h1 className="font-serif text-[36px] sm:text-[44px] md:text-[48px] lg:text-[64px] text-ink leading-[1] tracking-tight mb-5">
               You{" "}
               <i className="font-serif italic tracking-normal text-navy">
                 {passed ? "passed" : "missed"}
@@ -240,7 +240,7 @@ export default function QuizResults({
               </span>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center gap-8 md:gap-14 mt-2">
+            <div className="flex flex-col sm:flex-row items-center gap-6 md:gap-14 mt-2">
               <div className="relative flex items-center justify-center w-40 h-40 shrink-0 z-10">
                 <svg width="160" height="160" className="transform -rotate-90 absolute">
                   <circle cx="80" cy="80" r="68" fill="none" stroke="currentColor" strokeWidth="6" className="text-white/10" />
@@ -358,7 +358,7 @@ export default function QuizResults({
               </span>
               <span className="font-serif text-xl ml-0.5 mt-1 text-muted">%</span>
             </div>
-            <span className="font-mono text-[9px] text-muted mt-auto">↑ 4 vs avg</span>
+            <span className="font-mono text-[9px] text-muted mt-auto">{passed ? `+${percentage - effectivePassMark}% above pass mark` : `${effectivePassMark - percentage}% below pass mark`}</span>
           </div>
 
           <div className="bg-paper rounded-xl p-6 shadow-sm border border-transparent flex flex-col justify-between">
@@ -371,10 +371,10 @@ export default function QuizResults({
           </div>
 
           <div className="bg-paper rounded-xl p-6 shadow-sm border border-transparent flex flex-col justify-between">
-            <span className="block font-mono text-[9px] text-muted-2 tracking-widest font-semibold mb-3 uppercase">CONFIDENCE</span>
-            <span className="font-serif text-[42px] leading-none text-ink mb-2">{confidence}</span>
+            <span className="block font-mono text-[9px] text-muted-2 tracking-widest font-semibold mb-3 uppercase">DECISIVE</span>
+            <span className="font-serif text-[42px] leading-none text-ink mb-2">{confidentAns}</span>
             <span className="font-mono text-[9px] text-muted mt-auto">
-              {confidentAns} of {totalQuestions} ≥ 4★
+              of {totalQuestions} answered in 5–45s
             </span>
           </div>
         </div>
@@ -438,13 +438,14 @@ export default function QuizResults({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left font-sans text-[13px] md:text-sm whitespace-nowrap">
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left font-sans text-[13px] md:text-sm">
               <thead>
                 <tr className="font-mono text-[9px] text-muted-2 tracking-widest uppercase border-b border-rule/50 font-semibold bg-bg/30">
                   <th className="font-normal py-4 px-6 md:px-8 w-12 text-center">#</th>
                   <th className="font-normal py-4 px-4 w-24">TOPIC</th>
-                  <th className="font-normal py-4 px-4 min-w-[300px]">QUESTION</th>
+                  <th className="font-normal py-4 px-4">QUESTION</th>
                   <th className="font-normal py-4 px-4 w-20 text-center">TIME</th>
                   <th className="font-normal py-4 px-6 md:px-8 w-32 text-right">RESULT</th>
                 </tr>
@@ -466,29 +467,63 @@ export default function QuizResults({
                     }
                   }
                   const timeStr = timePerQuestion[q.id] ? formatTime(timePerQuestion[q.id]) : "--:--";
-
                   return (
-                    <tr role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+                    <tr
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                       key={q.id}
                       className={`transition-colors group cursor-pointer ${bgHover}`}
-                      onClick={() =>
-                        navigate(`/quiz/${topicId || "review"}-review`, {
-                          state: { customQuestions: [q], generatedTopic: "Review Detail" },
-                        })
-                      }
+                      onClick={() => navigate(`/quiz/${topicId || "review"}-review`, { state: { customQuestions: [q], generatedTopic: "Review Detail" } })}
                     >
                       <td className="py-4 px-6 md:px-8 text-center text-muted font-mono text-xs">{(i + 1).toString().padStart(2, "0")}</td>
-                      <td className="py-4 px-4 text-muted-2 font-mono text-[10px] uppercase tracking-wider">{q.ata}</td>
-                      <td className="py-4 px-4 text-ink truncate max-w-sm lg:max-w-xl">{q.prompt}</td>
-                      <td className="py-4 px-4 text-center font-mono text-[10px] text-muted">{timeStr}</td>
-                      <td className={`py-4 px-6 md:px-8 text-right font-mono text-[10px] tracking-widest uppercase flex items-center justify-end gap-2 group-hover:font-semibold transition-all shadow-none ${statusColor}`}>
-                        {statusText} <ArrowRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity -ml-1 group-hover:ml-0" />
+                      <td className="py-4 px-4 text-muted-2 font-mono text-[10px] uppercase tracking-wider whitespace-nowrap">{q.ata}</td>
+                      <td className="py-4 px-4 text-ink">{q.prompt}</td>
+                      <td className="py-4 px-4 text-center font-mono text-[10px] text-muted whitespace-nowrap">{timeStr}</td>
+                      <td className={`py-4 px-6 md:px-8 text-right font-mono text-[10px] tracking-widest uppercase whitespace-nowrap group-hover:font-semibold transition-all ${statusColor}`}>
+                        <span className="flex items-center justify-end gap-2">
+                          {statusText} <ArrowRight size={10} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </span>
                       </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="md:hidden divide-y divide-rule/50">
+            {(showAllQs ? questions : questions.slice(0, 7)).map((q, i) => {
+              let statusText = "SKIPPED";
+              let statusColor = "text-muted";
+              let bgHover = "hover:bg-panel";
+              if (answers[q.id]) {
+                if (answers[q.id] === q.correct) {
+                  statusText = "✓ CORRECT";
+                  statusColor = "text-mint";
+                  bgHover = "hover:bg-ring-green/5";
+                } else {
+                  statusText = "✕ MISSED";
+                  statusColor = "text-signal";
+                  bgHover = "hover:bg-signal/5";
+                }
+              }
+              const timeStr = timePerQuestion[q.id] ? formatTime(timePerQuestion[q.id]) : "--:--";
+              return (
+                <button
+                  key={q.id}
+                  className={`w-full text-left px-6 py-4 transition-colors ${bgHover}`}
+                  onClick={() => navigate(`/quiz/${topicId || "review"}-review`, { state: { customQuestions: [q], generatedTopic: "Review Detail" } })}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wider">{q.ata} · {timeStr}</span>
+                    <span className={`font-mono text-[9px] uppercase tracking-widest font-semibold ${statusColor}`}>{statusText}</span>
+                  </div>
+                  <p className="font-sans text-[13px] text-ink leading-snug">{q.prompt}</p>
+                </button>
+              );
+            })}
           </div>
 
           {questions.length > 7 && (

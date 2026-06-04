@@ -40,7 +40,7 @@ export function PublicLayout() {
             <Link to="/today" className="text-sm font-sans text-muted hover:text-ink hidden md:block">Dashboard</Link>
           )}
           <Link to="/modules" className="hidden md:block">
-            <Button variant="primary" className="h-[34px] px-3.5 text-xs font-sans font-semibold border-0">Start studying</Button>
+            <Button variant="primary" className="h-[44px] px-3.5 text-xs font-sans font-semibold border-0">Start studying</Button>
           </Link>
           {/* Mobile Menu Activation (hamburger) */}
           <button

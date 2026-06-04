@@ -101,13 +101,13 @@ export default function HomeView() {
             <>
               <Link to="/today" className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors hidden sm:block">Dashboard</Link>
               <Link to="/today">
-                <Button variant="primary" className="h-[38px] px-4 sm:px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Resume studying <MoveRight size={14} className="ml-1.5" /></Button>
+                <Button variant="primary" className="h-[44px] px-4 sm:px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Resume studying <MoveRight size={14} className="ml-1.5" /></Button>
               </Link>
             </>
           ) : (
             <>
               <button onClick={() => openAuthModal("signin")} className="hidden sm:block text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors cursor-pointer">Sign in</button>
-              <Button onClick={() => openAuthModal("signup")} variant="primary" className="h-[38px] px-4 sm:px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Start studying <MoveRight size={14} className="ml-1.5" /></Button>
+              <Button onClick={() => openAuthModal("signup")} variant="primary" className="h-[44px] px-4 sm:px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Start studying <MoveRight size={14} className="ml-1.5" /></Button>
             </>
           )}
         </div>
@@ -153,7 +153,7 @@ export default function HomeView() {
               <span className="tracking-[0.25em]">EXAM PREP · DGCA · EASA · ATPL · TYPE RATING</span>
             </span>
             <h1 
-              className="font-serif text-[42px] md:text-[48px] lg:text-[80px] xl:text-[100px] leading-[0.95] tracking-tight text-ink mb-6 md:mb-8 select-none whitespace-normal md:break-words min-w-0"
+              className="font-serif text-[32px] sm:text-[38px] md:text-[48px] lg:text-[80px] xl:text-[100px] leading-[0.95] tracking-tight text-ink mb-6 md:mb-8 select-none whitespace-normal break-words min-w-0"
               style={{ textShadow: '0 2px 8px rgba(242, 238, 228, 0.7)' }}
             >
               Fly the <span className="italic text-navy">checkride</span><br />
@@ -176,7 +176,7 @@ export default function HomeView() {
                </Link>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 border-t border-rule/30 pt-8 w-full mt-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8 border-t border-rule/30 pt-8 w-full mt-6">
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{liveQuestionsCount.toLocaleString()}</span>
                 <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">QUESTIONS AVAILABLE</span>
@@ -214,7 +214,9 @@ export default function HomeView() {
               ASSISTING CADETS APPROVED FOR TYPE RATINGS AT SECURE CARRIERS
             </div>
             <div className="h-[30px] w-[1px] bg-rule hidden md:block" />
-            <div className="flex gap-10 md:gap-16 whitespace-nowrap overflow-x-auto no-scrollbar font-serif text-[22px] text-ink opacity-60 tracking-tight items-center w-full">
+            <div className="relative flex-1 min-w-0">
+              <div className="absolute right-0 top-0 bottom-0 w-12 bg-gradient-to-l from-paper to-transparent pointer-events-none z-10 md:hidden" />
+              <div className="flex gap-10 md:gap-16 whitespace-nowrap overflow-x-auto no-scrollbar font-serif text-[22px] text-ink opacity-60 tracking-tight items-center w-full pr-8 md:pr-0">
                <span>Indigo Airlines</span>
                <span>Air India</span>
                <span>FlyDubai</span>

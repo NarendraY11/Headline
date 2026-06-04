@@ -469,7 +469,7 @@ export default function MockExamsView() {
                 </Card>
               ) : (
                 <Card className="bg-panel border-rule overflow-hidden p-0">
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto hidden md:block">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="border-b border-rule font-mono uppercase text-[9px] tracking-widest text-muted-2 bg-bg-2/30">
@@ -540,6 +540,34 @@ export default function MockExamsView() {
                         })}
                       </tbody>
                     </table>
+                  </div>
+                  {/* Mobile card fallback */}
+                  <div className="md:hidden divide-y divide-rule/40 font-sans text-xs">
+                    {attempts.map((attempt) => {
+                      const dateText = new Date(attempt.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+                      const title = attempt.data?.topicTitle || attempt.topic_id || "Simulator Session";
+                      const passThreshold = attempt.data?.overridePassMark || 70;
+                      const pct = attempt.percentage !== undefined ? attempt.percentage : Math.round((attempt.score / attempt.total) * 100);
+                      const isPass = pct >= passThreshold;
+                      const getModeLabel = (m: string) => { switch (m) { case "timed": return "Full Mock"; case "subject_mock": return "Subject Mock"; case "practice": return "Guided Practice"; default: return m ? m.charAt(0).toUpperCase() + m.slice(1) : "Session"; } };
+                      return (
+                        <div key={attempt.id} className="p-4 flex flex-col gap-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-medium text-ink leading-tight">{title}</span>
+                            <span className={`shrink-0 inline-block font-mono text-[9px] font-bold rounded px-2 py-0.5 border ${isPass ? "border-emerald-500/20 text-emerald-700 bg-emerald-500/5" : "border-signal-soft text-signal bg-signal-soft"}`}>
+                              {isPass ? "PASS" : "FAIL"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 font-mono text-[10px] text-muted-2">
+                            <span>{dateText}</span>
+                            <span className="text-rule">·</span>
+                            <span>{getModeLabel(attempt.mode)}</span>
+                            <span className="text-rule">·</span>
+                            <span className="font-medium text-ink">{pct}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </Card>
               )}

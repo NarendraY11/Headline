@@ -68,7 +68,7 @@ const ToastItem: React.FC<{ toast: ToastMessage; onDismiss: () => void }> = ({ t
 
   return (
     <div
-      className={`anim-toast pointer-events-auto flex items-start gap-3 bg-paper border border-rule shadow-lg rounded-lg p-4 min-w-[300px] max-w-sm border-l-4 ${borders[toast.type]}`}
+      className={`anim-toast pointer-events-auto flex items-start gap-3 bg-paper border border-rule shadow-lg rounded-lg p-4 min-w-[240px] sm:min-w-[300px] max-w-[calc(100vw-2rem)] sm:max-w-sm border-l-4 ${borders[toast.type]}`}
     >
       {icons[toast.type]}
       <div className="flex-1">

@@ -39,7 +39,7 @@ export default function SplitLayout({
 }: QuizLayoutProps) {
   const [isReportOpen, setIsReportOpen] = useState(false);
   return (
-    <div className="flex flex-col h-screen h-[100dvh] bg-bg overflow-hidden">
+    <div className="flex flex-col h-screen h-[100dvh] bg-bg">
       <AnimatePresence>
         {showAbortPrompt && (
           <motion.div 
@@ -52,22 +52,25 @@ export default function SplitLayout({
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
-              className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
+              role="dialog"
+            aria-modal="true"
+            aria-labelledby="abort-dialog-title-split"
+            className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
             >
-              <h3 className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
+              <h3 id="abort-dialog-title-split" className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
               <p className="font-sans text-sm text-ink-2 mb-6">
                 Are you sure you want to exit? Your progress for this session will be lost.
               </p>
               <div className="flex justify-end gap-3">
-                <Button variant="ghost" className="border border-rule text-ink" onClick={() => setShowAbortPrompt(false)}>
-                  Cancel
-                </Button>
                 <Button variant="ghost" className="border border-signal text-signal hover:bg-signal-soft" onClick={() => {
                    setShowAbortPrompt(false);
                    localStorage.removeItem(storageKey);
                    navigate('/modules');
                 }}>
                   Abort
+                </Button>
+                <Button variant="ghost" className="border border-rule text-ink" onClick={() => setShowAbortPrompt(false)}>
+                  Cancel
                 </Button>
               </div>
             </motion.div>

@@ -145,7 +145,7 @@ export function RecentEventsAuditTable({ profiles }: RecentEventsAuditTableProps
       ) : filteredEvents.length === 0 ? (
         <p className="text-center text-xs text-muted-2 py-6">No recent events match this filter category.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto hidden md:block">
           <table className="w-full text-left border-collapse font-sans text-xs">
             <thead>
               <tr className="border-b border-rule font-mono uppercase tracking-wide text-muted text-[10px] bg-bg-2/30">
@@ -198,6 +198,25 @@ export function RecentEventsAuditTable({ profiles }: RecentEventsAuditTableProps
               })}
             </tbody>
           </table>
+        </div>
+        {/* Mobile card fallback */}
+        <div className="md:hidden divide-y divide-rule/30 font-sans text-xs">
+          {filteredEvents.map((ev) => {
+            const userProfile = ev.user_id ? profiles[ev.user_id] : null;
+            const email = ev.metadata?.user_email || userProfile?.email || "Unknown Agent";
+            const createdTime = new Date(ev.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+            return (
+              <div key={ev.id} className="p-3 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-[10px] text-ink truncate flex-1">{email}</span>
+                  <span className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase tracking-wider ${getBadgeClass(ev.event_type)}`}>
+                    {cleanName(ev.event_type)}
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] text-muted">{createdTime}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </Card>

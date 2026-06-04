@@ -51,7 +51,7 @@ export function AiUsageHardestQuestions({ aiUsageData, hardestQuestions, COLORS 
       </div>
 
       {/* Hardest Questions table */}
-      <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col h-[340px] shadow-sm lg:col-span-2 overflow-hidden">
+      <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col h-[260px] sm:h-[300px] lg:h-[340px] shadow-sm lg:col-span-2 overflow-hidden">
         <div className="mb-4">
           <h3 className="font-serif text-lg font-medium text-ink">Lowest Accuracy Questions</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Statistically hardest questions based on user fail-rates</p>

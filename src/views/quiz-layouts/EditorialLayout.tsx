@@ -15,6 +15,7 @@ export default function EditorialLayout({
   selectedOptionId,
   answers,
   submittedIds,
+  revealedIds,
   isSubmittedPractice,
   isRevealedViva,
   isBookmarked,
@@ -26,8 +27,11 @@ export default function EditorialLayout({
   handleSelectOption,
   handleSubmitPractice,
   handleRevealViva,
+  handleVivaKnew,
+  handleVivaDidntKnow,
   handleNext,
   handlePrev,
+  handleJump,
   toggleBookmark,
   handleExplainDeeper,
   setShowAbortPrompt,
@@ -52,22 +56,25 @@ export default function EditorialLayout({
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
-              className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
+              role="dialog"
+            aria-modal="true"
+            aria-labelledby="abort-dialog-title"
+            className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
             >
-              <h3 className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
+              <h3 id="abort-dialog-title" className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
               <p className="font-sans text-sm text-ink-2 mb-6">
                 Are you sure you want to exit? Your progress for this session will be lost.
               </p>
               <div className="flex justify-end gap-3">
-                <Button variant="ghost" className="border border-rule text-ink" onClick={() => setShowAbortPrompt(false)}>
-                  Cancel
-                </Button>
                 <Button variant="ghost" className="border border-signal text-signal hover:bg-signal-soft" onClick={() => {
                    setShowAbortPrompt(false);
                    localStorage.removeItem(storageKey);
                    navigate('/modules');
                 }}>
                   Abort
+                </Button>
+                <Button variant="ghost" className="border border-rule text-ink" onClick={() => setShowAbortPrompt(false)}>
+                  Cancel
                 </Button>
               </div>
             </motion.div>
@@ -149,29 +156,41 @@ export default function EditorialLayout({
       <main className="flex-1 w-full max-w-[760px] mx-auto px-4 pt-6 pb-24 flex flex-col relative z-10">
         
          {/* Progress Dot Bar */}
-        <div className="flex items-center justify-center gap-2 w-full mb-10 overflow-x-auto pb-2 overflow-y-hidden">
-          {questions.map((q, idx) => {
-            let dotClass = "bg-rule w-2 h-2"; // upcoming / default
-            
-            if (idx === currentIndex) {
-              dotClass = "bg-ink w-2.5 h-2.5"; // current
-            } else if (mode === 'practice' && submittedIds.has(q.id)) {
-              const isCorrect = answers[q.id] === q.correct;
-              dotClass = isCorrect ? "bg-mint w-2.5 h-2.5" : "bg-signal w-2.5 h-2.5";
-            } else if ((mode === 'timed' || mode === 'viva') && answers[q.id]) {
-              dotClass = "bg-ink-2 w-2.5 h-2.5"; // roughly analogous to filled
-            }
-            
-            return (
-              <motion.div 
-                key={q.id} 
-                layout
-                initial={false}
-                animate={{ scale: idx === currentIndex ? 1.2 : 1 }}
-                className={`rounded-full transition-colors duration-300 shrink-0 ${dotClass}`} 
-              />
-            );
-          })}
+        <div className="flex items-center gap-3 w-full mb-10">
+          <div className="relative flex-1 min-w-0">
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-bg to-transparent pointer-events-none z-10" />
+          <div className="flex items-center justify-start gap-2 overflow-x-auto pb-1 overflow-y-hidden pr-6">
+            {questions.map((q, idx) => {
+              let dotClass = "bg-rule w-2 h-2"; // upcoming / default
+
+              if (idx === currentIndex) {
+                dotClass = "bg-ink w-2.5 h-2.5"; // current
+              } else if (mode === 'practice' && submittedIds.has(q.id)) {
+                const isCorrect = answers[q.id] === q.correct;
+                dotClass = isCorrect ? "bg-mint w-2.5 h-2.5" : "bg-signal w-2.5 h-2.5";
+              } else if (mode === 'timed' && answers[q.id]) {
+                dotClass = "bg-sky w-2.5 h-2.5";
+              } else if (mode === 'viva' && revealedIds.has(q.id)) {
+                dotClass = "bg-mint w-2.5 h-2.5";
+              }
+
+              return (
+                <motion.button
+                  key={q.id}
+                  layout
+                  initial={false}
+                  animate={{ scale: idx === currentIndex ? 1.2 : 1 }}
+                  onClick={() => handleJump(idx)}
+                  aria-label={`Question ${idx + 1}${idx === currentIndex ? ', current' : ''}`}
+                  className={`rounded-full transition-colors duration-300 shrink-0 outline-none focus-visible:ring-2 focus-visible:ring-ink/40 ${dotClass}`}
+                />
+              );
+            })}
+          </div>
+          </div>
+          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-2 shrink-0 tabular-nums">
+            {currentIndex + 1}/{totalQuestions}
+          </span>
         </div>
 
         <AnimatePresence mode="wait">
@@ -275,16 +294,16 @@ export default function EditorialLayout({
                      if (isCorrect) {
                        containerClass = "bg-mint-soft border-mint text-mint z-10 relative";
                        iconMarkup = <CheckCircle2 size={18} />;
-                       animateProps = { scale: [1, 1.01, 1], transition: { duration: 0.4, ease: "easeInOut" } };
+                       animateProps = { scale: [1, 1.03, 1], transition: { duration: 0.4, ease: "easeInOut" } };
                      } else if (isSelected && !isCorrect) {
                        containerClass = "bg-signal-soft border-signal text-signal opacity-100 z-10 relative";
                        iconMarkup = <XCircle size={18} />;
                        animateProps = { x: [0, -5, 5, -5, 5, 0], transition: { duration: 0.4 } };
                      } else {
-                       containerClass = "bg-transparent border-rule opacity-35";
+                       containerClass = "bg-transparent border-rule opacity-60";
                      }
                    } else if (isSelected) {
-                     containerClass = "bg-paper border-ink shadow-sm ring-1 ring-inset ring-ink";
+                     containerClass = "bg-ink/[0.06] border-ink shadow-sm ring-2 ring-ink ring-offset-1";
                      animateProps = { scale: 1.01 };
                    }
 
@@ -305,7 +324,9 @@ export default function EditorialLayout({
                            handleSelectOption(choice.id);
                          }
                        }}
-                       className={`p-5 rounded-xl border flex items-center gap-5 outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:border-sky-soft transition-shadow ${containerClass}`}
+                       aria-label={`Choice ${charLabel}: ${choice.label}`}
+                       aria-pressed={isSelected}
+                       className={`p-5 rounded-xl border flex items-center gap-5 outline-none focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:border-ink/30 transition-shadow ${containerClass}`}
                      >
                        <div className="w-8 h-8 rounded-full border border-current flex items-center justify-center shrink-0 bg-paper transition-colors">
                          {iconMarkup}
@@ -329,7 +350,7 @@ export default function EditorialLayout({
                 >
                    <div className="p-6 md:p-8 flex-1">
                      <span className="font-mono text-[9px] text-muted-2 tracking-widest uppercase mb-4 block">MODEL RATIONALE</span>
-                     <p className="font-serif text-[24px] md:text-[26px] text-ink leading-snug mb-6">
+                     <p className="font-sans text-[15px] md:text-[16px] text-ink leading-relaxed mb-6">
                         {currentQ.explanation}
                      </p>
                      <div className="flex flex-wrap gap-2.5 items-center">
@@ -398,48 +419,68 @@ export default function EditorialLayout({
         <div className="sticky bottom-0 bg-bg mt-auto z-30 flex flex-col">
           {/* Mobile Action Bar */}
           <div className="md:hidden pb-[calc(1rem+var(--sab))] pt-3 border-t border-rule flex items-center gap-3">
-             <button 
+             <button
                onClick={() => toggleBookmark(currentQ)}
+               aria-label={isBookmarked ? "Remove bookmark" : "Bookmark this question"}
                className={`rounded-full border transition-colors shrink-0 flex items-center justify-center ${isBookmarked ? 'bg-signal-soft border-signal text-signal' : 'bg-transparent border-rule text-muted'}`}
                style={{ width: "48px", height: "48px" }}
              >
                <Bookmark size={18} strokeWidth={2} fill={isBookmarked ? "currentColor" : "none"} />
              </button>
-             
+
              <div className="flex-1">
                 {mode === "practice" && !isSubmittedPractice ? (
-                   <Button 
-                     variant="primary" 
+                   <Button
+                     variant="primary"
                      onClick={handleSubmitPractice}
                      disabled={!selectedOptionId}
+                     title={!selectedOptionId ? "Select an answer first" : undefined}
                      className={`w-full h-[48px] bg-ink text-bg rounded-[24px] text-[15px] font-medium flex items-center justify-center border-0 ${!selectedOptionId ? 'opacity-40 cursor-not-allowed' : ''}`}
                    >
                      Submit answer <ArrowRight size={18} className="ml-2" />
                    </Button>
                 ) : mode === "viva" && !isRevealedViva ? (
-                   <Button 
-                     variant="primary" 
+                   <Button
+                     variant="primary"
                      onClick={() => handleRevealViva(currentQ.id)}
                      className="w-full h-[48px] bg-ink text-bg rounded-[24px] text-[15px] font-medium flex items-center justify-center border-0"
                    >
                      Reveal answer <ArrowRight size={18} className="ml-2" />
                    </Button>
+                ) : mode === "viva" && isRevealedViva && handleVivaKnew ? (
+                   <div className="flex gap-2 w-full">
+                     <Button
+                       variant="primary"
+                       onClick={() => handleVivaKnew!(currentQ.id)}
+                       className="flex-1 h-[48px] bg-mint text-bg rounded-[24px] text-[14px] font-medium flex items-center justify-center border-0 gap-1.5"
+                     >
+                       <CheckCircle2 size={16} /> Got it
+                     </Button>
+                     <Button
+                       variant="ghost"
+                       onClick={() => handleVivaDidntKnow!(currentQ.id)}
+                       className="flex-1 h-[48px] border border-signal text-signal rounded-[24px] text-[14px] font-medium flex items-center justify-center gap-1.5"
+                     >
+                       Review again
+                     </Button>
+                   </div>
                 ) : mode === "timed" && !answers[currentQ.id] ? (
-                   <Button 
-                     variant="primary" 
+                   <Button
+                     variant="primary"
                      onClick={() => handleSelectOption(selectedOptionId!)}
                      disabled={!selectedOptionId}
+                     title={!selectedOptionId ? "Select an answer first" : undefined}
                      className={`w-full h-[48px] bg-ink text-bg rounded-[24px] text-[15px] font-medium flex items-center justify-center border-0 ${!selectedOptionId ? 'opacity-40 cursor-not-allowed' : ''}`}
                    >
                      Confirm <ArrowRight size={18} className="ml-2" />
                    </Button>
                 ) : (
-                   <Button 
-                     variant="primary" 
-                     className="w-full h-[48px] bg-ink text-bg rounded-[24px] text-[15px] font-medium flex items-center justify-center border-0" 
+                   <Button
+                     variant="primary"
+                     className="w-full h-[48px] bg-ink text-bg rounded-[24px] text-[15px] font-medium flex items-center justify-center border-0"
                      onClick={handleNext}
                    >
-                     {currentIndex === totalQuestions - 1 ? 'Complete Sequence' : 'Next'} <ArrowRight size={18} className="ml-2" />
+                     {currentIndex === totalQuestions - 1 ? 'Finish' : 'Next'} <ArrowRight size={18} className="ml-2" />
                    </Button>
                 )}
              </div>
@@ -447,10 +488,10 @@ export default function EditorialLayout({
 
           {/* Desktop Action Bar */}
           <div className="hidden md:flex pb-[calc(1.5rem+var(--sab))] pt-4 border-t border-rule items-center justify-between w-full">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               onClick={handlePrev}
-              className={`opacity-100 h-9 px-4 text-[13px] ${currentIndex === 0 ? 'invisible' : ''}`}
+              className={`h-9 px-4 text-[13px] transition-opacity ${currentIndex === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
             >
                <ArrowLeft size={16} className="mr-1.5" /> Previous
             </Button>
@@ -458,40 +499,59 @@ export default function EditorialLayout({
             <div className="flex items-center gap-3">
                {mode === "practice" && !isSubmittedPractice && (
                  <Button variant="ghost" className="h-9 px-4 text-[13px]" onClick={handleNext}>
-                   Skip for now
+                   Skip
                  </Button>
                )}
 
                {/* Contextual Action Button */}
                {mode === "practice" && !isSubmittedPractice ? (
-                  <Button 
-                    variant="primary" 
+                  <Button
+                    variant="primary"
                     onClick={handleSubmitPractice}
                     disabled={!selectedOptionId}
+                    title={!selectedOptionId ? "Select an answer first" : undefined}
                     className={`h-9 px-5 text-[13px] ${!selectedOptionId ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
                     Submit answer <ArrowRight size={16} className="ml-1.5" />
                   </Button>
                ) : mode === "viva" && !isRevealedViva ? (
-                 <Button 
-                    variant="primary" 
+                 <Button
+                    variant="primary"
                     onClick={() => handleRevealViva(currentQ.id)}
                     className="h-9 px-5 text-[13px]"
                   >
                     Reveal answer <ArrowRight size={16} className="ml-1.5" />
                   </Button>
+               ) : mode === "viva" && isRevealedViva && handleVivaKnew ? (
+                 <>
+                   <Button
+                     variant="ghost"
+                     onClick={() => handleVivaDidntKnow!(currentQ.id)}
+                     className="h-9 px-4 text-[13px] border border-signal text-signal hover:bg-signal-soft"
+                   >
+                     Review again
+                   </Button>
+                   <Button
+                     variant="primary"
+                     onClick={() => handleVivaKnew!(currentQ.id)}
+                     className="h-9 px-5 text-[13px] bg-mint border-0 text-bg hover:bg-mint/80 flex items-center gap-1.5"
+                   >
+                     <CheckCircle2 size={15} /> Got it
+                   </Button>
+                 </>
                ) : mode === "timed" && !answers[currentQ.id] ? (
-                 <Button 
-                    variant="primary" 
+                 <Button
+                    variant="primary"
                     onClick={() => handleSelectOption(selectedOptionId!)}
                     disabled={!selectedOptionId}
+                    title={!selectedOptionId ? "Select an answer first" : undefined}
                     className={`h-9 px-5 text-[13px] ${!selectedOptionId ? 'opacity-40 cursor-not-allowed' : ''}`}
                  >
                     Confirm <ArrowRight size={16} className="ml-1.5" />
                  </Button>
                ) : (
                   <Button variant="primary" className="h-9 px-5 text-[13px]" onClick={handleNext}>
-                    {currentIndex === totalQuestions - 1 ? 'Complete Sequence' : 'Next'} <ArrowRight size={16} className="ml-1.5" />
+                    {currentIndex === totalQuestions - 1 ? 'Finish' : 'Next'} <ArrowRight size={16} className="ml-1.5" />
                   </Button>
                )}
             </div>

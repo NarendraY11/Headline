@@ -436,7 +436,7 @@ export default function TopicView() {
               </div>
 
               {/* Title */}
-              <h1 className="font-serif text-[44px] md:text-[64px] text-ink leading-none tracking-tight mb-8 max-w-3xl">
+              <h1 className="font-serif text-[32px] sm:text-[40px] md:text-[56px] lg:text-[64px] text-ink leading-none tracking-tight mb-8 max-w-3xl">
                 {/* Make last word italic for style as requested */}
                 {selectedSub.title.split(" ").map((word, i, arr) => (
                   <span
