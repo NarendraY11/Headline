@@ -198,7 +198,7 @@ export default function AdminSettings() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Add Admin form */}
         <div className="col-span-1">
-          <div className="bg-white border border-rule rounded-xl p-5 shadow-xs space-y-4">
+          <div className="bg-paper border border-rule rounded-xl p-5 shadow-xs space-y-4">
             <div>
               <h3 className="font-serif text-base font-medium text-ink">Enroll Administrator</h3>
               <p className="font-mono text-[9px] text-muted uppercase tracking-wider mt-0.5">Authorize colleagues access</p>
@@ -235,7 +235,7 @@ export default function AdminSettings() {
 
         {/* Admins list */}
         <div className="col-span-2">
-          <div className="bg-white border border-rule rounded-xl shadow-xs overflow-hidden">
+          <div className="bg-paper border border-rule rounded-xl shadow-xs overflow-hidden">
             <div className="p-5 border-b border-rule bg-bg-2/30">
               <h3 className="font-serif text-base font-medium text-ink">Authorized Administrators List</h3>
               <p className="font-mono text-[9px] text-muted uppercase tracking-wider mt-0.5">Verify personnel roster</p>
@@ -304,7 +304,7 @@ export default function AdminSettings() {
       </div>
 
       {/* Broadcast notification */}
-      <div className="bg-white border border-rule rounded-xl p-5 shadow-xs space-y-4">
+      <div className="bg-paper border border-rule rounded-xl p-5 shadow-xs space-y-4">
         <div className="flex items-center gap-2 border-b border-rule pb-3">
           <Megaphone size={16} className="text-navy" />
           <div>

@@ -10,7 +10,7 @@ export function SubjectHeatmapCharts({ usageBySubject, heatmapData }: Props) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
       {/* Usage by Subject */}
-      <div className="bg-white border border-rule rounded-xl p-6 flex flex-col min-h-[360px] shadow-sm">
+      <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col min-h-[360px] shadow-sm">
         <div className="mb-4">
           <h3 className="font-serif text-lg font-medium text-ink">Most Popular Subjects</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Total quiz simulation requests (top 10 subjects)</p>
@@ -42,7 +42,7 @@ export function SubjectHeatmapCharts({ usageBySubject, heatmapData }: Props) {
       </div>
 
       {/* Sub-category Heatmap */}
-      <div className="bg-white border border-rule rounded-xl p-6 flex flex-col min-h-[360px] shadow-sm justify-between">
+      <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col min-h-[360px] shadow-sm justify-between">
         <div>
           <h3 className="font-serif text-lg font-medium text-ink">Sub-category Activity Intensity</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider mb-4">Focus intensity heatmap based on question answers count</p>

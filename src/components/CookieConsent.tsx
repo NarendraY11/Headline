@@ -55,7 +55,7 @@ export function CookieConsent() {
               </div>
               <div className="space-y-1">
                 <h5 className="font-serif font-medium text-sm text-ink leading-tight">Consent Settings</h5>
-                <span className="font-mono text-[8px] text-muted-2 tracking-widest uppercase block">REGULATORY TRANSPARENCY</span>
+                <span className="font-mono text-[10px] text-muted tracking-widest uppercase block">REGULATORY TRANSPARENCY</span>
               </div>
               <button 
                 onClick={handleDecline} 

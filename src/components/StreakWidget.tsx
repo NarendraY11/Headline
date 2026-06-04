@@ -175,7 +175,7 @@ export default function StreakWidget() {
                         key={`day-${d}`}
                         className={`w-6 h-6 flex items-center justify-center rounded-full text-[10px] font-mono transition-all relative ${
                           isActive
-                            ? "bg-signal text-white font-bold shadow-[0_2px_6px_rgba(235,94,40,0.15)]"
+                            ? "bg-signal text-bg font-bold shadow-[0_2px_6px_rgba(235,94,40,0.15)]"
                             : isTodayCell
                               ? "border border-dashed border-signal/60 text-signal font-semibold bg-signal/5"
                               : "text-ink/75 hover:bg-bg-2"

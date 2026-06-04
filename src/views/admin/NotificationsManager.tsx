@@ -212,7 +212,7 @@ export default function NotificationsManager() {
       </div>
 
       {/* Compose */}
-      <Card className="bg-white border border-rule shadow-sm overflow-hidden">
+      <Card className="bg-paper border border-rule shadow-sm overflow-hidden">
         <div className="p-5 border-b border-rule bg-bg-2/20">
           <h3 className="font-serif text-lg font-medium text-ink">Compose notification</h3>
         </div>
@@ -226,7 +226,7 @@ export default function NotificationsManager() {
                 type="button"
                 onClick={() => switchMode("personal")}
                 className={`flex items-center gap-1.5 px-4 py-2 font-mono text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer ${
-                  mode === "personal" ? "bg-navy text-bg" : "bg-white text-muted hover:bg-bg-2"
+                  mode === "personal" ? "bg-navy text-bg" : "bg-paper text-muted hover:bg-bg-2"
                 }`}
               >
                 <User size={13} /> Personal
@@ -235,7 +235,7 @@ export default function NotificationsManager() {
                 type="button"
                 onClick={() => switchMode("group")}
                 className={`flex items-center gap-1.5 px-4 py-2 font-mono text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer border-l border-rule ${
-                  mode === "group" ? "bg-navy text-bg" : "bg-white text-muted hover:bg-bg-2"
+                  mode === "group" ? "bg-navy text-bg" : "bg-paper text-muted hover:bg-bg-2"
                 }`}
               >
                 <Users size={13} /> Group
@@ -273,7 +273,7 @@ export default function NotificationsManager() {
               </div>
             )}
 
-            <div className="border border-rule rounded-lg max-h-64 overflow-y-auto divide-y divide-rule/60 bg-white">
+            <div className="border border-rule rounded-lg max-h-64 overflow-y-auto divide-y divide-rule/60 bg-paper">
               {loadingProfiles ? (
                 <div className="py-8 text-center font-mono text-[10px] uppercase tracking-wider text-muted">Loading roster…</div>
               ) : filteredProfiles.length === 0 ? (
@@ -300,7 +300,7 @@ export default function NotificationsManager() {
                       }}
                       className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-bg-2/50 ${selected ? "bg-navy/5" : ""}`}
                     >
-                      <span className={`w-4 h-4 shrink-0 border flex items-center justify-center ${mode === "personal" ? "rounded-full" : "rounded"} ${selected ? "bg-navy border-navy text-white" : "border-rule bg-white"}`}>
+                      <span className={`w-4 h-4 shrink-0 border flex items-center justify-center ${mode === "personal" ? "rounded-full" : "rounded"} ${selected ? "bg-navy border-navy text-white" : "border-rule bg-paper"}`}>
                         {selected && <Check size={11} />}
                       </span>
                       <div className="w-7 h-7 rounded-full bg-ink/5 border border-rule/65 text-ink flex items-center justify-center font-serif text-[11px] font-bold uppercase shrink-0">
@@ -363,7 +363,7 @@ export default function NotificationsManager() {
       </Card>
 
       {/* History */}
-      <div className="bg-white border border-rule rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-paper border border-rule rounded-xl overflow-hidden shadow-sm">
         <div className="p-5 border-b border-rule bg-bg-2/20 flex justify-between items-center flex-wrap gap-2">
           <h3 className="font-serif text-lg font-medium text-ink">Sent history ({history.length})</h3>
           <span className="font-mono text-[9px] text-muted uppercase tracking-wider">Most recent 50 dispatches</span>

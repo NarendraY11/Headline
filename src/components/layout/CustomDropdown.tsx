@@ -56,7 +56,7 @@ export function CustomDropdown({ value, options, onChange }: { value: string, op
                   setIsOpen(false);
                 }
               }}
-              className="px-4 py-2.5 text-sm font-sans flex items-center justify-between cursor-pointer hover:bg-[#FDFCF8] dark:hover:bg-bg-2 text-ink transition-colors focus:bg-[#FDFCF8] dark:focus:bg-bg-2 focus:outline-none"
+              className="px-4 py-2.5 text-sm font-sans flex items-center justify-between cursor-pointer hover:bg-[#FDFCF8] dark:hover:bg-bg-2 text-ink transition-colors focus:bg-[#FDFCF8] dark:focus:bg-bg-2 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky/60 aria-selected:bg-sky-soft aria-selected:font-medium dark:aria-selected:bg-bg-2"
             >
               <span className="capitalize">{opt.label}</span>
               {value === opt.value && <Check size={14} className="text-ink ml-4" />}

@@ -123,7 +123,7 @@ export default function LeadCapture() {
           
           {/* INTRO CAPTION */}
           <div className="md:col-span-2 space-y-3">
-            <span className="font-mono text-[8.5px] bg-[#DF9D38]/10 text-[#DF9D38] border border-[#DF9D38]/20 px-2 py-0.5 rounded uppercase tracking-widest font-bold">
+            <span className="font-mono text-[8.5px] bg-amber-soft text-[#855807] dark:text-amber border border-amber/30 px-2 py-0.5 rounded uppercase tracking-widest font-bold">
               Free Cadet Materials
             </span>
             <h3 className="font-serif text-xl sm:text-2xl font-bold text-ink leading-tight">

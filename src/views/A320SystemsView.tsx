@@ -12,7 +12,7 @@ export default function A320SystemsView() {
       <header className="h-[72px] flex items-center justify-between px-6 lg:px-10 bg-bg z-50 absolute top-0 w-full left-0 right-0 border-b border-rule/50">
         <Link to="/" className="hover:opacity-90 transition-opacity flex items-center gap-3">
           <Wordmark compassSize={24} />
-          <span className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase border border-rule px-1.5 py-0.5 rounded-[4px] mt-0.5 opacity-80">FL · 380</span>
+          <span className="font-mono text-[9px] text-muted tracking-[0.2em] uppercase border border-rule px-1.5 py-0.5 rounded-[4px] mt-0.5">FL · 380</span>
         </Link>
         <div className="hidden lg:flex items-center gap-8 font-sans text-[13px] tracking-wide text-ink-2">
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">Question bank</Link>

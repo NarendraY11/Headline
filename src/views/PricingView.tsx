@@ -297,7 +297,7 @@ export default function PricingView() {
                className={`px-5 py-2.5 rounded-full text-xs font-mono tracking-wider uppercase transition-all duration-300 focus:outline-none relative flex items-center gap-1.5 ${billingInterval === "yearly" ? "bg-navy text-bg font-semibold shadow-sm" : "text-muted hover:text-ink"}`}
              >
                Annual Access
-               <span className="bg-[#DF9D38] text-bg font-sans font-bold text-[8px] tracking-normal px-1.5 py-0.5 rounded uppercase leading-none">
+               <span className="bg-[#DF9D38] text-[#0d1a2d] font-sans font-bold text-[8px] tracking-normal px-1.5 py-0.5 rounded uppercase leading-none">
                  Save 50%
                </span>
              </button>
@@ -336,7 +336,7 @@ export default function PricingView() {
             {/* PRO TIER */}
             <FadeUp delay={250} className="h-full relative">
                <div className="absolute top-0 right-0 -tr-translate-y-1/2 translate-x-1/4 translate-y-[-16px] z-10">
-                 <Chip variant="solid" className="bg-[#DF9D38] border-[#CF8E28] text-bg text-[9px] px-3.5 py-1.5 shadow-md transform rotate-2 tracking-widest font-mono uppercase font-bold">★ PREFLIGHT CLEARANCE</Chip>
+                 <Chip variant="solid" className="bg-[#DF9D38] border-[#CF8E28] text-[#0d1a2d] text-[9px] px-3.5 py-1.5 shadow-md transform rotate-2 tracking-widest font-mono uppercase font-bold">★ PREFLIGHT CLEARANCE</Chip>
                </div>
                <div className={`border-2 ${isPro ? "border-mint" : "border-navy"} bg-paper rounded-[24px] p-10 h-full flex flex-col shadow-xl relative overflow-hidden`}>
                   <div className="absolute top-0 right-0 w-64 h-64 bg-navy/5 blur-3xl rounded-full translate-x-1/3 -translate-y-1/3" />

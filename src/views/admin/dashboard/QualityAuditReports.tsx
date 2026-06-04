@@ -6,7 +6,7 @@ interface Props {
 
 export function QualityAuditReports({ reports, handleResolveReport }: Props) {
   return (
-    <div className="bg-white border border-rule rounded-xl p-6 shadow-sm">
+    <div className="bg-paper border border-rule rounded-xl p-6 shadow-sm">
       <div className="flex justify-between items-center border-b border-rule pb-4 mb-4">
         <div>
           <h3 className="font-serif text-lg font-medium text-ink">Pilot Syllabus Quality Audit Roster</h3>

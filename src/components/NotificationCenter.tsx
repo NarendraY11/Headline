@@ -95,7 +95,7 @@ export default function NotificationCenter() {
       >
         <Bell size={18} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-signal text-[9px] font-mono font-bold text-white rounded-full flex items-center justify-center border-2 border-bg shadow-sm animate-pulse">
+          <span className="absolute top-1 right-1 w-4 h-4 bg-signal text-[9px] font-mono font-bold text-bg rounded-full flex items-center justify-center border-2 border-bg shadow-sm animate-pulse">
             {unreadCount}
           </span>
         )}

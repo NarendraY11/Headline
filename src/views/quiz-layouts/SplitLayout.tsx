@@ -213,7 +213,7 @@ export default function SplitLayout({
                 {currentQ.diagramCaption && (
                   <div className="md:hidden w-full mt-2 mb-8 bg-ink rounded-xl overflow-hidden relative border border-rule/20">
                      <div className="flex items-center justify-between p-3 border-b border-white/10 bg-black/20">
-                       <span className="font-mono text-[9px] uppercase tracking-widest text-white/50">
+                       <span className="font-mono text-[9px] uppercase tracking-widest text-white/75">
                           FIG. {currentQ.ata.split('·')[0].trim().replace(' ', '-')}
                        </span>
                      </div>

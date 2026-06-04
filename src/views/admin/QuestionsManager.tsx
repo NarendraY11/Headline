@@ -452,7 +452,7 @@ export default function QuestionsManager() {
           )}
 
           {/* Core Navigation Filters */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-white p-4 border border-rule rounded-xl shadow-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 bg-paper p-4 border border-rule rounded-xl shadow-sm">
             <div className="relative">
               <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-2" />
               <input
@@ -527,12 +527,12 @@ export default function QuestionsManager() {
           </div>
 
           {loading ? (
-            <div className="h-[250px] flex flex-col items-center justify-center bg-white border border-rule rounded-xl">
+            <div className="h-[250px] flex flex-col items-center justify-center bg-paper border border-rule rounded-xl">
               <div className="w-10 h-10 border-4 border-ink border-t-transparent rounded-full animate-spin mb-4"></div>
               <p className="font-mono text-xs text-muted tracking-widest uppercase">Fetching Aviation Questions...</p>
             </div>
           ) : paginatedQuestions.length === 0 ? (
-            <div className="text-center py-20 bg-white border border-dashed border-rule rounded-xl">
+            <div className="text-center py-20 bg-paper border border-dashed border-rule rounded-xl">
               <AlertCircle className="mx-auto text-muted mb-3" size={32} />
               <h3 className="font-serif text-lg font-medium text-ink mb-1">No Questions Found</h3>
               <p className="text-xs text-muted max-w-sm mx-auto mb-6">Modify spelling filters or compile a new flight question node.</p>
@@ -540,7 +540,7 @@ export default function QuestionsManager() {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="bg-white border border-rule rounded-xl overflow-x-auto shadow-sm">
+              <div className="bg-paper border border-rule rounded-xl overflow-x-auto shadow-sm">
                 <table className="w-full text-left border-collapse font-sans text-xs">
                   <thead>
                     <tr className="border-b border-rule font-mono uppercase tracking-wide text-muted text-[10px] bg-bg-2/50">
@@ -648,7 +648,7 @@ export default function QuestionsManager() {
               </div>
 
               {/* Pagination controls */}
-              <div className="flex justify-between items-center bg-white border border-rule rounded-xl px-4 py-3 shadow-sm font-sans">
+              <div className="flex justify-between items-center bg-paper border border-rule rounded-xl px-4 py-3 shadow-sm font-sans">
                 <span className="font-mono text-[10px] text-muted-2 uppercase tracking-wider">
                   Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredQuestions.length)} of {filteredQuestions.length} records · Page {currentPage}/{totalPages}
                 </span>
@@ -657,14 +657,14 @@ export default function QuestionsManager() {
                   <button
                     onClick={prevPage}
                     disabled={currentPage === 1}
-                    className="p-1.5 border border-rule hover:bg-bg-2 rounded-lg text-ink cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-1.5 border border-rule hover:bg-bg-2 rounded-lg text-ink cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft size={16} />
                   </button>
                   <button
                     onClick={nextPage}
                     disabled={currentPage === totalPages}
-                    className="p-1.5 border border-rule hover:bg-bg-2 rounded-lg text-ink cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-1.5 border border-rule hover:bg-bg-2 rounded-lg text-ink cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ChevronRight size={16} />
                   </button>
@@ -724,7 +724,7 @@ export default function QuestionsManager() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
             {/* LEFT COLUMN: CRITICAL DATA ENTRY FORM (7 Cols wide) */}
-            <form onSubmit={(e) => { e.preventDefault(); handleSaveQuestion(); }} className="lg:col-span-7 bg-white border border-rule rounded-2xl p-6 shadow-sm space-y-5">
+            <form onSubmit={(e) => { e.preventDefault(); handleSaveQuestion(); }} className="lg:col-span-7 bg-paper border border-rule rounded-2xl p-6 shadow-sm space-y-5">
               
               <div className="text-[11px] font-mono uppercase tracking-widest text-muted-2 font-bold border-b border-rule pb-2 mb-2">
                 1. Domain Categorization
@@ -863,7 +863,7 @@ export default function QuestionsManager() {
                         type="text"
                         value={currentQuestion.choices?.[i]?.label || ""}
                         onChange={(e) => handleChoiceChange(i, e.target.value)}
-                        className="flex-1 text-xs p-2 bg-white border border-rule rounded-lg focus:outline-none focus:border-rule-strong text-ink"
+                        className="flex-1 text-xs p-2 bg-paper border border-rule rounded-lg focus:outline-none focus:border-rule-strong text-ink"
                         placeholder={`Option ${upperLetter} answer option text label...`}
                         required
                       />
@@ -950,7 +950,7 @@ export default function QuestionsManager() {
               </div>
 
               {/* Replica Quiz Card Wrapper with real styling from EditorialLayout */}
-              <div className="bg-white border-2 border-rule rounded-2xl overflow-hidden shadow-md flex flex-col p-6 min-h-[500px]">
+              <div className="bg-paper border-2 border-rule rounded-2xl overflow-hidden shadow-md flex flex-col p-6 min-h-[500px]">
                 
                 {/* Meta header labels */}
                 <div className="flex items-center justify-between border-b border-rule pb-3.5 mb-5">
@@ -995,7 +995,7 @@ export default function QuestionsManager() {
                      <div className="w-full h-36 flex items-center justify-center opacity-85 hover:opacity-100 transition-opacity">
                        <FlightControlsDiagram />
                      </div>
-                     <div className="absolute bottom-0 right-0 font-mono text-[8px] uppercase tracking-wide text-muted bg-white border-t border-l border-rule px-2 py-1 rounded-tl-lg font-bold">
+                     <div className="absolute bottom-0 right-0 font-mono text-[8px] uppercase tracking-wide text-muted bg-paper border-t border-l border-rule px-2 py-1 rounded-tl-lg font-bold">
                        {currentQuestion.diagram_caption}
                      </div>
                   </div>
@@ -1022,7 +1022,7 @@ export default function QuestionsManager() {
                         choiceStyle = "opacity-45 bg-transparent border-rule/50";
                       }
                     } else if (isSelected) {
-                      choiceStyle = "border-ink bg-white ring-1 ring-ink font-semibold";
+                      choiceStyle = "border-ink bg-paper ring-1 ring-ink font-semibold";
                     }
 
                     return (
@@ -1035,7 +1035,7 @@ export default function QuestionsManager() {
                           }
                         }}
                       >
-                        <div className="w-6.5 h-6.5 rounded-full border border-current flex items-center justify-center shrink-0 bg-white shadow-sm">
+                        <div className="w-6.5 h-6.5 rounded-full border border-current flex items-center justify-center shrink-0 bg-paper shadow-sm">
                           {innerBadgeMarkup}
                         </div>
                         <span className="font-sans text-xs font-semibold leading-snug">{choice.label || `Choice value ${charLetter} is empty`}</span>
@@ -1054,7 +1054,7 @@ export default function QuestionsManager() {
                       }
                     }}
                     disabled={!previewSelectedOption || previewSubmitted}
-                    className="flex-1 py-2 bg-ink text-bg text-[10px] font-mono tracking-wider font-bold uppercase rounded-lg disabled:opacity-30 disabled:cursor-not-allowed hover:bg-ink-2 transition-colors h-9"
+                    className="flex-1 py-2 bg-ink text-bg text-[10px] font-mono tracking-wider font-bold uppercase rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-ink-2 transition-colors h-9"
                   >
                     Simulate Submit
                   </button>
@@ -1092,7 +1092,7 @@ export default function QuestionsManager() {
                           const trimRef = ref.trim();
                           if (!trimRef) return null;
                           return (
-                            <span key={idx} className="font-mono text-[8px] text-muted-2 tracking-wide border border-rule bg-white py-0.5 px-2 rounded font-semibold uppercase">
+                            <span key={idx} className="font-mono text-[8px] text-muted-2 tracking-wide border border-rule bg-paper py-0.5 px-2 rounded font-semibold uppercase">
                               {trimRef}
                             </span>
                           );

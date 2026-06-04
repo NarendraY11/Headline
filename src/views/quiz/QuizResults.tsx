@@ -160,7 +160,7 @@ export default function QuizResults({
             </div>
             <button
               onClick={() => setUnlockedMilestone(null)}
-              className="text-white/40 hover:text-white transition-colors h-9 px-4 font-mono text-[10px] uppercase font-bold tracking-wider hover:bg-white/5 border border-white/15 rounded-full shrink-0"
+              className="text-white/70 hover:text-white transition-colors h-9 px-4 font-mono text-[10px] uppercase font-bold tracking-wider hover:bg-white/5 border border-white/15 rounded-full shrink-0"
             >
               Dismiss
             </button>
@@ -232,7 +232,7 @@ export default function QuizResults({
             </div>
 
             <div className="flex justify-between items-start mb-6">
-              <span className="font-mono text-[10px] text-white/40 tracking-widest uppercase">BLOCK SCORE</span>
+              <span className="font-mono text-[10px] text-white/70 tracking-widest uppercase">BLOCK SCORE</span>
               <span
                 className={`font-mono text-[9px] uppercase tracking-widest font-semibold px-3 py-1 rounded-full border ${passed ? "border-ring-green text-ring-green bg-ring-green/10" : "border-signal text-signal bg-signal/10"}`}
               >
@@ -256,7 +256,7 @@ export default function QuizResults({
                     <span className="font-serif text-[56px] text-white leading-none tracking-tight">{animatedScore}</span>
                     <span className="font-serif text-2xl text-white/70 ml-0.5 mt-2">%</span>
                   </div>
-                  <span className="font-mono text-[10px] text-white/50 tracking-widest mt-1 uppercase">
+                  <span className="font-mono text-[10px] text-white/75 tracking-widest mt-1 uppercase">
                     {correctCount} OF {totalQuestions}
                   </span>
                 </div>
@@ -264,15 +264,15 @@ export default function QuizResults({
 
               <div className="flex flex-col gap-6 border-l border-white/10 pl-8 min-w-[140px] z-10 py-2">
                 <div>
-                  <span className="block font-mono text-[9px] text-white/40 tracking-widest font-semibold mb-1 uppercase">PASS MARK</span>
+                  <span className="block font-mono text-[9px] text-white/70 tracking-widest font-semibold mb-1 uppercase">PASS MARK</span>
                   <span className="font-serif text-2xl text-white block leading-none mt-1">{effectivePassMark}%</span>
                 </div>
                 <div>
-                  <span className="block font-mono text-[9px] text-white/40 tracking-widest font-semibold mb-1 uppercase">YOUR SCORE</span>
+                  <span className="block font-mono text-[9px] text-white/70 tracking-widest font-semibold mb-1 uppercase">YOUR SCORE</span>
                   <span className="font-serif text-2xl text-white block leading-none mt-1">{percentage}%</span>
                 </div>
                 <div>
-                  <span className="block font-mono text-[9px] text-white/40 tracking-widest font-semibold mb-1 uppercase">MARGIN</span>
+                  <span className="block font-mono text-[9px] text-white/70 tracking-widest font-semibold mb-1 uppercase">MARGIN</span>
                   <span className="font-serif text-2xl text-white block leading-none mt-1">{marginStr}</span>
                 </div>
               </div>

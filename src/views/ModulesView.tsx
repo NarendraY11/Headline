@@ -263,7 +263,7 @@ export default function ModulesView() {
 
         {/* GUIDED TRACK PILOT HIGHWAY SECTION */}
         {syllabus !== "All" && sortedWaypoints.length > 0 && (
-          <div className="mb-10 p-6 bg-white border border-rule rounded-2xl shadow-sm space-y-6">
+          <div className="mb-10 p-6 bg-paper border border-rule rounded-2xl shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 border border-rule bg-[#fbfaf6] text-navy rounded-xl">

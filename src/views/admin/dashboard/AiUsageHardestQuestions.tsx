@@ -12,7 +12,7 @@ export function AiUsageHardestQuestions({ aiUsageData, hardestQuestions, COLORS 
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
       {/* AI Feature Usage Donut */}
-      <div className="bg-white border border-rule rounded-xl p-6 flex flex-col h-[340px] shadow-sm lg:col-span-1 justify-between">
+      <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col h-[340px] shadow-sm lg:col-span-1 justify-between">
         <div>
           <h3 className="font-serif text-lg font-medium text-ink flex items-center gap-2">
             <Bot size={18} className="text-emerald-600" />
@@ -51,7 +51,7 @@ export function AiUsageHardestQuestions({ aiUsageData, hardestQuestions, COLORS 
       </div>
 
       {/* Hardest Questions table */}
-      <div className="bg-white border border-rule rounded-xl p-6 flex flex-col h-[340px] shadow-sm lg:col-span-2 overflow-hidden">
+      <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col h-[340px] shadow-sm lg:col-span-2 overflow-hidden">
         <div className="mb-4">
           <h3 className="font-serif text-lg font-medium text-ink">Lowest Accuracy Questions</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Statistically hardest questions based on user fail-rates</p>

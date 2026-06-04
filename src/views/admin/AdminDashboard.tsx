@@ -50,7 +50,7 @@ export default function AdminDashboard() {
       />
 
       {loading ? (
-        <div className="h-[450px] flex flex-col items-center justify-center p-8 bg-white border border-rule rounded-xl">
+        <div className="h-[450px] flex flex-col items-center justify-center p-8 bg-paper border border-rule rounded-xl">
           <div className="w-10 h-10 border-4 border-ink border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="font-mono text-xs text-muted tracking-widest uppercase">Compiling telemetry parameters...</p>
         </div>
