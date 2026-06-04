@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import FocusTrap from "focus-trap-react";
 import { CheckCircle2, XCircle, ArrowLeft, ArrowRight, Clock, Bookmark, Sparkles, X, Flag } from "lucide-react";
 import { Button, Chip, Wordmark } from "../../components/Atoms";
 import { QuizLayoutProps } from "./types";
@@ -42,20 +43,21 @@ export default function SplitLayout({
     <div className="flex flex-col h-screen h-[100dvh] bg-bg">
       <AnimatePresence>
         {showAbortPrompt && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/20 backdrop-blur-sm"
           >
-            <motion.div 
+            <FocusTrap>
+            <motion.div
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
               role="dialog"
-            aria-modal="true"
-            aria-labelledby="abort-dialog-title-split"
-            className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
+              aria-modal="true"
+              aria-labelledby="abort-dialog-title-split"
+              className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
             >
               <h3 id="abort-dialog-title-split" className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
               <p className="font-sans text-sm text-ink-2 mb-6">
@@ -74,6 +76,7 @@ export default function SplitLayout({
                 </Button>
               </div>
             </motion.div>
+            </FocusTrap>
           </motion.div>
         )}
       </AnimatePresence>

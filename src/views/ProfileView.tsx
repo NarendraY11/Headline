@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button, Card } from "../components/Atoms";
-import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2, Sparkles, ShieldCheck, CalendarClock, ArrowRight } from "lucide-react";
+import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2, Sparkles, ShieldCheck, CalendarClock, ArrowRight, AlertTriangle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { isPaidActive, daysLeft, planLabel } from "../lib/plan";
 
@@ -17,6 +17,8 @@ export default function ProfileView() {
 
   const [isEditingExamDate, setIsEditingExamDate] = useState(false);
   const [tempExamDate, setTempExamDate] = useState("");
+  const [confirmWipe, setConfirmWipe] = useState(false);
+  const [confirmSignOutAll, setConfirmSignOutAll] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -39,7 +41,24 @@ export default function ProfileView() {
     }
   }, [savedDate]);
 
-  if (loading) return null;
+  if (loading) return (
+    <div className="max-w-4xl mx-auto py-10 md:py-16 px-4 w-full animate-pulse space-y-8">
+      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 border-b border-rule pb-8">
+        <div className="w-24 h-24 rounded-full bg-rule flex-shrink-0" />
+        <div className="flex-1 space-y-3 w-full">
+          <div className="h-3 bg-rule w-24 rounded" />
+          <div className="h-8 bg-rule w-48 rounded" />
+          <div className="h-3 bg-rule w-36 rounded" />
+          <div className="flex gap-2 mt-2">
+            <div className="h-9 bg-rule w-28 rounded-full" />
+            <div className="h-9 bg-rule w-28 rounded-full" />
+          </div>
+        </div>
+      </div>
+      <div className="h-32 bg-rule rounded-2xl" />
+      <div className="h-24 bg-rule rounded-xl" />
+    </div>
+  );
 
   if (!user) {
     return (
@@ -560,6 +579,8 @@ export default function ProfileView() {
                   {userData?.settings?.remindersEnabled ? "OPTED IN" : "MUTED"}
                 </span>
                 <button
+                  role="switch"
+                  aria-checked={!!userData?.settings?.remindersEnabled}
                   aria-label="Toggle spaced review reminder emails"
                   onClick={() => {
                     const currentSettings = userData?.settings || {};
@@ -571,7 +592,7 @@ export default function ProfileView() {
                       }
                     });
                   }}
-                  className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none cursor-pointer ${userData?.settings?.remindersEnabled ? 'bg-mint' : 'bg-rule-strong'}`}
+                  className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg cursor-pointer ${userData?.settings?.remindersEnabled ? 'bg-mint' : 'bg-rule-strong'}`}
                 >
                   <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.settings?.remindersEnabled ? 'translate-x-[20px]' : 'translate-x-0'}`} />
                 </button>
@@ -590,6 +611,8 @@ export default function ProfileView() {
                 </span>
                 <button
                   id="newsletterOptInToggleBtn"
+                  role="switch"
+                  aria-checked={!!userData?.newsletterOptIn}
                   aria-label="Toggle weekly tips newsletter"
                   onClick={() => {
                     const currentStatus = !!userData?.newsletterOptIn;
@@ -597,7 +620,7 @@ export default function ProfileView() {
                       newsletterOptIn: !currentStatus
                     });
                   }}
-                  className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none cursor-pointer ${userData?.newsletterOptIn ? 'bg-mint' : 'bg-rule-strong'}`}
+                  className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg cursor-pointer ${userData?.newsletterOptIn ? 'bg-mint' : 'bg-rule-strong'}`}
                 >
                   <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.newsletterOptIn ? 'translate-x-[20px]' : 'translate-x-0'}`} />
                 </button>
@@ -637,41 +660,61 @@ export default function ProfileView() {
             Sign out of this device, or end every active session at once.
           </p>
           <div className="mt-auto flex flex-col gap-3 pt-2">
-            {/* Primary, everyday action — promoted to a visible bordered button. */}
             <Button variant="ghost" onClick={logout} className="gap-2 justify-center border border-rule-strong text-ink hover:bg-bg-2">
               <LogOut size={16} /> Sign out
             </Button>
-            {/* Security escape hatch (lost/stolen/shared device): revokes every
-                session server-side. Kept subordinate so it doesn't compete. */}
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm("Log out of all devices? This ends every active session, including this one.")) {
-                  logoutEverywhere();
-                }
-              }}
-              className="text-[11px] font-sans text-muted-2 hover:text-signal underline underline-offset-2 transition-colors self-center"
-            >
-              Lost a device? Sign out of all devices
-            </button>
+            {confirmSignOutAll ? (
+              <div className="border border-amber/30 bg-amber-soft/40 rounded-lg p-3 flex flex-col gap-2">
+                <p className="font-sans text-xs text-ink-2 leading-relaxed">This ends every active session, including this one. Continue?</p>
+                <div className="flex gap-2">
+                  <Button variant="ghost" className="flex-1 h-8 text-xs border border-amber/40 text-amber hover:bg-amber-soft" onClick={() => { setConfirmSignOutAll(false); logoutEverywhere(); }}>
+                    Sign out everywhere
+                  </Button>
+                  <Button variant="ghost" className="h-8 text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmSignOutAll(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmSignOutAll(true)}
+                className="text-[11px] font-sans text-muted-2 hover:text-signal underline underline-offset-2 transition-colors self-center"
+              >
+                Lost a device? Sign out of all devices
+              </button>
+            )}
           </div>
         </div>
 
         <div className="border border-signal-soft rounded-xl bg-bg p-6 flex flex-col items-start gap-3">
-          <div className="flex items-center gap-3 text-signal">
-            <AlertCircle size={22} />
+          <div className="flex items-center gap-3">
+            <AlertCircle size={22} className="text-signal" />
             <span className="font-sans font-semibold text-lg text-ink">Danger Zone</span>
           </div>
           <p className="font-sans text-sm text-ink-2 font-light leading-relaxed">
             Wiping your logbook permanently erases all mock attempts, study history, and telemetry. This cannot be reversed.
           </p>
-          <Button variant="ghost" className="mt-auto text-signal hover:bg-signal-soft border border-signal-soft" onClick={() => {
-              if (window.confirm("Are you sure you want to permanently erase all records?")) {
-                  resetAccount();
-              }
-          }}>
-            Wipe Logbook & Progress
-          </Button>
+          {confirmWipe ? (
+            <div className="w-full border border-signal/30 bg-signal-soft/40 rounded-lg p-3 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-signal">
+                <AlertTriangle size={14} />
+                <p className="font-sans text-xs font-semibold">This action is permanent and cannot be undone.</p>
+              </div>
+              <div className="flex gap-2 mt-1">
+                <Button variant="ghost" className="flex-1 h-8 text-xs border border-signal text-signal hover:bg-signal-soft" onClick={() => { setConfirmWipe(false); resetAccount(); }}>
+                  Yes, wipe everything
+                </Button>
+                <Button variant="ghost" className="h-8 text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmWipe(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="ghost" className="mt-auto text-signal hover:bg-signal-soft border border-signal-soft" onClick={() => setConfirmWipe(true)}>
+              Wipe Logbook & Progress
+            </Button>
+          )}
         </div>
       </div>
     </div>

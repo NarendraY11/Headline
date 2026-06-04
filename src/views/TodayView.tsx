@@ -678,7 +678,7 @@ export default function TodayView() {
 
         {/* TILES */}
         <div className="mb-10 w-full relative">
-          <div className="absolute -top-6 right-0 font-mono text-[9px] text-muted-2 uppercase tracking-widest hidden md:flex items-center gap-1.5 opacity-50">
+          <div className="absolute -top-6 right-0 font-mono text-[9px] text-muted-2 uppercase tracking-widest flex items-center gap-1.5 opacity-50">
             <span>DRAG TO REORDER</span>
           </div>
           <Reorder.Group

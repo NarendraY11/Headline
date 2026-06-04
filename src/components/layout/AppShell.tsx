@@ -127,10 +127,10 @@ export function AppShell() {
         if (saved) {
           setBookmarkCount(JSON.parse(saved).length);
         } else {
-          setBookmarkCount(42); // default fallback to match visual specs
+          setBookmarkCount(0);
         }
       } catch {
-        setBookmarkCount(42);
+        setBookmarkCount(0);
       }
     }
   }, [userData?.bookmarks]);
@@ -292,6 +292,13 @@ export function AppShell() {
           id="app-shell"
           className="min-h-screen min-h-[100dvh] bg-bg text-ink flex flex-row overflow-x-hidden font-sans"
         >
+          {/* Skip navigation link for keyboard users */}
+          <a
+            href="#app-main-content"
+            className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[200] focus:bg-paper focus:border focus:border-rule focus:px-4 focus:py-2 focus:rounded-lg focus:text-ink focus:text-sm focus:font-medium focus:shadow-lg"
+          >
+            Skip to main content
+          </a>
           <Suspense fallback={null}>
             {showShortcuts && <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />}
             {showSettings && <SettingsOverlay onClose={() => setShowSettings(false)} />}
@@ -303,12 +310,12 @@ export function AppShell() {
           <div 
             className={`hidden md:block flex-shrink-0 ${reduceMotion === 'always' ? 'transition-none' : 'transition-[width] duration-200 ease-in-out'} ${isSidebarPinnedOpen ? 'w-[240px]' : 'w-[64px]'}`} 
           />
-          <aside 
+          <aside
             id="desktop-sidebar"
+            aria-label="Primary navigation"
             className={`hidden md:flex flex-col h-screen fixed left-0 top-0 border-r border-rule bg-bg select-none z-40 overflow-hidden ${reduceMotion === 'always' ? 'transition-none' : 'transition-[width] duration-200 ease-in-out'} ${isSidebarExpanded ? 'w-[240px] shadow-[8px_0_24px_rgba(0,0,0,0.02)]' : 'w-[64px]'}`}
             onMouseEnter={() => !isSidebarPinnedOpen && setIsSidebarHovered(true)}
             onMouseLeave={() => !isSidebarPinnedOpen && setIsSidebarHovered(false)}
-            aria-expanded={isSidebarExpanded}
           >
             {/* Top Logo / Wordmark + Pin Button */}
             <div className="h-[64px] flex items-center justify-between px-3 border-b border-rule/50 flex-shrink-0 relative overflow-hidden">
@@ -316,10 +323,12 @@ export function AppShell() {
                 <Wordmark compassSize={26} hideText={!isSidebarExpanded} />
               </Link>
               {isSidebarExpanded && windowWidth >= 1024 && (
-                <button 
+                <button
                   onClick={() => setIsSidebarPinned(!isSidebarPinned)}
                   className="text-muted hover:text-ink transition-colors p-3 -m-1.5 rounded-md hover:bg-bg-2 z-50 flex-shrink-0 ml-auto focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none"
                   title={isSidebarPinned ? "Unpin sidebar" : "Pin sidebar"}
+                  aria-label={isSidebarPinned ? "Unpin sidebar" : "Pin sidebar"}
+                  aria-pressed={isSidebarPinned}
                 >
                   {isSidebarPinned ? <PinOff size={14} /> : <Pin size={14} />}
                 </button>
@@ -359,6 +368,8 @@ export function AppShell() {
                       if (isTablet && isSidebarTappedForTablet) setIsSidebarTappedForTablet(false);
                     }}
                     title={!isSidebarExpanded ? item.label : undefined}
+                    aria-label={!isSidebarExpanded ? item.label : undefined}
+                    aria-current={active ? "page" : undefined}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 ${
                       active
                         ? "bg-panel text-ink border-rule shadow-sm"
@@ -443,15 +454,20 @@ export function AppShell() {
                 <Link to="/" className="font-serif font-medium tracking-tighter text-[20px] text-ink hover:text-navy transition-colors cursor-pointer hidden sm:inline focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none rounded-sm px-1 leading-none">Heading</Link>
                 
                 <div className="relative hidden sm:block" onMouseLeave={() => setShowHistory(false)}>
-                  <button 
+                  <button
                     onMouseEnter={() => setShowHistory(true)}
                     onClick={() => setShowHistory(!showHistory)}
-                    className="text-muted-2 hover:text-ink px-1 focus:outline-none"
+                    aria-label="Show recent pages"
+                    aria-expanded={showHistory}
+                    aria-haspopup="menu"
+                    className="text-muted-2 hover:text-ink px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 rounded"
                   >
                     /
                   </button>
                   {showHistory && (
                       <div
+                        role="menu"
+                        aria-label="Recent pages"
                         className="anim-pop absolute top-full left-1/2 -translate-x-1/2 mt-1 w-56 bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.06)] overflow-hidden py-1.5 z-50 origin-top"
                       >
                         <div className="px-3 py-1.5 mb-1 font-mono text-[9px] text-muted-2 uppercase tracking-[0.2em] border-b border-rule/30">Recent Flights</div>
@@ -471,18 +487,16 @@ export function AppShell() {
                     )}
                 </div>
                 <h2 className="text-ink font-medium tracking-tight truncate m-0 text-sm ml-1 max-w-[100px] xs:max-w-[140px] sm:max-w-none">{getBreadcrumbTitle()}</h2>
-                <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest bg-rule/50 px-1.5 py-0.5 rounded-[4px] ml-1 whitespace-nowrap hidden md:inline">
-                  {getReadingTime()}
-                </span>
               </div>
 
               {/* Right side: Streak, Actions, and Auth */}
               <div className="flex items-center gap-2.5 sm:gap-3">
                 {/* Search icon button */}
-                <button 
+                <button
                   onClick={() => setShowSearch(true)}
                   className="p-2 text-muted hover:text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none cursor-pointer"
                   title="Search questions, ATA chapters…"
+                  aria-label="Search questions and ATA chapters"
                 >
                   <Search size={18} />
                 </button>
@@ -532,8 +546,17 @@ export function AppShell() {
 
             {/* MOBILE MENU NAV DRAWER */}
             {mobileMenuOpen && (
+                <>
+                  {/* Backdrop — closes menu on outside tap */}
+                  <div
+                    className="md:hidden fixed inset-0 z-30 top-[64px] bg-ink/20 backdrop-blur-[2px]"
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-hidden="true"
+                  />
                 <div
                   id="mobile-nav-drawer"
+                  role="navigation"
+                  aria-label="Mobile navigation"
                   className="anim-drawer md:hidden fixed top-[64px] left-0 right-0 z-40 bg-paper border-b border-rule shadow-2xl rounded-b-2xl px-4 py-4 flex flex-col gap-4"
                   style={{
                     borderColor: "var(--rule)",
@@ -599,6 +622,7 @@ export function AppShell() {
                     </Link>
                   </div>
                 </div>
+                </>
               )}
 
             {/* TRIAL & SUBSCRIPTION STATUS BANNER */}
@@ -622,26 +646,41 @@ export function AppShell() {
             </main>
 
             {/* MOBILE BOTTOM TAB BAR */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg border-t border-rule pb-[var(--sab)] flex items-stretch justify-around px-2">
-              <NavLink to="/today" className={({isActive}) => `flex flex-col items-center justify-center flex-1 py-3 gap-1 ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
-                <Compass size={22} />
-                <span className="font-sans text-[10px] font-medium tracking-wide">Today</span>
+            <nav aria-label="Primary navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg border-t border-rule pb-[var(--sab)] flex items-stretch justify-around px-2">
+              <NavLink to="/today" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
+                {({isActive}) => (<>
+                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
+                  <Compass size={22} />
+                  <span className="font-sans text-[10px] font-medium tracking-wide">Today</span>
+                </>)}
               </NavLink>
-              <NavLink to="/modules" className={({isActive}) => `flex flex-col items-center justify-center flex-1 py-3 gap-1 ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
-                <Layers size={22} />
-                <span className="font-sans text-[10px] font-medium tracking-wide">Bank</span>
+              <NavLink to="/modules" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
+                {({isActive}) => (<>
+                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
+                  <Layers size={22} />
+                  <span className="font-sans text-[10px] font-medium tracking-wide">Bank</span>
+                </>)}
               </NavLink>
-              <NavLink to="/mock-exams" className={({isActive}) => `flex flex-col items-center justify-center flex-1 py-3 gap-1 ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
-                <LayoutGrid size={22} />
-                <span className="font-sans text-[10px] font-medium tracking-wide">Mock</span>
+              <NavLink to="/mock-exams" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
+                {({isActive}) => (<>
+                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
+                  <LayoutGrid size={22} />
+                  <span className="font-sans text-[10px] font-medium tracking-wide">Mock</span>
+                </>)}
               </NavLink>
-              <NavLink to="/topic/a320-systems" className={({isActive}) => `flex flex-col items-center justify-center flex-1 py-3 gap-1 ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
-                <Plane size={22} />
-                <span className="font-sans text-[10px] font-medium tracking-wide">A320</span>
+              <NavLink to="/topic/a320-systems" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
+                {({isActive}) => (<>
+                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
+                  <Plane size={22} />
+                  <span className="font-sans text-[10px] font-medium tracking-wide">A320</span>
+                </>)}
               </NavLink>
-              <NavLink to="/analytics" className={({isActive}) => `flex flex-col items-center justify-center flex-1 py-3 gap-1 ${isActive ? 'text-ink [&>svg]:stroke-[2.5px]' : 'text-muted hover:text-ink'}`}>
-                <BarChart3 size={22} />
-                <span className="font-sans text-[10px] font-medium tracking-wide">Stats</span>
+              <NavLink to="/analytics" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink' : 'text-muted hover:text-ink'}`}>
+                {({isActive}) => (<>
+                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
+                  <BarChart3 size={22} className={isActive ? 'stroke-[2.5px]' : ''} />
+                  <span className="font-sans text-[10px] font-medium tracking-wide">Stats</span>
+                </>)}
               </NavLink>
             </nav>
 
