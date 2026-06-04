@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import { Question } from "../data/questions";
 import { rawSubjects, SubjectItem } from "../data/topics";
 import { getCachedQuestions, getCachedQuestionsByIds, putQuestions } from "./offline/questionCache";
+import { normalizeSlug } from "./slug";
 
 const CACHE_TTL = 300000; // 5 minutes in milliseconds
 
@@ -147,12 +148,11 @@ export async function fetchQuizQuestionsForTopic(
         .select("*")
         .eq("status", "published");
       
-      const normalize = (s: string) => s.replace(/[^a-z0-9]/gi, "").toLowerCase();
-      const normTarget = normalize(topicId);
-      
-      data = (res.data || []).filter((q: any) => 
-        normalize(q.subject_id || "") === normTarget || 
-        normalize(q.subcategory_id || "") === normTarget
+      const normTarget = normalizeSlug(topicId);
+
+      data = (res.data || []).filter((q: any) =>
+        normalizeSlug(q.subject_id) === normTarget ||
+        normalizeSlug(q.subcategory_id) === normTarget
       );
     }
 
@@ -189,12 +189,11 @@ export async function fetchQuizQuestionsForTopic(
     // or offline): prefer the user's real cached questions, then the bundled
     // static bank, so the quiz is never empty. Match the topic where possible.
     if (questions.length === 0) {
-      const normalize = (s: string | undefined) => (s || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
-      const normTarget = normalize(topicId);
+      const normTarget = normalizeSlug(topicId);
       const matchesTopic = (q: Question) =>
-        normalize(q.subcategoryId) === normTarget ||
-        normalize(q.subjectId) === normTarget ||
-        normalize(q.topicId) === normTarget;
+        normalizeSlug(q.subcategoryId) === normTarget ||
+        normalizeSlug(q.subjectId) === normTarget ||
+        normalizeSlug(q.topicId) === normTarget;
 
       const cachedAll = await getCachedQuestions();
       const cachedMatched = cachedAll.filter(matchesTopic);
