@@ -362,7 +362,11 @@ export default function ProfileView() {
       {/* Subscription / Clearance status */}
       <Card
         className={`p-6 md:p-8 mb-6 rounded-2xl relative overflow-hidden ${
-          isPro ? "bg-navy border-navy text-bg" : "bg-panel border-rule"
+          isPro
+            ? "bg-navy border-navy text-bg"
+            : subPlan === "trial"
+            ? "bg-paper border-l-4 border-l-amber"
+            : "bg-paper border-l-4 border-l-navy"
         }`}
       >
         {isPro && (
@@ -377,6 +381,11 @@ export default function ProfileView() {
             >
               {isPro ? <Sparkles size={12} /> : <ShieldCheck size={12} />} Membership
             </span>
+            {subPlan === "trial" && (
+              <span className="ml-2 inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest font-bold text-amber bg-amber-soft border border-amber/20 px-2 py-0.5 rounded-full align-middle">
+                Trial{subDaysLeft !== null ? ` · ${subDaysLeft}d left` : ""}
+              </span>
+            )}
             <h3 className={`font-serif text-2xl md:text-3xl ${isPro ? "text-bg" : "text-ink"}`}>
               {subPlan === "lifetime"
                 ? "Captain (Pro) · Lifetime"
@@ -425,17 +434,17 @@ export default function ProfileView() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <Card className="bg-panel border-rule p-6">
+        <Card className="bg-paper p-6">
           <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Target Clearance</div>
           <div className="font-serif text-3xl text-ink">{targetExam}</div>
         </Card>
-        <Card className="bg-panel border-rule p-6">
+        <Card className="bg-paper p-6">
           <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Consecutive Days</div>
           <div className="font-serif text-3xl text-ink flex items-end gap-2">
             {streakCount} <span className="font-sans text-xs font-semibold text-muted pb-1">DAY STREAK</span>
           </div>
         </Card>
-        <Card className="bg-panel border-rule p-6 relative group">
+        <Card className="bg-paper p-6 relative group">
           <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1 flex justify-between items-center">
             <span>Time-to-Exam</span>
             {savedDate && !isEditingExamDate && (
@@ -524,7 +533,7 @@ export default function ProfileView() {
         </Card>
       </div>
 
-      <Card className="bg-panel border-rule p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
+      <Card className="bg-paper p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-12">
         <div className="space-y-1 max-w-lg text-center md:text-left">
           <span className="block font-mono text-[9px] uppercase tracking-widest text-mint font-bold">RE-ENGAGEMENT</span>
           <h3 className="font-serif text-xl font-bold text-ink">Spaced Review Reminder Emails</h3>
@@ -554,7 +563,7 @@ export default function ProfileView() {
         </div>
       </Card>
 
-      <Card className="bg-panel border-rule p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+      <Card className="bg-paper p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
         <div className="space-y-1 max-w-lg text-center md:text-left">
           <span className="block font-mono text-[9px] uppercase tracking-widest text-mint font-bold">AVIATION ACADEMY</span>
           <h3 className="font-serif text-xl font-bold text-ink flex items-center gap-2 justify-center md:justify-start">

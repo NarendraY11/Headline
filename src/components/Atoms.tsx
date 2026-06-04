@@ -350,7 +350,7 @@ export interface CardProps {
 export function Card({ children, className = "", style = {}, ...props }: CardProps) {
   return (
     <div
-      className={`bg-paper border border-rule p-6 md:p-8 shadow-[0_4px_24px_-4px_rgba(13,26,45,0.03)] opacity-100 relative ${className}`}
+      className={`bg-paper border border-rule-strong p-6 md:p-8 shadow-[0_1px_2px_rgba(13,26,45,0.04),0_8px_24px_-8px_rgba(13,26,45,0.10)] opacity-100 relative ${className}`}
       style={{
         borderRadius: "var(--r-lg)",
         ...style,
