@@ -86,7 +86,7 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
   // Fallback Loading Skeleton - Never gets stuck loading!
   if (loading || questions.length === 0) {
     return (
-      <div className="bg-paper border border-rule rounded-2xl p-5 sm:p-6 md:p-8 shadow-sm text-center relative overflow-hidden w-full max-w-[90vw] sm:max-w-sm md:max-w-md mx-auto md:mx-0 shrink-0 h-[450px] flex flex-col justify-between items-stretch animate-pulse">
+      <div className="bg-paper border border-rule rounded-2xl p-5 sm:p-6 md:p-8 shadow-sm text-center relative overflow-hidden w-full max-w-[90vw] sm:max-w-sm md:max-w-md mx-auto md:mx-0 shrink-0 min-h-[360px] sm:min-h-[420px] md:h-[450px] flex flex-col justify-between items-stretch animate-pulse">
         <div className="flex justify-between items-center pb-2">
           <div className="h-4 bg-muted-2/20 w-16 rounded font-mono"></div>
           <div className="h-4 bg-muted-2/20 w-10 rounded"></div>
@@ -257,7 +257,7 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
         </div>
 
         {showTooltip && (
-          <div className="anim-pop absolute bottom-14 left-0 font-sans text-xs bg-ink text-bg px-3 py-1.5 rounded shadow-lg whitespace-nowrap z-20">
+          <div className="anim-pop absolute bottom-14 left-0 font-sans text-xs bg-ink text-bg px-3 py-1.5 rounded shadow-lg whitespace-nowrap z-20 max-w-[calc(100%-1rem)]">
             {tooltipMessage}
             <div className="absolute -bottom-1 left-4 w-2 h-2 bg-ink transform rotate-45"></div>
           </div>

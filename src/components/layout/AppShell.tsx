@@ -470,7 +470,7 @@ export function AppShell() {
                       </div>
                     )}
                 </div>
-                <h2 className="text-ink font-medium tracking-tight truncate m-0 text-sm ml-1">{getBreadcrumbTitle()}</h2>
+                <h2 className="text-ink font-medium tracking-tight truncate m-0 text-sm ml-1 max-w-[100px] xs:max-w-[140px] sm:max-w-none">{getBreadcrumbTitle()}</h2>
                 <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest bg-rule/50 px-1.5 py-0.5 rounded-[4px] ml-1 whitespace-nowrap hidden md:inline">
                   {getReadingTime()}
                 </span>

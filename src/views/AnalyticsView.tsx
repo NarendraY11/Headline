@@ -422,7 +422,7 @@ export default function AnalyticsView() {
                 <TrendingUp size={16} /> ATA Mastery
               </h2>
             </div>
-            <div className="h-[300px] w-full border border-rule rounded-lg p-2 sm:p-4 bg-paper">
+            <div className="h-[220px] sm:h-[260px] md:h-[300px] w-full border border-rule rounded-lg p-2 sm:p-4 bg-paper">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={masteries.map(m => ({

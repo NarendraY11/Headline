@@ -294,7 +294,7 @@ export default function SubcategoriesManager() {
       )}
 
       {loading ? (
-        <div className="h-[250px] flex flex-col items-center justify-center bg-paper border border-rule rounded-xl">
+        <div className="h-[160px] sm:h-[200px] md:h-[250px] flex flex-col items-center justify-center bg-paper border border-rule rounded-xl">
           <div className="w-10 h-10 border-4 border-ink border-t-transparent rounded-full animate-spin mb-4"></div>
           <p className="font-mono text-xs text-muted tracking-widest uppercase">Fetching Subcategory Map...</p>
         </div>

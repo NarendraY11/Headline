@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowLeft, ArrowRight, Bookmark, X, Check } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, Bookmark, X } from "lucide-react";
 import { Button, Wordmark } from "../../components/Atoms";
 import { QuizLayoutProps } from "./types";
 import { useEffect, useRef } from "react";
@@ -13,6 +13,8 @@ export default function FlashcardLayout({
   timeElapsed,
   formatTime,
   handleRevealViva,
+  handleVivaKnew,
+  handleVivaDidntKnow,
   handleNext,
   handlePrev,
   toggleBookmark,
@@ -43,22 +45,25 @@ export default function FlashcardLayout({
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
-              className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
+              role="dialog"
+            aria-modal="true"
+            aria-labelledby="abort-dialog-title-fc"
+            className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
             >
-              <h3 className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
+              <h3 id="abort-dialog-title-fc" className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
               <p className="font-sans text-sm text-ink-2 mb-6">
                 Are you sure you want to exit? Your progress for this session will be lost.
               </p>
               <div className="flex justify-end gap-3">
-                <Button variant="ghost" className="border border-rule text-ink hover:bg-bg-2" onClick={() => setShowAbortPrompt(false)}>
-                  Cancel
-                </Button>
                 <Button variant="ghost" className="border border-signal text-signal hover:bg-signal-soft" onClick={() => {
                    setShowAbortPrompt(false);
                    localStorage.removeItem(storageKey);
                    navigate('/modules');
                 }}>
                   Abort
+                </Button>
+                <Button variant="ghost" className="border border-rule text-ink hover:bg-bg-2" onClick={() => setShowAbortPrompt(false)}>
+                  Cancel
                 </Button>
               </div>
             </motion.div>
@@ -76,12 +81,11 @@ export default function FlashcardLayout({
         </div>
 
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3 md:gap-4 justify-center text-[#8a94a6] w-auto whitespace-nowrap">
-          <div className="font-mono text-[9px] tracking-widest uppercase flex flex-col leading-[1.2] text-right">
-             <span className="opacity-70">{(currentIndex + 1).toString().padStart(2, '0')} OF</span>
-             <span className="opacity-70">{totalQuestions.toString().padStart(2, '0')}</span>
-          </div>
-          <div className="w-12 md:w-24 h-[2px] bg-rule rounded-full relative overflow-hidden">
-             <div className="absolute top-0 left-0 h-full bg-ink transition-all duration-300" style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }} />
+          <span className="font-mono text-[10px] tracking-widest uppercase opacity-70">
+            {currentIndex + 1} / {totalQuestions}
+          </span>
+          <div className="w-16 md:w-28 h-1 bg-rule rounded-full relative overflow-hidden">
+             <div className="absolute top-0 left-0 h-full bg-ink rounded-full transition-all duration-300" style={{ width: `${((currentIndex + 1) / totalQuestions) * 100}%` }} />
           </div>
           <div className="font-mono text-[10px] tracking-[0.1em] text-ink">
             {formatTime(timeElapsed)}
@@ -164,8 +168,8 @@ export default function FlashcardLayout({
 
            {/* FOOTER TOOLBAR */}
            <div className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-2 z-20">
-             <Button 
-               variant="ghost" 
+             <Button
+               variant="ghost"
                onClick={handlePrev}
                className={`w-11 h-11 rounded-full border border-rule text-[#8a94a6] hover:text-ink flex justify-center items-center bg-paper shadow-sm transition-colors shrink-0 ${currentIndex === 0 ? 'opacity-0 pointer-events-none' : ''}`}
                aria-label="Previous question"
@@ -176,37 +180,53 @@ export default function FlashcardLayout({
              <Button
                variant="ghost"
                onClick={() => toggleBookmark(currentQ)}
+               aria-label={isBookmarked ? "Remove bookmark" : "Bookmark this question"}
                className={`h-11 px-4 sm:px-5 rounded-full border bg-paper shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center gap-2 ${isBookmarked ? 'border-transparent text-paper bg-signal hover:bg-signal-strong shadow-md' : 'border-rule text-ink hover:bg-bg-2'}`}
              >
                <Bookmark size={15} strokeWidth={isBookmarked ? 2.5 : 1.5} fill={isBookmarked ? "currentColor" : "none"} className={isBookmarked ? 'mb-px' : ''} /> Save
              </Button>
 
-             <Button
-               variant="ghost"
-               onClick={() => {
-                 if (!isRevealedViva) handleRevealViva(currentQ.id);
-                 else handleNext();
-               }}
-               className="h-11 px-6 sm:px-8 rounded-full border border-transparent bg-ink hover:bg-ink-2 text-bg shadow-sm transition-colors text-[14px] font-medium font-sans flex items-center justify-center gap-2 flex-1 sm:min-w-[180px] sm:max-w-xs"
-             >
-               {!isRevealedViva ? 'Reveal answer →' : (currentIndex === totalQuestions - 1 ? 'Complete →' : 'Next →')}
-             </Button>
+             {!isRevealedViva ? (
+               <Button
+                 variant="ghost"
+                 onClick={() => handleRevealViva(currentQ.id)}
+                 className="h-11 px-6 sm:px-8 rounded-full border border-transparent bg-ink hover:bg-ink-2 text-bg shadow-sm transition-colors text-[14px] font-medium font-sans flex items-center justify-center gap-2 flex-1 sm:min-w-[180px] sm:max-w-xs"
+               >
+                 Reveal answer →
+               </Button>
+             ) : handleVivaKnew ? (
+               <>
+                 <Button
+                   variant="ghost"
+                   onClick={() => handleVivaDidntKnow!(currentQ.id)}
+                   className="h-11 px-5 sm:px-6 rounded-full border border-signal text-signal bg-paper hover:bg-signal-soft shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center gap-1.5 flex-1 sm:max-w-[160px]"
+                 >
+                   Review again
+                 </Button>
+                 <Button
+                   variant="ghost"
+                   onClick={() => handleVivaKnew!(currentQ.id)}
+                   className="h-11 px-6 sm:px-8 rounded-full border border-transparent bg-mint hover:bg-mint/80 text-bg shadow-sm transition-colors text-[14px] font-medium font-sans flex items-center justify-center gap-2 flex-1 sm:min-w-[160px] sm:max-w-xs"
+                 >
+                   <CheckCircle2 size={16} /> Got it
+                 </Button>
+               </>
+             ) : (
+               <Button
+                 variant="ghost"
+                 onClick={handleNext}
+                 className="h-11 px-6 sm:px-8 rounded-full border border-transparent bg-ink hover:bg-ink-2 text-bg shadow-sm transition-colors text-[14px] font-medium font-sans flex items-center justify-center gap-2 flex-1 sm:min-w-[180px] sm:max-w-xs"
+               >
+                 {currentIndex === totalQuestions - 1 ? 'Complete →' : 'Next →'}
+               </Button>
+             )}
 
              <Button
                variant="ghost"
                onClick={handleNext}
                className="h-11 px-5 sm:px-6 rounded-full border border-rule bg-paper hover:bg-bg-2 text-ink shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center"
              >
-               Skip
-             </Button>
-
-             <Button 
-               variant="ghost" 
-               onClick={handleNext}
-               className={`w-11 h-11 rounded-full border border-rule text-[#8a94a6] hover:text-ink flex justify-center items-center bg-paper shadow-sm transition-colors shrink-0 ${currentIndex === totalQuestions - 1 ? 'opacity-0 pointer-events-none' : ''}`}
-               aria-label="Next question"
-             >
-               <ArrowRight size={18} strokeWidth={1.5} />
+               Pass
              </Button>
            </div>
          </div>

@@ -603,6 +603,18 @@ export default function QuizView() {
     }
   };
 
+  const handleVivaKnew = (qId: string) => {
+    const q = questions[currentIndex];
+    recordAnswerProgress(user?.uid || null, qId, true, q.topicId);
+    handleNext();
+  };
+
+  const handleVivaDidntKnow = (qId: string) => {
+    const q = questions[currentIndex];
+    recordAnswerProgress(user?.uid || null, qId, false, q.topicId);
+    handleNext();
+  };
+
   const finishQuiz = () => {
     trackQuestionTime();
     // Record real attempt
@@ -1011,6 +1023,7 @@ export default function QuizView() {
         ata={currentQ?.ata}
         routeTopicId={routeTopicId}
         mockExams={mockExams}
+        totalQuestions={questions.length}
         startQuiz={startQuiz}
         navigate={navigate}
       />
@@ -1096,6 +1109,8 @@ export default function QuizView() {
     handleSelectOption,
     handleSubmitPractice,
     handleRevealViva,
+    handleVivaKnew,
+    handleVivaDidntKnow,
     handleNext,
     handlePrev,
     handleJump,

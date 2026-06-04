@@ -277,7 +277,7 @@ export default function PricingView() {
       <section id="pricing" className="pt-10 pb-24 md:pt-16 md:pb-32 max-w-[1000px] mx-auto px-6 w-full relative z-10">
          <FadeUp className="text-center mb-10">
             <span className="eyebrow block mb-4 text-[10px] tracking-[0.25em] text-signal font-mono uppercase">§ 04 · LICENSE TO FLY</span>
-            <h2 className="font-serif text-[48px] md:text-[60px] text-ink mb-4 tracking-tight leading-none">Invest in your exam pass.</h2>
+            <h2 className="font-serif text-[36px] sm:text-[44px] md:text-[60px] text-ink mb-4 tracking-tight leading-none">Invest in your exam pass.</h2>
             <p className="font-sans text-ink-2 font-light text-[17px] max-w-lg mx-auto leading-relaxed">
               Unlock the entire operational syllabus today. Select your subscription frequency with zero commitment, cancel anytime.
             </p>

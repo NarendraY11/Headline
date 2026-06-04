@@ -104,7 +104,7 @@ export default function NotificationCenter() {
       {/* Dropdown Pane */}
       {isOpen && (
           <div
-            className="anim-pop absolute right-0 mt-2.5 w-80 sm:w-96 bg-paper border border-rule rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.1)] overflow-hidden z-50 origin-top-right text-left"
+            className="anim-pop absolute right-0 mt-2.5 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-sm bg-paper border border-rule rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.1)] overflow-hidden z-50 origin-top-right text-left"
           >
             {/* Header */}
             <div className="px-4 py-3 bg-bg border-b border-rule flex items-center justify-between">

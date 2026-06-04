@@ -7,7 +7,8 @@ interface QuizSetupProps {
   customTopic?: string;
   ata?: string;
   routeTopicId?: string;
-  mockExams: any[]; // Or import the type if available
+  mockExams: any[];
+  totalQuestions?: number;
   startQuiz: (mode: QuizMode) => void;
   navigate: (path: string) => void;
 }
@@ -17,9 +18,12 @@ export default function QuizSetup({
   ata,
   routeTopicId,
   mockExams,
+  totalQuestions,
   startQuiz,
   navigate,
 }: QuizSetupProps) {
+  const qCount = totalQuestions || 0;
+  const timedMin = qCount > 0 ? Math.max(1, Math.ceil(qCount * 1.5)) : null;
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4">
       <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
@@ -51,6 +55,9 @@ export default function QuizSetup({
                 RECOMMENDED
               </Chip>
             </div>
+            {qCount > 0 && (
+              <p className="font-mono text-[9px] uppercase tracking-widest text-muted-2 mb-2">{qCount} questions · self-paced</p>
+            )}
             <p className="font-sans text-sm text-muted font-light w-11/12">
               Standard study mode. Receive immediate technical feedback and high-fidelity references after each selection.
             </p>
@@ -70,6 +77,9 @@ export default function QuizSetup({
                   MOCK EXAM
                 </Chip>
               </div>
+              {qCount > 0 && timedMin && (
+                <p className="font-mono text-[9px] uppercase tracking-widest text-muted-2 mb-2">{qCount} questions · ~{timedMin} min</p>
+              )}
               <p className="font-sans text-sm text-muted font-light w-11/12">
                 Simulates DGCA/EASA stress loading. No feedback until the final payload is delivered. Track your time-per-question metrics.
               </p>
@@ -87,6 +97,9 @@ export default function QuizSetup({
                   MEMORY RECALL
                 </Chip>
               </div>
+              {qCount > 0 && (
+                <p className="font-mono text-[9px] uppercase tracking-widest text-muted-2 mb-2">{qCount} cards · self-paced</p>
+              )}
               <p className="font-sans text-sm text-muted font-light w-11/12">
                 Used for oral board prep or rapid repetition. Formulate the answer mentally, then reveal the regulatory model answer.
               </p>

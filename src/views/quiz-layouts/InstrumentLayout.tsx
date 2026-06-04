@@ -72,22 +72,25 @@ export default function InstrumentLayout({
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
-              className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
+              role="dialog"
+            aria-modal="true"
+            aria-labelledby="abort-dialog-title-inst"
+            className="bg-panel border border-rule rounded-xl p-6 w-full max-w-sm shadow-2xl relative"
             >
-              <h3 className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
+              <h3 id="abort-dialog-title-inst" className="font-serif text-2xl text-ink mb-2">Abort Session?</h3>
               <p className="font-sans text-sm text-ink-2 mb-6">
                 Are you sure you want to exit? Your progress for this mock exam will be lost.
               </p>
               <div className="flex justify-end gap-3">
-                <Button variant="ghost" className="border border-rule text-ink" onClick={() => setShowAbortPrompt(false)}>
-                  Cancel
-                </Button>
                 <Button variant="ghost" className="border border-signal text-signal hover:bg-signal-soft" onClick={() => {
                    setShowAbortPrompt(false);
                    localStorage.removeItem(storageKey);
                    navigate('/modules');
                 }}>
                   Abort
+                </Button>
+                <Button variant="ghost" className="border border-rule text-ink" onClick={() => setShowAbortPrompt(false)}>
+                  Cancel
                 </Button>
               </div>
             </motion.div>
@@ -130,9 +133,10 @@ export default function InstrumentLayout({
                 repeat: Infinity,
                 ease: "easeInOut"
               }}
-              className={`font-mono text-[10px] md:text-[11px] tracking-widest flex items-center gap-1.5 ml-2 lg:ml-4 uppercase ${
-                timeLeft < 300 
-                  ? 'text-[#ff4d4d] font-semibold drop-shadow-[0_0_8px_rgba(255,77,77,0.4)]' 
+              title="Time remaining"
+              className={`font-mono text-[10px] md:text-[11px] tracking-widest flex items-center gap-1.5 ml-2 lg:ml-4 uppercase cursor-default ${
+                timeLeft < 300
+                  ? 'text-[#ff4d4d] font-semibold drop-shadow-[0_0_8px_rgba(255,77,77,0.4)]'
                   : 'text-ink'
               }`}
             >
@@ -259,17 +263,24 @@ export default function InstrumentLayout({
                     
                     let containerClass = "bg-[#11223b]/30 border-rule/50 hover:bg-[#11223b] cursor-pointer text-[#f5f2ea]";
                     if (isSelected) {
-                      containerClass = "bg-[#1a2c47] border-[#f5f2ea]/30 ring-1 ring-inset ring-[#f5f2ea]/30 shadow-[0_0_15px_rgba(245,242,234,0.05)]";
+                      containerClass = "bg-[#1e3a5f] border-[#f5f2ea]/50 ring-2 ring-inset ring-[#f5f2ea]/40 shadow-[0_0_20px_rgba(245,242,234,0.08)]";
                     }
 
                     return (
-                      <motion.div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+                      <motion.div
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Choice ${charLabel}: ${choice.label}`}
+                        aria-pressed={isSelected}
+                        onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                         key={choice.id}
                         whileTap={{ scale: 0.99 }}
+                        animate={isSelected ? { scale: [1, 1.01, 1] } : {}}
+                        transition={{ duration: 0.25 }}
                         onClick={() => handleSelectOption(choice.id)}
                         className={`p-6 rounded-xl border flex items-center gap-5 outline-none transition-all duration-200 ${containerClass}`}
                       >
-                        <div className={`w-[34px] h-[34px] rounded-full border flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'border-[#f5f2ea]/50 bg-[#f5f2ea]/10 text-ink' : 'border-rule/50 text-[#8a94a6]'}`}>
+                        <div className={`w-[34px] h-[34px] rounded-full border flex items-center justify-center shrink-0 transition-colors ${isSelected ? 'border-[#f5f2ea]/70 bg-[#f5f2ea]/15 text-ink' : 'border-rule/50 text-[#8a94a6]'}`}>
                           <span className="font-mono text-[13px] font-medium mt-px">{charLabel}</span>
                         </div>
                         <span className="font-sans font-medium text-[14px] md:text-[15px] leading-snug">{choice.label}</span>
@@ -338,12 +349,12 @@ export default function InstrumentLayout({
             >
               SKIP
             </Button>
-            <Button 
+            <Button
               variant="ghost"
               onClick={handleNext}
               className="h-[42px] px-6 border border-rule text-bg bg-[#f5f2ea] hover:bg-[#ebe7dc] rounded-full uppercase tracking-[0.15em] font-mono text-[11px] font-semibold flex items-center transition-colors"
             >
-              {currentIndex === totalQuestions - 1 ? 'COMPLETE' : 'CONFIRM'} <ArrowRight size={16} className="ml-2" strokeWidth={2} />
+              {currentIndex === totalQuestions - 1 ? 'COMPLETE' : (answers[currentQ.id] ? 'NEXT' : 'CONFIRM')} <ArrowRight size={16} className="ml-2" strokeWidth={2} />
             </Button>
          </div>
       </footer>

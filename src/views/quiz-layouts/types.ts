@@ -21,6 +21,8 @@ export interface QuizLayoutProps {
   handleSelectOption: (id: string) => void;
   handleSubmitPractice: () => void;
   handleRevealViva: (id: string) => void;
+  handleVivaKnew?: (id: string) => void;
+  handleVivaDidntKnow?: (id: string) => void;
   handleNext: () => void;
   handlePrev: () => void;
   handleJump: (index: number) => void;
