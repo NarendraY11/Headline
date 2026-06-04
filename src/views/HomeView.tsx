@@ -1,5 +1,5 @@
 import { ArrowUpRight, CheckCircle2, MoveRight, User } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type CSSProperties, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, Card, Chip, CompassLogomark, Wordmark } from "../components/Atoms";
 import DailyStudyGoal from "../components/DailyStudyGoal";
@@ -14,11 +14,19 @@ import { FAQItem } from "./home/FAQItem";
 import { InteractiveSampleQuestion } from "./home/InteractiveSampleQuestion";
 import { LazyChartWrapper } from "./home/LazyChartWrapper";
 
+// Trust-stat floors used until (or instead of) live counts resolve. Keeping
+// these in sync with the bank size advertised on /pricing avoids a "0
+// questions" headline when the Supabase count query is blocked.
+const QUESTION_COUNT_FALLBACK = 6940;
+const SUBJECT_COUNT_FALLBACK = 28;
+
 export default function HomeView() {
   const { user, openAuthModal } = useAuth();
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [liveQuestionsCount, setLiveQuestionsCount] = useState<number>(0);
-  const [liveSubjectsCount, setLiveSubjectsCount] = useState<number>(0);
+  // Never render 0 for these trust stats: if the live count query is blocked
+  // (RLS) or returns null, fall back to a realistic floor rather than "0".
+  const [liveQuestionsCount, setLiveQuestionsCount] = useState<number>(QUESTION_COUNT_FALLBACK);
+  const [liveSubjectsCount, setLiveSubjectsCount] = useState<number>(SUBJECT_COUNT_FALLBACK);
   const [platformAnsweredCount, setPlatformAnsweredCount] = useState<number>(42520);
   const [activePilotsCount, setActivePilotsCount] = useState<number>(230);
 
@@ -34,8 +42,9 @@ export default function HomeView() {
         ]);
 
         setQuestions(previewQuestions);
-        setLiveQuestionsCount(countResponse.count ?? previewQuestions.length);
-        setLiveSubjectsCount(mergedSubjects.length);
+        const resolvedQuestions = countResponse.count ?? previewQuestions.length;
+        if (resolvedQuestions > 0) setLiveQuestionsCount(resolvedQuestions);
+        if (mergedSubjects.length > 0) setLiveSubjectsCount(mergedSubjects.length);
 
         if (profilesResponse?.count) {
           setActivePilotsCount(profilesResponse.count);
@@ -87,7 +96,7 @@ export default function HomeView() {
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">VIVA</Link>
           <Link to="/pricing" className="hover:text-ink transition-colors px-2 py-2">Pricing</Link>
         </nav>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
           {user ? (
             <>
               <Link to="/today" className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors hidden sm:block">Dashboard</Link>
@@ -97,7 +106,7 @@ export default function HomeView() {
             </>
           ) : (
             <>
-              <button onClick={() => openAuthModal("signin")} className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors hidden sm:block cursor-pointer">Sign in</button>
+              <button onClick={() => openAuthModal("signin")} className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors cursor-pointer">Sign in</button>
               <Button onClick={() => openAuthModal("signup")} variant="primary" className="h-[38px] px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Start studying <MoveRight size={14} className="ml-1.5" /></Button>
             </>
           )}
@@ -124,7 +133,20 @@ export default function HomeView() {
         <div className="px-6 w-full max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-center gap-12 md:gap-8 md:overflow-visible relative" style={{ zIndex: 3 }}>
           
           {/* LEFT COLUMN */}
-          <div className="flex-1 md:max-w-[50%] lg:max-w-2xl relative z-10 w-full min-w-0">
+          {/* The hero sits on a fixed cream gradient in BOTH themes, so pin the
+              ink/navy/muted tokens to their light-theme values here. Otherwise
+              the dark theme flips `text-ink` to near-white → invisible on cream. */}
+          <div
+            className="flex-1 md:max-w-[50%] lg:max-w-2xl relative z-10 w-full min-w-0"
+            style={{
+              "--color-ink": "#0d1a2d",
+              "--color-ink-2": "#1a2c47",
+              "--color-navy": "#14305a",
+              "--color-muted": "#334155",
+              "--color-muted-2": "#475569",
+              "--color-rule": "rgba(13, 26, 45, 0.10)",
+            } as CSSProperties}
+          >
           <FadeUp>
             <span className="eyebrow block mb-5 font-mono text-[10px] uppercase tracking-widest text-muted-2 flex items-center gap-2.5">
               <span className="w-1.5 h-1.5 rounded-sm bg-signal transform rotate-45" />
@@ -156,20 +178,20 @@ export default function HomeView() {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 border-t border-rule/30 pt-8 w-full mt-6">
               <div className="flex flex-col gap-1">
-                <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{liveQuestionsCount}</span>
-                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">QUESTIONS AVAILABLE</span>
+                <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{liveQuestionsCount.toLocaleString()}</span>
+                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">QUESTIONS AVAILABLE</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{liveSubjectsCount}</span>
-                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">SUBJECTS COVERED</span>
+                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">SUBJECTS COVERED</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-navy tracking-tight leading-none">{platformAnsweredCount.toLocaleString()}</span>
-                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">PLATFORM RESPONSES</span>
+                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">PLATFORM RESPONSES</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-[#A66C23] tracking-tight leading-none">{activePilotsCount}</span>
-                <span className="font-mono text-[9px] tracking-widest text-muted-2 uppercase">PILOTS ACTIVE LIVE</span>
+                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">PILOTS ENROLLED</span>
               </div>
             </div>
           </FadeUp>

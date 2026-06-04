@@ -1,0 +1,28 @@
+# Heading
+
+> Heading is a question bank, mock-exam engine, and A320 systems reference for commercial pilot exam preparation. It targets the EASA Part-FCL and Indian DGCA theoretical syllabi (ATPL/CPL) and A320 type-rating prep, with adaptive spaced repetition, timed mock papers with negative marking, VIVA oral practice, and per-syllabus readiness analytics.
+
+Heading is a single-page web app (also installable as a PWA). Authenticated study features (dashboard, question bank, mock exams, analytics) live behind sign-in; the pages below are the public, indexable entry points.
+
+## Product
+
+- [Question Bank](https://headline-blush.vercel.app/modules): Adaptive practice across 28 subjects with spaced repetition, bookmarks, and notes.
+- [Mock Exams](https://headline-blush.vercel.app/mock-exams): DGCA & EASA paper templates with real sectional weighting, strict timers, and negative marking.
+- [A320 Systems](https://headline-blush.vercel.app/a320-systems): Interactive cockpit-grade reference — ATA chapters, ECAM logic, and schematics you can study from or quiz against.
+- [Pricing](https://headline-blush.vercel.app/pricing): Free Cadet tier and Captain (Pro) subscription, monthly or annual.
+
+## Company
+
+- [About](https://headline-blush.vercel.app/about): What Heading is and who it is built for.
+- [Blog](https://headline-blush.vercel.app/blog): Ground-school theory tips and exam-prep articles.
+- [Contact](https://headline-blush.vercel.app/contact): Support and enquiries.
+
+## Legal
+
+- [Privacy Policy](https://headline-blush.vercel.app/privacy)
+- [Terms of Service](https://headline-blush.vercel.app/terms)
+- [Refund Policy](https://headline-blush.vercel.app/refund)
+
+## Optional
+
+- [Sitemap](https://headline-blush.vercel.app/sitemap.xml): Full list of crawlable URLs.
