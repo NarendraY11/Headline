@@ -248,12 +248,12 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
         </div>
 
       <div className="flex items-center justify-between mt-auto border-t border-rule/20 pt-4 relative">
-        <div className="flex gap-2 sm:gap-3 font-mono text-[8px] sm:text-[9px] text-muted-2 tracking-[0.1em] sm:tracking-[0.2em] uppercase">
-          <button onClick={() => handleToolbarClick("BOOKMARK")} className="hover:text-ink transition-colors outline-none focus-visible:ring-2">BOOKMARK</button>
+        <div className="flex items-center gap-2 sm:gap-3 font-mono text-[8px] sm:text-[9px] text-muted-2 tracking-[0.1em] sm:tracking-[0.2em] uppercase -my-3">
+          <button onClick={() => handleToolbarClick("BOOKMARK")} className="inline-flex items-center min-h-[44px] px-1 -mx-1 hover:text-ink transition-colors outline-none focus-visible:ring-2">BOOKMARK</button>
           <span>·</span>
-          <button onClick={() => handleToolbarClick("NOTE")} className="hover:text-ink transition-colors outline-none focus-visible:ring-2">NOTE</button>
+          <button onClick={() => handleToolbarClick("NOTE")} className="inline-flex items-center min-h-[44px] px-1 -mx-1 hover:text-ink transition-colors outline-none focus-visible:ring-2">NOTE</button>
           <span>·</span>
-          <button onClick={() => handleToolbarClick("SKIP")} className="hover:text-ink transition-colors outline-none focus-visible:ring-2">SKIP</button>
+          <button onClick={() => handleToolbarClick("SKIP")} className="inline-flex items-center min-h-[44px] px-1 -mx-1 hover:text-ink transition-colors outline-none focus-visible:ring-2">SKIP</button>
         </div>
 
         {showTooltip && (
