@@ -1176,7 +1176,7 @@ export default function QuizView() {
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-4 right-4 z-[999] bg-panel text-ink border border-rule px-4 py-2.5 rounded-full shadow-lg font-sans text-[13px] font-medium flex items-center gap-2"
+            className="fixed top-4 right-4 z-[var(--z-toast)] bg-panel text-ink border border-rule px-4 py-2.5 rounded-full shadow-lg font-sans text-[13px] font-medium flex items-center gap-2"
           >
             <CheckCircle2 size={16} className="text-mint" />
             Progress saved
@@ -1188,7 +1188,7 @@ export default function QuizView() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999] max-w-md w-[92%] bg-ink text-bg border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[var(--z-toast)] max-w-md w-[92%] bg-ink text-bg border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3"
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5">
@@ -1230,21 +1230,24 @@ export default function QuizView() {
         )}
 
         {showAbortPrompt && (
-          <motion.div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-ink/70 backdrop-blur-sm"
+            className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-ink/70 backdrop-blur-sm"
             onClick={() => setShowAbortPrompt(false)}
           >
-            <motion.div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="abort-dialog-title"
               initial={{ opacity: 0, y: 20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
               className="bg-paper p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-rule relative"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="font-serif text-3xl text-ink mb-2">
+              <h2 id="abort-dialog-title" className="font-serif text-3xl text-ink mb-2">
                 Abort Session?
               </h2>
               <p className="font-mono text-[11px] text-muted uppercase tracking-widest leading-relaxed mb-8">

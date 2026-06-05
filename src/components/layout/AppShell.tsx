@@ -53,7 +53,14 @@ export function AppShell() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [bookmarkCount, setBookmarkCount] = useState(42);
+  const [bookmarkCount, setBookmarkCount] = useState(() => {
+    try {
+      const saved = localStorage.getItem("heading_bookmarks");
+      return saved ? JSON.parse(saved).length : 0;
+    } catch {
+      return 0;
+    }
+  });
   const [history, setHistory] = useState<{path: string, title: string}[]>([]);
   const [isSidebarPinned, setIsSidebarPinned] = useState(() => 
     localStorage.getItem("heading_sidebar_pinned") === "true" || false
@@ -312,7 +319,7 @@ export function AppShell() {
           />
           <aside
             id="desktop-sidebar"
-            aria-label="Primary navigation"
+            aria-label="Main navigation"
             className={`hidden md:flex flex-col h-screen fixed left-0 top-0 border-r border-rule bg-bg select-none z-40 overflow-hidden ${reduceMotion === 'always' ? 'transition-none' : 'transition-[width] duration-200 ease-in-out'} ${isSidebarExpanded ? 'w-[240px] shadow-[8px_0_24px_rgba(0,0,0,0.02)]' : 'w-[64px]'}`}
             onMouseEnter={() => !isSidebarPinnedOpen && setIsSidebarHovered(true)}
             onMouseLeave={() => !isSidebarPinnedOpen && setIsSidebarHovered(false)}
@@ -646,7 +653,7 @@ export function AppShell() {
             </main>
 
             {/* MOBILE BOTTOM TAB BAR */}
-            <nav aria-label="Primary navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg border-t border-rule pb-[var(--sab)] flex items-stretch justify-around px-2">
+            <nav aria-label="Bottom navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg border-t border-rule pb-[var(--sab)] flex items-stretch justify-around px-2">
               <NavLink to="/today" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
                 {({isActive}) => (<>
                   {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}

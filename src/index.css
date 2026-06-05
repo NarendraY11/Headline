@@ -58,7 +58,8 @@
   --sky: #2f6098; /* darkened from #4173a8 — old value was 4.48:1 on bg (sub-AA) */
   --sky-soft: #d5e1ee;
   --ring-green: #9ee29a;
-  
+  --pro-gold: #df9d38;
+
   --r-xs: 4px;
   --r-sm: 6px;
   --r-md: 10px;
@@ -91,6 +92,7 @@
   --sky: #7eb6f2; /* Added to fix 4.5:1 contrast on dark bg */
   --sky-soft: #14283f;
   --ring-green: #37bf30;
+  --pro-gold: #e0a040;
 }
 
 @theme {
@@ -115,6 +117,11 @@
   --color-sky: var(--sky);
   --color-sky-soft: var(--sky-soft);
   --color-ring-green: var(--ring-green);
+  --color-pro-gold: var(--pro-gold);
+
+  /* Semantic z-index scale */
+  --z-toast: 999;
+  --z-modal: 9999;
 
   --radius-r-xs: var(--r-xs);
   --radius-r-sm: var(--r-sm);

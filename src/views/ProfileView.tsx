@@ -264,7 +264,7 @@ export default function ProfileView() {
           <div className="relative group">
             <div className="w-24 h-24 rounded-full border-2 border-rule overflow-hidden bg-navy flex items-center justify-center relative shadow-sm">
               {currentPhotoURL ? (
-                <img src={currentPhotoURL} alt="Avatar" className="w-full h-full object-cover" />
+                <img src={currentPhotoURL} alt={user.displayName ? `Profile photo of ${user.displayName}` : "Profile photo"} className="w-full h-full object-cover" />
               ) : (
                 <span className="font-serif text-3xl text-bg uppercase">
                   {user.displayName?.charAt(0) || "P"}
@@ -327,8 +327,9 @@ export default function ProfileView() {
                 type="file" 
                 ref={fileInputRef} 
                 onChange={onFileInputChange} 
-                accept="image/*" 
-                className="hidden" 
+                accept="image/*"
+                aria-label="Upload profile photo"
+                className="hidden"
               />
             </div>
 
@@ -384,18 +385,18 @@ export default function ProfileView() {
           isPro
             ? "bg-navy border-navy text-bg"
             : subPlan === "trial"
-            ? "bg-panel border-l-4 border-l-amber"
-            : "bg-panel border-l-4 border-l-navy"
+            ? "bg-amber-soft/40 border border-amber/30"
+            : "bg-panel border border-rule"
         }`}
       >
         {isPro && (
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#DF9D38]/10 blur-3xl rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--pro-gold)]/10 blur-3xl rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
         )}
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <span
               className={`inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.2em] font-bold ${
-                isPro ? "text-[#DF9D38]" : "text-muted"
+                isPro ? "text-[var(--pro-gold)]" : "text-muted"
               }`}
             >
               {isPro ? <Sparkles size={12} /> : <ShieldCheck size={12} />} Membership
@@ -436,7 +437,7 @@ export default function ProfileView() {
                   <div className="font-mono text-[9px] uppercase tracking-widest text-bg/50 mb-1 flex items-center gap-1">
                     <CalendarClock size={10} /> Days Left
                   </div>
-                  <div className="font-sans text-sm font-semibold text-[#DF9D38]">{subDaysLeft}</div>
+                  <div className="font-sans text-sm font-semibold text-[var(--pro-gold)]">{subDaysLeft}</div>
                 </div>
               )}
             </div>
@@ -630,21 +631,21 @@ export default function ProfileView() {
         </Card>
 
         {/* Referral CTA */}
-        <Card className="bg-emerald-500/5 border border-emerald-500/10 p-6 md:p-8 flex flex-col justify-between gap-4 rounded-2xl">
+        <Card className="bg-mint-soft/30 border border-mint/20 p-6 md:p-8 flex flex-col justify-between gap-4 rounded-2xl">
           <div className="space-y-1">
-            <span className="block font-mono text-[9px] uppercase tracking-widest text-[#10B981] font-bold">PILOT COOP</span>
+            <span className="block font-mono text-[9px] uppercase tracking-widest text-mint font-bold">PILOT COOP</span>
             <h3 className="font-serif text-xl font-bold text-ink flex items-center gap-2">
-              <Gift size={18} className="text-emerald-600" /> Refer a Cadet & Earn
+              <Gift size={18} className="text-mint" /> Refer a Cadet & Earn
             </h3>
             <p className="font-sans text-xs text-muted leading-relaxed font-light">
-              Share your dispatch URL. When your referred peer upgrades, you both get <strong className="text-[#10B981]">30 days of free Pro</strong> credited immediately.
+              Share your dispatch URL. When your referred peer upgrades, you both get <strong className="text-mint">30 days of free Pro</strong> credited immediately.
             </p>
           </div>
           <Button
             id="profileReferEarnBtn"
             variant="ghost"
             onClick={() => navigate("/referral")}
-            className="h-10 rounded-full font-mono text-[10px] uppercase tracking-wider px-6 border-emerald-600/20 hover:bg-emerald-500/10 text-emerald-700 bg-transparent self-start"
+            className="h-10 rounded-full font-mono text-[10px] uppercase tracking-wider px-6 border-mint/20 hover:bg-mint-soft text-mint bg-transparent self-start"
           >
             Dispatch Invites
           </Button>

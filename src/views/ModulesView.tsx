@@ -1,5 +1,5 @@
 import { ArrowUpRight, ChevronDown, Compass, Lock, Milestone, Plus, Search, Target } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../components/Atoms";
@@ -16,7 +16,8 @@ export default function ModulesView() {
   const navigate = useNavigate();
 
   const { logbook } = useLogbook();
-  const { userData } = useAuth();
+  const { userData, user } = useAuth();
+  const prefersReducedMotion = useReducedMotion();
   const { stats: progressStats } = useUserProgress();
 
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
@@ -266,7 +267,7 @@ export default function ModulesView() {
           <div className="mb-10 p-6 bg-paper border border-rule rounded-2xl shadow-sm space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 border border-rule bg-[#fbfaf6] text-navy rounded-xl">
+                <div className="p-2 border border-rule bg-panel text-navy rounded-xl">
                   <Compass size={22} className="animate-spin-slow text-navy" />
                 </div>
                 <div>
@@ -287,7 +288,7 @@ export default function ModulesView() {
             {/* Horizontal Timeline Connector Map */}
             <div className="relative pt-4 pb-2">
               <div className="absolute top-[28px] left-4 right-4 h-0.5 bg-rule z-0" />
-              <div className="relative z-10 flex items-center justify-between overflow-x-auto no-scrollbar gap-8 px-2">
+              <div className="relative z-10 flex items-center justify-between overflow-x-auto gap-8 px-2 scrollbar-thin scrollbar-thumb-rule scrollbar-track-transparent pb-1">
                 {sortedWaypoints.map((way, idx) => {
                   const isActiveRecommendation = nextWaypointRecommendation?.id === way.id;
                   return (
@@ -322,7 +323,7 @@ export default function ModulesView() {
             </div>
 
             <p className="font-sans text-[12px] text-muted leading-relaxed font-light">
-              This sequential syllabus has been assembled dynamically for Narendra using ICAO flight certification sequences. Complete waypoint study criteria to unlock full mock competence metrics.
+              This sequential syllabus has been assembled dynamically for {user?.displayName || "you"} using ICAO flight certification sequences. Complete waypoint study criteria to unlock full mock competence metrics.
             </p>
           </div>
         )}
@@ -391,10 +392,10 @@ export default function ModulesView() {
 
             const cardContent = (
               <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
+                initial={prefersReducedMotion ? {} : { opacity: 0, y: 30 }}
+                whileInView={prefersReducedMotion ? {} : { opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.5, delay: (idx % 6) * 0.05, type: "spring", stiffness: 90, damping: 20 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.5, delay: prefersReducedMotion ? 0 : (idx % 6) * 0.05, type: "spring", stiffness: 90, damping: 20 }}
                 className="h-full relative"
               >
                 <div 
@@ -446,10 +447,10 @@ export default function ModulesView() {
                         </div>
                         <div className="h-1.5 w-full bg-rule rounded-full overflow-hidden relative">
                           <motion.div 
-                            initial={{ width: 0 }}
-                            whileInView={{ width: `${Math.max(2, actualMastery * 100)}%` }}
+                            initial={prefersReducedMotion ? {} : { width: 0 }}
+                            whileInView={prefersReducedMotion ? {} : { width: `${Math.max(2, actualMastery * 100)}%` }}
                             viewport={{ once: true }}
-                            transition={{ duration: 0.8, ease: 'easeOut', delay: 0.2 }}
+                            transition={{ duration: prefersReducedMotion ? 0 : 0.8, ease: 'easeOut', delay: prefersReducedMotion ? 0 : 0.2 }}
                             className="absolute inset-y-0 left-0 rounded-full"
                             style={{ backgroundColor: barColor }}
                           />

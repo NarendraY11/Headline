@@ -373,9 +373,6 @@ export default function TopicView() {
                   className={`w-full text-left px-6 py-4 flex items-center group transition-colors relative outline-none ${isSelected ? "bg-panel" : "hover:bg-bg-2"}`}
                 >
                   {/* Left Accent Bar */}
-                  {isSelected && (
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-ink" />
-                  )}
 
                   <div className="w-10 font-mono text-sm text-muted-2 font-medium shrink-0">
                     {shortCode}

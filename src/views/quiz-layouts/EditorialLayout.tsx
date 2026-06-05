@@ -61,8 +61,8 @@ export default function EditorialLayout({
                    Q {(currentIndex + 1)}/{(totalQuestions)}
                  </span>
               </div>
-              <div className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-ink">
-                 <Clock size={13} strokeWidth={1.5} /> 
+              <div role="timer" aria-label={mode === "timed" ? "Time remaining" : "Time elapsed"} className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-ink">
+                 <Clock size={13} strokeWidth={1.5} aria-hidden="true" />
                  {mode === "timed" && timeLeft !== null ? formatTime(timeLeft) : formatTime(timeElapsed)}
               </div>
            </div>
@@ -91,8 +91,8 @@ export default function EditorialLayout({
             QUESTION {(currentIndex + 1).toString().padStart(3, '0')} / {totalQuestions.toString().padStart(2, '0')}
           </div>
 
-          <div className={`flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest ${mode === 'timed' && timeLeft !== null && timeLeft < 300 ? 'text-signal animate-pulse' : 'text-ink'}`}>
-             <Clock size={13} strokeWidth={1.5} /> 
+          <div role="timer" aria-label={mode === "timed" ? "Time remaining" : "Time elapsed"} className={`flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest ${mode === 'timed' && timeLeft !== null && timeLeft < 300 ? 'text-signal animate-pulse' : 'text-ink'}`}>
+             <Clock size={13} strokeWidth={1.5} aria-hidden="true" />
              {mode === "timed" && timeLeft !== null ? formatTime(timeLeft) : formatTime(timeElapsed)}
           </div>
 

@@ -4,6 +4,7 @@ import {
     Clock,
     Compass,
     Flame,
+    Play,
     TrendingUp
 } from "lucide-react";
 import { Reorder } from "motion/react";
@@ -210,13 +211,11 @@ export default function TodayView() {
 
   useEffect(() => {
     setCurrentDateString(
-      new Date()
-        .toLocaleDateString("en-US", {
-          weekday: "short",
-          day: "numeric",
-          month: "short",
-        })
-        .toUpperCase()
+      new Date().toLocaleDateString("en-US", {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      })
     );
   }, []);
 
@@ -543,7 +542,7 @@ export default function TodayView() {
             strokeWidth={1}
           />
           <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-signal hidden md:block mb-4">
-            § 01 · BRIEFING · LIVE
+            § BRIEFING · LIVE
           </span>
           <h1 className="text-[42px] leading-[1.05] md:h-display text-ink font-serif tracking-tight md:leading-tight mb-2">
             {isLate ? (
@@ -663,14 +662,15 @@ export default function TodayView() {
           >
             <Button
               variant="primary"
-              className="w-full bg-bg text-ink hover:bg-paper h-[48px] rounded-[14px] flex items-center justify-center border-0 shadow-none font-medium text-base cursor-pointer"
+              className="w-full bg-bg text-ink hover:bg-paper h-[48px] rounded-[14px] flex items-center justify-center gap-2 border-0 shadow-none font-medium text-base cursor-pointer"
             >
+              <Play size={14} aria-hidden="true" />
               {activeSession ? (
-                `▶ Resume ${activeSession.topicId.toUpperCase().replace("-", " ")} · ${activeSession.answeredCount} Answered`
+                `Resume ${activeSession.topicId.toUpperCase().replaceAll("-", " ")} · ${activeSession.answeredCount} Answered`
               ) : logbook.length > 0 ? (
-                "▶ Start Daily Drill"
+                "Start Daily Drill"
               ) : (
-                "▶ Start First Module"
+                "Start First Module"
               )}
             </Button>
           </Link>
@@ -700,7 +700,7 @@ export default function TodayView() {
         <div className="flex items-baseline justify-between gap-4 mb-4 mt-2">
           <div>
             <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase mb-1.5">
-              § 02 · TELEMETRY
+              § TELEMETRY
             </div>
             <h2 className="font-serif text-[28px] text-ink leading-none tracking-tight">
               Your analytics
