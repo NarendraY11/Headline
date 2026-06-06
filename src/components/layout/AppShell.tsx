@@ -61,11 +61,9 @@ export function AppShell() {
       return 0;
     }
   });
-  const [history, setHistory] = useState<{path: string, title: string}[]>([]);
-  const [isSidebarPinned, setIsSidebarPinned] = useState(() => 
+  const [isSidebarPinned, setIsSidebarPinned] = useState(() =>
     localStorage.getItem("heading_sidebar_pinned") === "true" || false
   );
-  const [showHistory, setShowHistory] = useState(false);
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [isSidebarTappedForTablet, setIsSidebarTappedForTablet] = useState(false);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1200);
@@ -171,14 +169,6 @@ export function AppShell() {
     return "System";
   };
 
-  useEffect(() => {
-    const title = getBreadcrumbTitle(location.pathname);
-    setHistory(prev => {
-      const filtered = prev.filter(p => p.path !== location.pathname);
-      return [{ path: location.pathname, title }, ...filtered].slice(0, 5);
-    });
-  }, [location.pathname]);
-
   const uniqueDates = [
     ...new Set(
       logbook.map((att) => att.dateISO?.split("T")[0]).filter(Boolean)
@@ -217,14 +207,6 @@ export function AppShell() {
   const isSidebarExpanded = isSidebarPinnedOpen || isSidebarHovered || (isTablet && isSidebarTappedForTablet);
   
   const reduceMotion = userData?.settings?.reduceMotion ? "always" : "user";
-
-  const getReadingTime = () => {
-    const p = location.pathname;
-    if (p.startsWith("/quiz/")) return "12 min read";
-    if (p.startsWith("/topic/") || p === "/mock-exams") return "8 min read";
-    if (p === "/modules") return "1 min read";
-    return "3 min read";
-  };
 
   const isItemActive = (to: string) => {
     const path = location.pathname;
@@ -460,39 +442,7 @@ export function AppShell() {
                 <div className="w-2 h-2 rounded-full bg-mint animate-[pulse_2s_infinite]" title="Live session active" />
                 <Link to="/" className="font-serif font-medium tracking-tighter text-[20px] text-ink hover:text-navy transition-colors cursor-pointer hidden sm:inline focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none rounded-sm px-1 leading-none">Heading</Link>
                 
-                <div className="relative hidden sm:block" onMouseLeave={() => setShowHistory(false)}>
-                  <button
-                    onMouseEnter={() => setShowHistory(true)}
-                    onClick={() => setShowHistory(!showHistory)}
-                    aria-label="Show recent pages"
-                    aria-expanded={showHistory}
-                    aria-haspopup="menu"
-                    className="text-muted-2 hover:text-ink px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 rounded"
-                  >
-                    /
-                  </button>
-                  {showHistory && (
-                      <div
-                        role="menu"
-                        aria-label="Recent pages"
-                        className="anim-pop absolute top-full left-1/2 -translate-x-1/2 mt-1 w-56 bg-paper border border-rule rounded-xl shadow-[0_12px_32px_rgba(0,0,0,0.06)] overflow-hidden py-1.5 z-50 origin-top"
-                      >
-                        <div className="px-3 py-1.5 mb-1 font-mono text-[9px] text-muted-2 uppercase tracking-[0.2em] border-b border-rule/30">Recent Flights</div>
-                        {history.length > 0 ? history.map((h, i) => (
-                           <Link 
-                             key={`${h.path}-${i}`} 
-                             to={h.path}
-                             onClick={() => setShowHistory(false)}
-                             className="block px-3 py-2 font-sans text-[13px] text-ink hover:bg-bg-2 transition-colors truncate mx-1.5 rounded-md"
-                           >
-                             {h.title}
-                           </Link>
-                        )) : (
-                           <div className="px-3 py-2 text-[13px] text-muted">No history yet</div>
-                        )}
-                      </div>
-                    )}
-                </div>
+                <span className="text-muted-2 hidden sm:inline px-1" aria-hidden="true">/</span>
                 <h2 className="text-ink font-medium tracking-tight truncate m-0 text-sm ml-1 max-w-[100px] xs:max-w-[140px] sm:max-w-none">{getBreadcrumbTitle()}</h2>
               </div>
 
