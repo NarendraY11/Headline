@@ -5,6 +5,7 @@ import {
     Clock,
     Compass,
     Flame,
+    GripVertical,
     Play,
     TrendingUp,
     X,
@@ -360,7 +361,7 @@ export default function TodayView() {
   }
 
   const tileBaseClasses =
-    "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between cursor-grab active:cursor-grabbing";
+    "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between cursor-grab active:cursor-grabbing group";
 
   const renderTile = (tile: string) => {
     switch (tile) {
@@ -372,12 +373,14 @@ export default function TodayView() {
             value="streak"
             id="streak"
             className={tileBaseClasses}
+            whileDrag={{ scale: 1.03, boxShadow: "0 8px 24px rgba(13,26,45,0.14)" }}
           >
             <div className="flex items-center gap-1.5 mb-1 text-muted-2">
               <Flame size={14} className={hasStreak ? "text-signal" : "text-muted-2"} />
               <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                 STREAK
               </span>
+              <GripVertical size={11} className="ml-auto opacity-0 group-hover:opacity-30 transition-opacity" aria-hidden="true" />
             </div>
             {hasStreak ? (
               <>
@@ -425,6 +428,7 @@ export default function TodayView() {
             value="answered"
             id="answered"
             className={tileBaseClasses}
+            whileDrag={{ scale: 1.03, boxShadow: "0 8px 24px rgba(13,26,45,0.14)" }}
           >
             <div>
               <div className="flex items-center gap-1.5 mb-1 text-muted-2">
@@ -432,6 +436,7 @@ export default function TodayView() {
                 <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                   Q'S ANSWERED
                 </span>
+                <GripVertical size={11} className="ml-auto opacity-0 group-hover:opacity-30 transition-opacity" aria-hidden="true" />
               </div>
               <div className="font-serif text-[26px] text-ink leading-none mt-2 flex items-baseline justify-between overflow-hidden">
                 <div>
@@ -469,6 +474,7 @@ export default function TodayView() {
             value="score"
             id="score"
             className={tileBaseClasses}
+            whileDrag={{ scale: 1.03, boxShadow: "0 8px 24px rgba(13,26,45,0.14)" }}
           >
             <div>
               <div className="flex items-center gap-1.5 mb-1 text-muted-2">
@@ -476,6 +482,7 @@ export default function TodayView() {
                 <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                   AVG SCORE
                 </span>
+                <GripVertical size={11} className="ml-auto opacity-0 group-hover:opacity-30 transition-opacity" aria-hidden="true" />
               </div>
               <div
                 className={`font-serif text-[26px] leading-none mt-2 ${getScoreColor(avgScore)}`}
@@ -485,7 +492,11 @@ export default function TodayView() {
                   %
                 </span>
               </div>
-              <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
+              <div className={`mt-2 font-mono text-[9px] tracking-wide ${
+                scoreTrendSign === "↑" ? "text-mint" :
+                scoreTrendSign === "↓" ? "text-signal" :
+                "text-muted-2"
+              }`}>
                 Trend: {scoreTrendStr}
               </div>
             </div>
@@ -498,6 +509,7 @@ export default function TodayView() {
             value="hours"
             id="hours"
             className={tileBaseClasses}
+            whileDrag={{ scale: 1.03, boxShadow: "0 8px 24px rgba(13,26,45,0.14)" }}
           >
             <div>
               <div className="flex items-center gap-1.5 mb-1 text-muted-2">
@@ -505,6 +517,7 @@ export default function TodayView() {
                 <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                   HOURS · 7D
                 </span>
+                <GripVertical size={11} className="ml-auto opacity-0 group-hover:opacity-30 transition-opacity" aria-hidden="true" />
               </div>
               <div className="font-serif text-[26px] text-ink leading-none mt-2">
                 {hasAttempts ? <AnimatedCounter value={hoursThisWeek} /> : 0}{" "}
@@ -588,7 +601,7 @@ export default function TodayView() {
         )}
 
         {showNotifBanner && (
-          <div className="bg-bg-2 border border-rule rounded-xl px-3.5 py-2.5 mb-4 flex items-center justify-between gap-3">
+          <div role="status" aria-live="polite" className="bg-bg-2 border border-rule rounded-xl px-3.5 py-2.5 mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <Bell size={14} className="text-navy shrink-0" />
               <p className="font-sans text-xs text-ink-2">Enable daily drill reminders</p>
@@ -706,7 +719,8 @@ export default function TodayView() {
 
         {/* TILES */}
         <div className="mb-10 w-full relative">
-          <div className="absolute -top-6 right-0 font-mono text-[9px] text-muted-2 uppercase tracking-wide flex items-center gap-1.5 opacity-50">
+          <div className="absolute -top-6 right-0 font-mono text-[9px] text-muted-2 uppercase tracking-wide flex items-center gap-1.5 opacity-60">
+            <GripVertical size={11} />
             <span>DRAG TO REORDER</span>
           </div>
           <Reorder.Group
