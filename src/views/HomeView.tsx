@@ -20,6 +20,15 @@ import { LazyChartWrapper } from "./home/LazyChartWrapper";
 const QUESTION_COUNT_FALLBACK = 6940;
 const SUBJECT_COUNT_FALLBACK = 28;
 
+interface SiteContent {
+  hero_subheadline?: string;
+  hero_cta_primary?: string;
+  hero_cta_secondary?: string;
+  stats_question_count_label?: string;
+  stats_subjects_label?: string;
+  stats_pilots_label?: string;
+}
+
 export default function HomeView() {
   const { user, openAuthModal } = useAuth();
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -29,16 +38,18 @@ export default function HomeView() {
   const [liveSubjectsCount, setLiveSubjectsCount] = useState<number>(SUBJECT_COUNT_FALLBACK);
   const [platformAnsweredCount, setPlatformAnsweredCount] = useState<number>(42520);
   const [activePilotsCount, setActivePilotsCount] = useState<number>(230);
+  const [siteContent, setSiteContent] = useState<SiteContent>({});
 
   useEffect(() => {
     async function loadStatsAndContent() {
       try {
-        const [previewQuestions, mergedSubjects, countResponse, profilesResponse, attemptsResponse] = await Promise.all([
+        const [previewQuestions, mergedSubjects, countResponse, profilesResponse, attemptsResponse, settingsResponse] = await Promise.all([
           fetchPublishedQuestions({ limit: 10 }),
           fetchMergedSubjects(),
           supabase.from("questions").select("id", { count: "exact", head: true }).eq("status", "published"),
           supabase.from("profiles").select("id", { count: "exact", head: true }),
-          supabase.from("attempts").select("total")
+          supabase.from("attempts").select("total"),
+          supabase.from("app_settings").select("site_content").eq("id", 1).single()
         ]);
 
         setQuestions(previewQuestions);
@@ -55,6 +66,10 @@ export default function HomeView() {
           if (sum > 0) {
             setPlatformAnsweredCount(sum);
           }
+        }
+
+        if (settingsResponse?.data?.site_content) {
+          setSiteContent(settingsResponse.data.site_content as SiteContent);
         }
       } catch (e) {
         console.warn("Error loading home stats and content:", e);
@@ -160,7 +175,7 @@ export default function HomeView() {
               before the checkride.
             </h1>
             <p className="font-sans text-[16px] md:text-[18px] lg:text-[22px] text-ink-2 font-light max-w-[560px] mb-8 lg:mb-10 leading-relaxed md:leading-[1.6]">
-              Heading is a question bank, mock-exam engine, and A320 systems reference built for student pilots, line crews on type, and the instructors who sign them off.
+              {siteContent.hero_subheadline || "Heading is a question bank, mock-exam engine, and A320 systems reference built for student pilots, line crews on type, and the instructors who sign them off."}
             </p>
             
             <div className="flex flex-col sm:flex-row items-center gap-4 mb-10 md:mb-14 lg:mb-16">
@@ -179,11 +194,11 @@ export default function HomeView() {
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8 border-t border-rule/30 pt-8 w-full mt-6">
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{liveQuestionsCount.toLocaleString()}</span>
-                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">QUESTIONS AVAILABLE</span>
+                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">{siteContent.stats_question_count_label || "QUESTIONS AVAILABLE"}</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{liveSubjectsCount}</span>
-                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">SUBJECTS COVERED</span>
+                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">{siteContent.stats_subjects_label || "SUBJECTS COVERED"}</span>
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{platformAnsweredCount.toLocaleString()}</span>
@@ -191,7 +206,7 @@ export default function HomeView() {
               </div>
               <div className="flex flex-col gap-1">
                 <span className="font-serif text-[28px] lg:text-[36px] text-ink tracking-tight leading-none">{activePilotsCount}</span>
-                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">PILOTS ENROLLED</span>
+                <span className="font-mono text-[11px] tracking-widest text-muted-2 uppercase">{siteContent.stats_pilots_label || "PILOTS ENROLLED"}</span>
               </div>
             </div>
           </FadeUp>

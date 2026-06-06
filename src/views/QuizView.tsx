@@ -25,6 +25,7 @@ const InstrumentLayout = lazy(() => import("./quiz-layouts/InstrumentLayout"));
 const FlashcardLayout = lazy(() => import("./quiz-layouts/FlashcardLayout"));
 
 import { QuizLoading, QuizNoQuestions } from "./quiz/QuizLoaders";
+import PaperSelector from "./quiz/PaperSelector";
 import QuizResults from "./quiz/QuizResults";
 import QuizResumePrompt from "./quiz/QuizResumePrompt";
 import QuizSetup from "./quiz/QuizSetup";
@@ -208,6 +209,22 @@ export default function QuizView() {
   const [revealedIds, setRevealedIds] = useState<Set<string>>(
     savedState?.revealedIds ? new Set(savedState.revealedIds) : new Set(),
   );
+
+  // Paper selector: only shown for the /quiz/viva route, before quiz begins
+  const [showPaperPicker, setShowPaperPicker] = useState(isVivaRoute);
+
+  const handlePaperConfirm = (selectedIds: string[]) => {
+    setShowPaperPicker(false);
+    if (selectedIds.length > 0) {
+      setQuestions((prev) =>
+        prev.filter(
+          (q) =>
+            selectedIds.includes(q.subjectId || "") ||
+            selectedIds.includes(q.topicId || "")
+        )
+      );
+    }
+  };
 
   // Track bookmarked question IDs
   const [bookmarks, setBookmarks] = useState<string[]>(() => {
@@ -990,6 +1007,16 @@ export default function QuizView() {
   };
 
   // --- RENDER HELPERS ---
+  if (showPaperPicker) {
+    return (
+      <PaperSelector
+        mode="viva"
+        onConfirm={handlePaperConfirm}
+        onBack={() => navigate("/today")}
+      />
+    );
+  }
+
   if (loadingContent || (!questions && (isVivaRoute || mode === "viva"))) {
     return <QuizLoading isVivaRoute={isVivaRoute} mode={mode} />;
   }

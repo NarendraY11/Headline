@@ -1,5 +1,5 @@
-import { Bookmark, BookmarkMinus, Play } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Bookmark, BookmarkMinus, Filter, Play, X } from "lucide-react";
+import { useMemo, useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button, Card, Chip } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
@@ -11,6 +11,8 @@ export default function BookmarksView() {
   const navigate = useNavigate();
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<Set<string>>(new Set());
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
 
   useEffect(() => {
     async function resolveBookmarks() {
@@ -59,12 +61,43 @@ export default function BookmarksView() {
     }
   };
 
+  // Unique subjects present in bookmarked questions for the filter panel
+  const availableSubjects = useMemo(() => {
+    const seen = new Map<string, string>();
+    bookmarkedQuestions.forEach((q) => {
+      const id = q.subjectId || q.topicId || "";
+      const label = q.ata?.split("·")[0]?.trim() || id;
+      if (id && !seen.has(id)) seen.set(id, label);
+    });
+    return Array.from(seen.entries()).map(([id, label]) => ({ id, label }));
+  }, [bookmarkedQuestions]);
+
+  const filteredForPractice = useMemo(() => {
+    if (selectedSubjectFilter.size === 0) return bookmarkedQuestions;
+    return bookmarkedQuestions.filter(
+      (q) =>
+        selectedSubjectFilter.has(q.subjectId || "") ||
+        selectedSubjectFilter.has(q.topicId || "")
+    );
+  }, [bookmarkedQuestions, selectedSubjectFilter]);
+
   const startPractice = () => {
     navigate('/quiz/bookmarks-review', {
       state: {
-        customQuestions: bookmarkedQuestions,
-        generatedTopic: "Bookmarked Interrogatories"
+        customQuestions: filteredForPractice,
+        generatedTopic: selectedSubjectFilter.size > 0
+          ? `Bookmarks — ${selectedSubjectFilter.size} subject${selectedSubjectFilter.size > 1 ? "s" : ""}`
+          : "Bookmarked Interrogatories"
       }
+    });
+  };
+
+  const toggleSubjectFilter = (id: string) => {
+    setSelectedSubjectFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
     });
   };
 
@@ -108,7 +141,7 @@ export default function BookmarksView() {
 
   return (
     <div className="max-w-5xl mx-auto py-12 md:py-24 px-4 w-full">
-      <div className="mb-16 border-b border-rule pb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+      <div className="mb-10 border-b border-rule pb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
           <span className="eyebrow block mb-4">SAVED CHRONICLES</span>
           <h1 className="font-serif text-[50px] leading-none text-ink tracking-tight mb-4">
@@ -118,10 +151,69 @@ export default function BookmarksView() {
             Review tricky questions from your practice runs or prepare for oral exams with your dedicated flashcard set.
           </p>
         </div>
-        <Button variant="primary" className="shrink-0" onClick={startPractice}>
-          <Play size={16} fill="currentColor" /> Practice Bookmarked
-        </Button>
+        <div className="flex items-center gap-3 shrink-0">
+          {availableSubjects.length > 1 && (
+            <Button
+              variant="ghost"
+              onClick={() => setShowFilterPanel(!showFilterPanel)}
+              className={selectedSubjectFilter.size > 0 ? "border-ink text-ink" : ""}
+            >
+              <Filter size={14} />
+              {selectedSubjectFilter.size > 0 ? `${selectedSubjectFilter.size} filter${selectedSubjectFilter.size > 1 ? "s" : ""}` : "Filter papers"}
+            </Button>
+          )}
+          <Button variant="primary" onClick={startPractice}>
+            <Play size={16} fill="currentColor" />
+            {filteredForPractice.length < bookmarkedQuestions.length
+              ? `Practice ${filteredForPractice.length} selected`
+              : "Practice Bookmarked"}
+          </Button>
+        </div>
       </div>
+
+      {/* Subject filter panel */}
+      {showFilterPanel && availableSubjects.length > 1 && (
+        <div className="mb-8 p-5 bg-bg-2 border border-rule-strong rounded-xl">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-sans text-sm font-semibold text-ink">Filter by subject paper</h3>
+            <div className="flex items-center gap-2">
+              {selectedSubjectFilter.size > 0 && (
+                <button
+                  onClick={() => setSelectedSubjectFilter(new Set())}
+                  className="font-mono text-[10px] text-muted-2 hover:text-ink transition-colors"
+                >
+                  Clear all
+                </button>
+              )}
+              <button
+                onClick={() => setShowFilterPanel(false)}
+                className="p-1 text-muted-2 hover:text-ink transition-colors rounded"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {availableSubjects.map(({ id, label }) => {
+              const active = selectedSubjectFilter.has(id);
+              return (
+                <button
+                  key={id}
+                  onClick={() => toggleSubjectFilter(id)}
+                  className={`px-3 py-1.5 rounded-full border text-[12px] font-sans font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 ${
+                    active
+                      ? "bg-ink text-paper border-ink"
+                      : "bg-paper border-rule-strong text-muted hover:border-ink hover:text-ink"
+                  }`}
+                >
+                  {label}
+                  {active && <X size={10} className="inline ml-1.5 -mt-0.5" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-6">
         {bookmarkedQuestions.map((q) => (

@@ -9,6 +9,9 @@ export function AuthModalTrigger() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const PUBLIC_ROUTES = ["/", "/login", "/about", "/pricing", "/contact", "/privacy", "/terms", "/refund", "/blog", "/qotd", "/a320-systems"];
+  const isOnPublicRoute = PUBLIC_ROUTES.includes(location.pathname) || location.pathname.startsWith("/exams/") || location.pathname.startsWith("/blog/");
+
   useEffect(() => {
     if (user) {
       const redirectFromState = location.state?.from;
@@ -18,6 +21,8 @@ export function AuthModalTrigger() {
       if (target) {
         sessionStorage.removeItem("auth_redirect_path");
         navigate(target, { replace: true });
+      } else if (isOnPublicRoute) {
+        navigate("/today", { replace: true });
       }
     }
   }, [user, navigate, location]);

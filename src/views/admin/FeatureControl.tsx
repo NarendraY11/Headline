@@ -195,9 +195,12 @@ export default function FeatureControl() {
           <h2 className="text-lg font-serif text-ink mb-4 border-b border-rule pb-2">Learning Features</h2>
           {renderToggle("mockExams", "Mock Exams", "Toggle the main exams catalog.")}
           {renderToggle("topicPractice", "Topic Practice", "Free practice and module navigation.")}
+          {renderToggle("vivaPractice", "VIVA Practice", "Oral exam simulation mode.")}
           {renderToggle("qotd", "Question of the Day", "Daily question challenge section.")}
           {renderToggle("spacedRepetition", "Spaced Repetition", "Smart review and weak-area algorithm.")}
           {renderToggle("a320Systems", "A320 Systems", "Technical system diagram study (Interactive).")}
+          {renderToggle("bookmarksEnabled", "Bookmarks & Flashcards", "Allow users to bookmark questions and use flashcard view.")}
+          {renderToggle("leaderboard", "Leaderboard", "Show ranked performance leaderboard (beta).")}
         </section>
 
         <section>
@@ -205,6 +208,10 @@ export default function FeatureControl() {
           {renderToggle("flashcards", "Flashcard Layout", "Exam alternate view.")}
           {renderToggle("cockpitLayouts", "Cockpit/Instrument Layouts", "Exam alternate view.")}
           {renderToggle("themeToggle", "Dark Mode Toggle", "Allow users to switch between light/dark themes.")}
+          {renderToggle("searchEnabled", "Global Search", "Enable the search overlay across all app content.")}
+          {renderToggle("notifications", "Notifications", "Show the notification bell and real-time alerts.")}
+          {renderToggle("offlineMode", "Offline Mode (PWA)", "Allow the app to work without internet via service worker cache.")}
+          {renderToggle("pwaInstallPrompt", "PWA Install Prompt", "Show the install-to-homescreen banner.")}
           {renderToggle("cookieConsent", "Cookie Consent Banner", "Show the EU GDPR cookie acceptance.")}
           {renderToggle("maintenanceMode", "Maintenance Mode", "Locks out non-admins from using the app entirely.")}
           {renderToggle("signupsOpen", "Signups Open", "Toggle to restrict new sign ups (creates).")}
@@ -215,6 +222,7 @@ export default function FeatureControl() {
           {renderToggle("proGating", "Pro Gating", "If disabled, ALL users get premium features (skips auth check).")}
           {renderToggle("pricingCheckout", "Pricing/Checkout", "Allows people to buy lifetime or subscribing.")}
           {renderToggle("freeTrial", "Free Trial", "Enable the 3-day free trial system.")}
+          {renderToggle("referralProgram", "Referral Program", "Show Refer & Earn section and track referral codes.")}
           {renderToggle("adsense", "Ad placements", "Toggle standard ad slots in the UI.")}
           {renderToggle("analytics", "Analytics Dashboard", "Show users their performance stats.")}
           {renderToggle("masteryCharts", "Mastery Charts", "Show subject and progress details in Stats view.")}

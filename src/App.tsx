@@ -51,6 +51,9 @@ const AdminSettings = lazy(() => import("./views/admin/AdminSettings"));
 const FeatureControl = lazy(() => import("./views/admin/FeatureControl"));
 const BlogManager = lazy(() => import("./views/admin/BlogManager"));
 const NotificationsManager = lazy(() => import("./views/admin/NotificationsManager"));
+const RolesManager = lazy(() => import("./views/admin/RolesManager"));
+const PricingManager = lazy(() => import("./views/admin/PricingManager"));
+const SiteContentManager = lazy(() => import("./views/admin/SiteContentManager"));
 
 import { CookieConsent } from "./components/CookieConsent";
 import { GlobalToastListener } from "./components/GlobalToastListener";
@@ -162,6 +165,9 @@ export default function App() {
             <Route path="/admin/features" element={<FeatureControl />} />
             <Route path="/admin/blog" element={<BlogManager />} />
             <Route path="/admin/notifications" element={<NotificationsManager />} />
+            <Route path="/admin/roles" element={<RolesManager />} />
+            <Route path="/admin/pricing" element={<PricingManager />} />
+            <Route path="/admin/site-content" element={<SiteContentManager />} />
           </Route>
 
           {/* AUTHENTICATED APP ROUTES (With App Shell) */}

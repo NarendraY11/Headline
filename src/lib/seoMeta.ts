@@ -58,6 +58,9 @@ export function getMetaForRoute(path: string): RouteMeta {
       title = "Aviation Article — Heading";
       description = "Read pilot guides and airline ground school theory insights.";
     }
+  } else if (path.startsWith("/quiz/")) {
+    title = "Quiz — Heading";
+    description = "Attempt a timed DGCA/EASA pilot theory quiz with instant feedback, negative marking, and detailed explanations for every question.";
   } else if (path.startsWith("/exams/")) {
     const examId = path.substring(7);
     if (examId === "dgca-cpl") {
