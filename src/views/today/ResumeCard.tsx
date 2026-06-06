@@ -54,7 +54,7 @@ export function ResumeCard() {
         <X size={14} />
       </button>
       <div className="min-w-0">
-        <div className="font-mono text-[9px] uppercase tracking-widest text-navy mb-0.5">Resume where you left off</div>
+        <div className="font-mono text-[9px] uppercase tracking-wide text-navy mb-0.5">Resume where you left off</div>
         <div className="font-serif text-base text-ink truncate capitalize">{resume.label}</div>
         {resume.total > 0 && (
           <div className="font-sans text-[11px] text-muted-2 mt-0.5">

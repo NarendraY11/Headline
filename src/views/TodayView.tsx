@@ -1,13 +1,15 @@
 import {
     Award,
+    Bell,
     BookOpen,
     Clock,
     Compass,
     Flame,
     Play,
-    TrendingUp
+    TrendingUp,
+    X,
 } from "lucide-react";
-import { Reorder } from "motion/react";
+import { motion, Reorder } from "motion/react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/Atoms";
@@ -41,13 +43,13 @@ export default function TodayView() {
   const [notificationStatus, setNotificationStatus] = useState<
     NotificationPermission | "unsupported"
   >("default");
+  const [showNotifBanner, setShowNotifBanner] = useState(false);
   const { logbook, loading: logbookLoading } = useLogbook();
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [dueCount, setDueCount] = useState<number>(0);
 
-  // Daily study reminder: if the user hasn't logged any activity today, drop a
-  // gentle nudge into their notifications (once per day).
+  // Daily study reminder notification (once per day, gentle)
   useEffect(() => {
     if (!user) return;
     const today = new Date().toISOString().slice(0, 10);
@@ -119,57 +121,26 @@ export default function TodayView() {
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
-    handleResize(); // Initial check
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const hasAttempts = logbook.length > 0;
 
-  // Daily Drill progress notification
+  // Show in-app banner first; only call requestPermission() when user taps Enable
   useEffect(() => {
-    if (
-      !loading &&
-      !logbookLoading &&
-      hasAttempts &&
-      !userData?.settings?.doNotDisturb
-    ) {
-      const now = new Date();
-      const todayStr = now.toISOString().split("T")[0];
-      const hasStudiedToday = Array.isArray(logbook)
-        ? logbook.some((att: any) => att.dateISO?.startsWith(todayStr))
-        : false;
-
-      if (
-        !hasStudiedToday &&
-        now.getHours() >= 12 &&
-        notificationStatus !== "granted"
-      ) {
-        if (
-          "Notification" in window &&
-          Notification.permission !== "denied" &&
-          notificationStatus === "default"
-        ) {
-          Notification.requestPermission().then((permission) => {
-            setNotificationStatus(permission);
-            if (permission === "granted") {
-              new Notification("Daily Drill Pending", {
-                body: "Captain, you haven't logged any progress today. Complete your daily drill now!",
-                icon: "/favicon.svg",
-              });
-            }
-          });
-        }
-      }
+    if (loading || logbookLoading || !hasAttempts || userData?.settings?.doNotDisturb) return;
+    const now = new Date();
+    const todayStr = now.toISOString().split("T")[0];
+    const hasStudiedToday = Array.isArray(logbook)
+      ? logbook.some((att: any) => att.dateISO?.startsWith(todayStr))
+      : false;
+    const dismissed = localStorage.getItem("heading_notif_banner_dismissed") === todayStr;
+    if (!hasStudiedToday && now.getHours() >= 12 && notificationStatus === "default" && !dismissed) {
+      setShowNotifBanner(true);
     }
-  }, [
-    loading,
-    logbookLoading,
-    hasAttempts,
-    notificationStatus,
-    userData?.settings?.doNotDisturb,
-    logbook,
-  ]);
+  }, [loading, logbookLoading, hasAttempts, notificationStatus, userData?.settings?.doNotDisturb, logbook]);
 
   const savedDate =
     userData?.nextExam ?? localStorage.getItem("heading_next_exam") ?? "";
@@ -254,9 +225,18 @@ export default function TodayView() {
 
   const totalQuestions = progressStats.totalQuestionsAnswered;
   const avgScore = progressStats.averageScore || 0;
-  // Fallback to logbook for hoursStudied since user_question_attempts doesn't track duration yet
   const hoursStudied = Math.round(
     logbook.reduce((sum, att) => sum + (att.durationSec || 0), 0) / 3600,
+  );
+
+  // Weekly hours: last 7 days only
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 6);
+  weekStart.setHours(0, 0, 0, 0);
+  const hoursThisWeek = Math.round(
+    logbook
+      .filter(att => att.dateISO && new Date(att.dateISO) >= weekStart)
+      .reduce((sum, att) => sum + (att.durationSec || 0), 0) / 3600
   );
 
   const displayedStreak = progressStats.streakCount;
@@ -279,7 +259,6 @@ export default function TodayView() {
     };
   });
 
-  // Calculate Mastery for Radar Chart
   const masteries = subjectsList.map((sub: any) => {
     const score = progressStats.subjectMastery[sub.id] || 0;
     const mappings: Record<string, string> = {
@@ -297,7 +276,7 @@ export default function TodayView() {
       subject: label,
       fullTitle: sub.title,
       score: score,
-      correct: score, // these aren't used separately mostly, but the radar uses 'score'
+      correct: score,
       total: 100,
     };
   });
@@ -322,13 +301,32 @@ export default function TodayView() {
     }
   };
 
+  const handleEnableNotifications = async () => {
+    if ("Notification" in window) {
+      const permission = await Notification.requestPermission();
+      setNotificationStatus(permission);
+      if (permission === "granted") {
+        new Notification("Reminders enabled", {
+          body: "You'll get a nudge when your daily drill is pending.",
+          icon: "/favicon.svg",
+        });
+      }
+    }
+    setShowNotifBanner(false);
+  };
+
+  const handleDismissNotifBanner = () => {
+    const today = new Date().toISOString().split("T")[0];
+    localStorage.setItem("heading_notif_banner_dismissed", today);
+    setShowNotifBanner(false);
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 70) return "text-mint";
     if (score >= 40) return "text-amber";
     return "text-signal";
   };
 
-  // Calculate real progression of score trend (latest half of attempts average score - oldest half of attempts average score)
   let scoreTrendSign = "";
   let scoreTrendStr = "";
   if (logbook.length >= 2) {
@@ -338,10 +336,10 @@ export default function TodayView() {
     const mid = Math.floor(chronological.length / 2);
     const firstHalf = chronological.slice(0, mid);
     const secondHalf = chronological.slice(mid);
-    
+
     const firstAvg = firstHalf.reduce((sum, a) => sum + (a.percentage || 0), 0) / firstHalf.length;
     const secondAvg = secondHalf.reduce((sum, a) => sum + (a.percentage || 0), 0) / secondHalf.length;
-    
+
     const diff = Math.round(secondAvg - firstAvg);
     if (diff > 0) {
       scoreTrendSign = "↑";
@@ -358,12 +356,13 @@ export default function TodayView() {
     scoreTrendStr = `+${Math.round(logbook[0].percentage || 0)}%`;
   } else {
     scoreTrendSign = "—";
-    scoreTrendStr = "No study data";
+    scoreTrendStr = "No data";
   }
 
+  const tileBaseClasses =
+    "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between cursor-grab active:cursor-grabbing";
+
   const renderTile = (tile: string) => {
-    const tileBaseClasses =
-      "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between cursor-grab active:cursor-grabbing";
     switch (tile) {
       case "streak":
         const hasStreak = displayedStreak > 0;
@@ -376,7 +375,7 @@ export default function TodayView() {
           >
             <div className="flex items-center gap-1.5 mb-1 text-muted-2">
               <Flame size={14} className={hasStreak ? "text-signal" : "text-muted-2"} />
-              <span className="font-mono text-[9px] uppercase tracking-widest text-ink-2">
+              <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                 STREAK
               </span>
             </div>
@@ -396,7 +395,7 @@ export default function TodayView() {
                     >
                       <div
                         className={`w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full border flex items-center justify-center
-                          ${d.isActive ? "bg-signal-soft border-signal/30 text-signal" : "bg-bg border-rule text-transparent"} 
+                          ${d.isActive ? "bg-signal-soft border-signal/30 text-signal" : "bg-bg border-rule text-transparent"}
                         `}
                       >
                         {d.isActive && (
@@ -430,7 +429,7 @@ export default function TodayView() {
             <div>
               <div className="flex items-center gap-1.5 mb-1 text-muted-2">
                 <BookOpen size={14} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-ink-2">
+                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                   Q'S ANSWERED
                 </span>
               </div>
@@ -442,25 +441,23 @@ export default function TodayView() {
                   </span>
                 </div>
                 {answeredToday >= dailyGoal ? (
-                  <span className="font-mono text-[9px] font-bold text-mint uppercase tracking-wider bg-mint/10 border border-mint/20 px-1.5 py-0.5 rounded">
+                  <span className="font-mono text-[9px] font-bold text-mint uppercase tracking-wide bg-mint/10 border border-mint/20 px-1.5 py-0.5 rounded">
                     Goal Met
                   </span>
                 ) : (
-                  <span className="font-mono text-[9px] text-amber uppercase tracking-wider">
+                  <span className="font-mono text-[9px] text-amber uppercase tracking-wide">
                     {remainingToGoal} to go
                   </span>
                 )}
               </div>
-              
-              {/* Progress Bar */}
               <div className="w-full bg-bg h-1.5 rounded-full mt-3 overflow-hidden border border-rule/50">
-                <div 
-                  className="bg-mint h-full transition-all duration-500 ease-out" 
+                <div
+                  className="bg-mint h-full transition-all duration-500 ease-out"
                   style={{ width: `${Math.min(100, (answeredToday / dailyGoal) * 100)}%` }}
                 />
               </div>
               <div className="mt-2 text-[9px] font-mono text-muted-2">
-                Lifetime Total: {totalQuestions} answered
+                Lifetime: {totalQuestions}
               </div>
             </div>
           </Reorder.Item>
@@ -476,7 +473,7 @@ export default function TodayView() {
             <div>
               <div className="flex items-center gap-1.5 mb-1 text-muted-2">
                 <Award size={14} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-ink-2">
+                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                   AVG SCORE
                 </span>
               </div>
@@ -487,6 +484,9 @@ export default function TodayView() {
                 <span className="font-sans text-xl text-muted font-normal tracking-normal">
                   %
                 </span>
+              </div>
+              <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
+                Trend: {scoreTrendStr}
               </div>
             </div>
           </Reorder.Item>
@@ -502,15 +502,18 @@ export default function TodayView() {
             <div>
               <div className="flex items-center gap-1.5 mb-1 text-muted-2">
                 <Clock size={14} />
-                <span className="font-mono text-[9px] uppercase tracking-widest text-ink-2">
-                  HOURS (WK)
+                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
+                  HOURS · 7D
                 </span>
               </div>
               <div className="font-serif text-[26px] text-ink leading-none mt-2">
-                {hasAttempts ? <AnimatedCounter value={hoursStudied} /> : 0}{" "}
+                {hasAttempts ? <AnimatedCounter value={hoursThisWeek} /> : 0}{" "}
                 <span className="font-sans text-xl text-muted font-normal lowercase tracking-normal">
                   hrs
                 </span>
+              </div>
+              <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
+                Total: {hoursStudied}h
               </div>
             </div>
           </Reorder.Item>
@@ -527,12 +530,11 @@ export default function TodayView() {
 
       <div className="relative z-10 px-4 pt-16 pb-8 max-w-[820px] mx-auto">
         <div className="relative mb-8 overflow-hidden">
-          {/* Mobile header bit */}
+          {/* Mobile header */}
           <div className="flex md:hidden items-center gap-2 mb-4">
             <span className="w-1.5 h-1.5 rounded-sm bg-signal transform rotate-45" />
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2">
-              BRIEFING ·{" "}
-              {currentDateString}
+              BRIEFING · {currentDateString}
             </span>
           </div>
 
@@ -562,10 +564,12 @@ export default function TodayView() {
           </h1>
         </div>
 
-        {/* Due For Review — secondary alert (kept lighter so the Readiness card
-            below remains the single primary focus of the viewport) */}
         {dueCount > 0 && (
-          <div className="motion-div" style={{ animation: "fadeIn 0.5s" }}>
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25 }}
+          >
             <div className="bg-signal-soft/60 border border-signal/15 rounded-[12px] px-3.5 py-2.5 mb-4 flex items-center justify-between gap-3 relative overflow-hidden">
               <div className="flex items-center gap-2.5 min-w-0">
                 <Flame size={15} className="text-signal shrink-0" />
@@ -580,6 +584,30 @@ export default function TodayView() {
                 Start →
               </Link>
             </div>
+          </motion.div>
+        )}
+
+        {showNotifBanner && (
+          <div className="bg-bg-2 border border-rule rounded-xl px-3.5 py-2.5 mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <Bell size={14} className="text-navy shrink-0" />
+              <p className="font-sans text-xs text-ink-2">Enable daily drill reminders</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={handleEnableNotifications}
+                className="font-mono text-[10px] font-bold tracking-wide uppercase text-navy hover:opacity-70 transition-opacity"
+              >
+                Enable
+              </button>
+              <button
+                onClick={handleDismissNotifBanner}
+                className="text-muted-2 hover:text-ink transition-colors p-0.5"
+                aria-label="Dismiss"
+              >
+                <X size={13} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -590,7 +618,7 @@ export default function TodayView() {
           </div>
 
           <div className="flex justify-between items-start mb-2 relative z-10 w-full">
-            <span className="font-mono text-[10px] tracking-widest uppercase opacity-80 text-bg">
+            <span className="font-mono text-[10px] tracking-wide uppercase opacity-80 text-bg">
               READINESS · LIVE
             </span>
           </div>
@@ -598,7 +626,7 @@ export default function TodayView() {
             {hasAttempts ? avgScore : "--"}
             <span className="text-[32px] opacity-70 ml-1">%</span>
           </div>
-          <div className="font-mono text-[11px] text-bg/60 uppercase tracking-widest mb-6 relative z-10">
+          <div className="font-mono text-[11px] text-bg/60 uppercase tracking-wide mb-6 relative z-10">
             {hasAttempts
               ? `OVERALL READINESS · BASED ON ${logbook.length} SESSIONS`
               : "COMPLETE YOUR FIRST SESSION TO TRACK PROGRESS"}
@@ -612,7 +640,7 @@ export default function TodayView() {
                   </div>
                 )}
                 <span
-                  className={`font-mono text-[10px] tracking-widest uppercase ${daysDiff < 7 ? "text-signal" : daysDiff <= 30 ? "text-amber" : "opacity-80 text-bg"}`}
+                  className={`font-mono text-[10px] tracking-wide uppercase ${daysDiff < 7 ? "text-signal" : daysDiff <= 30 ? "text-amber" : "opacity-80 text-bg"}`}
                 >
                   EXAM IN {daysDiff}D
                 </span>
@@ -622,7 +650,7 @@ export default function TodayView() {
                 onClick={() =>
                   window.dispatchEvent(new CustomEvent("open-next-check-modal"))
                 }
-                className="font-mono text-[10px] tracking-widest uppercase opacity-80 text-bg hover:opacity-100 transition-opacity flex items-center gap-1"
+                className="font-mono text-[10px] tracking-wide uppercase opacity-80 text-bg hover:opacity-100 transition-opacity flex items-center gap-1"
               >
                 SET EXAM →
               </button>
@@ -631,33 +659,33 @@ export default function TodayView() {
 
           {/* Readiness Gauge */}
           <div className="mt-4 mb-6 relative z-10 border-t border-bg/15 pt-5">
-            <div className="flex justify-between items-center text-[10px] uppercase tracking-wider font-mono text-bg/60 mb-2">
+            <div className="flex justify-between items-center text-[10px] uppercase tracking-wide font-mono text-bg/60 mb-2">
               <span>Exam Readiness Track</span>
-              <span className="text-mint font-bold">{readinessPercentage}% ({passedCount}/{subjectsList.length} subjects &ge; 80%)</span>
+              <span className="text-mint font-bold">{readinessPercentage}% ({passedCount}/{subjectsList.length} subjects ≥ 80%)</span>
             </div>
             <div className="w-full bg-bg/20 h-2.5 rounded-full relative overflow-hidden">
-              <div 
-                className="bg-mint h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(34,197,94,0.5)]" 
+              <div
+                className="bg-mint h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(34,197,94,0.5)]"
                 style={{ width: `${readinessPercentage}%` }}
               />
             </div>
             <p className="text-[11px] font-mono text-bg/60 tracking-normal leading-normal mt-2">
-              {isReadyForExam 
-                ? (daysDiff !== null && daysDiff <= 7 
-                  ? `✓ Optimal readiness achieved. Your exam is in ${daysDiff} days. You are well prepared — go rest, relax, and trust your training before you fly!` 
-                  : "✓ Exceeds flight preparation standards. Fully certified and ready for scheduling.")
-                : `Ready-for-exam threshold: 80% mastery across all subjects. Keep studying to clear ${subjectsList.length - passedCount} more subjects.`}
+              {isReadyForExam
+                ? (daysDiff !== null && daysDiff <= 7
+                  ? `✓ Optimal readiness achieved. Exam in ${daysDiff} days. Trust your training.`
+                  : "✓ Exceeds flight preparation standards. Ready for scheduling.")
+                : `Ready-for-exam threshold: 80% mastery across all subjects. ${subjectsList.length - passedCount} more to clear.`}
             </p>
           </div>
 
-          <Link 
+          <Link
             to={
-              activeSession 
-                ? `/quiz/${activeSession.topicId}` 
-                : logbook.length > 0 
-                  ? `/quiz/review` 
+              activeSession
+                ? `/quiz/${activeSession.topicId}`
+                : logbook.length > 0
+                  ? `/quiz/review`
                   : `/modules`
-            } 
+            }
             className="block w-full relative z-10"
           >
             <Button
@@ -678,7 +706,7 @@ export default function TodayView() {
 
         {/* TILES */}
         <div className="mb-10 w-full relative">
-          <div className="absolute -top-6 right-0 font-mono text-[9px] text-muted-2 uppercase tracking-widest flex items-center gap-1.5 opacity-50">
+          <div className="absolute -top-6 right-0 font-mono text-[9px] text-muted-2 uppercase tracking-wide flex items-center gap-1.5 opacity-50">
             <span>DRAG TO REORDER</span>
           </div>
           <Reorder.Group
@@ -691,12 +719,10 @@ export default function TodayView() {
           </Reorder.Group>
         </div>
 
-        <ResumeCard />
+        {/* Only show ResumeCard when no session is already in the hero CTA */}
+        {!activeSession && <ResumeCard />}
         <ReferralWidget />
 
-        {/* SECTION HEAD — gives the analytics blocks a real mid-level heading
-            (kicker = mono label, title = serif) instead of only tiny in-card
-            mono labels, so the page has scannable section separation. */}
         <div className="flex items-baseline justify-between gap-4 mb-4 mt-2">
           <div>
             <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase mb-1.5">
@@ -714,16 +740,16 @@ export default function TodayView() {
 
           <div className={`bg-paper border border-rule rounded-2xl md:rounded-lg shadow-sm col-span-1 ${weatherBriefingEnabled ? 'md:col-span-2' : 'md:col-span-3'} flex flex-col justify-between overflow-hidden relative min-h-[220px]`}>
             <div className="p-4 flex items-center justify-between border-b border-rule/50 z-10 bg-paper/80 backdrop-blur-md absolute top-0 left-0 right-0">
-              <div className="font-mono text-[9px] text-muted-2 tracking-widest uppercase flex items-center gap-1.5">
+              <div className="font-mono text-[9px] text-muted-2 tracking-wide uppercase flex items-center gap-1.5">
                 <TrendingUp size={14} className="text-ink" />
-                <span>MASTERY HEATMAP (RADAR)</span>
+                <span>MASTERY HEATMAP</span>
               </div>
-              <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest flex items-center gap-1.5">
+              <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 bg-mint rounded-full inline-block" />
-                Telemetry Active
+                Live
               </span>
             </div>
-            <div className="flex-1 w-full pt-[30px] md:pt-[50px] pb-4 px-2 md:px-4 bg-bg-2/30" role="img" aria-label="Radar chart showing aviation topic mastery percentage telemetry">
+            <div className="flex-1 w-full pt-[30px] md:pt-[50px] pb-4 px-2 md:px-4 bg-bg-2/30" role="img" aria-label="Radar chart showing aviation topic mastery percentage">
               <div style={{ width: "100%", minHeight: 320, height: "100%" }}>
                 {logbook.length > 0 ? (
                   <Suspense fallback={<ChartFallback />}>
@@ -731,9 +757,9 @@ export default function TodayView() {
                   </Suspense>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center p-6 border border-dashed border-rule rounded-xl bg-white/40">
-                    <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest mb-1.5 font-bold"> telemetry outline </span>
+                    <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide mb-1.5 font-bold">No data yet</span>
                     <p className="font-serif text-lg text-ink">Complete your first session to see analytics</p>
-                    <p className="font-sans text-[11px] text-muted-2 max-w-sm mt-1">Navigate to modules or exams to build radar coverage stats.</p>
+                    <p className="font-sans text-[11px] text-muted-2 max-w-sm mt-1">Navigate to modules or exams to build radar coverage.</p>
                   </div>
                 )}
               </div>
@@ -741,29 +767,29 @@ export default function TodayView() {
           </div>
         </div>
 
-        {/* STUDY PACING BLUEPRINT (RECHARTS) */}
+        {/* STUDY PACING BLUEPRINT */}
         <div className="bg-paper border border-rule rounded-2xl p-6 shadow-sm mb-10 w-full relative overflow-hidden min-h-[300px]">
           <div className="p-4 flex flex-col md:flex-row md:items-center justify-between border-b border-rule/50 z-10 bg-paper/80 backdrop-blur-md absolute top-0 left-0 right-0">
-            <div className="font-mono text-[9px] text-muted-2 tracking-widest uppercase flex items-center gap-1.5 mb-2 md:mb-0">
+            <div className="font-mono text-[9px] text-muted-2 tracking-wide uppercase flex items-center gap-1.5 mb-2 md:mb-0">
               <Clock size={14} className="text-navy" />
-              <span>STUDY PACING BLUEPRINT · HOURS VS TARGET EXAM</span>
+              <span>STUDY PACING · HOURS VS EXAM TARGET</span>
             </div>
             <div className="flex items-center gap-4">
               {savedDate ? (
-                <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest">
-                  Exam Clear: {new Date(savedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide">
+                  Exam: {new Date(savedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </span>
               ) : (
                 <button
                   onClick={() => window.dispatchEvent(new CustomEvent("open-next-check-modal"))}
-                  className="font-mono text-[9px] text-signal uppercase tracking-widest bg-signal-soft border border-signal-soft/30 px-2.5 py-0.5 rounded-full hover:opacity-80 transition"
+                  className="font-mono text-[9px] text-signal uppercase tracking-wide bg-signal-soft border border-signal-soft/30 px-2.5 py-0.5 rounded-full hover:opacity-80 transition"
                 >
-                  Configure Target Exam Date →
+                  Set Target Exam Date →
                 </button>
               )}
             </div>
           </div>
-          
+
           <div className="pt-16 pb-2">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-8 px-2">
               <div className="border-b sm:border-b-0 sm:border-r border-rule/30 pb-4 sm:pb-0 sm:pr-4">
@@ -782,12 +808,12 @@ export default function TodayView() {
                 <div className="font-mono text-[9px] text-muted-2 uppercase tracking-wide">Pacing Status</div>
                 <div className="font-sans text-xs font-semibold mt-2.5 flex items-center gap-1.5 leading-none font-mono uppercase">
                   {hoursStudied >= (pacingData[pacingData.length - 2]?.target || 0) ? (
-                    <span className="text-mint tracking-wider flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-mint rounded-full inline-block animate-pulse" /> On Track / Optimal
+                    <span className="text-mint tracking-wide flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-mint rounded-full inline-block animate-pulse" /> On Track
                     </span>
                   ) : (
-                    <span className="text-amber tracking-wider flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 bg-amber rounded-full inline-block" /> Increase Study Depth
+                    <span className="text-amber tracking-wide flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-amber rounded-full inline-block" /> Increase Depth
                     </span>
                   )}
                 </div>
@@ -801,16 +827,21 @@ export default function TodayView() {
                 </Suspense>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full min-h-[220px] text-center p-6 rounded-xl border border-dashed border-rule bg-white/40">
-                  <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest mb-1.5 font-bold"> timeline blank </span>
+                  <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide mb-1.5 font-bold">No sessions yet</span>
                   <p className="font-serif text-base text-ink">Complete your first session to see analytics</p>
-                  <p className="font-sans text-[11px] text-muted-2 max-w-sm mt-1">A target timeline against actual study hours will populate here.</p>
+                  <p className="font-sans text-[11px] text-muted-2 max-w-sm mt-1">A timeline against actual study hours will populate here.</p>
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <TodayStops />
+        <TodayStops
+          subjectsList={subjectsList}
+          subjectMastery={progressStats.subjectMastery}
+          dueCount={dueCount}
+          hasAttempts={hasAttempts}
+        />
       </div>
     </div>
   );

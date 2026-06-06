@@ -43,7 +43,7 @@ export function ReferralWidget() {
   return (
     <div className="bg-paper border border-rule rounded-xl p-4 mb-6">
       <div className="flex items-center justify-between mb-3">
-        <div className="font-mono text-[9px] uppercase tracking-widest text-muted-2 flex items-center gap-1.5">
+        <div className="font-mono text-[9px] uppercase tracking-wide text-muted-2 flex items-center gap-1.5">
           <Gift size={13} className="text-amber" /> Invite & earn Pro
         </div>
         <Link to="/referral" className="font-mono text-[9px] uppercase tracking-wider text-navy hover:underline">
