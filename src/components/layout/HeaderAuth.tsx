@@ -1,6 +1,7 @@
 import {
     User as UserIcon
 } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../Atoms";
@@ -8,14 +9,15 @@ import { Button } from "../Atoms";
 
 export function HeaderAuth() {
   const { user, loading, openAuthModal } = useAuth();
+  const [avatarError, setAvatarError] = useState(false);
   
   if (loading) return <div className="w-8 h-8 rounded-full bg-rule animate-pulse hidden sm:block md:hidden" />;
   
   if (user) {
     return (
       <Link to="/profile" className="hidden sm:flex md:hidden items-center gap-2 hover:opacity-80 transition-opacity">
-        {user.photoURL ? (
-          <img src={user.photoURL} alt="Avatar" className="w-8 h-8 rounded-full border border-rule object-cover" />
+        {user.photoURL && !avatarError ? (
+          <img src={user.photoURL} alt="Avatar" className="w-8 h-8 rounded-full border border-rule object-cover" onError={() => setAvatarError(true)} />
         ) : (
           <div className="w-8 h-8 rounded-full bg-navy text-bg flex items-center justify-center">
             <UserIcon size={16} />

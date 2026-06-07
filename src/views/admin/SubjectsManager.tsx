@@ -302,8 +302,32 @@ export default function SubjectsManager() {
         <div className="text-center py-20 bg-paper border border-dashed border-rule rounded-xl">
           <AlertCircle className="mx-auto text-muted mb-3" size={32} />
           <h3 className="font-serif text-lg font-medium text-ink mb-1">No Subjects Registered</h3>
-          <p className="text-xs text-muted max-w-sm mx-auto mb-6">Initialize a subject node to establish base syllabi constraints.</p>
-          <Button variant="primary" onClick={openNewModal}>Add Subject</Button>
+          <p className="text-xs text-muted max-w-sm mx-auto mb-6">
+            The subjects table is empty. Seed from the static aviation catalog or add a subject manually.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={async () => {
+                if (window.confirm("Seed the database with aviation subjects from the static catalog?")) {
+                  setLoading(true);
+                  setErrorStatus("");
+                  try {
+                    const out = await seedTaxonomy();
+                    setSuccessStatus(`Seeded ${out.subjectsCount} subjects successfully.`);
+                    fetchData();
+                  } catch (err: any) {
+                    setErrorStatus(err.message || "Seeding failed.");
+                  } finally {
+                    setLoading(false);
+                  }
+                }
+              }}
+              className="flex items-center gap-1.5 h-10 text-xs px-4 border border-rule hover:bg-bg-2 rounded-lg font-medium transition-colors"
+            >
+              <Server size={13} className="text-navy" /> Seed from catalog
+            </button>
+            <Button variant="primary" onClick={openNewModal}>Add Subject</Button>
+          </div>
         </div>
       ) : (
         <div className="bg-paper border border-rule rounded-xl overflow-x-auto shadow-sm">

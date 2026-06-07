@@ -123,9 +123,9 @@ export default function BookmarksView() {
           <div className="w-16 h-16 rounded-full bg-rule flex items-center justify-center text-muted mb-4 opacity-50">
             <Bookmark size={32} />
           </div>
-          <h1 className="font-serif text-4xl text-ink leading-tight">No references pinned.</h1>
+          <h1 className="font-serif text-4xl text-ink leading-tight">No flashcards yet.</h1>
           <p className="font-sans text-ink-2 font-light leading-relaxed max-w-sm">
-            You haven't bookmarked any interrogatories yet. Pin tricky questions during practice to review them here.
+            Bookmark tricky questions during practice sessions and they'll appear here as flashcards to review.
           </p>
           <div className="pt-6">
             <Link to="/modules">
@@ -143,9 +143,9 @@ export default function BookmarksView() {
     <div className="max-w-5xl mx-auto py-12 md:py-24 px-4 w-full">
       <div className="mb-10 border-b border-rule pb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
-          <span className="eyebrow block mb-4">SAVED CHRONICLES</span>
+          <span className="eyebrow block mb-4">FLASHCARD DECK</span>
           <h1 className="font-serif text-[50px] leading-none text-ink tracking-tight mb-4">
-            Bookmarked References
+            Flashcards
           </h1>
           <p className="font-sans text-lg text-ink-2 font-light max-w-2xl">
             Review tricky questions from your practice runs or prepare for oral exams with your dedicated flashcard set.

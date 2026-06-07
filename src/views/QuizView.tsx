@@ -216,13 +216,14 @@ export default function QuizView() {
   const handlePaperConfirm = (selectedIds: string[]) => {
     setShowPaperPicker(false);
     if (selectedIds.length > 0) {
-      setQuestions((prev) =>
-        prev.filter(
+      setQuestions((prev) => {
+        const filtered = prev.filter(
           (q) =>
             selectedIds.includes(q.subjectId || "") ||
             selectedIds.includes(q.topicId || "")
-        )
-      );
+        );
+        return filtered.length > 0 ? filtered : prev;
+      });
     }
   };
 

@@ -1,6 +1,7 @@
 import {
     User as UserIcon
 } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { getUserPlanState } from "../../lib/subscription";
@@ -9,6 +10,7 @@ import { getUserPlanState } from "../../lib/subscription";
 export function SidebarAuth({ isExpanded }: { isExpanded: boolean }) {
   const { user, userData, loading, openAuthModal } = useAuth();
   const planState = getUserPlanState(userData);
+  const [avatarError, setAvatarError] = useState(false);
   
   if (loading) return (
     <div className={`flex items-center gap-3 px-3 py-2.5 ${!isExpanded ? 'justify-center' : ''}`}>
@@ -24,8 +26,8 @@ export function SidebarAuth({ isExpanded }: { isExpanded: boolean }) {
         title={!isExpanded ? "Profile" : undefined}
       >
         <div className="flex-shrink-0 flex items-center justify-center w-4 h-4">
-          {user.photoURL ? (
-            <img src={user.photoURL} alt="Avatar" className="w-[18px] h-[18px] rounded-full border border-rule object-cover" />
+          {user.photoURL && !avatarError ? (
+            <img src={user.photoURL} alt="Avatar" className="w-[18px] h-[18px] rounded-full border border-rule object-cover" onError={() => setAvatarError(true)} />
           ) : (
             <div className="w-[18px] h-[18px] rounded-full bg-navy text-bg flex items-center justify-center">
               <UserIcon size={10} />
