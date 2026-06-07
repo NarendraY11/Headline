@@ -84,6 +84,7 @@ export default function BookmarksView() {
   const startPractice = () => {
     navigate('/quiz/bookmarks-review', {
       state: {
+        mode: "viva",
         customQuestions: filteredForPractice,
         generatedTopic: selectedSubjectFilter.size > 0
           ? `Bookmarks — ${selectedSubjectFilter.size} subject${selectedSubjectFilter.size > 1 ? "s" : ""}`

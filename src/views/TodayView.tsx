@@ -10,7 +10,7 @@ import {
     TrendingUp,
     X,
 } from "lucide-react";
-import { motion, Reorder } from "motion/react";
+import { motion } from "motion/react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/Atoms";
@@ -292,15 +292,6 @@ export default function TodayView() {
 
   const pacingData = getPacingData(savedDate, logbook);
 
-  const handleReorder = (newOrder: string[]) => {
-    setTileOrder(newOrder);
-    localStorage.setItem("heading_dashboard_tiles", JSON.stringify(newOrder));
-    if (userData) {
-      updateUserData({
-        settings: { ...userData.settings, dashboardTiles: newOrder },
-      });
-    }
-  };
 
   const handleEnableNotifications = async () => {
     if ("Notification" in window) {
@@ -361,26 +352,19 @@ export default function TodayView() {
   }
 
   const tileBaseClasses =
-    "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between cursor-grab active:cursor-grabbing group";
+    "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between";
 
   const renderTile = (tile: string) => {
     switch (tile) {
       case "streak":
         const hasStreak = displayedStreak > 0;
         return (
-          <Reorder.Item
-            key="streak"
-            value="streak"
-            id="streak"
-            className={tileBaseClasses}
-            whileDrag={{ scale: 1.03, boxShadow: "0 8px 24px rgba(13,26,45,0.14)" }}
-          >
+          <div key="streak" className={tileBaseClasses}>
             <div className="flex items-center gap-1.5 mb-1 text-muted-2">
               <Flame size={14} className={hasStreak ? "text-signal" : "text-muted-2"} />
               <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                 STREAK
               </span>
-              <GripVertical size={11} className="ml-auto opacity-0 group-hover:opacity-30 transition-opacity" aria-hidden="true" />
             </div>
             {hasStreak ? (
               <>
@@ -415,7 +399,7 @@ export default function TodayView() {
                 <span className="text-[10px] text-muted leading-tight mt-0.5">Start a session today!</span>
               </div>
             )}
-          </Reorder.Item>
+          </div>
         );
       case "answered":
         const dailyGoal = userData?.dailyGoal ?? 15;
@@ -423,21 +407,14 @@ export default function TodayView() {
         const remainingToGoal = Math.max(0, dailyGoal - answeredToday);
 
         return (
-          <Reorder.Item
-            key="answered"
-            value="answered"
-            id="answered"
-            className={tileBaseClasses}
-            whileDrag={{ scale: 1.03, boxShadow: "0 8px 24px rgba(13,26,45,0.14)" }}
-          >
+          <div key="answered" className={tileBaseClasses}>
             <div>
               <div className="flex items-center gap-1.5 mb-1 text-muted-2">
                 <BookOpen size={14} />
                 <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                   Q'S ANSWERED
                 </span>
-                <GripVertical size={11} className="ml-auto opacity-0 group-hover:opacity-30 transition-opacity" aria-hidden="true" />
-              </div>
+                </div>
               <div className="font-serif text-[26px] text-ink leading-none mt-2 flex items-baseline justify-between overflow-hidden">
                 <div>
                   <AnimatedCounter value={answeredToday} />
@@ -465,25 +442,18 @@ export default function TodayView() {
                 Lifetime: {totalQuestions}
               </div>
             </div>
-          </Reorder.Item>
+          </div>
         );
       case "score":
         return (
-          <Reorder.Item
-            key="score"
-            value="score"
-            id="score"
-            className={tileBaseClasses}
-            whileDrag={{ scale: 1.03, boxShadow: "0 8px 24px rgba(13,26,45,0.14)" }}
-          >
+          <div key="score" className={tileBaseClasses}>
             <div>
               <div className="flex items-center gap-1.5 mb-1 text-muted-2">
                 <Award size={14} />
                 <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                   AVG SCORE
                 </span>
-                <GripVertical size={11} className="ml-auto opacity-0 group-hover:opacity-30 transition-opacity" aria-hidden="true" />
-              </div>
+                </div>
               <div
                 className={`font-serif text-[26px] leading-none mt-2 ${getScoreColor(avgScore)}`}
               >
@@ -500,25 +470,18 @@ export default function TodayView() {
                 Trend: {scoreTrendStr}
               </div>
             </div>
-          </Reorder.Item>
+          </div>
         );
       case "hours":
         return (
-          <Reorder.Item
-            key="hours"
-            value="hours"
-            id="hours"
-            className={tileBaseClasses}
-            whileDrag={{ scale: 1.03, boxShadow: "0 8px 24px rgba(13,26,45,0.14)" }}
-          >
+          <div key="hours" className={tileBaseClasses}>
             <div>
               <div className="flex items-center gap-1.5 mb-1 text-muted-2">
                 <Clock size={14} />
                 <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                   HOURS · 7D
                 </span>
-                <GripVertical size={11} className="ml-auto opacity-0 group-hover:opacity-30 transition-opacity" aria-hidden="true" />
-              </div>
+                </div>
               <div className="font-serif text-[26px] text-ink leading-none mt-2">
                 {hasAttempts ? <AnimatedCounter value={hoursThisWeek} /> : 0}{" "}
                 <span className="font-sans text-xl text-muted font-normal lowercase tracking-normal">
@@ -529,7 +492,7 @@ export default function TodayView() {
                 Total: {hoursStudied}h
               </div>
             </div>
-          </Reorder.Item>
+          </div>
         );
       default:
         return null;
@@ -719,18 +682,9 @@ export default function TodayView() {
 
         {/* TILES */}
         <div className="mb-10 w-full relative">
-          <div className="absolute -top-6 right-0 font-mono text-[9px] text-muted-2 uppercase tracking-wide flex items-center gap-1.5 opacity-60">
-            <GripVertical size={11} />
-            <span>DRAG TO REORDER</span>
-          </div>
-          <Reorder.Group
-            axis="y"
-            values={tileOrder}
-            onReorder={handleReorder}
-            className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 w-full list-none"
-          >
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 w-full">
             {tileOrder.map((tile) => renderTile(tile))}
-          </Reorder.Group>
+          </div>
         </div>
 
         {/* Only show ResumeCard when no session is already in the hero CTA */}

@@ -178,7 +178,7 @@ export function WeatherWidget() {
   return (
     <div className="bg-paper border border-rule rounded-2xl md:rounded-lg p-5 md:p-4 shadow-sm col-span-1 flex flex-col justify-between transition-all duration-300">
       <div className="flex justify-between items-center mb-2">
-        <div className="font-mono text-[9px] text-muted-2 tracking-widest uppercase flex items-center gap-2">
+        <div className="font-mono text-[9px] text-muted-2 tracking-wide uppercase flex items-center gap-2">
           <span>WX INFO</span>
           {isAlert && <span className="w-1.5 h-1.5 rounded-full bg-signal" />}
         </div>

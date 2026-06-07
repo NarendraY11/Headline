@@ -120,7 +120,7 @@ export function TodayStops({ subjectsList, subjectMastery, dueCount }: TodayStop
                 <span className="font-mono text-[9px] text-muted-2 tracking-wide">{stop.subLabel}</span>
               </div>
               <span className="font-mono text-[10px] text-muted-2 uppercase shrink-0">{stop.duration}</span>
-              <ArrowUpRight size={16} className="text-muted ml-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <ArrowUpRight size={16} className="text-muted ml-1 shrink-0 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
             </div>
           </Link>
         );

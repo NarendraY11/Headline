@@ -70,6 +70,14 @@ export async function checkSessionValidity(userId: string): Promise<boolean> {
   // session even when the random id differs — device identity is the UA.
   if (isSameDevice(data.device_info)) return true;
 
+  // Same-device proof by id. Our own registerActiveSession() upsert always sets
+  // session_id === clientId, so when the server row's id matches ours this IS
+  // our session even if the UA string differs between contexts (installed PWAs
+  // and their service worker can report a slightly different user-agent than
+  // the page that first bound the row). A genuinely different device would hold
+  // a different session_id, so this does not weaken single-device eviction.
+  if (data.session_id === clientId) return true;
+
   // Legacy rows without device_info: fall back to the session-id match.
   if (!data.device_info && data.session_id === clientId) return true;
 

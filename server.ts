@@ -869,9 +869,10 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
         await admin.from("active_sessions").update({ ip_address: ip }).eq("user_id", uid);
         return res.json({ valid: true, bound: true });
       }
-      if (ipNetworkPrefix(row.ip_address) !== ipNetworkPrefix(ip)) {
-        return res.json({ valid: false, reason: "ip_changed" });
-      }
+      // Advisory only: mobile networks rotate the public IP legitimately, so a
+      // prefix change must NOT evict (it was logging users out of installed
+      // PWAs repeatedly). The session_id supersede check above still enforces
+      // single-device takeover.
       return res.json({ valid: true });
     } catch (e) {
       console.warn("session/check failed (fail-open):", e);

@@ -390,7 +390,7 @@ export default function ProfileView() {
         }`}
       >
         {isPro && (
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--pro-gold)]/10 blur-3xl rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--pro-gold)]/10 blur-2xl rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none -z-[1]" />
         )}
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
@@ -402,7 +402,7 @@ export default function ProfileView() {
               {isPro ? <Sparkles size={12} /> : <ShieldCheck size={12} />} Membership
             </span>
             {subPlan === "trial" && (
-              <span className="ml-2 inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest font-bold text-amber bg-amber-soft border border-amber/20 px-2 py-0.5 rounded-full align-middle">
+              <span className="ml-2 inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest font-bold text-ink bg-amber-soft border border-amber/30 px-2 py-0.5 rounded-full align-middle">
                 Trial{subDaysLeft !== null ? ` · ${subDaysLeft}d left` : ""}
               </span>
             )}
@@ -423,18 +423,18 @@ export default function ProfileView() {
           {isPro ? (
             <div className="flex flex-wrap gap-6 md:gap-8 shrink-0">
               <div>
-                <div className="font-mono text-[9px] uppercase tracking-widest text-bg/50 mb-1">Started</div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-bg/75 mb-1">Started</div>
                 <div className="font-sans text-sm font-semibold text-bg">{fmtSubDate(userData?.planStartedAt)}</div>
               </div>
               <div>
-                <div className="font-mono text-[9px] uppercase tracking-widest text-bg/50 mb-1">Renews / Expires</div>
+                <div className="font-mono text-[9px] uppercase tracking-widest text-bg/75 mb-1">Renews / Expires</div>
                 <div className="font-sans text-sm font-semibold text-bg">
                   {userData?.planExpiresAt ? fmtSubDate(userData.planExpiresAt) : "Never"}
                 </div>
               </div>
               {subDaysLeft !== null && (
                 <div>
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-bg/50 mb-1 flex items-center gap-1">
+                  <div className="font-mono text-[9px] uppercase tracking-widest text-bg/75 mb-1 flex items-center gap-1">
                     <CalendarClock size={10} /> Days Left
                   </div>
                   <div className="font-sans text-sm font-semibold text-[var(--pro-gold)]">{subDaysLeft}</div>

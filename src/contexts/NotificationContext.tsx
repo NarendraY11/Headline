@@ -94,9 +94,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     setLoading(true);
     try {
+      // Scope to the signed-in user's own rows. Admins satisfy the table's
+      // RLS `is_admin()` clause, so an unfiltered select would pull EVERY
+      // user's notifications into their personal bell — and mark-all-read
+      // (which filters by user_id) could never clear the others, so they
+      // reappear unread on every reload. The personal bell must be personal.
       const { data, error } = await supabase
         .from("notifications")
         .select("*")
+        .eq("user_id", user.uid)
         .order("created_at", { ascending: false });
 
       // DB column is `message`; the app uses `body`. Map between them.
@@ -165,6 +171,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.uid}` },
+        () => { refreshNotifications(); }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.uid}` },
         () => { refreshNotifications(); }
       )
       .subscribe();

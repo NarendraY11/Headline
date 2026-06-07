@@ -57,10 +57,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ valid: true, bound: true });
     }
 
-    // Compare by network prefix (/24 v4, /64 v6) so normal IP churn within the
-    // same subnet does not evict; only a jump to a different network trips it.
+    // Network change on an established session. Mobile networks (cellular
+    // CGNAT, Wi-Fi handoff) legitimately rotate the public IP — often mid-
+    // session — so this is ADVISORY ONLY: log it for forensics but NEVER evict
+    // on IP alone, or installed mobile PWAs get logged out again and again.
+    // Single-device takeover is still enforced above via the session_id
+    // supersede check, which is the real anti-hijack signal.
     if (ipNetworkPrefix(row.ip_address) !== ipNetworkPrefix(ip)) {
-      // Network jump on an established session: possible token replay/hijack.
       void logSecurityEvent({
         req,
         eventType: "session.ip_changed",
@@ -69,7 +72,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         actorEmail: user.email,
         metadata: { from_prefix: ipNetworkPrefix(row.ip_address), to_prefix: ipNetworkPrefix(ip) },
       });
-      return res.status(200).json({ valid: false, reason: "ip_changed" });
     }
 
     return res.status(200).json({ valid: true });

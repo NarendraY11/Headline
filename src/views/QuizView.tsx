@@ -187,6 +187,11 @@ export default function QuizView() {
     if (isVivaRoute) return "viva";
     if (isTimedRoute) return "timed";
     if (isPracticeRoute) return "practice";
+    // Honor an explicit mode passed via navigation state (e.g. the Flashcards
+    // deck launches bookmarked questions in viva/flashcard mode). Without this
+    // the bookmarks-review route falls through to the default practice layout.
+    const stateMode = location.state?.mode as QuizMode | undefined;
+    if (stateMode) return stateMode;
     return savedState?.mode || savedModeSelection;
   });
   const [currentIndex, setCurrentIndex] = useState(
