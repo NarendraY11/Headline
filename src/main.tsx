@@ -1,3 +1,6 @@
+// Sentry init — must run before any other app code.
+import './instrument';
+import * as Sentry from '@sentry/react';
 import '@fontsource/geist-sans/300.css';
 import '@fontsource/geist-sans/400.css';
 import '@fontsource/geist-sans/500.css';
@@ -37,7 +40,12 @@ runWhenIdle(() => {
   initPostHog();
 });
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById('root')!, {
+  // React 19 error hooks → Sentry (complements the in-app ErrorBoundary).
+  onUncaughtError: Sentry.reactErrorHandler(),
+  onCaughtError: Sentry.reactErrorHandler(),
+  onRecoverableError: Sentry.reactErrorHandler(),
+}).render(
   <StrictMode>
     <FeatureFlagsProvider>
       <AuthProvider>
