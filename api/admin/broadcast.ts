@@ -37,35 +37,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     const { title, message, type } = req.body || {};
 
-    const { data: profiles, error } = await admin.from("profiles").select("id");
+    // Fan-out runs entirely in Postgres (one INSERT…SELECT) so a 100k-user
+    // broadcast can't exceed the serverless function timeout. Returns the row
+    // count inserted.
+    const { data: sent, error } = await admin.rpc("broadcast_notification", {
+      p_title: title,
+      p_message: message,
+      p_type: type || "system",
+    });
     if (error) throw error;
 
-    // Server-side bulk read of the user base — feeds the bulk-access alert rule.
-    if ((profiles?.length ?? 0) > 100) {
+    // Bulk-access signal for the alert sweep.
+    if ((sent ?? 0) > 100) {
       void logSecurityEvent({
         req,
         eventType: "data.bulk_access",
         severity: "info",
         userId: user.id,
         actorEmail: user.email,
-        metadata: { count: profiles!.length, table: "profiles", via: "admin.broadcast" },
+        metadata: { count: sent, table: "profiles", via: "admin.broadcast" },
       });
-    }
-
-    const rows = (profiles || []).map((p: any) => ({
-      user_id: p.id,
-      title: String(title).slice(0, 200),
-      message: String(message).slice(0, 2000),
-      type: type || "system",
-      read: false,
-    }));
-
-    let sent = 0;
-    for (let i = 0; i < rows.length; i += 500) {
-      const chunk = rows.slice(i, i + 500);
-      const { error: insErr } = await admin.from("notifications").insert(chunk);
-      if (insErr) throw insErr;
-      sent += chunk.length;
     }
 
     console.log(`Broadcast sent to ${sent} users by ${user.email}`);

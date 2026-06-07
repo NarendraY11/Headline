@@ -41,7 +41,7 @@ const EMAIL_RE = /^[^\s@]{1,200}@[^\s@]{1,200}\.[^\s@]{1,20}$/;
 
 async function authEvent(req: VercelRequest, res: VercelResponse) {
   const ip = getClientIdentity(req);
-  if (!checkFormRateLimit("auth-event", ip, 30, 60_000)) {
+  if (!(await checkFormRateLimit("auth-event", ip, 30, 60_000))) {
     return res.status(204).end();
   }
   const type = typeof req.body?.type === "string" ? req.body.type : "";

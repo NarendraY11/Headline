@@ -4,7 +4,7 @@ import crypto from "crypto";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity, ipNetworkPrefix } from "./api/_lib/utils.js";
+import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity } from "./api/_lib/utils.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -204,24 +204,13 @@ async function startServer() {
       if (broadcastError) return res.status(400).json({ error: broadcastError });
       const { title, message, type } = req.body || {};
 
-      const { data: profiles, error } = await admin.from("profiles").select("id");
+      // Fan-out runs in Postgres (one INSERT…SELECT) — mirrors api/admin/broadcast.ts.
+      const { data: sent, error } = await admin.rpc("broadcast_notification", {
+        p_title: title,
+        p_message: message,
+        p_type: type || "system",
+      });
       if (error) throw error;
-
-      const rows = (profiles || []).map((p: any) => ({
-        user_id: p.id,
-        title: String(title).slice(0, 200),
-        message: String(message).slice(0, 2000),
-        type: type || "system",
-        read: false,
-      }));
-
-      let sent = 0;
-      for (let i = 0; i < rows.length; i += 500) {
-        const chunk = rows.slice(i, i + 500);
-        const { error: insErr } = await admin.from("notifications").insert(chunk);
-        if (insErr) throw insErr;
-        sent += chunk.length;
-      }
 
       return res.json({ success: true, sent });
     } catch (e: any) {

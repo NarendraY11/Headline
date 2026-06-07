@@ -59,19 +59,58 @@ export async function getAuthenticatedUser(req: VercelRequest, res: VercelRespon
 
 const userRequestTimestamps = new Map<string, number[]>();
 
-export async function checkRateLimit(uid: string): Promise<boolean> {
-  const now = Date.now();
-  const oneHourAgo = now - 60 * 60 * 1000;
+// Shared, cross-instance fixed-window limiter backed by public.rl_hit().
+// Under serverless autoscale the old in-memory maps gave each lambda its own
+// counter (effective limit ≈ limit × instances); this is one atomic upsert in
+// Postgres shared by every instance. Returns true=allowed, false=blocked,
+// null=limiter unavailable (caller falls back to a best-effort local check;
+// fail-open is deliberate so a limiter outage can't take down core features).
+export async function dbRateLimit(
+  bucket: string,
+  limit: number,
+  windowSec: number
+): Promise<boolean | null> {
+  try {
+    const { data, error } = await getSupabaseAdmin().rpc("rl_hit", {
+      p_key: bucket,
+      p_limit: limit,
+      p_window_sec: windowSec,
+    });
+    if (error) {
+      console.warn("rl_hit error:", error.message);
+      return null;
+    }
+    return data === true;
+  } catch (e) {
+    console.warn("rl_hit call failed:", e);
+    return null;
+  }
+}
 
-  // 1. In-memory per-instance check
-  let timestamps = userRequestTimestamps.get(uid) || [];
-  timestamps = timestamps.filter(t => t > oneHourAgo);
-  if (timestamps.length >= 20) {
-    return false;
+export async function checkRateLimit(uid: string): Promise<boolean> {
+  // Primary gate: shared 20/hour across ALL serverless instances.
+  const allowed = await dbRateLimit(`ai:${uid}`, 20, 60 * 60);
+
+  if (allowed === false) return false;
+
+  if (allowed === true) {
+    // Authoritative usage log (analytics + the fallback backstop below).
+    try {
+      await getSupabaseAdmin().from("events").insert({ user_id: uid, event_type: "ai_used" });
+    } catch (logErr) {
+      console.warn("Failed to record ai_used event:", logErr);
+    }
+    return true;
   }
 
-  // 2. Precise Supabase backstop. Must use the admin client: events SELECT is
+  // Fallback path (shared limiter unavailable): per-instance map + a precise
+  // events-count backstop. Must use the admin client: events SELECT is
   // admin-only under RLS, so the anon client would always count 0.
+  const now = Date.now();
+  const oneHourAgo = now - 60 * 60 * 1000;
+  let timestamps = (userRequestTimestamps.get(uid) || []).filter(t => t > oneHourAgo);
+  if (timestamps.length >= 20) return false;
+
   const oneHourAgoISO = new Date(oneHourAgo).toISOString();
   try {
     const { count, error } = await getSupabaseAdmin()
@@ -93,13 +132,8 @@ export async function checkRateLimit(uid: string): Promise<boolean> {
   timestamps.push(now);
   userRequestTimestamps.set(uid, timestamps);
 
-  // Authoritative server-side usage log so the DB backstop above actually
-  // has rows to count (client-side analytics events can be bypassed).
-  // Uses the admin client because the anon client has no auth context here.
   try {
-    await getSupabaseAdmin()
-      .from("events")
-      .insert({ user_id: uid, event_type: "ai_used" });
+    await getSupabaseAdmin().from("events").insert({ user_id: uid, event_type: "ai_used" });
   } catch (logErr) {
     console.warn("Failed to record ai_used event:", logErr);
   }
@@ -315,9 +349,20 @@ export function detectAttackPattern(value: unknown, fieldName: string): { error:
 
 const formSubmissionTimestamps = new Map<string, number[]>();
 
-// Best-effort per-instance limiter. Mirrors the in-memory approach already used
-// by checkRateLimit; under serverless this is per-instance, not global.
-export function checkFormRateLimit(formId: string, identity: string, limit = 10, windowMs = 60_000): boolean {
+// Cross-instance form limiter (shared via rl_hit), with a per-instance
+// in-memory fallback when the shared limiter is unavailable. Async now: the
+// only callers (screenSubmission, api/system.ts) already run in async handlers.
+export async function checkFormRateLimit(
+  formId: string,
+  identity: string,
+  limit = 10,
+  windowMs = 60_000
+): Promise<boolean> {
+  const windowSec = Math.max(1, Math.floor(windowMs / 1000));
+  const shared = await dbRateLimit(`form:${formId}:${identity}`, limit, windowSec);
+  if (shared !== null) return shared;
+
+  // Fallback: best-effort per-instance window.
   const key = `${formId}:${identity}`;
   const now = Date.now();
   const cutoff = now - windowMs;
@@ -404,7 +449,7 @@ export async function screenSubmission(params: {
     return { ok: false, status: 400, error: "Invalid submission." };
   }
 
-  if (!checkFormRateLimit(formId, identity)) {
+  if (!(await checkFormRateLimit(formId, identity))) {
     await logAbuse(identity, formId, "form_rate_limit", req);
     return { ok: false, status: 429, error: "Too many submissions. Please wait a minute and try again." };
   }
