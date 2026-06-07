@@ -381,6 +381,16 @@ export default function ProfileView() {
 
       {/* Subscription / Clearance status */}
       <Card
+        // Card hardcodes `bg-paper`, which wins the cascade over a passed
+        // `bg-navy` class (Tailwind picks the later-compiled utility, not the
+        // later class in the string) — so the premium card rendered white and
+        // its cream `text-bg` content was invisible. Force the surface via the
+        // token so it is correct in both themes (dark mode inverts --navy).
+        style={
+          isPro
+            ? { backgroundColor: "var(--color-navy)", borderColor: "var(--color-navy)" }
+            : undefined
+        }
         className={`p-6 md:p-8 mb-8 rounded-2xl relative overflow-hidden ${
           isPro
             ? "bg-navy border-navy text-bg"
