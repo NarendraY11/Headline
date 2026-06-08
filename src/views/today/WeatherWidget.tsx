@@ -40,23 +40,24 @@ export function WeatherWidget() {
     setGlobalLoading(true);
 
     try {
-      const response = await apiFetch("/api/weather", {
+      const result = await apiFetch("/api/weather", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({ icao: "EGLL" }),
       });
 
-      if (!response) {
-        setWeatherData((prev) => ({ 
-          briefing: "Weather briefing is currently offline", 
-          condition: "CLOUDY", 
-          unavailable: true 
+      if (!result.ok) {
+        setWeatherData((prev) => ({
+          briefing: "Weather briefing is currently offline",
+          condition: "CLOUDY",
+          unavailable: true
         }) as any);
         return;
       }
 
+      const response = result.response;
       const contentType = response.headers.get("content-type");
       if (contentType && contentType.indexOf("application/json") !== -1) {
         try {

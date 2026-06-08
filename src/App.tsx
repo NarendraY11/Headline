@@ -149,6 +149,10 @@ export default function App() {
             <Route path="/blog/:slug" element={<BlogPostView />} />
             <Route path="/qotd" element={<QotdView />} />
             <Route path="/a320-systems" element={<A320SystemsView />} />
+            {/* Catch-all 404 lives in the PUBLIC layout so logged-out users and
+                crawlers reach the real NotFound page. Inside AuthGuard it was
+                trapped behind a misleading "Session Expired" redirect. */}
+            <Route path="*" element={<NotFoundView />} />
           </Route>
 
           {/* LOCKED ADMINISTRATIVE AREA */}
@@ -180,7 +184,6 @@ export default function App() {
             <Route path="/bookmarks" element={<BookmarksView />} />
             <Route path="/profile" element={<ProfileView />} />
             <Route path="/referral" element={<ReferralView />} />
-            <Route path="*" element={<NotFoundView />} />
           </Route>
 
           {/* FULLSCREEN QUIZ (authed, NO App Shell — each quiz layout is its

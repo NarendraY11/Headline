@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 
@@ -39,7 +39,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [loading, setLoading] = useState(true);
 
   // Helper to load localStorage fallback
-  const getLocalNotifications = (): NotificationItem[] => {
+  const getLocalNotifications = useCallback((): NotificationItem[] => {
     try {
       const saved = localStorage.getItem("heading_notifications_local");
       if (saved) return JSON.parse(saved);
@@ -47,17 +47,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       console.warn("Failed to parse local notifications:", e);
     }
     return [];
-  };
+  }, []);
 
-  const saveLocalNotifications = (list: NotificationItem[]) => {
+  const saveLocalNotifications = useCallback((list: NotificationItem[]) => {
     try {
       localStorage.setItem("heading_notifications_local", JSON.stringify(list));
     } catch (e) {
       console.warn("Failed to save local notifications:", e);
     }
-  };
+  }, []);
 
-  const refreshNotifications = async () => {
+  const refreshNotifications = useCallback(async () => {
     if (!user) {
       // Load offline notifications from local storage
       const local = getLocalNotifications();
@@ -156,11 +156,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.uid, getLocalNotifications, saveLocalNotifications]);
 
   useEffect(() => {
     refreshNotifications();
-  }, [user]);
+  }, [user?.uid, refreshNotifications]);
 
   // Realtime: push new notifications to the user the moment they're inserted
   // (e.g. admin broadcast, plan grant) without a manual refresh.
@@ -180,7 +180,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user]);
+  }, [user?.uid, refreshNotifications]);
 
   // Handle countdown exam date reminders dynamically
   useEffect(() => {
@@ -207,7 +207,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [notifications.length]);
 
-  const addNotification = async (
+  const addNotification = useCallback(async (
     title: string,
     body: string,
     type: "milestone" | "reminder" | "system" | "countdown"
@@ -251,9 +251,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       saveLocalNotifications(local);
       setNotifications(local);
     }
-  };
+  }, [user?.uid, getLocalNotifications, saveLocalNotifications, refreshNotifications]);
 
-  const markAsRead = async (id: string) => {
+  const markAsRead = useCallback(async (id: string) => {
     // Optimistic update
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, read: true } : n))
@@ -276,9 +276,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (e) {
       console.warn("Failed syncing read notification:", e);
     }
-  };
+  }, [user?.uid, getLocalNotifications, saveLocalNotifications]);
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     setNotifications(prev =>
       prev.map(n => ({ ...n, read: true }))
     );
@@ -300,9 +300,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (e) {
       console.warn("Failed marking all as read:", e);
     }
-  };
+  }, [user?.uid, getLocalNotifications, saveLocalNotifications]);
 
-  const deleteNotification = async (id: string) => {
+  const deleteNotification = useCallback(async (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
     
     const localList = getLocalNotifications().filter(n => n.id !== id);
@@ -322,23 +322,32 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (e) {
       console.warn("Failed deleting notification:", e);
     }
-  };
+  }, [user?.uid, getLocalNotifications, saveLocalNotifications]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const value = useMemo<NotificationContextProps>(() => ({
+    notifications,
+    unreadCount,
+    loading,
+    addNotification,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    refreshNotifications,
+  }), [
+    notifications,
+    unreadCount,
+    loading,
+    addNotification,
+    markAsRead,
+    markAllAsRead,
+    deleteNotification,
+    refreshNotifications,
+  ]);
+
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        unreadCount,
-        loading,
-        addNotification,
-        markAsRead,
-        markAllAsRead,
-        deleteNotification,
-        refreshNotifications,
-      }}
-    >
+    <NotificationContext.Provider value={value}>
       {children}
     </NotificationContext.Provider>
   );
