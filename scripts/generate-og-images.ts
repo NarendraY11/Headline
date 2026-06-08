@@ -115,7 +115,7 @@ export async function generateOgImages() {
   <!-- Secondary Meta Information Grid -->
   <g transform="translate(80, 460)">
     <text x="0" y="0" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8" letter-spacing="0.05em">
-      PUBLISHED ON <tspan fill="#f59e0b" font-weight="bold">${escapeXml(post.date.toUpperCase())}</tspan>  &middot;  READTIME <tspan fill="#ffffff">${escapeXml(post.readTime.toUpperCase())}</tspan>
+      PUBLISHED ON <tspan fill="#f59e0b" font-weight="bold">${escapeXml(post.date.toUpperCase())}</tspan>  &#183;  READTIME <tspan fill="#ffffff">${escapeXml(post.readTime.toUpperCase())}</tspan>
     </text>
   </g>
 
