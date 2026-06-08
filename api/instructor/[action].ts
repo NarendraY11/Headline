@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { ai, getAuthenticatedUser, checkRateLimit, isProUser, isFeatureEnabled, validateInstructorPayload, screenSubmission } from "../_lib/utils.js";
+import { ai, getAuthenticatedUser, getSupabaseAdmin, checkRateLimit, isProUser, isFeatureEnabled, validateInstructorPayload, screenSubmission } from "../_lib/utils.js";
 import { logSecurityEvent } from "../_lib/securityLog.js";
+import { handleCoach } from "../_lib/coach.js";
 
 // Per-action gating, mirroring server.ts (dev). `explain` is free; the rest
 // require an active Pro/Trial plan. Each maps to its app_settings feature flag.
@@ -81,34 +82,13 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
   return res.status(200).json(questions);
 }
 
+// Weak-area coach / study-plan generation. Shared with server.ts via
+// handleCoach so dev and prod stay identical. Markdown by default; structured
+// StudyPlan JSON (persisted to study_plans) when aiStudyScheduler is enabled.
 async function coach(req: VercelRequest, res: VercelResponse) {
-  const { scores = {} } = req.body || {};
-
-  const scoresText = Object.entries(scores)
-    .map(([topic, data]: [string, any]) => {
-      const total = Number(data?.total) || 0;
-      const correct = Number(data?.correct) || 0;
-      if (total <= 0) return null; // skip empty topics; avoids divide-by-zero NaN
-      return `${topic}: ${correct}/${total} (${Math.round((correct / total) * 100)}%)`;
-    })
-    .filter(Boolean)
-    .join("\n");
-
-  if (!scoresText) {
-    return res.status(400).json({ error: "No scored topics provided." });
-  }
-
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [
-      { role: "user", parts: [{ text: `My pilot exam scores are:\n${scoresText}\n\nBased on these pilot exam scores, write a focused 7-day study plan prioritising the weakest ATA chapters/topics. For each day, suggest specific sub-topics or concepts to focus on. Ensure the response is concise and highly actionable. Under 250 words.` }] }
-    ],
-    config: {
-      systemInstruction: "You are an expert aviation instructor guiding a CPL/ATPL cadet. Use their score breakdown to identify their weakest areas and provide specific, actionable concepts to study."
-    }
-  });
-
-  return res.status(200).json({ text: response.text });
+  const uid = (req as any).uid as string;
+  const result = await handleCoach(ai, getSupabaseAdmin(), uid, req.body || {});
+  return res.status(result.status).json(result.body);
 }
 
 async function diagnosis(req: VercelRequest, res: VercelResponse) {
@@ -157,6 +137,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const user = await getAuthenticatedUser(req, res);
   if (!user) return;
+  (req as any).uid = user.id; // consumed by coach() via handleCoach
 
   const gate = ACTION_GATES[action as string];
   if (gate) {
