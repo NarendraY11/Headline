@@ -40,8 +40,10 @@ export function DarkModeToggle() {
   };
 
   return (
-    <button 
+    <button
       onClick={handleToggle}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      aria-pressed={isDark}
       className="p-3 -m-1.5 text-muted hover:text-ink hover:bg-bg-2 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none"
       title="Toggle Night Mode"
     >

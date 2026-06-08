@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import sharp from "sharp";
 import { blogPosts } from "../src/data/blog.js";
 
 // Helper to handle ESM directory paths
@@ -38,16 +39,16 @@ function wrapText(text: string, maxCharsPerLine: number): string[] {
   return lines;
 }
 
-export function generateOgImages() {
+export async function generateOgImages() {
   const outputDir = path.join(__dirname, "../public/og-posts");
-  
+
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
   console.log(`Generating OG images for ${blogPosts.length} posts...`);
 
-  blogPosts.forEach(post => {
+  for (const post of blogPosts) {
     const wrappedLines = wrapText(post.title, 42); // Wrap around 42 characters for titles
     
     // Create the beautiful SVG Template
@@ -136,10 +137,16 @@ export function generateOgImages() {
   </g>
 </svg>`;
 
-    const outputPath = path.join(outputDir, `${post.slug}.svg`);
-    fs.writeFileSync(outputPath, svgContent, "utf8");
-    console.log(`Saved OG image: ${post.slug}.svg`);
-  });
+    // Keep the SVG (used internally / debugging) but ALSO rasterize to PNG.
+    // Social scrapers (Facebook, LinkedIn, X/Twitter, Slack, Discord) do not
+    // render SVG og:image, so the canonical share image must be PNG.
+    const svgPath = path.join(outputDir, `${post.slug}.svg`);
+    fs.writeFileSync(svgPath, svgContent, "utf8");
+
+    const pngPath = path.join(outputDir, `${post.slug}.png`);
+    await sharp(Buffer.from(svgContent)).png().toFile(pngPath);
+    console.log(`Saved OG image: ${post.slug}.png`);
+  }
 
   console.log("Completed dynamic OG image batch generation.");
 }

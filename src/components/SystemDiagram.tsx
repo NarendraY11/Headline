@@ -257,13 +257,13 @@ export function FlightControlsDiagram() {
             const isFailed = (lawIdx > 0) && node.id === 'FCPC1';
             const isActive = (isHovered || isPinned) && !isFailed;
             
-            let nodeFill = blueprintMode ? (isActive ? 'var(--ink)' : 'var(--white)') : 'var(--paper)';
-            let textFill = blueprintMode ? (isActive ? 'var(--white)' : 'var(--ink)') : (isActive ? 'var(--sky)' : 'var(--ink)');
+            let nodeFill = blueprintMode ? (isActive ? 'var(--ink)' : 'var(--white, #fff)') : 'var(--paper)';
+            let textFill = blueprintMode ? (isActive ? 'var(--white, #fff)' : 'var(--ink)') : (isActive ? 'var(--sky)' : 'var(--ink)');
             let strokeColor = blueprintMode ? 'var(--ink)' : (isActive ? 'var(--sky)' : 'var(--ink)');
             const strokeWidth = isActive ? (blueprintMode ? "2.5" : "2") : (blueprintMode ? "1" : "1.5");
 
             if (isFailed) {
-              nodeFill = blueprintMode ? 'var(--white)' : 'rgba(239, 68, 68, 0.1)';
+              nodeFill = blueprintMode ? 'var(--white, #fff)' : 'rgba(239, 68, 68, 0.1)';
               textFill = blueprintMode ? 'var(--ink-40, #9ca3af)' : 'var(--signal, #ef4444)';
               strokeColor = blueprintMode ? 'var(--ink-40, #9ca3af)' : 'var(--signal, #ef4444)';
             }

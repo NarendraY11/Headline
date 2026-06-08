@@ -189,11 +189,14 @@ export default function ContactView() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <label className="font-mono text-[10px] text-muted-2 uppercase tracking-wider block">
+                        <label htmlFor="contact-name" className="font-mono text-[10px] text-muted-2 uppercase tracking-wider block">
                           Cadet Name <span className="text-signal">*</span>
                         </label>
                         <input
+                          id="contact-name"
+                          name="name"
                           type="text"
+                          autoComplete="name"
                           required
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -203,11 +206,15 @@ export default function ContactView() {
                       </div>
 
                       <div className="space-y-1.5">
-                        <label className="font-mono text-[10px] text-muted-2 uppercase tracking-wider block">
+                        <label htmlFor="contact-email" className="font-mono text-[10px] text-muted-2 uppercase tracking-wider block">
                           Return Email Location <span className="text-signal">*</span>
                         </label>
                         <input
+                          id="contact-email"
+                          name="email"
                           type="email"
+                          autoComplete="email"
+                          inputMode="email"
                           required
                           value={formData.email}
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -218,10 +225,11 @@ export default function ContactView() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="font-mono text-[10px] text-muted-2 uppercase tracking-wider block">
+                      <label htmlFor="contact-subject" className="font-mono text-[10px] text-muted-2 uppercase tracking-wider block">
                         Transmission Classification
                       </label>
                       <select
+                        id="contact-subject"
                         value={formData.subject}
                         onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                         className="w-full bg-[#fcfcf9] dark:bg-[#1a1c18] border border-rule px-3 py-2 text-sm text-ink font-sans focus:outline-none focus:border-signal transition-colors rounded-sm"
@@ -234,10 +242,12 @@ export default function ContactView() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="font-mono text-[10px] text-muted-2 uppercase tracking-wider block">
+                      <label htmlFor="contact-message" className="font-mono text-[10px] text-muted-2 uppercase tracking-wider block">
                         Payload Message <span className="text-signal">*</span>
                       </label>
                       <textarea
+                        id="contact-message"
+                        name="message"
                         required
                         rows={5}
                         value={formData.message}

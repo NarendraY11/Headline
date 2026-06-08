@@ -220,7 +220,7 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
               </div>
 
               <ControlRow title="Negative Marking" desc="Deduct points in timed mode">
-                <CustomToggle isOn={negativeMarking} onToggle={handleToggleNegativeMarking} />
+                <CustomToggle isOn={negativeMarking} onToggle={handleToggleNegativeMarking} ariaLabel="Negative marking" />
               </ControlRow>
 
               <div>
@@ -275,13 +275,13 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
                   </span>
                   <span className="block text-xs font-mono tracking-wide text-muted-2 mt-1">Dark theme for low-light environments</span>
                 </div>
-                <CustomToggle isOn={isDark} onToggle={handleThemeToggle} />
+                <CustomToggle isOn={isDark} onToggle={handleThemeToggle} ariaLabel="Night mode" />
               </div>
 
               <div className="border-t border-rule" />
 
               <ControlRow title="Reduce Motion" desc="Disable non-essential animations">
-                <CustomToggle isOn={reduceMotion} onToggle={handleToggleReduceMotion} />
+                <CustomToggle isOn={reduceMotion} onToggle={handleToggleReduceMotion} ariaLabel="Reduce motion" />
               </ControlRow>
 
               <div className="border-t border-rule" />

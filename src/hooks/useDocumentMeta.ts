@@ -9,7 +9,16 @@ export function useDocumentMeta() {
   useEffect(() => {
     const path = location.pathname;
     const { title, description, ogImage } = getMetaForRoute(path);
-    const origin = window.location.origin;
+    // Canonical/OG URLs must always use the production origin. During the
+    // build-time prerender the page is served from http://localhost:5555, so
+    // window.location.origin would bake "localhost" into the canonical, og:url
+    // and og:image of every static snapshot. Pin the public origin instead;
+    // fall back to window.location.origin only for non-prod hosts (preview).
+    const PROD_ORIGIN = "https://headline-blush.vercel.app";
+    const runtimeOrigin =
+      typeof window !== "undefined" ? window.location.origin : PROD_ORIGIN;
+    const isLocalhost = /localhost|127\.0\.0\.1/.test(runtimeOrigin);
+    const origin = isLocalhost ? PROD_ORIGIN : runtimeOrigin;
     const canonicalUrl = `${origin}${path}`;
 
     // Update document title
@@ -28,6 +37,22 @@ export function useDocumentMeta() {
 
     // Update canonical link URL
     setElementAttr("link", 'link[rel="canonical"]', "rel", "canonical", "href", canonicalUrl);
+
+    // Robots: the site-wide default in index.html is index,follow. Authed,
+    // admin, and transactional routes must NOT be indexed (they only ever
+    // render the login/app shell to a crawler). Flip the meta per-route.
+    const NONPUBLIC_PREFIXES = [
+      "/login", "/reset-password", "/today", "/modules", "/topic",
+      "/mock-exams", "/analytics", "/bookmarks", "/profile", "/referral",
+      "/quiz", "/admin", "/dashboard",
+    ];
+    const isNonPublic = NONPUBLIC_PREFIXES.some(
+      (p) => path === p || path.startsWith(p + "/")
+    );
+    setElementAttr(
+      "meta", 'meta[name="robots"]', "name", "robots", "content",
+      isNonPublic ? "noindex, follow" : "index, follow"
+    );
 
     // Update Meta Description
     setElementAttr("meta", 'meta[name="description"]', "name", "description", "content", description);

@@ -18,7 +18,6 @@ export function RouteMetaHelper() {
     const refCode = params.get("ref");
     if (refCode) {
       localStorage.setItem("referred_by_code", refCode);
-      console.log("Captured campaign referral code:", refCode);
     }
   }, [location.pathname, location.search]);
 

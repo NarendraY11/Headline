@@ -53,7 +53,9 @@ export function getMetaForRoute(path: string): RouteMeta {
     if (post) {
       title = `${post.title} — Heading Blog`;
       description = post.description;
-      ogImage = `/og-posts/${post.slug}.svg`;
+      // PNG, not SVG — social scrapers (FB/LinkedIn/X/Slack) don't render SVG
+      // og:image. Generated alongside the SVG by scripts/generate-og-images.ts.
+      ogImage = `/og-posts/${post.slug}.png`;
     } else {
       title = "Aviation Article — Heading";
       description = "Read pilot guides and airline ground school theory insights.";

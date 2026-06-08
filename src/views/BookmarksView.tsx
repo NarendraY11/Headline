@@ -221,7 +221,7 @@ export default function BookmarksView() {
           <Card key={q.id} className="bg-panel border-rule flex flex-col md:flex-row md:items-start gap-6 relative group">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
-                <Chip variant="solid" className="text-[9px]">{q.ata.split('·')[0].trim()}</Chip>
+                <Chip variant="solid" className="text-[9px]">{q.ata?.split('·')[0]?.trim() || q.difficulty || 'GENERAL'}</Chip>
                 <span className="font-mono text-[9px] uppercase tracking-widest text-muted">{q.difficulty || "standard"}</span>
               </div>
               <p className="font-serif text-xl sm:text-2xl text-ink leading-snug mb-4">{q.prompt}</p>

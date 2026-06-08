@@ -93,7 +93,10 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
       <div className="fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4 pointer-events-none">
         <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} className="absolute inset-0 bg-ink/20 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
         
-        <motion.div 
+        <motion.div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Search"
           initial={{ opacity: 0, scale: 0.95, y: -20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -20 }}
@@ -102,9 +105,10 @@ export default function SearchOverlay({ onClose }: { onClose: () => void }) {
         >
         <div className="p-4 border-b border-rule flex items-center gap-3">
           <Search size={20} className="text-muted-2" />
-          <input 
+          <input
             ref={inputRef}
-            type="text" 
+            type="text"
+            aria-label="Search modules and exams"
             placeholder="Jump to module, ATA chapter, or exam..."
             value={query}
             onChange={e => setQuery(e.target.value)}

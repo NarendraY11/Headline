@@ -482,7 +482,7 @@ export default function SplitLayout({
           <div className="flex-1 flex items-center justify-center p-8 overflow-hidden relative">
              <div className="absolute top-8 right-8 text-[#f2f1f0]/5">
                 {/* Speedometer graphic top-right placeholder */}
-                <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="animate-[spin_10s_linear_infinite]">
+                <svg aria-hidden="true" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" className="animate-[spin_10s_linear_infinite] motion-reduce:animate-none">
                   <circle cx="12" cy="12" r="10" strokeDasharray="2 4"/>
                   <path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.93 19.07l2.83-2.83"/><path d="M16.24 7.76l2.83-2.83"/>
                 </svg>

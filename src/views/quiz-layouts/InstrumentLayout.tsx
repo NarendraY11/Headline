@@ -135,9 +135,11 @@ export default function InstrumentLayout({
                 else if (isAnswered) tickClass = "bg-mint w-4";
 
                 return (
-                  <button 
+                  <button
                     key={q.id}
                     onClick={() => handleJump?.(idx)}
+                    aria-label={`Go to question ${idx + 1}`}
+                    aria-current={isCurrent ? "true" : undefined}
                     className={`h-7 w-full flex flex-col items-center justify-center relative cursor-pointer outline-none hover:bg-rule/30 rounded-md transition-colors ${isCurrent ? 'opacity-100' : 'opacity-70 hover:opacity-100'}`}
                   >
                     <div className="flex items-center gap-2 px-1 w-full opacity-0 hover:opacity-100 absolute left-full ml-1 z-50">
@@ -164,10 +166,12 @@ export default function InstrumentLayout({
              else if (isAnswered) tickClass = "bg-mint w-4";
              
              return (
-               <button 
+               <button
                  key={q.id}
                  onClick={() => handleJump?.(idx)}
-                 className={`flex flex-col items-center justify-center gap-1.5 shrink-0 transition-opacity ${isCurrent ? 'opacity-100' : 'opacity-50'}`}
+                 aria-label={`Go to question ${idx + 1}`}
+                 aria-current={isCurrent ? "true" : undefined}
+                 className={`flex flex-col items-center justify-center gap-1.5 shrink-0 min-h-6 py-1.5 transition-opacity ${isCurrent ? 'opacity-100' : 'opacity-50'}`}
                >
                  <span className={`font-mono text-[9px] ${isCurrent ? 'text-amber' : 'text-muted-2'}`}>{(idx + 1).toString().padStart(2, '0')}</span>
                  <div className={`h-[3px] rounded-full ${tickClass}`} style={{ minWidth: isCurrent ? '20px' : '16px' }} />
@@ -192,8 +196,10 @@ export default function InstrumentLayout({
                   <span className="font-mono text-[10px] md:text-[11px] uppercase tracking-widest text-[#8a94a6] flex items-center gap-2">
                     <span className="text-signal text-[12px] leading-none mb-[2px]">♦</span> ATA {currentQ.ata}
                   </span>
-                  <button 
+                  <button
                     onClick={() => toggleBookmark(currentQ)}
+                    aria-label={isBookmarked ? "Remove bookmark" : "Bookmark this question"}
+                    aria-pressed={isBookmarked}
                     className={`p-1.5 rounded transition-colors ${isBookmarked ? 'text-signal' : 'text-[#8a94a6] hover:text-ink'}`}
                   >
                     <Bookmark size={15} strokeWidth={1.5} fill={isBookmarked ? "currentColor" : "none"} />

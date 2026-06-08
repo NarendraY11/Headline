@@ -142,17 +142,17 @@ export default function LeadCapture() {
           <form onSubmit={handleSubscribe} className="md:col-span-3 space-y-4" id="leadMagnetForm">
             {honeypot.field}
             {errorStatus && (
-              <div className="p-3 bg-orange-500/10 border border-orange-500/20 text-orange-900 rounded text-xs flex items-center gap-2">
+              <div role="alert" aria-live="assertive" className="p-3 bg-orange-500/10 border border-orange-500/20 text-orange-900 rounded text-xs flex items-center gap-2">
                 <AlertCircle size={14} className="text-orange-600 shrink-0" />
                 <span>{errorStatus}</span>
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-mono uppercase tracking-wider text-muted-2 font-bold select-none">
+              <label htmlFor="leadResourceSelect" className="block text-[10px] font-mono uppercase tracking-wider text-muted-2 font-bold select-none">
                 Resource Deliverable Selection
               </label>
-              <select 
+              <select
                 id="leadResourceSelect"
                 aria-label="Select resource to download"
                 value={selectedResource}
@@ -166,14 +166,18 @@ export default function LeadCapture() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-[10px] font-mono uppercase tracking-wider text-muted-2 font-bold select-none">
+              <label htmlFor="leadEmailInput" className="block text-[10px] font-mono uppercase tracking-wider text-muted-2 font-bold select-none">
                 Cadet Email Address
               </label>
               <div className="relative">
                 <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2" />
-                <input 
+                <input
                   id="leadEmailInput"
+                  name="email"
                   type="email"
+                  autoComplete="email"
+                  inputMode="email"
+                  enterKeyHint="send"
                   required
                   placeholder="name@flightacademy.com"
                   value={email}

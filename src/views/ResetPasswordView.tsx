@@ -133,7 +133,7 @@ export default function ResetPasswordView() {
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-signal-soft/50 border border-signal/20 text-signal text-xs rounded-lg flex items-start gap-2.5">
+            <div role="alert" aria-live="assertive" className="mb-4 p-3 bg-signal-soft/50 border border-signal/20 text-signal text-xs rounded-lg flex items-start gap-2.5">
               <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
               <span className="font-sans font-medium">{error}</span>
             </div>
@@ -189,14 +189,19 @@ export default function ResetPasswordView() {
           ) : tokenStatus === "valid" ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                <label htmlFor="reset-password" className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
                   New Password
                 </label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3.5 top-3 text-muted-2" />
                   <input
+                    id="reset-password"
+                    name="new-password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    aria-describedby="reset-password-hint"
                     required
+                    aria-invalid={!!error}
                     disabled={loading}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -205,26 +210,32 @@ export default function ResetPasswordView() {
                   />
                   <button
                     type="button"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3.5 top-3 text-muted-2 hover:text-ink cursor-pointer"
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
-                <span className="block mt-1.5 font-sans text-[10px] text-muted-2">
+                <span id="reset-password-hint" className="block mt-1.5 font-sans text-[10px] text-muted-2">
                   Password must be at least 8 characters long.
                 </span>
               </div>
 
               <div>
-                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                <label htmlFor="reset-confirm" className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
                   Confirm Password
                 </label>
                 <div className="relative">
                   <Lock size={16} className="absolute left-3.5 top-3 text-muted-2" />
                   <input
+                    id="reset-confirm"
+                    name="confirm-password"
                     type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    enterKeyHint="go"
                     required
+                    aria-invalid={!!error}
                     disabled={loading}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -233,6 +244,7 @@ export default function ResetPasswordView() {
                   />
                   <button
                     type="button"
+                    aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3.5 top-3 text-muted-2 hover:text-ink cursor-pointer"
                   >

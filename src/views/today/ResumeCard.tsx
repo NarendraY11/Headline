@@ -48,7 +48,7 @@ export function ResumeCard() {
     <div className="relative flex items-center justify-between gap-3 bg-navy/5 border border-navy/20 rounded-xl p-4 mb-6">
       <button
         onClick={() => setResume(null)}
-        className="absolute top-2 right-2 text-muted-2 hover:text-ink"
+        className="absolute top-2 right-2 p-1.5 -m-1.5 text-muted-2 hover:text-ink"
         aria-label="Dismiss"
       >
         <X size={14} />

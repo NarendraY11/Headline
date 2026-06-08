@@ -37,8 +37,15 @@ function fontPreloadPlugin() {
   };
 }
 
-export default defineConfig(() => {
+export default defineConfig(({ command }) => {
+  const isBuild = command === 'build';
   return {
+    // Strip debug logging from production bundles. console.warn/error are kept
+    // for genuine diagnostics (and Sentry now captures errors); console.log/
+    // info/debug + debugger are dropped. Dev (command='serve') is untouched.
+    esbuild: isBuild
+      ? { pure: ['console.log', 'console.info', 'console.debug'], drop: ['debugger'] }
+      : {},
     define: {
       '__APP_VERSION__': JSON.stringify(
         process.env.npm_package_version || '1.0.0'
@@ -67,10 +74,14 @@ export default defineConfig(() => {
         // precached shell (important given the prerender + esbuild server pipeline).
         includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'offline.html'],
         manifest: {
+          id: '/',
           name: 'Heading — Pilot Exam Prep',
           short_name: 'Heading',
           description:
             'Premium pilot exam preparation — realistic DGCA, EASA & A320 mock exams, study diagnostics, and analytics.',
+          lang: 'en',
+          dir: 'ltr',
+          categories: ['education', 'productivity'],
           theme_color: '#14305a',
           background_color: '#14305a',
           display: 'standalone',
@@ -96,7 +107,7 @@ export default defineConfig(() => {
           // App shell: SPA navigations fall back to the precached index.html so
           // routes work offline. Never hijack API / SEO endpoints.
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/api\//, /^\/sitemap\.xml$/, /^\/robots\.txt$/],
+          navigateFallbackDenylist: [/^\/api\//, /^\/sitemap\.xml$/, /^\/robots\.txt$/, /^\/llms\.txt$/],
           runtimeCaching: [
             // Supabase auth: NEVER cache tokens / session.
             {
@@ -145,6 +156,9 @@ export default defineConfig(() => {
             if (/\/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(n)) return 'vendor-react';
             if (/\/node_modules\/(motion|framer-motion)\//.test(n)) return 'vendor-motion';
             if (n.includes('/node_modules/@supabase/')) return 'vendor-supabase';
+            // Split Sentry into its own stable chunk: it was landing in the app
+            // entry chunk, so every app-code deploy busted the ~30KB+ SDK cache.
+            if (n.includes('/node_modules/@sentry/') || n.includes('/node_modules/@sentry-internal/')) return 'vendor-sentry';
             if (n.includes('/node_modules/recharts/')) return 'vendor-recharts';
             // d3 is only used by the lazy MasterySunburst (analytics route); keep
             // it isolated so it never leaks into the entry/critical chunk.
