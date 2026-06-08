@@ -1,7 +1,43 @@
+import * as Sentry from "@sentry/react";
 import { supabase } from "./supabase";
 
 /**
+ * Why a request failed.
+ *  - `http`     server responded with a non-2xx status (see `status`).
+ *  - `offline`  the browser reports no network connection.
+ *  - `timeout`  our own AbortController fired after `timeoutMs`.
+ *  - `aborted`  the caller's external signal aborted the request.
+ *  - `network`  fetch rejected for another reason (DNS, CORS, connection reset).
+ */
+export type ApiFailureKind = "http" | "offline" | "timeout" | "aborted" | "network";
+
+export interface ApiSuccess {
+  ok: true;
+  /** The successful (2xx) Response. */
+  response: Response;
+  status: number;
+}
+
+export interface ApiFailure {
+  ok: false;
+  /** Present for an `http` failure so callers can read the error body; null otherwise. */
+  response: Response | null;
+  /** HTTP status for `http` failures; null when no response was received. */
+  status: number | null;
+  kind: ApiFailureKind;
+}
+
+export type ApiResult = ApiSuccess | ApiFailure;
+
+/**
  * Authenticated fetch wrapper.
+ *
+ * Returns a discriminated {@link ApiResult} instead of collapsing every failure
+ * mode to `null`: callers can branch on `result.ok`, inspect `result.status`,
+ * read the error body off `result.response` (for `http` failures), or
+ * distinguish `offline`/`timeout` to show the right UI. Server errors (5xx) and
+ * timeouts are reported to Sentry here so they're visible centrally; callers
+ * don't need to capture again.
  *
  * @param path     API path.
  * @param options  Standard fetch options.
@@ -14,10 +50,16 @@ export async function apiFetch(
   path: string,
   options: RequestInit = {},
   timeoutMs = 30000
-): Promise<Response | null> {
+): Promise<ApiResult> {
   const controller = new AbortController();
+  let timedOut = false;
   const timeoutId =
-    timeoutMs > 0 ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    timeoutMs > 0
+      ? setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, timeoutMs)
+      : null;
   const clear = () => {
     if (timeoutId) clearTimeout(timeoutId);
   };
@@ -52,14 +94,47 @@ export async function apiFetch(
 
     if (!response.ok) {
       console.warn(`apiFetch received non-200 status ${response.status} for ${path}`);
-      return null;
+      // Surface server-side faults (5xx) to Sentry; 4xx are client/expected
+      // (auth, validation) and would just be noise.
+      if (response.status >= 500) {
+        Sentry.captureException(
+          new Error(`apiFetch ${response.status} for ${path}`),
+          { tags: { apiPath: path, apiStatus: String(response.status) } }
+        );
+      }
+      return { ok: false, response, status: response.status, kind: "http" };
     }
 
-    return response;
+    return { ok: true, response, status: response.status };
   } catch (err: any) {
     clear();
-    console.warn(`apiFetch error/timeout for ${path}:`, err.message || err);
-    return null;
+
+    // Our timeout fired.
+    if (timedOut) {
+      console.warn(`apiFetch timeout (${timeoutMs}ms) for ${path}`);
+      Sentry.captureException(
+        err instanceof Error ? err : new Error(`apiFetch timeout for ${path}`),
+        { tags: { apiPath: path, apiFailure: "timeout" } }
+      );
+      return { ok: false, response: null, status: null, kind: "timeout" };
+    }
+
+    // Caller's external signal aborted us — expected, not an error to report.
+    if (err?.name === "AbortError") {
+      return { ok: false, response: null, status: null, kind: "aborted" };
+    }
+
+    // No connection — expected and recoverable; don't spam Sentry.
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      return { ok: false, response: null, status: null, kind: "offline" };
+    }
+
+    console.warn(`apiFetch network error for ${path}:`, err?.message || err);
+    Sentry.captureException(
+      err instanceof Error ? err : new Error(`apiFetch network error for ${path}`),
+      { tags: { apiPath: path, apiFailure: "network" } }
+    );
+    return { ok: false, response: null, status: null, kind: "network" };
   }
 }
 

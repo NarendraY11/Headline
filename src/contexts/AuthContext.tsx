@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { trackEvent } from '../lib/track';
 import { registerActiveSession, clearLocalSession, checkSessionValidity, isSameDevice } from '../lib/sessionTracker';
@@ -115,14 +115,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       let serverValid = true;
       try {
         const sessionId = localStorage.getItem("client_session_id") || "";
-        const res = await apiFetch("/api/session/check", {
+        const result = await apiFetch("/api/session/check", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ session_id: sessionId }),
         });
-        // null = network failure -> fail open. Otherwise honor `valid`.
-        if (res) {
-          const body = await res.json();
+        // Any non-OK result (network/offline/timeout/http) -> fail open. Only a
+        // successful response that explicitly says valid:false forces a logout.
+        if (result.ok) {
+          const body = await result.response.json();
           serverValid = body?.valid !== false;
         }
       } catch {
@@ -190,16 +191,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [user?.uid]);
 
-  const openAuthModal = (defaultTab: 'signin' | 'signup' | 'forgot' = 'signin') => {
+  const openAuthModal = useCallback((defaultTab: 'signin' | 'signup' | 'forgot' = 'signin') => {
     setAuthModalTab(defaultTab);
     setAuthModalOpen(true);
-  };
+  }, []);
 
-  const closeAuthModal = () => {
+  const closeAuthModal = useCallback(() => {
     setAuthModalOpen(false);
-  };
+  }, []);
 
-  const fetchUserData = async (uid: string, mappedUser: any) => {
+  const fetchUserData = useCallback(async (uid: string, mappedUser: any) => {
     try {
       // 1. Fetch profile
       let { data: profile, error: profileErr } = await supabase
@@ -353,9 +354,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const syncWithServerAndMerge = async (uid: string) => {
+  const syncWithServerAndMerge = useCallback(async (uid: string) => {
     // Collect local storage bookmarks
     const localBookmarksStr = localStorage.getItem("heading_bookmarks");
     let localBookmarks = [];
@@ -506,7 +507,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error("Error migrating anonymous local storage progress:", e);
     }
-  };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -574,7 +575,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -585,9 +586,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
     if (error) throw error;
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       // Global scope revokes the refresh token server-side across all devices,
       // not just this browser. Explicit (it is also the GoTrue default).
@@ -625,11 +626,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Navigate immediately and refresh UI to fully reset
       window.location.href = "/";
     }
-  };
+  }, []);
 
   // (3) Log out of every device: purge the user's active-session rows, then
   // revoke all refresh tokens server-side (global) via the shared logout path.
-  const logoutEverywhere = async () => {
+  const logoutEverywhere = useCallback(async () => {
     try {
       if (user) {
         await supabase.from('active_sessions').delete().eq('user_id', user.uid);
@@ -638,9 +639,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Failed to clear active sessions:", e);
     }
     await logout();
-  };
+  }, [user, logout]);
 
-  const updateUserData = async (data: Partial<UserData>) => {
+  const updateUserData = useCallback(async (data: Partial<UserData>) => {
     if (!user) return;
     try {
         const updatePayload: any = { updated_at: new Date().toISOString() };
@@ -747,9 +748,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error("Error saving user settings payload inside Supabase:", e);
     }
-  };
+  }, [user, userData, fetchUserData]);
 
-  const resetAccount = async () => {
+  const resetAccount = useCallback(async () => {
       if (!user) return;
       try {
         await supabase.from('attempts').delete().eq('user_id', user.uid);
@@ -769,23 +770,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch (e) {
          console.error("Error resetting Supabase user credentials:", e);
       }
-  };
+  }, [user, fetchUserData]);
+
+  const value = useMemo<AuthContextType>(() => ({
+    user,
+    userData,
+    loading,
+    signInWithGoogle,
+    logout,
+    logoutEverywhere,
+    updateUserData,
+    resetAccount,
+    authModalOpen,
+    authModalTab,
+    openAuthModal,
+    closeAuthModal,
+  }), [
+    user,
+    userData,
+    loading,
+    signInWithGoogle,
+    logout,
+    logoutEverywhere,
+    updateUserData,
+    resetAccount,
+    authModalOpen,
+    authModalTab,
+    openAuthModal,
+    closeAuthModal,
+  ]);
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      userData,
-      loading,
-      signInWithGoogle,
-      logout,
-      logoutEverywhere,
-      updateUserData,
-      resetAccount,
-      authModalOpen,
-      authModalTab,
-      openAuthModal,
-      closeAuthModal
-    }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

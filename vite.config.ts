@@ -49,6 +49,14 @@ export default defineConfig(({ command }) => {
     define: {
       '__APP_VERSION__': JSON.stringify(
         process.env.npm_package_version || '1.0.0'
+      ),
+      // Sentry release: prefer the immutable Vercel commit SHA so every deploy
+      // maps to an exact source revision; fall back to the package version (and
+      // finally '0.0.0') for local/preview builds without the Vercel env.
+      '__SENTRY_RELEASE__': JSON.stringify(
+        process.env.VERCEL_GIT_COMMIT_SHA ||
+        process.env.npm_package_version ||
+        '0.0.0'
       )
     },
     resolve: {
