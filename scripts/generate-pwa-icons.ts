@@ -14,6 +14,9 @@ const jobs: { src: string; out: string; size: number }[] = [
   { src: "favicon.svg", out: "pwa-512x512.png", size: 512 },
   { src: "favicon.svg", out: "apple-touch-icon.png", size: 180 },
   { src: "icon-maskable.svg", out: "maskable-512x512.png", size: 512 },
+  // Monochrome notification badge (Android tints by alpha). Source is the
+  // flattened white compass silhouette.
+  { src: "icon-badge.svg", out: "badge-72x72.png", size: 72 },
 ];
 
 async function run() {

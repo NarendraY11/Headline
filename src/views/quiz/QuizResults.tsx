@@ -109,7 +109,6 @@ export default function QuizResults({
     }
   });
 
-  const confidence = percentage >= 80 ? "High" : percentage >= 60 ? "Med" : "Low";
   const confidentAns = timeEntries.filter(
     ([id, t]) =>
       t > 5 &&

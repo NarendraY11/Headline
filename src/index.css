@@ -11,6 +11,18 @@
   button, a, [role="button"], input, select, textarea {
     @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg;
   }
+
+  /* iOS Safari auto-zooms when a focused field's font-size is < 16px. On touch
+     devices force form controls to >=16px so focusing never triggers the jarring
+     viewport zoom. Scoped to coarse pointers so desktop keeps its smaller,
+     intentional input typography. Excludes non-text controls. */
+  @media (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
 }
 
 @font-face {

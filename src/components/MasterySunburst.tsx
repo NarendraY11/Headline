@@ -3,6 +3,7 @@ import { AlertTriangle, Archive, CheckCircle, Info, Star, Target } from "lucide-
 import { useEffect, useRef, useState } from "react";
 import { SubjectItem } from "../data/topics";
 import { Button, Card } from "./Atoms";
+import { useChartTokens } from "../views/today/useChartTokens";
 
 interface MasterySunburstProps {
   subjectsList: SubjectItem[];
@@ -24,6 +25,9 @@ interface SunburstNodeData {
 
 export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps) {
   const svgRef = useRef<SVGSVGElement>(null);
+  // Live design tokens so the chart recolors in dark mode (the faint hue
+  // fallback fills below otherwise wash out as dark-on-dark).
+  const tokens = useChartTokens();
 
   // Interaction State
   const [hoveredNode, setHoveredNode] = useState<d3.HierarchyRectangularNode<SunburstNodeData> | null>(null);
@@ -208,25 +212,21 @@ export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps)
         return "rgba(194, 64, 46, 0.85)"; // critical signal red
       }
 
-      // Fallback elegant palette based on core subject line color
+      // Fallback elegant palette based on core subject line color. Reads live
+      // design tokens (via color-mix for the low-opacity tint) so the faint
+      // fills stay legible on both light and dark surfaces.
+      const read = (name: string, fb: string) =>
+        getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fb;
+      const hueToken: Record<string, string> = {
+        navy: read("--navy", "#14305a"),
+        sky: read("--sky", "#2f6098"),
+        mint: read("--mint", "#1f5d44"),
+        amber: read("--amber", "#946108"),
+      };
       const hue = d.data.hue || "navy";
-      if (d.depth === 1) {
-        switch (hue) {
-          case "navy": return "rgba(20, 48, 90, 0.16)";
-          case "sky": return "rgba(65, 115, 168, 0.16)";
-          case "mint": return "rgba(44, 110, 84, 0.16)";
-          case "amber": return "rgba(201, 138, 43, 0.16)";
-          default: return "rgba(13, 26, 45, 0.12)";
-        }
-      } else {
-        switch (hue) {
-          case "navy": return "rgba(20, 48, 90, 0.08)";
-          case "sky": return "rgba(65, 115, 168, 0.08)";
-          case "mint": return "rgba(44, 110, 84, 0.08)";
-          case "amber": return "rgba(201, 138, 43, 0.08)";
-          default: return "rgba(13, 26, 45, 0.06)";
-        }
-      }
+      const base = hueToken[hue] || tokens.ink;
+      const pct = d.depth === 1 ? 16 : 8;
+      return `color-mix(in srgb, ${base} ${pct}%, transparent)`;
     };
 
     // Slice paths
@@ -284,7 +284,7 @@ export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps)
         .attrTween("d", d => () => arc(d) || "");
     }
 
-  }, [hierarchyData, sizeMode, progressMap, selectedNode]);
+  }, [hierarchyData, sizeMode, progressMap, selectedNode, tokens]);
 
   // Node to display inside the donut hole (hover takes precedence, then active zoom node, then root level metrics)
   const displayNode = hoveredNode || selectedNode || { depth: 0, data: hierarchyData };

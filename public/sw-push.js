@@ -21,7 +21,7 @@ self.addEventListener('push', (event) => {
   const options = {
     body: payload.body || '',
     icon: payload.icon || '/pwa-192x192.png',
-    badge: payload.badge || '/pwa-192x192.png',
+    badge: payload.badge || '/badge-72x72.png',
     tag: payload.tag || undefined,
     data: { url: payload.url || '/' },
   };

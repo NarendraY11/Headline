@@ -26,5 +26,13 @@
     "noUnusedLocals": true,
     "types": ["vite/client"]
   },
-  "exclude": ["supabase/functions"]
+  "exclude": [
+    "supabase/functions",
+    "agent-skills",
+    "ui-ux-pro-max-skill",
+    "claude-marketplace",
+    "graphify-out",
+    ".impeccable",
+    "dist"
+  ]
 }

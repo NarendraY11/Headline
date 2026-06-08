@@ -101,6 +101,23 @@ export default defineConfig(({ command }) => {
             { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
             { src: '/maskable-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           ],
+          // Long-press app-icon jump targets (Android/desktop PWA).
+          shortcuts: [
+            {
+              name: "Today",
+              short_name: "Today",
+              description: "Your daily study dashboard",
+              url: "/today",
+              icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }],
+            },
+            {
+              name: "Mock Exams",
+              short_name: "Mocks",
+              description: "Launch a timed mock exam",
+              url: "/mock-exams",
+              icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }],
+            },
+          ],
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2}'],
