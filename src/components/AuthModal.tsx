@@ -284,14 +284,14 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
 
             {/* Alert / Messages */}
             {error && (
-              <div className="mb-4 p-3 bg-signal-soft/50 border border-signal/20 text-signal text-xs rounded-lg flex items-start gap-2.5">
+              <div id="auth-error" role="alert" aria-live="assertive" className="mb-4 p-3 bg-signal-soft/50 border border-signal/20 text-signal text-xs rounded-lg flex items-start gap-2.5">
                 <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />
                 <span className="font-sans font-medium">{error}</span>
               </div>
             )}
 
             {successMsg && (
-              <div className="mb-4 p-3 bg-mint-soft/50 border border-mint/20 text-mint text-xs rounded-lg flex items-start gap-2.5">
+              <div role="status" aria-live="polite" className="mb-4 p-3 bg-mint-soft/50 border border-mint/20 text-mint text-xs rounded-lg flex items-start gap-2.5">
                 <CheckCircle size={16} className="mt-0.5 flex-shrink-0" />
                 <span className="font-sans font-medium">{successMsg}</span>
               </div>
@@ -302,14 +302,19 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
               {activeTab === "signin" && (
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                    <label htmlFor="signin-email" className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
                       Email Address
                     </label>
                     <div className="relative">
                       <Mail size={16} className="absolute left-3.5 top-3 text-muted-2" />
                       <input
+                        id="signin-email"
+                        name="email"
                         type="email"
+                        autoComplete="email"
+                        inputMode="email"
                         required
+                        aria-invalid={!!error}
                         disabled={loading}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -321,7 +326,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
 
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <label className="block text-xs font-mono text-muted uppercase tracking-wider">
+                      <label htmlFor="signin-password" className="block text-xs font-mono text-muted uppercase tracking-wider">
                         Password
                       </label>
                       <button
@@ -335,8 +340,13 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                     <div className="relative">
                       <Lock size={16} className="absolute left-3.5 top-3 text-muted-2" />
                       <input
+                        id="signin-password"
+                        name="password"
                         type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        enterKeyHint="go"
                         required
+                        aria-invalid={!!error}
                         disabled={loading}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -345,6 +355,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       />
                       <button
                         type="button"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3.5 top-3 text-muted-2 hover:text-ink cursor-pointer"
                       >
@@ -382,14 +393,18 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
               {activeTab === "signup" && signupsOpen && (
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                    <label htmlFor="signup-name" className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
                       Display Name
                     </label>
                     <div className="relative">
                       <User size={16} className="absolute left-3.5 top-3 text-muted-2" />
                       <input
+                        id="signup-name"
+                        name="name"
                         type="text"
+                        autoComplete="name"
                         required
+                        aria-invalid={!!error}
                         disabled={loading}
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
@@ -400,14 +415,19 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                    <label htmlFor="signup-email" className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
                       Email Address
                     </label>
                     <div className="relative">
                       <Mail size={16} className="absolute left-3.5 top-3 text-muted-2" />
                       <input
+                        id="signup-email"
+                        name="email"
                         type="email"
+                        autoComplete="email"
+                        inputMode="email"
                         required
+                        aria-invalid={!!error}
                         disabled={loading}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -418,14 +438,19 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                    <label htmlFor="signup-password" className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
                       Create Password
                     </label>
                     <div className="relative">
                       <Lock size={16} className="absolute left-3.5 top-3 text-muted-2" />
                       <input
+                        id="signup-password"
+                        name="new-password"
                         type={showPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        aria-describedby="signup-password-hint"
                         required
+                        aria-invalid={!!error}
                         disabled={loading}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -434,26 +459,32 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       />
                       <button
                         type="button"
+                        aria-label={showPassword ? "Hide password" : "Show password"}
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3.5 top-3 text-muted-2 hover:text-ink cursor-pointer"
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
-                    <span className="block mt-1.5 font-sans text-[10px] text-muted-2">
+                    <span id="signup-password-hint" className="block mt-1.5 font-sans text-[10px] text-muted-2">
                       Password must be at least 8 characters long.
                     </span>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                    <label htmlFor="signup-confirm" className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
                       Confirm Password
                     </label>
                     <div className="relative">
                       <Lock size={16} className="absolute left-3.5 top-3 text-muted-2" />
                       <input
+                        id="signup-confirm"
+                        name="confirm-password"
                         type={showConfirmPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        enterKeyHint="go"
                         required
+                        aria-invalid={!!error}
                         disabled={loading}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -462,6 +493,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       />
                       <button
                         type="button"
+                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                         className="absolute right-3.5 top-3 text-muted-2 hover:text-ink cursor-pointer"
                       >
@@ -491,14 +523,20 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
               {activeTab === "forgot" && (
                 <form onSubmit={handleForgotPassword} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
+                    <label htmlFor="forgot-email" className="block text-xs font-mono text-muted uppercase tracking-wider mb-1.5">
                       Registered Email Address
                     </label>
                     <div className="relative">
                       <Mail size={16} className="absolute left-3.5 top-3 text-muted-2" />
                       <input
+                        id="forgot-email"
+                        name="email"
                         type="email"
+                        autoComplete="email"
+                        inputMode="email"
+                        enterKeyHint="send"
                         required
+                        aria-invalid={!!error}
                         disabled={loading}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
@@ -595,7 +633,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         Sign up
                       </button>
                     ) : (
-                      <span className="text-muted-3">Signups closed for now.</span>
+                      <span className="text-muted-2">Signups closed for now.</span>
                     )}
                   </p>
                 )}

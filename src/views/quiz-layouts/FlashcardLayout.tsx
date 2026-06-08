@@ -143,7 +143,7 @@ export default function FlashcardLayout({
                variant="ghost"
                onClick={() => toggleBookmark(currentQ)}
                aria-label={isBookmarked ? "Remove bookmark" : "Bookmark this question"}
-               className={`h-11 px-4 sm:px-5 rounded-full border bg-paper shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center gap-2 ${isBookmarked ? 'border-transparent text-paper bg-signal hover:bg-signal-strong shadow-md' : 'border-rule text-ink hover:bg-bg-2'}`}
+               className={`h-11 px-4 sm:px-5 rounded-full border bg-paper shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center gap-2 ${isBookmarked ? 'border-transparent text-paper bg-signal hover:bg-signal/90 shadow-md' : 'border-rule text-ink hover:bg-bg-2'}`}
              >
                <Bookmark size={15} strokeWidth={isBookmarked ? 2.5 : 1.5} fill={isBookmarked ? "currentColor" : "none"} className={isBookmarked ? 'mb-px' : ''} /> Save
              </Button>

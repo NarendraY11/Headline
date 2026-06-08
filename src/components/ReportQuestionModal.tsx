@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, AlertTriangle, CheckCircle, Flag, MessageSquare } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -25,6 +25,16 @@ export default function ReportQuestionModal({ questionId, isOpen, onClose }: Rep
     { value: "formatting", label: "Incorrect Diagram / Formatting" },
     { value: "other", label: "Other Rationale Issues" }
   ];
+
+  // Close on Escape, matching the other dialogs (AuthModal/SearchOverlay).
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !loading) onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, loading, onClose]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,6 +86,9 @@ export default function ReportQuestionModal({ questionId, isOpen, onClose }: Rep
 
           {/* Modal Container */}
           <motion.div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-modal-title"
             initial={{ scale: 0.95, y: 15, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: 15, opacity: 0 }}
@@ -89,12 +102,13 @@ export default function ReportQuestionModal({ questionId, isOpen, onClose }: Rep
                   <Flag size={16} />
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl text-ink font-semibold">Report Issue</h3>
+                  <h3 id="report-modal-title" className="font-serif text-xl text-ink font-semibold">Report Issue</h3>
                   <p className="font-mono text-[9px] tracking-widest text-muted-2 uppercase mt-0.5">Syllabus Quality Audit</p>
                 </div>
               </div>
               <button
                 onClick={onClose}
+                aria-label="Close report dialog"
                 className="p-1 px-1.5 hover:bg-rule/50 rounded-md transition-colors text-muted hover:text-ink outline-none"
               >
                 <X size={18} />
@@ -118,7 +132,7 @@ export default function ReportQuestionModal({ questionId, isOpen, onClose }: Rep
             ) : (
               <form onSubmit={handleSubmit} className="space-y-5">
                 {error && (
-                  <div className="p-3 bg-signal-soft border border-signal/20 text-signal text-xs rounded-lg flex items-start gap-2">
+                  <div role="alert" aria-live="assertive" className="p-3 bg-signal-soft border border-signal/20 text-signal text-xs rounded-lg flex items-start gap-2">
                     <AlertTriangle size={15} className="shrink-0 mt-0.5" />
                     <span>{error}</span>
                   </div>
@@ -137,11 +151,12 @@ export default function ReportQuestionModal({ questionId, isOpen, onClose }: Rep
 
                 {/* Category Choices */}
                 <div className="space-y-1.5">
-                  <label className="font-mono text-[9px] uppercase tracking-widest text-muted-2 block">
+                  <label htmlFor="report-category" className="font-mono text-[9px] uppercase tracking-widest text-muted-2 block">
                     Discrepancy Category
                   </label>
                   <div className="relative">
                     <select
+                      id="report-category"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                       className="w-full bg-paper border border-rule rounded-xl px-4 py-2.5 text-sm font-medium text-ink focus:border-ink outline-none transition-colors appearance-none cursor-pointer pr-10"
@@ -160,10 +175,11 @@ export default function ReportQuestionModal({ questionId, isOpen, onClose }: Rep
 
                 {/* Comment Box */}
                 <div className="space-y-1.5">
-                  <label className="font-mono text-[9px] uppercase tracking-widest text-muted-2 block">
+                  <label htmlFor="report-comment" className="font-mono text-[9px] uppercase tracking-widest text-muted-2 block">
                     Description / Peer Arguments
                   </label>
                   <textarea
+                    id="report-comment"
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     placeholder="Provide specific manual references, page numbers, or logical explanations justifying your review request..."

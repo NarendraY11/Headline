@@ -275,7 +275,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               });
               
               if (!insErr) {
-                console.log(`Referral link created between user ${uid} and referrer ${referrer.id}`);
                 localStorage.removeItem("referred_by_code");
               }
             }

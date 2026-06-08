@@ -578,7 +578,7 @@ export default function TodayView() {
               </button>
               <button
                 onClick={handleDismissNotifBanner}
-                className="text-muted-2 hover:text-ink transition-colors p-0.5"
+                className="text-muted-2 hover:text-ink transition-colors p-2 -m-1.5"
                 aria-label="Dismiss"
               >
                 <X size={13} />
@@ -724,7 +724,7 @@ export default function TodayView() {
                     <MasteryRadar data={masteries} isMobile={isMobile} />
                   </Suspense>
                 ) : (
-                  <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center p-6 border border-dashed border-rule rounded-xl bg-white/40">
+                  <div className="flex flex-col items-center justify-center h-full min-h-[320px] text-center p-6 border border-dashed border-rule rounded-xl bg-paper/40">
                     <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide mb-1.5 font-bold">No data yet</span>
                     <p className="font-serif text-lg text-ink">Complete your first session to see analytics</p>
                     <p className="font-sans text-[11px] text-muted-2 max-w-sm mt-1">Navigate to modules or exams to build radar coverage.</p>
@@ -794,7 +794,7 @@ export default function TodayView() {
                   <PacingChart data={pacingData} />
                 </Suspense>
               ) : (
-                <div className="flex flex-col items-center justify-center h-full min-h-[220px] text-center p-6 rounded-xl border border-dashed border-rule bg-white/40">
+                <div className="flex flex-col items-center justify-center h-full min-h-[220px] text-center p-6 rounded-xl border border-dashed border-rule bg-paper/40">
                   <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide mb-1.5 font-bold">No sessions yet</span>
                   <p className="font-serif text-base text-ink">Complete your first session to see analytics</p>
                   <p className="font-sans text-[11px] text-muted-2 max-w-sm mt-1">A timeline against actual study hours will populate here.</p>

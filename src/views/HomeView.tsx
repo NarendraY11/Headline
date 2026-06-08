@@ -333,7 +333,7 @@ export default function HomeView() {
                  
                  <div className="flex justify-between font-mono text-[9px] text-muted tracking-widest uppercase">
                    <span>32 OF 60</span>
-                   <span className="text-signal-vivid">PASS 70%</span>
+                   <span className="text-signal">PASS 70%</span>
                  </div>
                </div>
              </Card>

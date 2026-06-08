@@ -350,6 +350,9 @@ html, body {
 
 @media (prefers-reduced-motion: reduce) {
   .page-enter, .anim-pop, .anim-drawer, .anim-fade, .anim-toast { animation: none; }
+  /* Infinite hover pulses must also stop for reduced-motion users. */
+  .Button.btn-primary:hover,
+  .group:hover .wordmark-heading-title { animation: none; }
 }
 
 /* Landing-page CSS animations — replace the motion runtime on the marketing

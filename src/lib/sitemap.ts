@@ -20,6 +20,9 @@ const staticRoutes = [
   { path: "/pricing", type: "marketing" },
   { path: "/contact", type: "marketing" },
   { path: "/blog", type: "marketing" },
+  // Public, indexable content routes (rendered by PublicLayout, prerendered).
+  { path: "/qotd", type: "marketing" },
+  { path: "/a320-systems", type: "marketing" },
   { path: "/privacy", type: "legal" },
   { path: "/terms", type: "legal" },
   { path: "/refund", type: "legal" },
@@ -33,14 +36,10 @@ const examPaths = [
   "/exams/a320-type-rating",
 ];
 
-const topicPaths = [
-  "/topic/air-navigation",
-  "/topic/meteorology",
-  "/topic/air-regulations",
-  "/topic/technical-general",
-  "/topic/human-performance",
-  "/topic/a320-systems",
-];
+// NOTE: /topic/:id is behind AuthGuard (see src/App.tsx), so crawlers hitting
+// these URLs only get the login shell — listing them in the sitemap invites
+// soft-404 / thin-content penalties. Public topic content is surfaced via the
+// indexable /exams/* landing pages instead.
 
 export async function generateSitemapXml(baseUrl: string, fetchDynamicPosts?: () => Promise<{slug: string, updated_at?: string}[]>): Promise<string> {
   let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
@@ -64,10 +63,6 @@ export async function generateSitemapXml(baseUrl: string, fetchDynamicPosts?: ()
 
   examPaths.forEach(path => {
     addUrl(path, "exam_landing", today);
-  });
-
-  topicPaths.forEach(path => {
-    addUrl(path, "topic_module", today);
   });
 
   const staticBlogsMap = new Map<string, string>();

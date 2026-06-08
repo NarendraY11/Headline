@@ -1296,7 +1296,7 @@ export default function QuizView() {
                 </Button>
                 <Button
                   variant="primary"
-                  className="flex-1 bg-signal hover:bg-signal-vivid text-paper shadow-md rounded-full border-transparent"
+                  className="flex-1 bg-signal hover:bg-signal/90 text-paper shadow-md rounded-full border-transparent"
                   onClick={() => {
                     setShowAbortPrompt(false);
                     navigate(-1);

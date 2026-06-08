@@ -37,6 +37,11 @@ export default function AnalyticsView() {
   const { stats: progressStats } = useUserProgress();
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
+  // Must be called unconditionally before any early return below — relocating
+  // this from mid-component fixes a Rules-of-Hooks violation that crashed the
+  // page for users with attempts (the loading/empty early returns skipped it,
+  // changing the hook call order between renders).
+  const { setLoading: setGlobalLoading } = useGlobalLoading();
 
   useEffect(() => {
     async function loadSubjects() {
@@ -187,8 +192,6 @@ export default function AnalyticsView() {
       if (b.score === null) return -1;
       return a.score - b.score;
     });
-
-  const { setLoading: setGlobalLoading } = useGlobalLoading();
 
   const handleGetDiagnosis = async () => {
     if (isInsightLoading || insight) return;
