@@ -5,7 +5,6 @@ import {
     Clock,
     Compass,
     Flame,
-    GripVertical,
     Play,
     TrendingUp,
     X,
@@ -37,7 +36,7 @@ import { ReferralWidget } from "./today/ReferralWidget";
 import { useNotifications } from "../contexts/NotificationContext";
 
 export default function TodayView() {
-  const { userData, user, loading, updateUserData } = useAuth();
+  const { userData, user, loading } = useAuth();
   const { addNotification } = useNotifications();
   const weatherBriefingEnabled = useFeature("weatherBriefing");
   const { stats: progressStats } = useUserProgress();

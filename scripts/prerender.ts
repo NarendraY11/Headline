@@ -109,7 +109,14 @@ async function prerender() {
           await page.waitForFunction(
             () => {
               const r = document.getElementById("root");
-              return !!r && r.childElementCount > 0;
+              if (!r || r.childElementCount === 0) return false;
+              // The instant boot splash (#app-splash) is itself a #root child
+              // injected in index.html, so childElementCount>0 is true BEFORE
+              // React commits — snapshotting then captures a blank splash-only
+              // shell (home/pricing committed slower than blog and shipped
+              // blank). createRoot replaces #root's children on first commit,
+              // removing the splash, so wait until it's gone = React mounted.
+              return !document.getElementById("app-splash");
             },
             { timeout: 10000 }
           );

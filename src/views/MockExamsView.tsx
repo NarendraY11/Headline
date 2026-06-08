@@ -828,22 +828,22 @@ export default function MockExamsView() {
                   </div>
 
                   {/* Standard Auto mock launcher card */}
-                  <Card className="border border-indigo-200 bg-indigo-50/10 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                  <Card className="border border-sky/30 bg-sky/5 p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div className="space-y-1 max-w-xl">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-indigo-200 text-indigo-700 bg-indigo-50 font-bold tracking-widest uppercase">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-sky/30 text-sky bg-sky/10 font-bold tracking-widest uppercase">
                         STANDARD GENERATED SIMULATOR
                       </span>
-                      <h4 className="font-serif text-xl font-bold text-indigo-950 pt-1.5">
+                      <h4 className="font-serif text-xl font-bold text-ink pt-1.5">
                         Dynamic Automatic Flight Deck
                       </h4>
-                      <p className="font-sans text-xs text-slate-650 leading-relaxed">
-                        Assembles a complete balanced draft of {selectedExam.total_questions || selectedExam.question_count || 50} random unique questions 
+                      <p className="font-sans text-xs text-muted leading-relaxed">
+                        Assembles a complete balanced draft of {selectedExam.total_questions || selectedExam.question_count || 50} random unique questions
                         spanning all linked subjects uniformly, simulating standard test pressures with high efficiency.
                       </p>
                     </div>
-                    <Button 
-                      variant="primary" 
-                      className="h-11 px-6.5 shrink-0 bg-indigo-600 border-indigo-600 hover:bg-indigo-700 hover:border-indigo-700 shadow-md flex items-center text-xs"
+                    <Button
+                      variant="primary"
+                      className="h-11 px-6.5 shrink-0 shadow-md flex items-center text-xs text-white"
                       onClick={() => handleStartAutomaticExamMock(selectedExam)}
                     >
                       Launch Auto Simulator <ArrowUpRight size={13} className="ml-1" />

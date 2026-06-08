@@ -37,16 +37,10 @@
     <!-- Apply the persisted theme BEFORE first paint. Without this the `dark`
          class is only added later by a React effect (and only when the toggle
          mounts), causing a flash of the wrong theme + layout/contrast shift
-         (CLS) on load, and dark-mode users briefly seeing the light theme. -->
-    <script>
-      (function () {
-        try {
-          if (localStorage.getItem('heading_theme') === 'dark') {
-            document.documentElement.classList.add('dark');
-          }
-        } catch (e) {}
-      })();
-    </script>
+         (CLS) on load, and dark-mode users briefly seeing the light theme.
+         Externalized to /theme-init.js so production CSP can drop
+         `script-src 'unsafe-inline'`. Blocking (no defer) so it runs first. -->
+    <script src="/theme-init.js"></script>
 
     <!-- Instant boot splash. #root is otherwise empty until the entry chunk
          downloads, parses, and auth resolves (up to ~5s on a cold PWA), so the

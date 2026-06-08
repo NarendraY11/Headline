@@ -9,8 +9,12 @@ export function AuthModalTrigger() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const PUBLIC_ROUTES = ["/", "/login", "/about", "/pricing", "/contact", "/privacy", "/terms", "/refund", "/blog", "/qotd", "/a320-systems"];
-  const isOnPublicRoute = PUBLIC_ROUTES.includes(location.pathname) || location.pathname.startsWith("/exams/") || location.pathname.startsWith("/blog/");
+  // Only these two routes auto-redirect a logged-in user into the app. The
+  // other public pages (/pricing, /about, /blog, /contact, …) must stay
+  // viewable while authenticated — otherwise logged-in users can't reach the
+  // pricing/upgrade page that ProGate, ProfileView, QuizResults, etc. link to.
+  const AUTH_LANDING_ROUTES = ["/", "/login"];
+  const isOnAuthLanding = AUTH_LANDING_ROUTES.includes(location.pathname);
 
   useEffect(() => {
     if (user) {
@@ -21,7 +25,7 @@ export function AuthModalTrigger() {
       if (target) {
         sessionStorage.removeItem("auth_redirect_path");
         navigate(target, { replace: true });
-      } else if (isOnPublicRoute) {
+      } else if (isOnAuthLanding) {
         navigate("/today", { replace: true });
       }
     }

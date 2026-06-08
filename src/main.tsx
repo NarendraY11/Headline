@@ -20,6 +20,7 @@ import { LoadingProvider } from './contexts/LoadingContext.tsx';
 import { ToastProvider } from './components/ui/Toast.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import { FeatureFlagsProvider } from './hooks/useFeatureFlags';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt.tsx';
 // SpeedInsights is lazy + idle-mounted (below) so it never competes with first
 // paint. Lazy import keeps it out of the entry chunk.
 const SpeedInsights = lazy(() =>
@@ -40,6 +41,19 @@ runWhenIdle(() => {
   initPostHog();
 });
 
+// Recover from stale-chunk errors after a new deploy: a lazy route's dynamic
+// import 404s because the hashed filenames changed under the running tab. Reload
+// once to pull the fresh index + chunk manifest. The session flag prevents a
+// reload loop if the chunk is genuinely missing; it's cleared after a healthy
+// load so a later deploy in the same session can still self-heal.
+window.addEventListener('vite:preloadError', (event) => {
+  if (sessionStorage.getItem('vite-preload-retry')) return;
+  sessionStorage.setItem('vite-preload-retry', '1');
+  event.preventDefault();
+  window.location.reload();
+});
+runWhenIdle(() => sessionStorage.removeItem('vite-preload-retry'));
+
 createRoot(document.getElementById('root')!, {
   // React 19 error hooks → Sentry (complements the in-app ErrorBoundary).
   onUncaughtError: Sentry.reactErrorHandler(),
@@ -53,6 +67,7 @@ createRoot(document.getElementById('root')!, {
           <ToastProvider>
             <LoadingProvider>
               <App />
+              <PWAUpdatePrompt />
               <Suspense fallback={null}>
                 <SpeedInsights />
               </Suspense>
