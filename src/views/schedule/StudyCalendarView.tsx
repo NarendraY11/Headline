@@ -35,9 +35,10 @@ import {
   Zap,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useCallback, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useFeature } from "../../hooks/useFeatureFlags";
 import { useScheduleRange } from "../../hooks/useStudyMissions";
 import { launchMission } from "../../lib/launchMission";
 import type { MissionStatus, MissionType, StudyMissionRow } from "../../types/studyScheduler";
@@ -653,6 +654,10 @@ export default function StudyCalendarView() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // FIX #9: Hook called unconditionally (Rules of Hooks). The early return
+  // is deferred until after all hooks have been called — see below.
+  const schedulerEnabled = useFeature("aiStudyScheduler");
+
   const [view, setView] = useState<CalendarView>("monthly");
   const [selectedDate, setSelectedDate] = useState<string | null>(todayISO());
   const [showPanel, setShowPanel] = useState(false);
@@ -764,6 +769,12 @@ export default function StudyCalendarView() {
   const canNext = view !== "agenda";
   const handlePrev = view === "monthly" ? prevMonth : prevWeek;
   const handleNext = view === "monthly" ? nextMonth : nextWeek;
+
+  // FIX #9: All hooks above have been called unconditionally. Now safe to
+  // redirect — flag is OFF means this feature is not yet live for this user.
+  if (!schedulerEnabled) {
+    return <Navigate to="/today" replace />;
+  }
 
   return (
     <div className="relative min-h-screen pb-24">
