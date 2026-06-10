@@ -12,7 +12,6 @@
 import { supabase } from "./supabase";
 import type {
   MissionStatus,
-  NewManualMission,
   StudyMissionRow,
   StudyPlanRow,
 } from "../types/studyScheduler";
@@ -25,10 +24,9 @@ export async function getActiveStudyPlan(userId: string): Promise<StudyPlanRow |
     .eq("user_id", userId)
     .eq("status", "active")
     .maybeSingle();
-  if (error) {
-    console.warn("getActiveStudyPlan failed:", error.message);
-    return null;
-  }
+  // FIX #15: previously returned null on error, hiding DB failures from callers.
+  // Now throws so the hook's catch block can surface an error to the UI.
+  if (error) throw new Error(`getActiveStudyPlan: ${error.message}`);
   return (data as StudyPlanRow) ?? null;
 }
 
@@ -44,10 +42,8 @@ export async function getMissionsForDate(
     .eq("scheduled_date", dateISO)
     .order("position", { ascending: true })
     .order("created_at", { ascending: true });
-  if (error) {
-    console.warn("getMissionsForDate failed:", error.message);
-    return [];
-  }
+  // FIX #15: throw on DB error so the hook's catch block surfaces it.
+  if (error) throw new Error(`getMissionsForDate: ${error.message}`);
   return (data as StudyMissionRow[]) ?? [];
 }
 
@@ -65,37 +61,9 @@ export async function getMissionsInRange(
     .lte("scheduled_date", endISO)
     .order("scheduled_date", { ascending: true })
     .order("position", { ascending: true });
-  if (error) {
-    console.warn("getMissionsInRange failed:", error.message);
-    return [];
-  }
+  // FIX #15: throw on DB error.
+  if (error) throw new Error(`getMissionsInRange: ${error.message}`);
   return (data as StudyMissionRow[]) ?? [];
-}
-
-/** "Add to Schedule": insert a user-owned manual mission (RLS-checked). */
-export async function addManualMission(
-  input: NewManualMission
-): Promise<StudyMissionRow | null> {
-  const { data, error } = await supabase
-    .from("study_missions")
-    .insert({
-      user_id: input.userId,
-      plan_id: null,
-      scheduled_date: input.scheduledDate,
-      type: input.type,
-      payload: input.payload,
-      estimated_min: input.estimatedMin ?? 0,
-      position: input.position ?? 0,
-      status: "pending",
-      source: "manual",
-    })
-    .select("*")
-    .single();
-  if (error) {
-    console.warn("addManualMission failed:", error.message);
-    return null;
-  }
-  return data as StudyMissionRow;
 }
 
 /** Flip mission status (pending → in_progress → completed/skipped). */
@@ -107,10 +75,8 @@ export async function updateMissionStatus(
     .from("study_missions")
     .update({ status })
     .eq("id", missionId);
-  if (error) {
-    console.warn("updateMissionStatus failed:", error.message);
-    return false;
-  }
+  // FIX #15: throw on DB error so callers (launchMission) can log the failure.
+  if (error) throw new Error(`updateMissionStatus: ${error.message}`);
   return true;
 }
 
@@ -126,46 +92,11 @@ export async function completeMission(
     .from("study_missions")
     .update({ status: "completed", completed_attempt_id: attemptId })
     .eq("id", missionId);
-  if (error) {
-    console.warn("completeMission failed:", error.message);
-    return false;
-  }
+  // FIX #15: throw on DB error so QuizView can log and surface the failure.
+  if (error) throw new Error(`completeMission: ${error.message}`);
   return true;
 }
 
-/** Fetch a single mission by id (used by M5 launch + completion flow). */
-export async function getMissionById(
-  missionId: string
-): Promise<StudyMissionRow | null> {
-  const { data, error } = await supabase
-    .from("study_missions")
-    .select("*")
-    .eq("id", missionId)
-    .maybeSingle();
-  if (error) {
-    console.warn("getMissionById failed:", error.message);
-    return null;
-  }
-  return (data as StudyMissionRow) ?? null;
-}
-
-/**
- * Count plan-source missions for a calendar day without fetching rows.
- * Used by the service layer to decide whether to trigger materialization.
- */
-export async function countPlanMissionsForDate(
-  userId: string,
-  dateISO: string
-): Promise<number> {
-  const { count, error } = await supabase
-    .from("study_missions")
-    .select("id", { head: true, count: "exact" })
-    .eq("user_id", userId)
-    .eq("scheduled_date", dateISO)
-    .eq("source", "plan");
-  if (error) {
-    console.warn("countPlanMissionsForDate failed:", error.message);
-    return 0;
-  }
-  return count ?? 0;
-}
+// FIX #18: addManualMission, getMissionById, countPlanMissionsForDate removed —
+// confirmed zero consumers outside this file across all of src/ and api/.
+// Restore from git history if "Add to Schedule" manual-mission UI is built.
