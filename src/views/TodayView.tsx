@@ -2,6 +2,7 @@ import {
     Award,
     Bell,
     BookOpen,
+    CalendarRange,
     Clock,
     Compass,
     Flame,
@@ -39,6 +40,7 @@ export default function TodayView() {
   const { userData, user, loading } = useAuth();
   const { addNotification } = useNotifications();
   const weatherBriefingEnabled = useFeature("weatherBriefing");
+  const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
   const { stats: progressStats } = useUserProgress();
   const [notificationStatus, setNotificationStatus] = useState<
     NotificationPermission | "unsupported"
@@ -809,6 +811,21 @@ export default function TodayView() {
           dueCount={dueCount}
           hasAttempts={hasAttempts}
         />
+
+        {/* AI Study Scheduler entry point — shown only when flag ON */}
+        {aiStudySchedulerEnabled && (
+          <Link to="/study-plan" className="block mt-6 group">
+            <div className="bg-navy/5 dark:bg-navy/20 border border-navy/20 dark:border-navy/40 rounded-2xl px-5 py-4 flex items-center gap-4 hover:border-navy/40 dark:hover:border-navy/60 transition-colors">
+              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-navy/10 dark:bg-navy/30 border border-navy/20 flex items-center justify-center">
+                <CalendarRange size={18} className="text-navy dark:text-paper/70" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-mono text-[9px] uppercase tracking-widest text-muted-2 mb-0.5">AI Study Scheduler</p>
+                <p className="font-serif text-[15px] text-ink leading-snug">View your Flight Plan →</p>
+              </div>
+            </div>
+          </Link>
+        )}
       </div>
     </div>
   );
