@@ -7,6 +7,7 @@ import { QualityAuditReports } from "./dashboard/QualityAuditReports";
 import { InboxPanel } from "./dashboard/InboxPanel";
 import { RecentAttemptsLog } from "./dashboard/RecentAttemptsLog";
 import { RevenueSnapshot } from "./dashboard/RevenueSnapshot";
+import { StudySchedulerMetrics } from "./dashboard/StudySchedulerMetrics";
 import { SubjectHeatmapCharts } from "./dashboard/SubjectHeatmapCharts";
 import { useAdminAnalytics } from "./dashboard/useAdminAnalytics";
 
@@ -88,6 +89,8 @@ export default function AdminDashboard() {
           <RecentAttemptsLog
             recentAttempts={recentAttempts}
           />
+
+          <StudySchedulerMetrics />
 
           <QualityAuditReports
             reports={reports}

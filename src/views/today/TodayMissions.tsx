@@ -1,15 +1,13 @@
 // =====================================================================
-// AI Study Scheduler — TodayMissions panel (Phase M5)
+// AI Study Scheduler — TodayMissions panel (M7: production rollout)
 //
+// Primary recommendation surface when aiStudyScheduler is enabled.
 // Shows today's scheduled missions above TodayStops in TodayView.
-// Feature-flag gated (aiStudyScheduler).
 //
-// Behaviour:
-//   - On mount: if needsMaterialization, auto-trigger materialize()
-//     then refetch. Silent — no blocking modal.
-//   - Each mission card: type chip, title, estimated time, status dot.
-//   - "Start" CTA: calls launchMission(mission, navigate, userId).
-//   - Completed/skipped missions shown but CTA replaced with status label.
+// M7 additions:
+//   - Safety guards: empty→Generate CTA, materialize-fail→retry flow
+//   - Regenerate Plan button (uses useRegenerate + current mastery)
+//   - Analytics: mission_started on launch
 // =====================================================================
 
 import {
@@ -22,15 +20,16 @@ import {
   Loader2,
   Mic,
   Play,
+  RefreshCw,
   Repeat,
   SkipForward,
   Zap,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { useMaterialize, useTodayMissions } from "../../hooks/useStudyMissions";
+import { useMaterialize, useRegenerate, useTodayMissions } from "../../hooks/useStudyMissions";
 import { launchMission } from "../../lib/launchMission";
 import type { MissionStatus, MissionType, StudyMissionRow } from "../../types/studyScheduler";
 
@@ -97,10 +96,8 @@ function MissionCard({ mission, onStart, launching }: MissionCardProps) {
         isDone ? "border-rule/40 opacity-70" : "border-rule hover:border-rule-strong"
       }`}
     >
-      {/* Status dot */}
       {statusDot(mission.status)}
 
-      {/* Type chip + title */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
           <span
@@ -117,13 +114,11 @@ function MissionCard({ mission, onStart, launching }: MissionCardProps) {
         </p>
       </div>
 
-      {/* Duration */}
       <div className="flex items-center gap-1 font-mono text-[9px] text-muted-2 uppercase tracking-wide flex-shrink-0">
         <Clock size={9} aria-hidden="true" />
         {formatMin(mission.estimated_min || 20)}
       </div>
 
-      {/* CTA */}
       {isDone ? (
         <div className="flex-shrink-0 flex items-center gap-1 font-mono text-[9px] uppercase tracking-wide text-muted-2 pl-1">
           {mission.status === "completed" ? (
@@ -151,34 +146,33 @@ function MissionCard({ mission, onStart, launching }: MissionCardProps) {
   );
 }
 
+// ── Props ────────────────────────────────────────────────────────────────────
+
+interface TodayMissionsProps {
+  /** Current mastery scores forwarded for plan regeneration. */
+  subjectMastery?: Record<string, number>;
+  /** Active plan id forwarded for regen analytics. */
+  activePlanId?: string | null;
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 
-export function TodayMissions() {
+export function TodayMissions({ subjectMastery, activePlanId }: TodayMissionsProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
 
   const { missions, loading, error, needsMaterialization, refetch } = useTodayMissions();
-  const { materialize, materializing } = useMaterialize();
+  const { materialize, materializing, error: matError, lastResult } = useMaterialize();
+  const { regenerate, regenerating } = useRegenerate();
   const [launchingId, setLaunchingId] = React.useState<string | null>(null);
+  const [regenError, setRegenError] = React.useState<string | null>(null);
 
-  // FIX #10: The old materializeOnce ref had two failure modes:
-  //   (a) On remount (tab switch / back-nav), a new ref instance is created
-  //       (current=false), so materialize fires again unnecessarily.
-  //   (b) After plan regeneration needsMaterialization goes true again, but the
-  //       old ref stays true on the same component instance — skipping the
-  //       required re-materialization silently.
-  //
-  // Replaced with a useEffect keyed on needsMaterialization. The `materializing`
-  // guard inside the effect prevents a double-trigger while the first call is
-  // in-flight. On each new true→false→true cycle (regen), the effect re-runs
-  // correctly. The `materialize` guard (materializing check) prevents concurrent
-  // calls if the effect fires twice before the first resolves.
+  // Auto-materialize when plan exists but no missions for today.
   useEffect(() => {
     if (!needsMaterialization || materializing) return;
     materialize().then((r) => {
       if (r.ok) refetch();
     });
-    // needsMaterialization is the intentional trigger; other deps are stable refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsMaterialization]);
 
@@ -192,7 +186,24 @@ export function TodayMissions() {
     }
   };
 
-  // Section header
+  const handleRetryMaterialize = () => {
+    materialize().then((r) => { if (r.ok) refetch(); });
+  };
+
+  const handleRegenerate = async () => {
+    setRegenError(null);
+    const scores: Record<string, { correct: number; total: number }> = {};
+    for (const [subjectId, mastery] of Object.entries(subjectMastery ?? {})) {
+      scores[subjectId] = { correct: Math.round(mastery), total: 100 };
+    }
+    const r = await regenerate(scores);
+    if (r.ok) {
+      refetch();
+    } else {
+      setRegenError(r.error ?? "Regeneration failed. Please try again.");
+    }
+  };
+
   const header = (
     <div className="flex items-center justify-between mb-3">
       <div>
@@ -203,12 +214,27 @@ export function TodayMissions() {
           Flight Plan
         </h2>
       </div>
-      {(materializing || loading) && (
-        <Loader2 size={14} className="text-muted-2 animate-spin" />
-      )}
+      <div className="flex items-center gap-2">
+        {(materializing || loading || regenerating) && (
+          <Loader2 size={14} className="text-muted-2 animate-spin" />
+        )}
+        {/* Regenerate plan — only shown when missions exist and mastery data available */}
+        {missions.length > 0 && !regenerating && Object.keys(subjectMastery ?? {}).length > 0 && (
+          <button
+            type="button"
+            onClick={handleRegenerate}
+            title="Regenerate study plan from current mastery"
+            className="h-7 px-2.5 rounded-lg border border-rule text-muted-2 hover:border-rule-strong hover:text-ink transition-colors font-mono text-[8px] uppercase tracking-wide flex items-center gap-1"
+          >
+            <RefreshCw size={9} />
+            Regen
+          </button>
+        )}
+      </div>
     </div>
   );
 
+  // Loading / materializing skeleton
   if (loading || (materializing && missions.length === 0)) {
     return (
       <div className="mb-8">
@@ -218,6 +244,29 @@ export function TodayMissions() {
     );
   }
 
+  // Materialize failure → retry flow
+  if (!loading && (matError ?? lastResult?.ok === false) && missions.length === 0) {
+    return (
+      <div className="mb-8">
+        {header}
+        <div className="bg-signal-soft border border-signal/15 rounded-xl px-4 py-4 text-center">
+          <p className="font-sans text-sm text-[#a83020] dark:text-signal mb-3">
+            {matError ?? "Failed to load today's schedule."}
+          </p>
+          <button
+            type="button"
+            onClick={handleRetryMaterialize}
+            disabled={materializing}
+            className="h-8 px-4 rounded-lg bg-ink text-paper font-sans text-[12px] font-medium disabled:opacity-50"
+          >
+            {materializing ? "Retrying…" : "Retry"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Data error (fetch failed)
   if (error) {
     return (
       <div className="mb-8">
@@ -229,25 +278,38 @@ export function TodayMissions() {
     );
   }
 
-  if (missions.length === 0) {
+  // No missions + no active plan → Generate Plan CTA
+  if (missions.length === 0 && !materializing && !needsMaterialization) {
     return (
       <div className="mb-8">
         {header}
         <div className="bg-paper border border-rule/50 rounded-xl px-5 py-6 text-center">
-          <p className="font-sans text-sm text-muted-2 leading-relaxed">
-            No missions scheduled for today.
+          <p className="font-sans text-sm text-muted-2 leading-relaxed mb-3">
+            No study plan yet. Generate one from your Analytics view.
           </p>
-          <p className="font-mono text-[9px] uppercase tracking-wide text-muted-2 mt-1">
-            Ask the AI coach to generate a study plan.
-          </p>
+          <Link
+            to="/analytics"
+            className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-navy text-paper font-sans text-[12px] font-medium hover:opacity-90 transition-opacity"
+          >
+            <Play size={11} aria-hidden="true" />
+            Generate Plan
+          </Link>
         </div>
       </div>
     );
   }
 
+  // Regen error toast
+  const regenBanner = regenError ? (
+    <div className="mb-2 bg-signal-soft border border-signal/15 rounded-xl px-4 py-2 font-sans text-[12px] text-[#a83020] dark:text-signal">
+      {regenError}
+    </div>
+  ) : null;
+
   return (
     <div className="mb-8">
       {header}
+      {regenBanner}
       <div className="space-y-2">
         {missions.map((m) => (
           <MissionCard

@@ -10,6 +10,7 @@
 // =====================================================================
 
 import { supabase } from "./supabase";
+import { trackMissionCompleted } from "./studyAnalytics.js";
 import type {
   MissionStatus,
   StudyMissionRow,
@@ -80,10 +81,6 @@ export async function updateMissionStatus(
   return true;
 }
 
-/**
- * Mark a mission complete and link the proof-of-work attempt. The DB trigger
- * verifies the attempt is the caller's own and stamps completed_at.
- */
 export async function completeMission(
   missionId: string,
   attemptId: string
@@ -94,6 +91,7 @@ export async function completeMission(
     .eq("id", missionId);
   // FIX #15: throw on DB error so QuizView can log and surface the failure.
   if (error) throw new Error(`completeMission: ${error.message}`);
+  trackMissionCompleted(missionId, undefined, attemptId);
   return true;
 }
 

@@ -8,8 +8,10 @@ import {
   Layers,
   TrendingUp,
 } from "lucide-react";
+import { useEffect } from "react";
 import type { StudyPlan, StudyPlanWeakArea } from "../../types/studyScheduler";
 import { PlanDayCard } from "./PlanDayCard";
+import { trackStudyPlanViewed } from "../../lib/studyAnalytics";
 
 function masteryColor(mastery: number): string {
   if (mastery >= 80) return "bg-mint";
@@ -72,11 +74,16 @@ function WeakAreaRow({ area }: { area: StudyPlanWeakArea }) {
 
 interface Props {
   plan: StudyPlan;
+  planId?: string;
   generatedAt?: string;
 }
 
-export function StudyPlanCard({ plan, generatedAt }: Props) {
+export function StudyPlanCard({ plan, planId, generatedAt }: Props) {
   const { meta, weakAreas, days } = plan;
+
+  useEffect(() => {
+    if (planId) trackStudyPlanViewed(planId);
+  }, [planId]);
   const totalMin = meta.totalEstimatedMin ?? days.reduce((s, d) => {
     const dm = d.estimatedMin ?? d.tasks.reduce((ts, t) => ts + t.estimatedMin, 0);
     return s + dm;

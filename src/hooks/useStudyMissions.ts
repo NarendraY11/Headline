@@ -20,10 +20,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useFeature } from "../hooks/useFeatureFlags";
-import { getMissionsForDate, getMissionsInRange } from "../lib/studyScheduler";
+import { getMissionsForDate, getMissionsInRange, getActiveStudyPlan } from "../lib/studyScheduler";
 import type { StudyMissionRow } from "../types/studyScheduler";
-import { materializePlan } from "../lib/missionService";
-import type { MaterializeResult } from "../lib/missionService";
+import { materializePlan, regeneratePlan } from "../lib/missionService";
+import type { MaterializeResult, RegenerateResult } from "../lib/missionService";
 
 // ── useTodayMissions ─────────────────────────────────────────────────────────
 
@@ -261,3 +261,55 @@ export function useMaterialize(): MaterializeState {
 
   return { materialize, materializing, error, lastResult };
 }
+
+// ── useRegenerate ─────────────────────────────────────────────────────────────
+
+export interface RegenerateState {
+  regenerate: (scores: Record<string, { correct: number; total: number }>) => Promise<RegenerateResult>;
+  regenerating: boolean;
+  error: string | null;
+}
+
+/**
+ * Imperative trigger for plan regeneration.
+ *
+ * Calls coach endpoint with current mastery scores → archives old plan →
+ * inserts new plan → materializes missions → fires schedule_regenerated event.
+ */
+export function useRegenerate(): RegenerateState {
+  const schedulerEnabled = useFeature("aiStudyScheduler");
+  const { user } = useAuth();
+  const [regenerating, setRegenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef(false);
+
+  useEffect(() => {
+    abortRef.current = false;
+    return () => { abortRef.current = true; };
+  }, []);
+
+  const regenerate = useCallback(
+    async (scores: Record<string, { correct: number; total: number }>): Promise<RegenerateResult> => {
+      if (!schedulerEnabled || !user?.id) {
+        return { ok: false, error: "Study scheduler not enabled." };
+      }
+      if (regenerating) return { ok: false, error: "Already regenerating." };
+      setRegenerating(true);
+      setError(null);
+
+      const oldPlan = await getActiveStudyPlan(user.id).catch(() => null);
+      const oldPlanId = oldPlan?.id ?? null;
+
+      const result = await regeneratePlan(scores, oldPlanId);
+      if (!abortRef.current) {
+        if (!result.ok) setError(result.error ?? "Regeneration failed.");
+        setRegenerating(false);
+      }
+      return result;
+    },
+    [schedulerEnabled, user?.id, regenerating]
+  );
+
+  return { regenerate, regenerating, error };
+}
+

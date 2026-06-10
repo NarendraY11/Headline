@@ -183,6 +183,50 @@ async function studyMaterialize(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+// ---- /api/system?fn=study-metrics ------------------------------------------
+
+async function studyMetrics(req: VercelRequest, res: VercelResponse) {
+  const admin = getSupabaseAdmin();
+  const user = await getAuthenticatedUser(req, res);
+  if (!user) return;
+
+  const { data: isAdmin } = await admin.rpc("is_admin", { uid: user.id });
+  if (!isAdmin) return res.status(403).json({ error: "Admin only." });
+
+  const now = new Date();
+  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+  const [plansResult, missionsResult] = await Promise.all([
+    admin.from("study_plans").select("id, status, user_id, generated_at").limit(1000),
+    admin.from("study_missions").select("id, status, source, scheduled_date, user_id").gte("scheduled_date", thirtyDaysAgo).limit(5000),
+  ]);
+
+  const plans = (plansResult.data ?? []) as { id: string; status: string; user_id: string }[];
+  const missions = (missionsResult.data ?? []) as { id: string; status: string; source: string; scheduled_date: string; user_id: string }[];
+
+  const activePlans = plans.filter((p) => p.status === "active").length;
+  const usersWithPlan = new Set(plans.filter((p) => p.status === "active").map((p) => p.user_id)).size;
+
+  const planMissions = missions.filter((m) => m.source === "plan");
+  const completedMissions = planMissions.filter((m) => m.status === "completed").length;
+  const totalMissions = planMissions.length;
+
+  const recentUsers = new Set(
+    planMissions.filter((m) => m.scheduled_date >= sevenDaysAgo).map((m) => m.user_id)
+  );
+
+  return res.status(200).json({
+    activePlans,
+    usersWithPlan,
+    missionCompletionRate: totalMissions > 0 ? Math.round((completedMissions / totalMissions) * 100) : 0,
+    completedMissions,
+    totalMissions,
+    dailyActivePlanners7d: recentUsers.size,
+    asOf: now.toISOString(),
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const fnParam = req.query.fn;
   const fn = Array.isArray(fnParam) ? fnParam[0] : fnParam;
@@ -209,6 +253,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: "Method Not Allowed" });
     }
     return studyMaterialize(req, res);
+  }
+
+  if (fn === "study-metrics") {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
+    return studyMetrics(req, res);
   }
 
   return res.status(404).json({ error: "Not Found" });
