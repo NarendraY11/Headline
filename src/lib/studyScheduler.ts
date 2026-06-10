@@ -132,3 +132,40 @@ export async function completeMission(
   }
   return true;
 }
+
+/** Fetch a single mission by id (used by M5 launch + completion flow). */
+export async function getMissionById(
+  missionId: string
+): Promise<StudyMissionRow | null> {
+  const { data, error } = await supabase
+    .from("study_missions")
+    .select("*")
+    .eq("id", missionId)
+    .maybeSingle();
+  if (error) {
+    console.warn("getMissionById failed:", error.message);
+    return null;
+  }
+  return (data as StudyMissionRow) ?? null;
+}
+
+/**
+ * Count plan-source missions for a calendar day without fetching rows.
+ * Used by the service layer to decide whether to trigger materialization.
+ */
+export async function countPlanMissionsForDate(
+  userId: string,
+  dateISO: string
+): Promise<number> {
+  const { count, error } = await supabase
+    .from("study_missions")
+    .select("id", { head: true, count: "exact" })
+    .eq("user_id", userId)
+    .eq("scheduled_date", dateISO)
+    .eq("source", "plan");
+  if (error) {
+    console.warn("countPlanMissionsForDate failed:", error.message);
+    return 0;
+  }
+  return count ?? 0;
+}
