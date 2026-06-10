@@ -146,6 +146,10 @@ export async function regeneratePlan(
     /* non-fatal */
   }
 
+  if (!newPlanId) {
+    return { ok: false, error: "Coach did not return a plan ID. Plan may not have been saved." };
+  }
+
   const matResult = await materializePlan();
   if (!matResult.ok) {
     return { ok: false, error: matResult.error ?? "Materialization failed after regen." };

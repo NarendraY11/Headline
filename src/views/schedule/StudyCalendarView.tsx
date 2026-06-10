@@ -661,7 +661,7 @@ export default function StudyCalendarView() {
 
   useEffect(() => {
     if (schedulerEnabled) trackCalendarOpened();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [view, setView] = useState<CalendarView>("monthly");
