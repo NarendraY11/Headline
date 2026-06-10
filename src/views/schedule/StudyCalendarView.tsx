@@ -41,6 +41,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useFeature } from "../../hooks/useFeatureFlags";
 import { useScheduleRange } from "../../hooks/useStudyMissions";
 import { launchMission } from "../../lib/launchMission";
+import { trackCalendarOpened } from "../../lib/studyAnalytics";
 import type { MissionStatus, MissionType, StudyMissionRow } from "../../types/studyScheduler";
 
 // ── Constants & helpers ───────────────────────────────────────────────────────
@@ -657,6 +658,11 @@ export default function StudyCalendarView() {
   // FIX #9: Hook called unconditionally (Rules of Hooks). The early return
   // is deferred until after all hooks have been called — see below.
   const schedulerEnabled = useFeature("aiStudyScheduler");
+
+  useEffect(() => {
+    if (schedulerEnabled) trackCalendarOpened();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [view, setView] = useState<CalendarView>("monthly");
   const [selectedDate, setSelectedDate] = useState<string | null>(todayISO());

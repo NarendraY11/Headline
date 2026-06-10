@@ -23,6 +23,7 @@ import {
 } from "./content.js";
 import { getDueQuestionIds } from "./spacedRepetition.js";
 import { updateMissionStatus } from "./studyScheduler.js";
+import { trackMissionStarted } from "./studyAnalytics.js";
 import type {
   LaunchMode,
   LaunchRoute,
@@ -126,6 +127,8 @@ export async function launchMission(
   } catch (err) {
     console.error("launchMission: could not set in_progress:", err);
   }
+
+  trackMissionStarted(mission.id, mission.type, mission.payload?.subjectId);
 
   const { payload, type } = mission;
 

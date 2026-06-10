@@ -19,6 +19,7 @@ import { getDueQuestionIds, recordAnswerProgress, trackAnswerForStreakAndGoal } 
 import { completeMission } from "../lib/studyScheduler";
 import { supabase } from "../lib/supabase";
 import { trackEvent } from "../lib/track";
+import { trackStudyPlanGenerated } from "../lib/studyAnalytics";
 
 const EditorialLayout = lazy(() => import("./quiz-layouts/EditorialLayout"));
 const SplitLayout = lazy(() => import("./quiz-layouts/SplitLayout"));
@@ -989,7 +990,8 @@ export default function QuizView() {
       }
 
       const data = await response.json();
-      setStudyPlan(data.text);
+      if (data.planId) trackStudyPlanGenerated(data.planId, data.plan?.meta?.horizonDays);
+      setStudyPlan(data.text ?? (data.format === "json" ? data.plan?.meta?.summary ?? "" : ""));
     } catch (error) {
       console.error("Coach error:", error);
       setStudyPlan(

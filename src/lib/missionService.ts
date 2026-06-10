@@ -13,6 +13,7 @@
 
 import { apiFetch, readError } from "./api.js";
 import { getMissionsForDate } from "./studyScheduler.js";
+import { trackStudyPlanMaterialized, trackScheduleRegenerated } from "./studyAnalytics.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -56,6 +57,7 @@ export async function materializePlan(): Promise<MaterializeResult> {
         planId: string;
         missions: number;
       };
+      if (data.planId) trackStudyPlanMaterialized(data.planId, data.missions ?? 0);
       return { ok: true, planId: data.planId, missions: data.missions };
     } catch {
       return { ok: true };
@@ -98,4 +100,58 @@ export async function ensureTodayMaterialized(
     console.warn("ensureTodayMaterialized:", msg);
     return { ok: false, error: msg };
   }
+}
+
+// ── regeneratePlan ────────────────────────────────────────────────────────────
+
+export interface RegenerateResult {
+  ok: boolean;
+  newPlanId?: string;
+  error?: string;
+}
+
+/**
+ * Regenerate the active study plan from current mastery scores.
+ *
+ * 1. Calls coach endpoint (archives old plan, inserts new one).
+ * 2. Calls materialize to expand new plan → missions.
+ * 3. Fires schedule_regenerated analytics event.
+ */
+export async function regeneratePlan(
+  scores: Record<string, { correct: number; total: number }>,
+  oldPlanId: string | null
+): Promise<RegenerateResult> {
+  const coachResult = await apiFetch(
+    "/api/instructor/coach",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scores }),
+    },
+    60_000
+  );
+
+  if (!coachResult.ok) {
+    let errorMsg = "Plan regeneration failed.";
+    if (coachResult.kind === "timeout") errorMsg = "Request timed out. Try again.";
+    else if (coachResult.response) errorMsg = await readError(coachResult.response, errorMsg);
+    return { ok: false, error: errorMsg };
+  }
+
+  let newPlanId: string | undefined;
+  try {
+    const data = (await coachResult.response.json()) as { planId?: string };
+    newPlanId = data.planId;
+  } catch {
+    /* non-fatal */
+  }
+
+  const matResult = await materializePlan();
+  if (!matResult.ok) {
+    return { ok: false, error: matResult.error ?? "Materialization failed after regen." };
+  }
+
+  if (newPlanId) trackScheduleRegenerated(oldPlanId, newPlanId);
+
+  return { ok: true, newPlanId };
 }

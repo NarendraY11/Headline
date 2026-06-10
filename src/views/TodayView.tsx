@@ -806,8 +806,13 @@ export default function TodayView() {
           </div>
         </div>
 
-        {aiStudySchedulerEnabled && <TodayMissions />}
+        {aiStudySchedulerEnabled && (
+          <TodayMissions
+            subjectMastery={progressStats.subjectMastery}
+          />
+        )}
 
+        {/* TodayStops: primary when flag OFF, supplemental when flag ON */}
         <TodayStops
           subjectsList={subjectsList}
           subjectMastery={progressStats.subjectMastery}

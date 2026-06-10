@@ -10,6 +10,7 @@
 // =====================================================================
 
 import { supabase } from "./supabase";
+import { trackMissionCompleted } from "./studyAnalytics.js";
 import type {
   MissionStatus,
   NewManualMission,
@@ -114,10 +115,6 @@ export async function updateMissionStatus(
   return true;
 }
 
-/**
- * Mark a mission complete and link the proof-of-work attempt. The DB trigger
- * verifies the attempt is the caller's own and stamps completed_at.
- */
 export async function completeMission(
   missionId: string,
   attemptId: string
@@ -130,6 +127,7 @@ export async function completeMission(
     console.warn("completeMission failed:", error.message);
     return false;
   }
+  trackMissionCompleted(missionId, undefined, attemptId);
   return true;
 }
 
