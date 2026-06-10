@@ -20,7 +20,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useFeature } from "../hooks/useFeatureFlags";
-import { getMissionsForDate } from "../lib/studyScheduler";
+import { getMissionsForDate, getMissionsInRange } from "../lib/studyScheduler";
 import type { StudyMissionRow } from "../types/studyScheduler";
 import { materializePlan } from "../lib/missionService";
 import type { MaterializeResult } from "../lib/missionService";
@@ -116,6 +116,49 @@ export function useMissions(dateISO: string): MissionsState {
     }
     return () => { active = false; };
   }, [schedulerEnabled, userId, dateISO]);
+
+  useEffect(() => {
+    const cleanup = load();
+    return () => { cleanup?.then?.(fn => fn?.()); };
+  }, [load]);
+
+  return { missions, loading, error, refetch: load };
+}
+
+// ── useScheduleRange ─────────────────────────────────────────────────────────
+
+export interface ScheduleRangeState {
+  missions: StudyMissionRow[];
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
+}
+
+/** Missions across an inclusive date range — used by the Flight Schedule calendar. */
+export function useScheduleRange(startISO: string, endISO: string): ScheduleRangeState {
+  const schedulerEnabled = useFeature("aiStudyScheduler");
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+
+  const [missions, setMissions] = useState<StudyMissionRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!schedulerEnabled || !userId) return;
+    let active = true;
+    setLoading(true);
+    setError(null);
+    try {
+      const rows = await getMissionsInRange(userId, startISO, endISO);
+      if (active) setMissions(rows);
+    } catch {
+      if (active) setError("Failed to load schedule.");
+    } finally {
+      if (active) setLoading(false);
+    }
+    return () => { active = false; };
+  }, [schedulerEnabled, userId, startISO, endISO]);
 
   useEffect(() => {
     const cleanup = load();

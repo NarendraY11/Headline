@@ -1,7 +1,8 @@
-import { ArrowLeft, CalendarRange, Compass, RefreshCw } from "lucide-react";
+import { ArrowLeft, CalendarRange, Compass, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useMaterialize } from "../hooks/useStudyMissions";
 import { getActiveStudyPlan } from "../lib/studyScheduler";
 import type { StudyPlanRow } from "../types/studyScheduler";
 import { StudyPlanCard } from "./study/StudyPlanCard";
@@ -58,8 +59,10 @@ function EmptyState() {
 // ── Main view ────────────────────────────────────────────────────────────────
 export default function StudySchedulerView() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [planRow, setPlanRow] = useState<StudyPlanRow | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const { materialize, materializing } = useMaterialize();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -168,8 +171,12 @@ export default function StudySchedulerView() {
               {/* Primary CTA — full width on mobile, grows on desktop */}
               <button
                 type="button"
-                disabled
-                aria-label="Add entire plan to schedule (coming in M6)"
+                disabled={materializing}
+                aria-label="Add entire plan to schedule"
+                onClick={async () => {
+                  const result = await materialize();
+                  if (result.ok) navigate("/schedule");
+                }}
                 className="
                   flex-1 h-12 rounded-2xl
                   bg-navy text-paper
@@ -178,13 +185,16 @@ export default function StudySchedulerView() {
                   flex items-center justify-center gap-2
                   shadow-[0_4px_20px_rgba(20,48,90,0.35)]
                   dark:shadow-[0_4px_20px_rgba(245,242,234,0.12)]
-                  cursor-not-allowed opacity-80
+                  hover:opacity-90
+                  disabled:opacity-60 disabled:cursor-wait
                   select-none
                   transition-opacity
                 "
               >
-                <CalendarRange size={16} aria-hidden="true" />
-                Add Entire Plan To Schedule
+                {materializing
+                  ? <Loader2 size={16} className="animate-spin" />
+                  : <CalendarRange size={16} aria-hidden="true" />}
+                {materializing ? "Scheduling…" : "Add Entire Plan To Schedule"}
               </button>
             </div>
           </div>

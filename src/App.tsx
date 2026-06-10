@@ -31,6 +31,7 @@ const QotdView = lazy(() => import("./views/QotdView"));
 const ReferralView = lazy(() => import("./views/ReferralView"));
 const A320SystemsView = lazy(() => import("./views/A320SystemsView"));
 const StudySchedulerView = lazy(() => import("./views/StudySchedulerView"));
+const StudyCalendarView = lazy(() => import("./views/schedule/StudyCalendarView"));
 
 import { AdminGuard } from "./components/AdminGuard";
 import { AuthGuard } from "./components/AuthGuard";
@@ -186,6 +187,7 @@ export default function App() {
             <Route path="/profile" element={<ProfileView />} />
             <Route path="/referral" element={<ReferralView />} />
             <Route path="/study-plan" element={<StudySchedulerView />} />
+            <Route path="/schedule" element={<StudyCalendarView />} />
           </Route>
 
           {/* FULLSCREEN QUIZ (authed, NO App Shell — each quiz layout is its

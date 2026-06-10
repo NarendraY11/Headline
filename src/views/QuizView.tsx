@@ -16,6 +16,7 @@ import { apiFetchRaw, readError } from "../lib/api";
 import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopic } from "../lib/content";
 import { submitQuestionAttempt } from "../lib/progress";
 import { getDueQuestionIds, recordAnswerProgress, trackAnswerForStreakAndGoal } from "../lib/spacedRepetition";
+import { completeMission } from "../lib/studyScheduler";
 import { supabase } from "../lib/supabase";
 import { trackEvent } from "../lib/track";
 
@@ -42,6 +43,7 @@ export default function QuizView() {
   const overridePassMark = location.state?.overridePassMark as number | undefined;
   const overrideNegMark = location.state?.overrideNegMark as number | undefined;
   const examTitle = location.state?.examTitle as string | undefined;
+  const missionId = location.state?.missionId as string | undefined;
 
   const isVivaRoute = routeTopicId === "viva";
   const isTimedRoute = routeTopicId === "timed";
@@ -735,6 +737,9 @@ export default function QuizView() {
             });
           if (error) {
             console.error("Could not save attempt to Supabase:", error);
+          } else if (missionId) {
+            // Link proof-of-work to the study mission row.
+            completeMission(missionId, attemptUid).catch(() => {});
           }
         } catch (err) {
           console.error("Could not save attempt exceptionally:", err);

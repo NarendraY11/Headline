@@ -2,6 +2,7 @@ import {
     ArrowUpRight,
     BarChart3,
     Bookmark,
+    CalendarDays,
     Compass,
     Flame,
     Gift,
@@ -264,6 +265,7 @@ export function AppShell() {
 
   const mockExamsEnabled = useFeature("mockExams");
   const a320SystemsEnabled = useFeature("a320Systems");
+  const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
 
   const navItems = [
     { label: "Today", to: "/today", icon: Compass },
@@ -273,6 +275,7 @@ export function AppShell() {
     { label: "VIVA practice", to: "/quiz/viva", icon: Mic },
     { label: "Flashcards", to: "/bookmarks", icon: Zap },
     { label: "Progress", to: "/analytics", icon: BarChart3 },
+    ...(aiStudySchedulerEnabled ? [{ label: "Flight Schedule", to: "/schedule", icon: CalendarDays }] : []),
     { label: "Refer & earn", to: "/referral", icon: Gift },
     ...(isAdmin ? [{ label: "Administrative Deck", to: "/admin", icon: Settings }] : []),
   ];
