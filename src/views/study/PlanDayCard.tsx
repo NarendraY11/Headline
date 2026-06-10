@@ -1,5 +1,8 @@
-import { CalendarDays, ChevronDown, ChevronUp, Clock, Plus, Target } from "lucide-react";
+import { CalendarDays, ChevronDown, ChevronUp, Clock, Loader2, Plus, Target } from "lucide-react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import { launchTask } from "../../lib/launchMission";
 import type { StudyPlanDay } from "../../types/studyScheduler";
 import { PlanTaskBlock } from "./PlanTaskBlock";
 
@@ -36,10 +39,23 @@ interface Props {
 
 export function PlanDayCard({ day, defaultOpen = false }: Props) {
   const [open, setOpen] = useState(defaultOpen);
+  const [launching, setLaunching] = useState(false);
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const priority = dayPriority(day);
   const hue = PRIORITY_HUE[priority] ?? PRIORITY_HUE[3];
   const mins = totalMinutes(day);
   const taskCount = day.tasks.length;
+
+  const handleStartStudying = async () => {
+    if (launching || day.tasks.length === 0) return;
+    setLaunching(true);
+    try {
+      await launchTask(day.tasks[0], navigate, user?.id ?? null);
+    } finally {
+      setLaunching(false);
+    }
+  };
 
   return (
     <div
@@ -96,15 +112,20 @@ export function PlanDayCard({ day, defaultOpen = false }: Props) {
             ))}
           </div>
 
-          {/* Day action row — disabled placeholders */}
+          {/* Day action row */}
           <div className="flex items-center gap-2 px-4 pb-4 pt-1 border-t border-rule/30">
             <button
               type="button"
-              disabled
-              aria-label="Start studying this day (coming soon)"
-              className="flex-1 h-9 rounded-xl bg-ink/50 text-paper/60 font-sans text-[12px] font-medium flex items-center justify-center gap-1.5 cursor-not-allowed select-none"
+              disabled={launching || day.tasks.length === 0}
+              onClick={handleStartStudying}
+              aria-label="Start studying this day"
+              className="flex-1 h-9 rounded-xl bg-ink text-paper font-sans text-[12px] font-medium flex items-center justify-center gap-1.5 hover:bg-ink-2 transition-colors disabled:opacity-50 disabled:cursor-wait"
             >
-              <CalendarDays size={13} aria-hidden="true" />
+              {launching ? (
+                <Loader2 size={13} className="animate-spin" aria-hidden="true" />
+              ) : (
+                <CalendarDays size={13} aria-hidden="true" />
+              )}
               Start Studying
             </button>
             <button

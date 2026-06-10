@@ -24,6 +24,7 @@ import { getDueQuestionIds } from "../lib/spacedRepetition";
 
 import { AnimatedCounter } from "./today/AnimatedCounter";
 import { TodayLoader } from "./today/DashboardLoaders";
+import { TodayMissions } from "./today/TodayMissions";
 import { TodayStops } from "./today/TodayStops";
 import { getPacingData } from "./today/utils";
 
@@ -804,6 +805,8 @@ export default function TodayView() {
             </div>
           </div>
         </div>
+
+        {aiStudySchedulerEnabled && <TodayMissions />}
 
         <TodayStops
           subjectsList={subjectsList}
