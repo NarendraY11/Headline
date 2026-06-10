@@ -45,6 +45,16 @@ export default function QuizView() {
   const examTitle = location.state?.examTitle as string | undefined;
   const missionId = location.state?.missionId as string | undefined;
 
+  // FIX #4: guard against double-execution of finishQuiz (timer effect + handleNext
+  // can both fire when time hits zero). Without this guard, two attempt rows get
+  // inserted and completeMission is called twice on the same mission.
+  const finishingRef = useRef(false);
+
+  // FIX #11: track whether completeMission was already called for this quiz session.
+  // location.state is immutable so we cannot clear missionId from it; this ref
+  // serves as a single-use latch to prevent double-completion on back-navigation.
+  const missionCompletedRef = useRef(false);
+
   const isVivaRoute = routeTopicId === "viva";
   const isTimedRoute = routeTopicId === "timed";
   const isPracticeRoute = routeTopicId === "practice";
@@ -644,7 +654,13 @@ export default function QuizView() {
     handleNext();
   };
 
-  const finishQuiz = () => {
+  const finishQuiz = async () => {
+    // FIX #4: prevent double-execution. Timer useEffect and handleNext can both
+    // call finishQuiz simultaneously when time hits zero. First call wins; the
+    // second returns immediately. Without this, two attempt rows are inserted.
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+
     trackQuestionTime();
     // Record real attempt
     let correctCount = 0;
@@ -720,6 +736,10 @@ export default function QuizView() {
 
     if (user) {
       const attemptUid = attemptRecord.id;
+      // FIX #2: saveAttempt was called fire-and-forget. If the user navigated
+      // away before the async work completed, the attempt insert and
+      // completeMission call were silently dropped — mission stuck in_progress.
+      // Now finishQuiz is async and we await saveAttempt() before setStatus.
       const saveAttempt = async () => {
         try {
           const { error } = await supabase
@@ -737,15 +757,25 @@ export default function QuizView() {
             });
           if (error) {
             console.error("Could not save attempt to Supabase:", error);
-          } else if (missionId) {
-            // Link proof-of-work to the study mission row.
-            completeMission(missionId, attemptUid).catch(() => {});
+          } else if (missionId && !missionCompletedRef.current) {
+            // FIX #3: completeMission error was silently swallowed via .catch(()=>{}).
+            // Now we await and log failures explicitly. Mission stays in_progress
+            // on failure — better than silently claiming success.
+            // FIX #11: missionCompletedRef ensures we only call completeMission once
+            // per quiz session even if finishQuiz somehow re-runs (e.g. back-nav).
+            missionCompletedRef.current = true;
+            try {
+              await completeMission(missionId, attemptUid);
+            } catch (missionErr) {
+              console.error("Could not complete mission:", missionErr);
+              // Non-fatal: attempt is saved; mission status update is best-effort.
+            }
           }
         } catch (err) {
           console.error("Could not save attempt exceptionally:", err);
         }
       };
-      saveAttempt();
+      await saveAttempt();
 
       updateUserData({
         attempts: {
