@@ -6,6 +6,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity } from "./api/_lib/utils.js";
 import { validateStudyPlan, expandPlanToMissions } from "./api/_lib/studyPlan.js";
+import { handleCoach } from "./api/_lib/coach.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -765,52 +766,13 @@ Do not include \`\`\`json or \`\`\` blocks, just the raw JSON array. Make the qu
       if (!coachScreen.ok) return res.status(coachScreen.status).json({ error: coachScreen.error });
       const coachError = validateInstructorPayload("coach", req.body);
       if (coachError) return res.status(400).json({ error: coachError });
-      const { scores = {} } = req.body;
+
+      // Shared with prod (api/instructor/[action].ts) via handleCoach: markdown
+      // by default, structured StudyPlan JSON persisted to study_plans when the
+      // aiStudyScheduler flag is on. Caching + fallback live inside handleCoach.
       const uid = (req as any).uid;
-      const payloadHash = crypto.createHash('sha256').update(JSON.stringify(scores)).digest('hex');
-      const cacheKey = `coach_${uid}_${payloadHash}`;
-      const admin = getSupabaseAdmin();
-      
-      const { data: cacheRow } = await admin.from('ai_cache').select('*').eq('cache_key', cacheKey).single();
-      const CACHE_DURATION = 24 * 60 * 60 * 1000;
-      if (cacheRow && (Date.now() - new Date(cacheRow.updated_at).getTime() < CACHE_DURATION)) {
-        return res.json(cacheRow.data);
-      }
-
-      // scores might look like { "ATA 27": { correct: 5, total: 8 }, "ATA 21": { correct: 2, total: 10 } }
-      
-      const scoresText = Object.entries(scores)
-        .map(([topic, data]: [string, any]) => {
-          const total = Number(data?.total) || 0;
-          const correct = Number(data?.correct) || 0;
-          if (total <= 0) return null; // skip empty topics; avoids divide-by-zero NaN
-          return `${topic}: ${correct}/${total} (${Math.round((correct / total) * 100)}%)`;
-        })
-        .filter(Boolean)
-        .join("\\n");
-
-      if (!scoresText) {
-        return res.status(400).json({ error: "No scored topics provided." });
-      }
-
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [
-          { role: "user", parts: [{ text: `My pilot exam scores are:\n${scoresText}\n\nBased on these pilot exam scores, write a focused 7-day study plan prioritising the weakest ATA chapters/topics. For each day, suggest specific sub-topics or concepts to focus on. Ensure the response is concise and highly actionable. Under 250 words.` }] }
-        ],
-        config: {
-          systemInstruction: "You are an expert aviation instructor guiding a CPL/ATPL cadet. Use their score breakdown to identify their weakest areas and provide specific, actionable concepts to study."
-        }
-      });
-
-      const finalData = { text: response.text };
-      await admin.from('ai_cache').upsert({
-        cache_key: cacheKey,
-        data: finalData,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'cache_key' });
-
-      res.json(finalData);
+      const result = await handleCoach(ai, getSupabaseAdmin(), uid, req.body || {});
+      res.status(result.status).json(result.body);
     } catch (error) {
       console.error("Error generating study plan:", error);
       res.status(500).json({ error: "Failed to generate study plan. Please try again." });
