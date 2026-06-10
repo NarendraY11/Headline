@@ -173,9 +173,12 @@ async function studyMaterialize(req: VercelRequest, res: VercelResponse) {
     // Release the advisory lock regardless of success or failure so subsequent
     // calls for this user are not permanently blocked.
     if (!lockErr && lockData) {
-      await admin.rpc("pg_advisory_unlock", { key: lockKey }).catch((e: unknown) => {
+      // PostgrestFilterBuilder does not extend Promise — use try/catch, not .catch().
+      try {
+        await admin.rpc("pg_advisory_unlock", { key: lockKey });
+      } catch (e: unknown) {
         console.warn("materialize: advisory unlock failed:", e);
-      });
+      }
     }
   }
 }
