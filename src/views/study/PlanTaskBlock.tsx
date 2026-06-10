@@ -7,11 +7,12 @@ import {
   Repeat,
   Zap,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import type { StudyPlanTask } from "../../types/studyScheduler";
 
 const MISSION_META: Record<
   string,
-  { label: string; icon: React.ReactNode; chipClass: string }
+  { label: string; icon: ReactNode; chipClass: string }
 > = {
   drill:     { label: "Drill",     icon: <Zap size={11} />,         chipClass: "bg-signal-soft text-[#a83020] dark:text-signal border-signal/15" },
   review:    { label: "Review",    icon: <Repeat size={11} />,      chipClass: "bg-sky-soft text-sky border-sky/15" },
