@@ -815,19 +815,37 @@ export default function TodayView() {
           hasAttempts={hasAttempts}
         />
 
-        {/* AI Study Scheduler entry point — shown only when flag ON */}
+        {/* AI Study Scheduler entry card — shown only when flag ON */}
         {aiStudySchedulerEnabled && (
-          <Link to="/study-plan" className="block mt-6 group">
-            <div className="bg-navy/5 dark:bg-navy/20 border border-navy/20 dark:border-navy/40 rounded-2xl px-5 py-4 flex items-center gap-4 hover:border-navy/40 dark:hover:border-navy/60 transition-colors">
-              <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-navy/10 dark:bg-navy/30 border border-navy/20 flex items-center justify-center">
-                <CalendarRange size={18} className="text-navy dark:text-paper/70" />
+          <div className="mt-6 bg-navy/5 dark:bg-navy/20 border border-navy/20 dark:border-navy/40 rounded-2xl overflow-hidden">
+            {/* Header row */}
+            <div className="flex items-center gap-3 px-5 pt-4 pb-3 border-b border-navy/10 dark:border-navy/20">
+              <div className="flex-shrink-0 w-9 h-9 rounded-xl bg-navy/10 dark:bg-navy/30 border border-navy/20 flex items-center justify-center">
+                <CalendarRange size={16} className="text-navy dark:text-paper/70" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-mono text-[9px] uppercase tracking-widest text-muted-2 mb-0.5">AI Study Scheduler</p>
-                <p className="font-serif text-[15px] text-ink leading-snug">View your Flight Plan →</p>
+                <p className="font-mono text-[9px] uppercase tracking-widest text-muted-2">AI Study Scheduler</p>
+                <p className="font-serif text-[15px] text-ink leading-snug">Today's Missions</p>
               </div>
             </div>
-          </Link>
+            {/* CTA row */}
+            <div className="flex items-center gap-2 px-5 py-3">
+              <Link
+                to="/today"
+                className="flex-1 h-9 rounded-xl bg-navy text-paper font-sans text-[12px] font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
+              >
+                <Play size={12} aria-hidden="true" />
+                Start Today
+              </Link>
+              <Link
+                to="/schedule"
+                className="flex-1 h-9 rounded-xl border border-navy/30 text-navy dark:text-paper/70 font-sans text-[12px] font-medium flex items-center justify-center gap-1.5 hover:border-navy/50 transition-colors"
+              >
+                <CalendarRange size={12} aria-hidden="true" />
+                View Schedule
+              </Link>
+            </div>
+          </div>
         )}
       </div>
     </div>
