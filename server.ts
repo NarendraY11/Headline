@@ -5,6 +5,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity } from "./api/_lib/utils.js";
+import { validateStudyPlan, expandPlanToMissions } from "./api/_lib/studyPlan.js";
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
@@ -543,6 +544,72 @@ async function startServer() {
     } catch (error: any) {
       console.error("Trial start failed:", error);
       res.status(500).json({ error: error.message || "Failed to start trial." });
+    }
+  });
+
+  // === STUDY SCHEDULER (Phase M1) — dev mirror of api/study/[action].ts ===
+  // Gated behind `aiStudyScheduler` (OFF by default). Only action: materialize.
+  app.post("/api/study/:action", requireAuth, rateLimiter, async (req, res) => {
+    if (!(await assertFeatureEnabled("aiStudyScheduler", res))) return;
+    const action = req.params.action;
+    if (action !== "materialize") return res.status(404).json({ error: "Not Found" });
+
+    const screen = await screenSubmission({
+      formId: `study:${action}`,
+      identity: getClientIdentity(req as any, (req as any).uid),
+      body: req.body,
+    });
+    if (!screen.ok) return res.status(screen.status).json({ error: screen.error });
+
+    try {
+      const uid = (req as any).uid;
+      const admin = getSupabaseAdmin();
+
+      const { data: planRow, error: planErr } = await admin
+        .from("study_plans")
+        .select("id, plan")
+        .eq("user_id", uid)
+        .eq("status", "active")
+        .maybeSingle();
+      if (planErr) {
+        console.error("materialize: plan lookup failed:", planErr.message);
+        return res.status(500).json({ error: "Failed to load study plan." });
+      }
+      if (!planRow) return res.status(404).json({ error: "No active study plan to materialize." });
+
+      const validation = validateStudyPlan(planRow.plan);
+      if (!validation.ok) {
+        return res.status(422).json({ error: `Invalid study plan: ${validation.error}` });
+      }
+
+      const baseDate = new Date();
+      const rows = expandPlanToMissions(validation.plan, { planId: planRow.id, userId: uid, baseDate });
+
+      const todayISO = baseDate.toISOString().slice(0, 10);
+      const { error: delErr } = await admin
+        .from("study_missions")
+        .delete()
+        .eq("plan_id", planRow.id)
+        .eq("source", "plan")
+        .eq("status", "pending")
+        .gte("scheduled_date", todayISO);
+      if (delErr) {
+        console.error("materialize: clear-pending failed:", delErr.message);
+        return res.status(500).json({ error: "Failed to refresh missions." });
+      }
+
+      if (rows.length > 0) {
+        const { error: insErr } = await admin.from("study_missions").insert(rows);
+        if (insErr) {
+          console.error("materialize: insert failed:", insErr.message);
+          return res.status(500).json({ error: "Failed to create missions." });
+        }
+      }
+
+      return res.json({ success: true, planId: planRow.id, missions: rows.length });
+    } catch (error: any) {
+      console.error("Study materialize failed:", error);
+      return res.status(500).json({ error: error.message || "Failed to process request." });
     }
   });
 
