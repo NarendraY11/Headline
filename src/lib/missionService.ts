@@ -58,7 +58,10 @@ export async function materializePlan(): Promise<MaterializeResult> {
       };
       return { ok: true, planId: data.planId, missions: data.missions };
     } catch {
-      return { ok: true };
+      // FIX #16: HTTP 200 but non-JSON body (e.g. Vercel 503 HTML page, CDN
+      // error). Previously returned { ok: true } with no planId/missions,
+      // making the caller believe materialization succeeded when it had not.
+      return { ok: false, error: "Unexpected server response. Please try again." };
     }
   }
 
@@ -86,7 +89,10 @@ export async function ensureTodayMaterialized(
   userId: string
 ): Promise<EnsureResult> {
   try {
-    const todayISO = new Date().toISOString().slice(0, 10);
+    // Use local date to match scheduled_date values set by the materialize
+    // endpoint (which also computes today relative to the server's local time).
+    const now = new Date();
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const existing = await getMissionsForDate(userId, todayISO);
     if (existing.some((m) => m.source === "plan")) {
       return { ok: true, alreadyMaterialized: true };

@@ -266,7 +266,7 @@ function DayPanel({ dateISO, missions, onClose, onStartMission, launchingId }: D
   const isToday = dateISO === today;
   const overdue = dateISO < today;
 
-  const dateLabel = new Date(dateISO + "T12:00:00").toLocaleDateString("en-GB", {
+  const dateLabel = new Date(dateISO + "T12:00:00Z").toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long",
   });
 
@@ -597,7 +597,7 @@ function AgendaView({ byDate, onStartMission, launchingId, onSelectDate }: Agend
         const overdue = iso < today;
         const pct = completionPct(missions);
 
-        const dateLabel = new Date(iso + "T12:00:00").toLocaleDateString("en-GB", {
+        const dateLabel = new Date(iso + "T12:00:00Z").toLocaleDateString("en-GB", {
           weekday: "long", day: "numeric", month: "long",
         });
 
@@ -617,7 +617,7 @@ function AgendaView({ byDate, onStartMission, launchingId, onSelectDate }: Agend
                   ? "bg-mint/10 text-mint border-mint/20"
                   : "bg-bg-2 text-ink border-rule"
               }`}>
-                {pct === 100 ? "✓" : new Date(iso + "T12:00:00").getDate()}
+                {pct === 100 ? "✓" : new Date(iso + "T12:00:00Z").getDate()}
               </div>
               <div>
                 <p className={`font-sans text-[13px] font-semibold ${isToday ? "text-navy dark:text-paper" : "text-ink"}`}>

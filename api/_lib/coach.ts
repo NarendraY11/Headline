@@ -209,6 +209,14 @@ async function persistPlan(
   meta: { examId: string | null; targetDate: string | null }
 ): Promise<string | null> {
   try {
+    // FIX #19 (known edge case, documented): archive + insert are two separate
+    // Supabase calls — not atomic. If a concurrent coach request fires between
+    // the archive and the insert, both requests archive the prior plan, then
+    // both attempt to insert a new active plan. The second insert hits the
+    // partial-unique index (uniq_study_plans_active_per_user) and fails.
+    // At current request volume this is acceptable: the failing request returns
+    // null and the coach falls back to markdown. A future fix would be to wrap
+    // both calls in a Postgres RPC (requires a new migration). Tracked in audit.
     await admin.from("study_plans").update({ status: "archived" }).eq("user_id", uid).eq("status", "active");
     const { data, error } = await admin
       .from("study_plans")

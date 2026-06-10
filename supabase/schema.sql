@@ -1323,10 +1323,16 @@ end;
 $$;
 
 -- =====================================================================
--- 18. AI STUDY SCHEDULER (Phase M1)
+-- 18. AI STUDY SCHEDULER (Phase M1 + audit fixes)
 -- study_plans (AI-authored structured JSON) + study_missions (calendar
 -- rows). Progress DERIVES from attempts / question_progress — no new
--- progress-tracking state. Mirrors migration 20260608120000.
+-- progress-tracking state.
+--
+-- SOURCE OF TRUTH: supabase/migrations/ is canonical.
+-- This section must mirror:
+--   20260608120000_study_scheduler_m1.sql       (tables, RLS, triggers)
+--   20260610120000_study_scheduler_audit_fixes.sql (constraint + policy)
+-- FIX #13: if you modify either migration, update this section to match.
 -- =====================================================================
 
 create table if not exists public.study_plans (
@@ -1369,7 +1375,12 @@ create table if not exists public.study_missions (
   completed_attempt_id uuid references public.attempts(id) on delete set null,
   created_at           timestamptz not null default now(),
   completed_at         timestamptz,
-  constraint missions_completed_ts check (status <> 'completed' or completed_at is not null)
+  -- FIX #14: bidirectional — both directions enforced at DB level.
+  constraint missions_completed_ts check (
+    (status = 'completed' and completed_at is not null)
+    or
+    (status <> 'completed' and completed_at is null)
+  )
 );
 
 create index if not exists idx_missions_user_date_status on public.study_missions(user_id, scheduled_date, status);
@@ -1387,8 +1398,9 @@ drop policy if exists "study_plans_update" on public.study_plans;
 create policy "study_plans_update" on public.study_plans for update
   using ((select public.is_admin())) with check ((select public.is_admin()));
 drop policy if exists "study_plans_delete" on public.study_plans;
+-- FIX #17: admin-only hard delete. Users soft-delete via status='archived'.
 create policy "study_plans_delete" on public.study_plans for delete
-  using ((select auth.uid()) = user_id or (select public.is_admin()));
+  using ((select public.is_admin()));
 
 drop policy if exists "study_missions_select" on public.study_missions;
 create policy "study_missions_select" on public.study_missions for select
