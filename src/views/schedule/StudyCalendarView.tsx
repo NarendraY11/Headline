@@ -56,8 +56,14 @@ const TYPE_META: Record<MissionType, { label: string; icon: ReactNode; dot: stri
   read:      { label: "Read",      icon: <BookOpen size={10} />,      dot: "bg-muted-2", chip: "bg-bg-2 text-ink-2 border-rule" },
 };
 
+// FIX #5: toISOString() returns UTC date, not local date. Users in UTC+X
+// timezones would see the wrong day highlighted as "today" — off by up to
+// ±24h. Derive the date from local year/month/day instead.
 function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function todayISO(): string {
@@ -652,21 +658,36 @@ export default function StudyCalendarView() {
   const [showPanel, setShowPanel] = useState(false);
   const [launchingId, setLaunchingId] = useState<string | null>(null);
 
+  // FIX #6: Track the current local date as state so the agenda fetchRange
+  // updates after midnight without requiring a page reload or navigation.
+  // A useEffect schedules a timeout to tick at the next local midnight.
+  const [currentDateStr, setCurrentDateStr] = useState(() => todayISO());
+  useEffect(() => {
+    // Compute ms until next local midnight and schedule a single tick.
+    const now = new Date();
+    const msUntilMidnight =
+      new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime() - now.getTime();
+    const timer = setTimeout(() => setCurrentDateStr(todayISO()), msUntilMidnight + 100);
+    return () => clearTimeout(timer);
+  }, [currentDateStr]); // re-arm after each midnight tick
+
   // Track the pivot point for monthly/weekly navigation
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
 
-  // Compute fetch range based on current view
+  // Compute fetch range based on current view.
+  // FIX #6: agenda start is derived from currentDateStr (state) not a bare
+  // todayISO() call, so it updates reactively after midnight.
   const fetchRange = useMemo(() => {
     if (view === "monthly") return monthRange(year, month);
     if (view === "weekly") return weekRange(weekAnchor);
-    // Agenda: fetch 90 days from today
-    const start = todayISO();
+    // Agenda: fetch 90 days from today (local)
+    const start = currentDateStr;
     const end90 = new Date();
     end90.setDate(end90.getDate() + 89);
     return { start, end: isoDate(end90) };
-  }, [view, year, month, weekAnchor]);
+  }, [view, year, month, weekAnchor, currentDateStr]);
 
   const { missions, loading, error } = useScheduleRange(fetchRange.start, fetchRange.end);
 

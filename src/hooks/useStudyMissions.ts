@@ -52,10 +52,15 @@ export function useTodayMissions(): TodayMissionsState {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const todayISO = new Date().toISOString().slice(0, 10);
-
+  // FIX #1: todayISO was computed outside useCallback and included in deps,
+  // causing a new string reference on every render → infinite refetch loop.
+  // Compute it inside load() so the callback deps are stable.
   const load = useCallback(async () => {
     if (!schedulerEnabled || !userId) return;
+    // Use local date (not UTC) so the query matches scheduled_date values
+    // which are also derived from local time in the materialize endpoint.
+    const now = new Date();
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     let active = true;
     setLoading(true);
     setError(null);
@@ -68,7 +73,7 @@ export function useTodayMissions(): TodayMissionsState {
       if (active) setLoading(false);
     }
     return () => { active = false; };
-  }, [schedulerEnabled, userId, todayISO]);
+  }, [schedulerEnabled, userId]);
 
   useEffect(() => {
     const cleanup = load();
@@ -101,13 +106,22 @@ export function useMissions(dateISO: string): MissionsState {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // FIX #1 (same pattern): dateISO comes from the caller. If the caller
+  // re-computes it on every render without memoisation, it creates a new
+  // string reference each time, putting it in deps causes infinite re-fetch.
+  // Capture into a ref so useCallback deps remain stable; the effect re-runs
+  // only when the actual string value changes (via the separate useEffect below).
+  const dateISORef = useRef(dateISO);
+  dateISORef.current = dateISO;
+
   const load = useCallback(async () => {
     if (!schedulerEnabled || !userId) return;
+    const date = dateISORef.current;
     let active = true;
     setLoading(true);
     setError(null);
     try {
-      const rows = await getMissionsForDate(userId, dateISO);
+      const rows = await getMissionsForDate(userId, date);
       if (active) setMissions(rows);
     } catch {
       if (active) setError("Failed to load missions.");
@@ -115,12 +129,13 @@ export function useMissions(dateISO: string): MissionsState {
       if (active) setLoading(false);
     }
     return () => { active = false; };
-  }, [schedulerEnabled, userId, dateISO]);
+  }, [schedulerEnabled, userId]);
 
+  // Re-fetch whenever the date string actually changes value (not reference).
   useEffect(() => {
     const cleanup = load();
     return () => { cleanup?.then?.(fn => fn?.()); };
-  }, [load]);
+  }, [load, dateISO]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { missions, loading, error, refetch: load };
 }
@@ -144,13 +159,24 @@ export function useScheduleRange(startISO: string, endISO: string): ScheduleRang
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // FIX #1: startISO/endISO were in useCallback deps — recomputed objects from
+  // useMemo in the calendar would create new references on every render and
+  // cause an infinite refetch loop. Use refs so callback deps stay stable;
+  // re-fetch is triggered by the useEffect dep on the actual string values.
+  const startRef = useRef(startISO);
+  const endRef = useRef(endISO);
+  startRef.current = startISO;
+  endRef.current = endISO;
+
   const load = useCallback(async () => {
     if (!schedulerEnabled || !userId) return;
+    const start = startRef.current;
+    const end = endRef.current;
     let active = true;
     setLoading(true);
     setError(null);
     try {
-      const rows = await getMissionsInRange(userId, startISO, endISO);
+      const rows = await getMissionsInRange(userId, start, end);
       if (active) setMissions(rows);
     } catch {
       if (active) setError("Failed to load schedule.");
@@ -158,12 +184,13 @@ export function useScheduleRange(startISO: string, endISO: string): ScheduleRang
       if (active) setLoading(false);
     }
     return () => { active = false; };
-  }, [schedulerEnabled, userId, startISO, endISO]);
+  }, [schedulerEnabled, userId]);
 
+  // Re-fetch whenever the range string values actually change.
   useEffect(() => {
     const cleanup = load();
     return () => { cleanup?.then?.(fn => fn?.()); };
-  }, [load]);
+  }, [load, startISO, endISO]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { missions, loading, error, refetch: load };
 }
