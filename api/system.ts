@@ -66,6 +66,19 @@ async function authEvent(req: VercelRequest, res: VercelResponse) {
 // Expand the caller's ACTIVE study plan into study_missions. Service-role,
 // idempotent (clears future pending plan-missions, then re-inserts). Gated
 // behind `aiStudyScheduler` (OFF by default) so it 403s until enabled.
+// FIX #7: derive a stable 32-bit integer from a UUID for use as a Postgres
+// advisory lock key. Different users get different keys; same user always gets
+// the same key. Uses djb2 hash over the first 16 hex chars of the UUID.
+function advisoryLockKey(userId: string): number {
+  const hex = userId.replace(/-/g, "").slice(0, 16);
+  let h = 5381;
+  for (let i = 0; i < hex.length; i++) {
+    h = ((h << 5) + h) ^ hex.charCodeAt(i);
+    h = h >>> 0; // keep as unsigned 32-bit
+  }
+  return h;
+}
+
 async function studyMaterialize(req: VercelRequest, res: VercelResponse) {
   const user = await getAuthenticatedUser(req, res);
   if (!user) return;
@@ -85,57 +98,89 @@ async function studyMaterialize(req: VercelRequest, res: VercelResponse) {
   }
 
   const admin = getSupabaseAdmin();
-  const { data: planRow, error: planErr } = await admin
-    .from("study_plans")
-    .select("id, plan")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
 
-  if (planErr) {
-    console.error("materialize: plan lookup failed:", planErr.message);
-    return res.status(500).json({ error: "Failed to load study plan." });
-  }
-  if (!planRow) {
-    return res.status(404).json({ error: "No active study plan to materialize." });
-  }
-
-  const validation = validateStudyPlan(planRow.plan);
-  if (!validation.ok) {
-    return res.status(422).json({ error: `Invalid study plan: ${validation.error}` });
-  }
-
-  // "Today" computed server-side (UTC, matching project timezone) so the
-  // schedule never anchors to a client clock.
-  const baseDate = new Date();
-  const rows = expandPlanToMissions(validation.plan, {
-    planId: planRow.id,
-    userId: user.id,
-    baseDate,
-  });
-
-  const todayISO = baseDate.toISOString().slice(0, 10);
-  const { error: delErr } = await admin
-    .from("study_missions")
-    .delete()
-    .eq("plan_id", planRow.id)
-    .eq("source", "plan")
-    .eq("status", "pending")
-    .gte("scheduled_date", todayISO);
-  if (delErr) {
-    console.error("materialize: clear-pending failed:", delErr.message);
-    return res.status(500).json({ error: "Failed to refresh missions." });
+  // FIX #7: The delete-then-insert pattern is not atomic. Two concurrent
+  // materialize calls for the same user could both execute the delete, then
+  // both execute the insert, creating duplicate missions.
+  //
+  // Use a per-user Postgres advisory lock (pg_try_advisory_lock) so only one
+  // materialize call proceeds at a time per user. pg_try_advisory_lock returns
+  // false (non-blocking) if the lock is already held; we 409 the second caller.
+  // The lock is session-scoped and released explicitly with pg_advisory_unlock.
+  const lockKey = advisoryLockKey(user.id);
+  const { data: lockData, error: lockErr } = await admin.rpc("pg_try_advisory_lock", { key: lockKey });
+  if (lockErr) {
+    // Advisory lock RPC unavailable — log but continue (degraded, not blocked).
+    console.warn("materialize: advisory lock unavailable:", lockErr.message);
+  } else if (!lockData) {
+    // Another request for this user is already materializing.
+    return res.status(409).json({ error: "Materialization already in progress for this user." });
   }
 
-  if (rows.length > 0) {
-    const { error: insErr } = await admin.from("study_missions").insert(rows);
-    if (insErr) {
-      console.error("materialize: insert failed:", insErr.message);
-      return res.status(500).json({ error: "Failed to create missions." });
+  try {
+    const { data: planRow, error: planErr } = await admin
+      .from("study_plans")
+      .select("id, plan")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    if (planErr) {
+      console.error("materialize: plan lookup failed:", planErr.message);
+      return res.status(500).json({ error: "Failed to load study plan." });
+    }
+    if (!planRow) {
+      return res.status(404).json({ error: "No active study plan to materialize." });
+    }
+
+    const validation = validateStudyPlan(planRow.plan);
+    if (!validation.ok) {
+      return res.status(422).json({ error: `Invalid study plan: ${validation.error}` });
+    }
+
+    // "Today" computed server-side (UTC, matching project timezone) so the
+    // schedule never anchors to a client clock.
+    const baseDate = new Date();
+    const rows = expandPlanToMissions(validation.plan, {
+      planId: planRow.id,
+      userId: user.id,
+      baseDate,
+    });
+
+    const todayISO = baseDate.toISOString().slice(0, 10);
+    const { error: delErr } = await admin
+      .from("study_missions")
+      .delete()
+      .eq("plan_id", planRow.id)
+      .eq("source", "plan")
+      .eq("status", "pending")
+      .gte("scheduled_date", todayISO);
+    if (delErr) {
+      console.error("materialize: clear-pending failed:", delErr.message);
+      return res.status(500).json({ error: "Failed to refresh missions." });
+    }
+
+    if (rows.length > 0) {
+      const { error: insErr } = await admin.from("study_missions").insert(rows);
+      if (insErr) {
+        console.error("materialize: insert failed:", insErr.message);
+        return res.status(500).json({ error: "Failed to create missions." });
+      }
+    }
+
+    return res.status(200).json({ success: true, planId: planRow.id, missions: rows.length });
+  } finally {
+    // Release the advisory lock regardless of success or failure so subsequent
+    // calls for this user are not permanently blocked.
+    if (!lockErr && lockData) {
+      // PostgrestFilterBuilder does not extend Promise — use try/catch, not .catch().
+      try {
+        await admin.rpc("pg_advisory_unlock", { key: lockKey });
+      } catch (e: unknown) {
+        console.warn("materialize: advisory unlock failed:", e);
+      }
     }
   }
-
-  return res.status(200).json({ success: true, planId: planRow.id, missions: rows.length });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

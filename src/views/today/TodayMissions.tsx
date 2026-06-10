@@ -27,7 +27,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useMaterialize, useTodayMissions } from "../../hooks/useStudyMissions";
@@ -161,16 +161,26 @@ export function TodayMissions() {
   const { materialize, materializing } = useMaterialize();
   const [launchingId, setLaunchingId] = React.useState<string | null>(null);
 
-  const materializeOnce = useRef(false);
-
-  // Auto-materialize when plan exists but no missions yet
+  // FIX #10: The old materializeOnce ref had two failure modes:
+  //   (a) On remount (tab switch / back-nav), a new ref instance is created
+  //       (current=false), so materialize fires again unnecessarily.
+  //   (b) After plan regeneration needsMaterialization goes true again, but the
+  //       old ref stays true on the same component instance — skipping the
+  //       required re-materialization silently.
+  //
+  // Replaced with a useEffect keyed on needsMaterialization. The `materializing`
+  // guard inside the effect prevents a double-trigger while the first call is
+  // in-flight. On each new true→false→true cycle (regen), the effect re-runs
+  // correctly. The `materialize` guard (materializing check) prevents concurrent
+  // calls if the effect fires twice before the first resolves.
   useEffect(() => {
-    if (!needsMaterialization || materializing || materializeOnce.current) return;
-    materializeOnce.current = true;
+    if (!needsMaterialization || materializing) return;
     materialize().then((r) => {
       if (r.ok) refetch();
     });
-  }, [needsMaterialization, materializing, materialize, refetch]);
+    // needsMaterialization is the intentional trigger; other deps are stable refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsMaterialization]);
 
   const handleStart = async (mission: StudyMissionRow) => {
     if (launchingId) return;

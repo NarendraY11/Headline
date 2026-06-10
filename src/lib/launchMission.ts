@@ -116,8 +116,16 @@ export async function launchMission(
   navigate: NavigateFunction,
   userId?: string | null
 ): Promise<void> {
-  // Flip to in_progress — best-effort, don't block navigation on failure.
-  updateMissionStatus(mission.id, "in_progress").catch(() => {});
+  // FIX #8: Previously fire-and-forget (.catch(()=>{})). Failures were invisible
+  // and the mission status machine was silently broken — mission stayed "pending"
+  // but QuizView would mark it "completed", skipping "in_progress" entirely.
+  // Now we await and log failures. Navigation is NOT blocked on failure (the
+  // in_progress flip is cosmetic UX, not a prerequisite for the session).
+  try {
+    await updateMissionStatus(mission.id, "in_progress");
+  } catch (err) {
+    console.error("launchMission: could not set in_progress:", err);
+  }
 
   const { payload, type } = mission;
 
