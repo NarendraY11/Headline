@@ -49,6 +49,11 @@ import { WeatherWidget } from "./today/WeatherWidget";
 import { ResumeCard } from "./today/ResumeCard";
 import { ReferralWidget } from "./today/ReferralWidget";
 import { useNotifications } from "../contexts/NotificationContext";
+import { usePredictiveIntelligence } from "../hooks/usePredictiveIntelligence";
+import { PassProbabilityCard } from "./today/PassProbabilityCard";
+import { AtRiskSubjectsCard } from "./today/AtRiskSubjectsCard";
+import { SuccessForecastCard } from "./today/SuccessForecastCard";
+import { RecommendedActionsCard } from "./today/RecommendedActionsCard";
 
 export default function TodayView() {
   const { userData, user, loading } = useAuth();
@@ -59,6 +64,7 @@ export default function TodayView() {
   const adaptiveRegenEnabled = useFeature("adaptiveRegen");
   const masteryAnalyticsEnabled = useFeature("masteryAnalytics");
   const examReadinessEtaEnabled = useFeature("examReadinessEta");
+  const predictiveIntelligenceEnabled = useFeature("predictiveIntelligence");
   const { stats: progressStats } = useUserProgress();
   const { snapshots: masterySnapshots } = useMasterySnapshots();
   const [subjectsCount, setSubjectsCount] = useState(0);
@@ -74,6 +80,13 @@ export default function TodayView() {
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [dueCount, setDueCount] = useState<number>(0);
+  // M11: build title map from subjectsList state (empty on first render, fine)
+  const subjectTitleMapForPredictive: Record<string, string> = {};
+  for (const sub of subjectsList) {
+    subjectTitleMapForPredictive[sub.id] = sub.title;
+  }
+  // M11: predictive intelligence — gates on flag; uses existing hook data
+  const predictive = usePredictiveIntelligence(subjectsCount, subjectTitleMapForPredictive);
 
   // Daily study reminder notification (once per day, gentle)
   useEffect(() => {
@@ -924,6 +937,43 @@ export default function TodayView() {
                 loading={masteryHistory.loading}
               />
             </Suspense>
+          </div>
+        )}
+
+        {/* M11: Predictive Intelligence — flag-gated */}
+        {predictiveIntelligenceEnabled && (
+          <div className="space-y-3 mb-8">
+            <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase mb-3">
+              § PREDICTIVE INTELLIGENCE
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(predictive.loading || predictive.result) && (
+                <PassProbabilityCard
+                  result={predictive.result?.passProbability ?? { probability: 0, label: "0%", band: "at_risk", trendMultiplier: 1 }}
+                  loading={predictive.loading}
+                />
+              )}
+              {(predictive.loading || predictive.result) && (
+                <SuccessForecastCard
+                  forecast={predictive.result?.successForecast ?? { etaWeeks: null, etaLabel: "Insufficient data", confidence: "low", velocityPerWeek: 0, alreadyReady: false }}
+                  currentScore={examReadiness.score}
+                  loading={predictive.loading}
+                />
+              )}
+            </div>
+            {(predictive.loading || predictive.result) && (
+              <AtRiskSubjectsCard
+                subjectRisks={predictive.result?.subjectRisks ?? []}
+                subjectTitles={subjectTitleMap}
+                loading={predictive.loading}
+              />
+            )}
+            {(predictive.loading || predictive.result) && (
+              <RecommendedActionsCard
+                actions={predictive.result?.recommendations ?? []}
+                loading={predictive.loading}
+              />
+            )}
           </div>
         )}
 

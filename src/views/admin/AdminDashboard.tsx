@@ -9,9 +9,12 @@ import { RecentAttemptsLog } from "./dashboard/RecentAttemptsLog";
 import { RevenueSnapshot } from "./dashboard/RevenueSnapshot";
 import { StudySchedulerMetrics } from "./dashboard/StudySchedulerMetrics";
 import { SubjectHeatmapCharts } from "./dashboard/SubjectHeatmapCharts";
+import { PredictiveAnalytics } from "./dashboard/PredictiveAnalytics";
 import { useAdminAnalytics } from "./dashboard/useAdminAnalytics";
+import { useFeature } from "../../hooks/useFeatureFlags";
 
 export default function AdminDashboard() {
+  const predictiveIntelligenceEnabled = useFeature("predictiveIntelligence");
   const {
     timeRange,
     setTimeRange,
@@ -91,6 +94,8 @@ export default function AdminDashboard() {
           />
 
           <StudySchedulerMetrics />
+
+          {predictiveIntelligenceEnabled && <PredictiveAnalytics />}
 
           <QualityAuditReports
             reports={reports}

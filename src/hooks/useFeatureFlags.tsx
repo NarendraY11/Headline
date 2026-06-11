@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-export type FlagKeys = "aiExplain" | "aiCoach" | "aiDiagnosis" | "aiPractice" | "weatherBriefing" | "mockExams" | "topicPractice" | "qotd" | "spacedRepetition" | "flashcards" | "cockpitLayouts" | "analytics" | "masteryCharts" | "blog" | "examSeoPages" | "a320Systems" | "adsense" | "pricingCheckout" | "freeTrial" | "proGating" | "maintenanceMode" | "cookieConsent" | "announcementBanner" | "announcementText" | "signupsOpen" | "themeToggle" | "vivaPractice" | "referralProgram" | "notifications" | "bookmarksEnabled" | "searchEnabled" | "leaderboard" | "offlineMode" | "pwaInstallPrompt" | "aiStudyScheduler" | "masterySnapshots" | "examReadinessDashboard" | "sm2Algorithm" | "adaptiveRegen" | "masteryAnalytics" | "missionScores" | "sm2QualityTiming" | "coachContextEnrichment" | "examReadinessEta";
+export type FlagKeys = "aiExplain" | "aiCoach" | "aiDiagnosis" | "aiPractice" | "weatherBriefing" | "mockExams" | "topicPractice" | "qotd" | "spacedRepetition" | "flashcards" | "cockpitLayouts" | "analytics" | "masteryCharts" | "blog" | "examSeoPages" | "a320Systems" | "adsense" | "pricingCheckout" | "freeTrial" | "proGating" | "maintenanceMode" | "cookieConsent" | "announcementBanner" | "announcementText" | "signupsOpen" | "themeToggle" | "vivaPractice" | "referralProgram" | "notifications" | "bookmarksEnabled" | "searchEnabled" | "leaderboard" | "offlineMode" | "pwaInstallPrompt" | "aiStudyScheduler" | "masterySnapshots" | "examReadinessDashboard" | "sm2Algorithm" | "adaptiveRegen" | "masteryAnalytics" | "missionScores" | "sm2QualityTiming" | "coachContextEnrichment" | "examReadinessEta" | "predictiveIntelligence";
 
 export type Flags = Record<FlagKeys, any>;
 
@@ -50,6 +50,7 @@ export const defaultFlags: Flags = {
   sm2QualityTiming: false,       // M9B: response time → quality 3/5 in SM-2
   coachContextEnrichment: false, // M9C: mission rate + streak sent to coach on regen
   examReadinessEta: false,       // M9D: velocity + ETA projection in readiness gauge
+  predictiveIntelligence: false, // M11: pass probability + subject risk + success forecast
 };
 
 const FeatureFlagsContext = createContext<{ flags: Flags; loading: boolean }>({ flags: defaultFlags, loading: true });
