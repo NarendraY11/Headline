@@ -85,9 +85,24 @@ export async function completeMission(
   missionId: string,
   attemptId: string
 ): Promise<boolean> {
+  // M9A: fetch attempt score (non-fatal; stays NULL on error or missing row)
+  let score: number | null = null;
+  try {
+    const { data } = await supabase
+      .from("attempts")
+      .select("percentage")
+      .eq("id", attemptId)
+      .maybeSingle();
+    if (typeof data?.percentage === "number") {
+      score = Math.min(100, Math.max(0, Math.round(data.percentage)));
+    }
+  } catch {
+    // non-fatal — score stays null
+  }
+
   const { error } = await supabase
     .from("study_missions")
-    .update({ status: "completed", completed_attempt_id: attemptId })
+    .update({ status: "completed", completed_attempt_id: attemptId, score })
     .eq("id", missionId);
   // FIX #15: throw on DB error so QuizView can log and surface the failure.
   if (error) throw new Error(`completeMission: ${error.message}`);
