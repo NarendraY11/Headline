@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Wordmark } from "./branding/Wordmark";
-import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity, ShieldCheck, FileText, SlidersHorizontal, ChevronDown, ChevronRight, Bell, IndianRupee, Globe, UserCog } from "lucide-react";
+import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity, ShieldCheck, FileText, SlidersHorizontal, ChevronDown, ChevronRight, Bell, IndianRupee, Globe, UserCog, Bot } from "lucide-react";
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
@@ -27,6 +27,7 @@ export function AdminLayout() {
     { label: "Feature Control", path: "/admin/features", icon: SlidersHorizontal },
     { label: "Pricing Manager", path: "/admin/pricing", icon: IndianRupee },
     { label: "Site Content", path: "/admin/site-content", icon: Globe },
+    { label: "AI Settings", path: "/admin/ai-settings", icon: Bot },
     { label: "Admin Roles", path: "/admin/roles", icon: UserCog },
     { label: "Admin Settings", path: "/admin/settings", icon: Settings },
   ];
