@@ -234,7 +234,10 @@ const STALENESS_DAYS      = 21;
 const CRITICAL_THRESHOLD  = 50;
 const MIN_ANSWERS_FOR_NEW_CRITICAL = 5;
 const AUTO_REGEN_COOLDOWN_MS  = 3 * 24 * 60 * 60 * 1000;
-const MAX_AUTO_REGENS_PER_7D  = 3;
+// Per-plan-cycle cap: regen_count carries forward to each new plan.
+// After this many auto-regens the user must manually initiate.
+// New plan from a manual regen starts at regen_count=0, resetting the cap.
+const MAX_AUTO_REGENS_PER_PLAN_CYCLE = 3;
 
 // ---- /api/system?fn=study-mastery-check ------------------------------------
 
@@ -365,7 +368,7 @@ async function studyAdaptiveRegen(req: VercelRequest, res: VercelResponse) {
   const now = Date.now();
   const regenCount = planRow.regen_count ?? 0;
 
-  // Cooldown enforcement
+  // Cooldown enforcement (3-day minimum between auto-regens)
   if (planRow.last_regen_at) {
     const elapsed = now - new Date(planRow.last_regen_at).getTime();
     if (elapsed < AUTO_REGEN_COOLDOWN_MS) {
@@ -374,92 +377,127 @@ async function studyAdaptiveRegen(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  // Auto-regen rate cap: ≥3 regens → disable auto, but allow manual
-  if (regenCount >= MAX_AUTO_REGENS_PER_7D && req.body?.source !== "manual") {
+  // Per-plan-cycle cap: auto only; manual always allowed
+  if (regenCount >= MAX_AUTO_REGENS_PER_PLAN_CYCLE && req.body?.source !== "manual") {
     await admin.from("study_plans").update({ auto_regen_enabled: false }).eq("id", planRow.id);
-    return res.status(429).json({ error: "Auto-regen limit reached. Manual regen still available.", rateLimited: true });
+    return res.status(429).json({ error: "Auto-regen limit reached for this plan cycle. Manual regen still available.", rateLimited: true });
   }
 
-  // Build coach scores from mastery snapshots
-  const { data: snapRows } = await admin
-    .from("mastery_snapshots")
-    .select("subject_id, mastery")
-    .eq("user_id", user.id);
-
-  const scores: Record<string, { correct: number; total: number }> = {};
-  for (const s of (snapRows ?? []) as { subject_id: string; mastery: number }[]) {
-    scores[s.subject_id] = { correct: s.mastery, total: 100 };
-  }
-  if (Object.keys(scores).length === 0) return res.status(422).json({ error: "No mastery data to regenerate plan." });
-
-  // Generate new plan via coach (reuses existing coach infra + caching)
-  const { handleCoach } = await import("./_lib/coach.js");
-  const { GoogleGenAI } = await import("@google/genai");
-  const GEMINI_KEY = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "";
-  if (!GEMINI_KEY) return res.status(503).json({ error: "AI service unavailable." });
-
-  const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
-  const coachResult = await handleCoach(ai, admin, user.id, {
-    scores,
-    examId: (planRow.plan as { meta?: { examId?: string } })?.meta?.examId ?? null,
-    targetDate: (planRow.plan as { meta?: { targetDate?: string } })?.meta?.targetDate ?? null,
-  });
-  if (coachResult.status !== 200) return res.status(coachResult.status).json(coachResult.body);
-
-  const newPlanId = (coachResult.body as { planId?: string }).planId;
-  if (!newPlanId) return res.status(500).json({ error: "Coach did not return plan ID." });
-
-  // Materialize new plan inline (no HTTP round-trip)
-  const { data: newPlanRow, error: newPlanErr } = await admin
-    .from("study_plans").select("id, plan").eq("id", newPlanId).single();
-  if (newPlanErr || !newPlanRow) return res.status(500).json({ error: "Failed to load new plan." });
-
-  const validation = validateStudyPlan(newPlanRow.plan);
-  if (!validation.ok) return res.status(422).json({ error: `Invalid plan: ${validation.error}` });
-
-  const baseDate = new Date();
-  const todayISO = baseDate.toISOString().slice(0, 10);
-  const missionRows = expandPlanToMissions(validation.plan, { planId: newPlanId, userId: user.id, baseDate });
-
-  // Delete future pending missions for OLD plan, insert new
-  await admin.from("study_missions")
-    .delete()
-    .eq("plan_id", planRow.id)
-    .eq("source", "plan")
-    .eq("status", "pending")
-    .gte("scheduled_date", todayISO);
-
-  if (missionRows.length > 0) {
-    const { error: insErr } = await admin.from("study_missions").insert(missionRows);
-    if (insErr) return res.status(500).json({ error: "Failed to create missions after regen." });
+  // FIX: advisory lock — same key as studyMaterialize so both ops
+  // are mutually exclusive per user, preventing concurrent plan edits.
+  const lockKey = advisoryLockKey(user.id);
+  const { data: lockData, error: lockErr } = await admin.rpc("pg_try_advisory_lock", { key: lockKey });
+  if (lockErr) {
+    console.warn("adaptive-regen: advisory lock unavailable:", lockErr.message);
+  } else if (!lockData) {
+    return res.status(409).json({ error: "Another plan operation is in progress for this user." });
   }
 
-  // Re-baseline mastery snapshots: baseline_mastery = current mastery
-  const rebaseRows = (snapRows ?? []).map((s: { subject_id: string; mastery: number }) => ({
-    user_id: user.id,
-    subject_id: s.subject_id,
-    baseline_mastery: s.mastery,
-    updated_at: new Date().toISOString(),
-  }));
-  if (rebaseRows.length > 0) {
-    await admin.from("mastery_snapshots").upsert(rebaseRows, { onConflict: "user_id,subject_id" });
+  let newPlanId: string | undefined;
+
+  try {
+    // Build coach scores from mastery snapshots
+    const { data: snapRows } = await admin
+      .from("mastery_snapshots")
+      .select("subject_id, mastery")
+      .eq("user_id", user.id);
+
+    const scores: Record<string, { correct: number; total: number }> = {};
+    for (const s of (snapRows ?? []) as { subject_id: string; mastery: number }[]) {
+      scores[s.subject_id] = { correct: s.mastery, total: 100 };
+    }
+    if (Object.keys(scores).length === 0) return res.status(422).json({ error: "No mastery data to regenerate plan." });
+
+    // Generate new plan via coach (reuses coach infra + caching)
+    const { handleCoach } = await import("./_lib/coach.js");
+    const { GoogleGenAI } = await import("@google/genai");
+    const GEMINI_KEY = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "";
+    if (!GEMINI_KEY) return res.status(503).json({ error: "AI service unavailable." });
+
+    const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
+    const coachResult = await handleCoach(ai, admin, user.id, {
+      scores,
+      examId: (planRow.plan as { meta?: { examId?: string } })?.meta?.examId ?? null,
+      targetDate: (planRow.plan as { meta?: { targetDate?: string } })?.meta?.targetDate ?? null,
+    });
+    if (coachResult.status !== 200) return res.status(coachResult.status).json(coachResult.body);
+
+    newPlanId = (coachResult.body as { planId?: string }).planId;
+    if (!newPlanId) return res.status(500).json({ error: "Coach did not return plan ID." });
+
+    // Materialize new plan inline
+    const { data: newPlanRow, error: newPlanErr } = await admin
+      .from("study_plans").select("id, plan").eq("id", newPlanId).single();
+    if (newPlanErr || !newPlanRow) return res.status(500).json({ error: "Failed to load new plan." });
+
+    const validation = validateStudyPlan(newPlanRow.plan);
+    if (!validation.ok) return res.status(422).json({ error: `Invalid plan: ${validation.error}` });
+
+    const baseDate = new Date();
+    const todayISO = baseDate.toISOString().slice(0, 10);
+    const missionRows = expandPlanToMissions(validation.plan, { planId: newPlanId, userId: user.id, baseDate });
+
+    // Delete future pending old-plan missions
+    const { error: delErr } = await admin.from("study_missions")
+      .delete()
+      .eq("plan_id", planRow.id)
+      .eq("source", "plan")
+      .eq("status", "pending")
+      .gte("scheduled_date", todayISO);
+    if (delErr) {
+      console.error("adaptive-regen: delete missions failed:", delErr.message);
+      return res.status(500).json({ error: "Failed to clear old missions." });
+    }
+
+    // FIX: compensate orphan — if insert fails, restore old plan as active
+    if (missionRows.length > 0) {
+      const { error: insErr } = await admin.from("study_missions").insert(missionRows);
+      if (insErr) {
+        console.error("adaptive-regen: mission insert failed:", insErr.message);
+        // New plan is already active (set by handleCoach). Restore old plan to
+        // active so user has a working schedule while we fail gracefully.
+        await admin.from("study_plans").update({ status: "archived" }).eq("id", newPlanId);
+        await admin.from("study_plans").update({ status: "active" }).eq("id", planRow.id);
+        return res.status(500).json({ error: "Failed to create missions. Plan restored to previous state." });
+      }
+    }
+
+    // Re-baseline mastery snapshots: baseline_mastery = current mastery
+    const rebaseRows = (snapRows ?? []).map((s: { subject_id: string; mastery: number }) => ({
+      user_id: user.id,
+      subject_id: s.subject_id,
+      baseline_mastery: s.mastery,
+      updated_at: new Date().toISOString(),
+    }));
+    if (rebaseRows.length > 0) {
+      await admin.from("mastery_snapshots").upsert(rebaseRows, { onConflict: "user_id,subject_id" });
+    }
+
+    const daysSinceLast = planRow.last_regen_at
+      ? Math.round((now - new Date(planRow.last_regen_at).getTime()) / 864e5)
+      : Math.round((now - new Date(planRow.generated_at ?? 0).getTime()) / 864e5);
+
+    await admin.from("study_plans")
+      .update({ last_regen_at: new Date().toISOString(), regen_count: regenCount + 1 })
+      .eq("id", newPlanId);
+
+    return res.status(200).json({
+      ok: true,
+      newPlanId,
+      missionsCreated: missionRows.length,
+      regenCount: regenCount + 1,
+      daysSinceLastRegen: daysSinceLast,
+    });
+  } finally {
+    // Release advisory lock regardless of success or failure
+    if (!lockErr && lockData) {
+      try {
+        await admin.rpc("pg_advisory_unlock", { key: lockKey });
+      } catch (e: unknown) {
+        console.warn("adaptive-regen: advisory unlock failed:", e);
+      }
+    }
   }
-
-  const daysSinceLast = planRow.last_regen_at
-    ? Math.round((now - new Date(planRow.last_regen_at).getTime()) / 864e5)
-    : Math.round((now - new Date(planRow.generated_at ?? 0).getTime()) / 864e5);
-
-  await admin.from("study_plans")
-    .update({ last_regen_at: new Date().toISOString(), regen_count: regenCount + 1 })
-    .eq("id", newPlanId);
-
-  return res.status(200).json({
-    ok: true,
-    newPlanId,
-    missionsCreated: missionRows.length,
-    regenCount: regenCount + 1,
-    daysSinceLastRegen: daysSinceLast,
-  });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
