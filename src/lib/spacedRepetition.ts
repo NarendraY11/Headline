@@ -57,6 +57,28 @@ export function calculateNextReview(
   };
 }
 
+// ── SM-2 quality derivation (M9B) ────────────────────────────────────────────
+
+/**
+ * Derive SM-2 quality from response time vs session median.
+ * quality 5 = correct + fast (<60% median)
+ * quality 4 = correct + normal (60-140%)   ← default when no timing
+ * quality 3 = correct + slow  (>140%)
+ * quality 1 = wrong
+ * quality 0 = wrong + show-answer used (timeSec=0 heuristic)
+ */
+export function deriveQuality(
+  isCorrect: boolean,
+  timeSec: number,
+  medianTimeSec: number
+): number {
+  if (!isCorrect) return timeSec === 0 ? 0 : 1;
+  if (timeSec <= 0 || medianTimeSec <= 0) return 4;
+  if (timeSec < medianTimeSec * 0.6) return 5;
+  if (timeSec < medianTimeSec * 1.4) return 4;
+  return 3;
+}
+
 // ── SM-2 (M8C) ────────────────────────────────────────────────────────────────
 //
 // quality levels:
@@ -173,14 +195,15 @@ export async function recordAnswerProgress(
   correct: boolean,
   topicId?: string,
   options?: {
-    /** When true, use SM-2 algorithm instead of SM-lite. Pass from useFeature("sm2Algorithm"). */
     useSM2?: boolean;
-    /**
-     * SM-2 quality score (0-5). Only used when useSM2=true.
-     * Defaults to 4 (correct/normal) or 1 (wrong) when not provided.
-     * Future: derive from response time for quality 3/5.
-     */
+    /** Explicit quality 0-5. Takes precedence over timing derivation. */
     quality?: number;
+    /** M9B: response time for this question in seconds. */
+    timeSec?: number;
+    /** M9B: session median response time. Used with timeSec to derive quality 3/5. */
+    medianTimeSec?: number;
+    /** M9B: when true, derive quality from timeSec/medianTimeSec instead of binary. */
+    sm2QualityTiming?: boolean;
   }
 ): Promise<QuestionProgress> {
   let progressMap: Record<string, QuestionProgress> = {};
@@ -195,8 +218,13 @@ export async function recordAnswerProgress(
   // Choose algorithm path
   let nextStats: Omit<QuestionProgress, "question_id">;
   if (options?.useSM2) {
-    // Derive quality: use provided value, or fall back to binary correct/wrong
-    const quality = options.quality ?? (correct ? 4 : 1);
+    // M9B: derive quality from timing if available; else binary fallback
+    let quality: number;
+    if (options.sm2QualityTiming && options.timeSec !== undefined && options.medianTimeSec !== undefined) {
+      quality = deriveQuality(correct, options.timeSec, options.medianTimeSec);
+    } else {
+      quality = options.quality ?? (correct ? 4 : 1);
+    }
     nextStats = calculateNextReviewSM2(current, quality);
   } else {
     nextStats = calculateNextReview(current, correct);

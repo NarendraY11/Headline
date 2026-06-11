@@ -74,6 +74,7 @@ export default function QuizView() {
   const cockpitEnabled = useFeature("cockpitLayouts");
   const masterySnapshotsEnabled = useFeature("masterySnapshots");
   const sm2AlgorithmEnabled = useFeature("sm2Algorithm");
+  const sm2QualityTimingEnabled = useFeature("sm2QualityTiming");
 
   // Load questions
   const customQuestions = location.state?.customQuestions as
@@ -666,6 +667,14 @@ export default function QuizView() {
     finishingRef.current = true;
 
     trackQuestionTime();
+
+    // M9B: compute session median response time for SM-2 quality derivation
+    const sessionTimes = Object.values(timePerQuestion).filter((t) => t > 0);
+    const sortedTimes = [...sessionTimes].sort((a, b) => a - b);
+    const medianSessionTimeSec = sortedTimes.length > 0
+      ? (sortedTimes[Math.floor(sortedTimes.length / 2)] ?? 30)
+      : 30;
+
     // Record real attempt
     let correctCount = 0;
     const ataBreakdown: Record<string, { correct: number; total: number }> = {};
@@ -690,8 +699,17 @@ export default function QuizView() {
       // Record per-question performance for spaced repetition if answered
       if (userSelected) {
         answeredCount++;
+        // M9B: pass response time for SM-2 quality derivation
+        const qTimeSec = timePerQuestion[q.id] ?? 0;
         recordAnswerProgress(user?.uid || null, q.id, isCorrect, q.topicId,
-          sm2AlgorithmEnabled ? { useSM2: true } : undefined
+          sm2AlgorithmEnabled ? {
+            useSM2: true,
+            ...(sm2QualityTimingEnabled && qTimeSec > 0 ? {
+              timeSec: qTimeSec,
+              medianTimeSec: medianSessionTimeSec,
+              sm2QualityTiming: true,
+            } : {})
+          } : undefined
         );
         
         if (user) {
