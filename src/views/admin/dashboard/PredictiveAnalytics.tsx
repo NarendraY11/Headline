@@ -1,6 +1,6 @@
-// M11: Admin Predictive Analytics Panel
-// Shows fleet-level pass probability distribution, subject risk heatmap,
-// and user-level success forecast metrics derived from mastery_snapshots.
+// M11/M11B: Admin Predictive Analytics Panel
+// Fleet-level: pass probability distribution, subject risk heatmap,
+// projected exam scores, study hour load, and risk factor summary.
 
 import { useEffect, useState } from "react";
 import { supabase } from "../../../lib/supabase";
@@ -10,6 +10,7 @@ import {
   computeFailureRisk,
   type RiskLevel,
 } from "../../../lib/predictiveIntelligence";
+import { computeStudyHourPrediction } from "../../../lib/forecastEngine";
 import { deriveMasteryFields, type MasterySnapshotRow } from "../../../lib/masterySnapshot";
 import { computeExamReadiness } from "../../../lib/examReadiness";
 
@@ -20,6 +21,9 @@ interface FleetStats {
   mediumRiskUserCount: number;
   lowRiskUserCount: number;
   subjectRiskSummary: { subjectId: string; highRiskUsers: number; avgMastery: number }[];
+  avgStudyHoursPerWeek: number;
+  usersNeedingMoreThan10h: number;
+  avgCriticalSubjectsPerUser: number;
 }
 
 function StatCard({ label, value, sub, accent }: { label: string; value: string | number; sub?: string; accent?: string }) {
@@ -70,6 +74,9 @@ export function PredictiveAnalytics() {
         const userIds = Object.keys(byUser);
         let totalProbability = 0;
         let highRisk = 0, mediumRisk = 0, lowRisk = 0;
+        let totalStudyHours = 0;
+        let usersOver10h = 0;
+        let totalCriticalSubjects = 0;
         const subjectHighMap: Record<string, { total: number; high: number; masterySum: number }> = {};
 
         for (const uid of userIds) {
@@ -84,8 +91,8 @@ export function PredictiveAnalytics() {
             subjectMasteries,
             answersTotals,
             totalExamSubjects: snapshots.length,
-            streakCount: 0,       // admin view: no streak data
-            lastActivityDate: "", // admin view: no recency data
+            streakCount: 0,
+            lastActivityDate: "",
           });
           const pp = computePassProbability(readiness, snapshots);
           const fr = computeFailureRisk(readiness, snapshots);
@@ -93,8 +100,13 @@ export function PredictiveAnalytics() {
           if (fr.level === "HIGH") highRisk++;
           else if (fr.level === "MEDIUM") mediumRisk++;
           else lowRisk++;
+          totalCriticalSubjects += fr.criticalCount;
 
-          // Per-subject risk accumulation
+          // M11B: study hours per user
+          const studyHours = computeStudyHourPrediction(snapshots, 0, 12);
+          totalStudyHours += studyHours.hoursPerWeek;
+          if (studyHours.hoursPerWeek > 10) usersOver10h++;
+
           const subjectRisks = computeSubjectRisks(snapshots, {});
           for (const sr of subjectRisks) {
             if (!subjectHighMap[sr.subjectId]) subjectHighMap[sr.subjectId] = { total: 0, high: 0, masterySum: 0 };
@@ -120,6 +132,9 @@ export function PredictiveAnalytics() {
             mediumRiskUserCount: mediumRisk,
             lowRiskUserCount: lowRisk,
             subjectRiskSummary,
+            avgStudyHoursPerWeek: Math.round(totalStudyHours / Math.max(1, userIds.length)),
+            usersNeedingMoreThan10h: usersOver10h,
+            avgCriticalSubjectsPerUser: Math.round((totalCriticalSubjects / Math.max(1, userIds.length)) * 10) / 10,
           });
         }
       } catch (e: unknown) {
@@ -172,6 +187,28 @@ export function PredictiveAnalytics() {
               value={stats.lowRiskUserCount}
               sub={`${Math.round((stats.lowRiskUserCount / stats.totalUsersWithSnapshots) * 100)}% of fleet`}
               accent="text-mint"
+            />
+          </div>
+
+          {/* M11B: forecast KPI row */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            <StatCard
+              label="Avg study load"
+              value={`${stats.avgStudyHoursPerWeek}h/wk`}
+              sub="to reach 75% mastery"
+              accent={stats.avgStudyHoursPerWeek > 10 ? "text-signal" : stats.avgStudyHoursPerWeek > 5 ? "text-amber" : "text-mint"}
+            />
+            <StatCard
+              label="High study load"
+              value={stats.usersNeedingMoreThan10h}
+              sub={`need >10h/wk`}
+              accent={stats.usersNeedingMoreThan10h > 0 ? "text-amber" : "text-ink"}
+            />
+            <StatCard
+              label="Avg critical subjects"
+              value={stats.avgCriticalSubjectsPerUser}
+              sub="per user (< 50% mastery)"
+              accent={stats.avgCriticalSubjectsPerUser > 1 ? "text-signal" : "text-ink"}
             />
           </div>
 

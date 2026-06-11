@@ -50,10 +50,12 @@ import { ResumeCard } from "./today/ResumeCard";
 import { ReferralWidget } from "./today/ReferralWidget";
 import { useNotifications } from "../contexts/NotificationContext";
 import { usePredictiveIntelligence } from "../hooks/usePredictiveIntelligence";
+import { useForecastEngine } from "../hooks/useForecastEngine";
 import { PassProbabilityCard } from "./today/PassProbabilityCard";
 import { AtRiskSubjectsCard } from "./today/AtRiskSubjectsCard";
 import { SuccessForecastCard } from "./today/SuccessForecastCard";
 import { RecommendedActionsCard } from "./today/RecommendedActionsCard";
+import { ForecastDashboard } from "./today/ForecastDashboard";
 
 export default function TodayView() {
   const { userData, user, loading } = useAuth();
@@ -87,6 +89,8 @@ export default function TodayView() {
   }
   // M11: predictive intelligence — gates on flag; uses existing hook data
   const predictive = usePredictiveIntelligence(subjectsCount, subjectTitleMapForPredictive);
+  // M11B: forecast engine — extended projections
+  const forecastEngine = useForecastEngine(subjectsCount, subjectTitleMapForPredictive);
 
   // Daily study reminder notification (once per day, gentle)
   useEffect(() => {
@@ -974,6 +978,18 @@ export default function TodayView() {
                 loading={predictive.loading}
               />
             )}
+
+            {/* M11B: Forecast Dashboard */}
+            <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase mt-6 mb-3">
+              § FORECAST DASHBOARD
+            </div>
+            <ForecastDashboard
+              forecast={forecastEngine.result}
+              predictive={predictive.result}
+              subjectTitles={subjectTitleMap}
+              currentScore={examReadiness.score}
+              loading={forecastEngine.loading}
+            />
           </div>
         )}
 
