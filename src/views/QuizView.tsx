@@ -73,6 +73,7 @@ export default function QuizView() {
   const flashcardsEnabled = useFeature("flashcards");
   const cockpitEnabled = useFeature("cockpitLayouts");
   const masterySnapshotsEnabled = useFeature("masterySnapshots");
+  const sm2AlgorithmEnabled = useFeature("sm2Algorithm");
 
   // Load questions
   const customQuestions = location.state?.customQuestions as
@@ -689,7 +690,9 @@ export default function QuizView() {
       // Record per-question performance for spaced repetition if answered
       if (userSelected) {
         answeredCount++;
-        recordAnswerProgress(user?.uid || null, q.id, isCorrect, q.topicId);
+        recordAnswerProgress(user?.uid || null, q.id, isCorrect, q.topicId,
+          sm2AlgorithmEnabled ? { useSM2: true } : undefined
+        );
         
         if (user) {
           submitQuestionAttempt(user.uid, q.id, isCorrect, q.subjectId, q.subcategoryId, q.examId);
