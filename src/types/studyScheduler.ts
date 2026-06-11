@@ -145,6 +145,8 @@ export interface StudyMissionRow {
   status: MissionStatus;
   source: MissionSource;
   completed_attempt_id: string | null;
+  /** M9A: quiz score 0-100 from linked attempt. NULL for review/viva/flashcard/read. */
+  score: number | null;
   created_at: string;
   completed_at: string | null;
 }
