@@ -32,6 +32,12 @@ export interface UseMasteryHistoryResult {
   weeks: MasteryHistoryPoint[];
   /** All subject_ids with data in the window */
   subjects: string[];
+  /**
+   * M9D: average mastery accuracy delta per week across all subjects,
+   * computed over last 4 weeks with data. Positive = improving, negative =
+   * declining, 0 when insufficient history.
+   */
+  velocityPerWeek: number;
   loading: boolean;
   error: string | null;
 }
@@ -55,6 +61,40 @@ function weekLabel(d: Date): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
+// ── Velocity computation (M9D) ───────────────────────────────────────────
+
+/**
+ * Average week-over-week accuracy delta across all subjects.
+ * Uses last 4 weeks with data. Returns 0 when < 2 weeks available.
+ */
+function computeVelocity(
+  points: MasteryHistoryPoint[],
+  subjects: string[]
+): number {
+  if (subjects.length === 0 || points.length < 2) return 0;
+
+  // Collect all-subject average accuracy per week
+  const weekAverages = points
+    .map((w) => {
+      const vals = subjects
+        .map((s) => w[s])
+        .filter((v): v is number => typeof v === "number");
+      return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    })
+    .filter((v): v is number => v !== null);
+
+  if (weekAverages.length < 2) return 0;
+
+  // Last 4 weeks with data
+  const recent = weekAverages.slice(-4);
+  const deltas: number[] = [];
+  for (let i = 1; i < recent.length; i++) {
+    deltas.push(recent[i] - recent[i - 1]);
+  }
+  if (deltas.length === 0) return 0;
+  return Math.round((deltas.reduce((a, b) => a + b, 0) / deltas.length) * 10) / 10;
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────
 
 export function useMasteryHistory(weeks = 8): UseMasteryHistoryResult {
@@ -65,6 +105,7 @@ export function useMasteryHistory(weeks = 8): UseMasteryHistoryResult {
   const [result, setResult] = useState<UseMasteryHistoryResult>({
     weeks: [],
     subjects: [],
+    velocityPerWeek: 0,
     loading: false,
     error: null,
   });
@@ -129,10 +170,13 @@ export function useMasteryHistory(weeks = 8): UseMasteryHistoryResult {
         return point;
       });
 
-      setResult({ weeks: points, subjects, loading: false, error: null });
+      // M9D: compute average weekly velocity over last 4 weeks
+      const velocityPerWeek = computeVelocity(points, subjects);
+
+      setResult({ weeks: points, subjects, velocityPerWeek, loading: false, error: null });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to load mastery history.";
-      setResult({ weeks: [], subjects: [], loading: false, error: msg });
+      setResult({ weeks: [], subjects: [], velocityPerWeek: 0, loading: false, error: msg });
     }
   }, [flagEnabled, userId, weeks]);
 
