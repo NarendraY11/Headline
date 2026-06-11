@@ -8,6 +8,10 @@ import { BAND_COLOR, BAND_LABEL, type ExamReadinessResult } from "../../lib/exam
 
 interface Props extends ExamReadinessResult {
   loading?: boolean;
+  /** M9D: avg mastery Δ per week; positive = improving */
+  velocityPerWeek?: number;
+  /** M9D: weeks until exam-ready band; null = already ready / declining / no data */
+  etaWeeks?: number | null;
 }
 
 const RADIUS = 54;
@@ -54,7 +58,7 @@ function ComponentBar({
   );
 }
 
-export function ExamReadinessGauge({ score, band, components, loading }: Props) {
+export function ExamReadinessGauge({ score, band, components, loading, velocityPerWeek, etaWeeks }: Props) {
   const color = BAND_COLOR[band];
   const label = BAND_LABEL[band];
 
@@ -149,6 +153,27 @@ export function ExamReadinessGauge({ score, band, components, loading }: Props) 
               weight={weight}
             />
           ))}
+
+          {/* M9D: velocity + ETA row */}
+          {!loading && velocityPerWeek !== undefined && (
+            <div className="flex items-center gap-2 pt-1 border-t border-rule/40 mt-1">
+              <span className="font-mono text-[8px] uppercase tracking-wide text-muted-2 w-[72px] flex-shrink-0">
+                Velocity
+              </span>
+              <span className={`font-mono text-[10px] font-semibold ${
+                velocityPerWeek > 0 ? "text-mint" :
+                velocityPerWeek < 0 ? "text-signal" : "text-muted-2"
+              }`}>
+                {velocityPerWeek > 0 ? "↑" : velocityPerWeek < 0 ? "↓" : "→"}
+                {" "}{Math.abs(velocityPerWeek).toFixed(1)}%/wk
+              </span>
+              {etaWeeks != null && (
+                <span className="font-mono text-[8px] text-muted-2 ml-auto text-right">
+                  ~{etaWeeks}w to ready
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

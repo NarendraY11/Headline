@@ -151,3 +151,26 @@ export function urgencyScore(mastery: number, confidence: number): number {
     0.3;
   return (100 - mastery) * multiplier * Math.max(0.5, confidence);
 }
+
+// ── computeETA (M9D) ──────────────────────────────────────────────────────────
+
+/**
+ * Estimate weeks until ExamReadinessScore reaches the exam_ready band (≥80).
+ *
+ * @param currentScore  current readiness score 0-100
+ * @param velocityPerWeek  avg score delta per week (from useMasteryHistory)
+ * @returns weeks (positive integer) or null when:
+ *   - already at exam_ready (score >= 80)
+ *   - velocity <= 0 (not improving)
+ *   - < 2 weeks of history (unreliable)
+ */
+export function computeETA(
+  currentScore: number,
+  velocityPerWeek: number
+): number | null {
+  if (currentScore >= 80) return null;
+  if (velocityPerWeek <= 0) return null;
+  const weeksNeeded = Math.ceil((80 - currentScore) / velocityPerWeek);
+  if (weeksNeeded > 52) return null;  // > 1 year = not useful
+  return weeksNeeded;
+}

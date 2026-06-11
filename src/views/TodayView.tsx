@@ -33,6 +33,7 @@ import { RecommendedFocus } from "./today/RecommendedFocus";
 import { AdaptiveRegenBanner } from "./today/AdaptiveRegenBanner";
 import { MasteryHeatmap } from "./today/MasteryHeatmap";
 import { useExamReadiness } from "../hooks/useExamReadiness";
+import { computeETA } from "../lib/examReadiness";
 import { useMasterySnapshots } from "../hooks/useMasterySnapshots";
 import { useAdaptiveRegen } from "../hooks/useAdaptiveRegen";
 import { useMasteryHistory } from "../hooks/useMasteryHistory";
@@ -57,6 +58,7 @@ export default function TodayView() {
   const examReadinessDashboardEnabled = useFeature("examReadinessDashboard");
   const adaptiveRegenEnabled = useFeature("adaptiveRegen");
   const masteryAnalyticsEnabled = useFeature("masteryAnalytics");
+  const examReadinessEtaEnabled = useFeature("examReadinessEta");
   const { stats: progressStats } = useUserProgress();
   const { snapshots: masterySnapshots } = useMasterySnapshots();
   const [subjectsCount, setSubjectsCount] = useState(0);
@@ -323,6 +325,14 @@ export default function TodayView() {
   }
 
   const isPro = isPaidActive(userData);
+
+  // M9D: velocity + ETA (only when examReadinessEta flag ON)
+  const etaWeeks = examReadinessEtaEnabled
+    ? computeETA(examReadiness.score, masteryHistory.velocityPerWeek)
+    : null;
+  const velocityForGauge = examReadinessEtaEnabled
+    ? masteryHistory.velocityPerWeek
+    : undefined;
 
 
   const handleEnableNotifications = async () => {
@@ -879,6 +889,8 @@ export default function TodayView() {
               band={examReadiness.band}
               components={examReadiness.components}
               loading={examReadiness.loading}
+              velocityPerWeek={velocityForGauge}
+              etaWeeks={etaWeeks}
             />
             {masterySnapshots.length > 0 && (
               <>
