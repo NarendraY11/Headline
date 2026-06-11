@@ -1,5 +1,5 @@
 import { Eye, EyeOff, Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../components/Atoms";
 import { Spinner } from "../../components/Spinner";
 import { useToast } from "../../components/ui/Toast";
@@ -41,13 +41,16 @@ export default function SiteContentManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const savedRef = useRef<SiteContent>(DEFAULT_CONTENT);
   const { showToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
       const { data } = await supabase.from("app_settings").select("site_content").eq("id", 1).single();
       if (data?.site_content && Object.keys(data.site_content).length > 0) {
-        setContent({ ...DEFAULT_CONTENT, ...data.site_content });
+        const merged = { ...DEFAULT_CONTENT, ...data.site_content };
+        setContent(merged);
+        savedRef.current = merged;
       }
       setLoading(false);
     };
@@ -59,12 +62,15 @@ export default function SiteContentManager() {
   };
 
   const handleSave = async () => {
+    const optimistic = { ...content };
     setSaving(true);
-    const { error } = await supabase.from("app_settings").upsert({ id: 1, site_content: content });
+    const { error } = await supabase.from("app_settings").upsert({ id: 1, site_content: optimistic });
     setSaving(false);
     if (error) {
+      setContent(savedRef.current);
       showToast({ type: "error", title: "Save failed", message: error.message });
     } else {
+      savedRef.current = optimistic;
       showToast({ type: "success", title: "Content saved", message: "Landing page will reflect changes on next visit." });
     }
   };

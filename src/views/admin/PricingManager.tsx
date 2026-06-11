@@ -1,5 +1,5 @@
 import { IndianRupee, Plus, Save, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../components/Atoms";
 import { Spinner } from "../../components/Spinner";
 import { useToast } from "../../components/ui/Toast";
@@ -23,6 +23,7 @@ export default function PricingManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newTier, setNewTier] = useState<Partial<PricingTier>>({ currency: "INR" });
+  const savedRef = useRef<PricingTier[]>(DEFAULT_TIERS);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function PricingManager() {
           description: val.description || "",
         }));
         setTiers(parsed);
+        savedRef.current = parsed;
       }
       setLoading(false);
     };
@@ -71,16 +73,19 @@ export default function PricingManager() {
   };
 
   const handleSave = async () => {
+    const optimistic = [...tiers];
     setSaving(true);
     const pricingObj: Record<string, any> = {};
-    tiers.forEach((t) => {
+    optimistic.forEach((t) => {
       pricingObj[t.key] = { label: t.label, amount: t.amount, currency: t.currency, description: t.description };
     });
     const { error } = await supabase.from("app_settings").upsert({ id: 1, pricing: pricingObj });
     setSaving(false);
     if (error) {
+      setTiers(savedRef.current);
       showToast({ type: "error", title: "Save failed", message: error.message });
     } else {
+      savedRef.current = optimistic;
       showToast({ type: "success", title: "Pricing updated", message: "Changes live on next checkout." });
     }
   };

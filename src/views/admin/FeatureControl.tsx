@@ -1,5 +1,5 @@
 import { AlertTriangle, Eye, ImageOff, PowerOff, Save } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../../components/Atoms";
 import { useToast } from "../../components/ui/Toast";
 import { defaultFlags, FlagKeys, Flags } from "../../hooks/useFeatureFlags";
@@ -81,6 +81,7 @@ export default function FeatureControl() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hover, setHover] = useState<HoverState | null>(null);
+  const savedRef = useRef<Flags>(defaultFlags);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -92,7 +93,9 @@ export default function FeatureControl() {
     if (error) {
       console.error("Error fetching flags:", error);
     } else if (data?.flags) {
-      setFlags({ ...defaultFlags, ...data.flags });
+      const merged = { ...defaultFlags, ...data.flags };
+      setFlags(merged);
+      savedRef.current = merged;
     }
     setLoading(false);
   };
@@ -113,12 +116,15 @@ export default function FeatureControl() {
   };
 
   const handleSave = async () => {
+    const optimistic = { ...flags };
     setSaving(true);
-    const { error } = await supabase.from("app_settings").upsert({ id: 1, flags });
+    const { error } = await supabase.from("app_settings").upsert({ id: 1, flags: optimistic });
     setSaving(false);
     if (error) {
+      setFlags(savedRef.current);
       showToast({ type: "error", title: "Save Failed", message: error.message });
     } else {
+      savedRef.current = optimistic;
       showToast({ type: "success", title: "Saved successfully", message: "Feature flags updated." });
     }
   };
