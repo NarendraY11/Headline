@@ -29,6 +29,7 @@ import type { ReactNode } from "react";
 import React, { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useFeature } from "../../hooks/useFeatureFlags";
 import { useMaterialize, useRegenerate, useTodayMissions } from "../../hooks/useStudyMissions";
 import { launchMission } from "../../lib/launchMission";
 import type { MissionStatus, MissionType, StudyMissionRow } from "../../types/studyScheduler";
@@ -84,9 +85,10 @@ interface MissionCardProps {
   mission: StudyMissionRow;
   onStart: (m: StudyMissionRow) => void;
   launching: boolean;
+  showScores?: boolean;
 }
 
-function MissionCard({ mission, onStart, launching }: MissionCardProps) {
+function MissionCard({ mission, onStart, launching, showScores }: MissionCardProps) {
   const meta = TYPE_META[mission.type] ?? TYPE_META.drill;
   const isDone = mission.status === "completed" || mission.status === "skipped";
 
@@ -120,9 +122,23 @@ function MissionCard({ mission, onStart, launching }: MissionCardProps) {
       </div>
 
       {isDone ? (
-        <div className="flex-shrink-0 flex items-center gap-1 font-mono text-[9px] uppercase tracking-wide text-muted-2 pl-1">
+        <div className="flex-shrink-0 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wide text-muted-2 pl-1">
           {mission.status === "completed" ? (
-            <><CheckCircle2 size={12} className="text-mint" /> Done</>
+            <>
+              <CheckCircle2 size={12} className="text-mint" />
+              {showScores && mission.score != null ? (
+                <span
+                  className={`text-[9px] font-mono font-semibold ${
+                    mission.score >= 80 ? "text-mint" :
+                    mission.score >= 60 ? "text-amber" : "text-signal"
+                  }`}
+                >
+                  {mission.score}%
+                </span>
+              ) : (
+                <span>Done</span>
+              )}
+            </>
           ) : (
             <><SkipForward size={12} /> Skipped</>
           )}
@@ -161,6 +177,7 @@ export function TodayMissions({ subjectMastery, activePlanId }: TodayMissionsPro
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const missionScoresEnabled = useFeature("missionScores");
   const { missions, loading, error, needsMaterialization, refetch } = useTodayMissions();
   const { materialize, materializing, error: matError, lastResult } = useMaterialize();
   const { regenerate, regenerating } = useRegenerate();
@@ -317,6 +334,7 @@ export function TodayMissions({ subjectMastery, activePlanId }: TodayMissionsPro
             mission={m}
             onStart={handleStart}
             launching={launchingId === m.id}
+            showScores={missionScoresEnabled}
           />
         ))}
       </div>
