@@ -427,6 +427,8 @@ async function studyAdaptiveRegen(req: VercelRequest, res: VercelResponse) {
           .gte("scheduled_date", sevenDaysAgo),
         admin.from("profiles").select("streak_count").eq("id", user.id).maybeSingle(),
       ]);
+      if (missionsRes.error) console.warn("adaptive-regen: missions enrichment query failed:", missionsRes.error.message);
+      if (profileRes.error) console.warn("adaptive-regen: profile enrichment query failed:", profileRes.error.message);
       const recentMissions = (missionsRes.data ?? []) as { status: string }[];
       if (recentMissions.length > 0) {
         const completed = recentMissions.filter((m) => m.status === "completed").length;
