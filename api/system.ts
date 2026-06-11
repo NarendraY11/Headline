@@ -414,11 +414,36 @@ async function studyAdaptiveRegen(req: VercelRequest, res: VercelResponse) {
     const GEMINI_KEY = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "";
     if (!GEMINI_KEY) return res.status(503).json({ error: "AI service unavailable." });
 
+    // M9C: enrich coach context with mission completion rate + streak
+    let completionRate7d: number | null = null;
+    let streakCount = 0;
+    if (await isFeatureEnabled("coachContextEnrichment")) {
+      const sevenDaysAgo = new Date(now - 7 * 864e5).toISOString().slice(0, 10);
+      const [missionsRes, profileRes] = await Promise.all([
+        admin.from("study_missions")
+          .select("status")
+          .eq("user_id", user.id)
+          .eq("source", "plan")
+          .gte("scheduled_date", sevenDaysAgo),
+        admin.from("profiles").select("streak_count").eq("id", user.id).maybeSingle(),
+      ]);
+      if (missionsRes.error) console.warn("adaptive-regen: missions enrichment query failed:", missionsRes.error.message);
+      if (profileRes.error) console.warn("adaptive-regen: profile enrichment query failed:", profileRes.error.message);
+      const recentMissions = (missionsRes.data ?? []) as { status: string }[];
+      if (recentMissions.length > 0) {
+        const completed = recentMissions.filter((m) => m.status === "completed").length;
+        completionRate7d = Math.round((completed / recentMissions.length) * 100);
+      }
+      streakCount = (profileRes.data as { streak_count?: number } | null)?.streak_count ?? 0;
+    }
+
     const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
     const coachResult = await handleCoach(ai, admin, user.id, {
       scores,
       examId: (planRow.plan as { meta?: { examId?: string } })?.meta?.examId ?? null,
       targetDate: (planRow.plan as { meta?: { targetDate?: string } })?.meta?.targetDate ?? null,
+      ...(completionRate7d !== null && { completionRate7d }),
+      ...(streakCount > 0 && { streakCount }),
     });
     if (coachResult.status !== 200) return res.status(coachResult.status).json(coachResult.body);
 

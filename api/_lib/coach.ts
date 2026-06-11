@@ -284,6 +284,9 @@ export async function handleCoach(
   const horizonDays = clampHorizon(body?.horizonDays);
   const examId: string | null = typeof body?.examId === "string" ? body.examId.slice(0, 100) : null;
   const targetDate: string | null = typeof body?.targetDate === "string" ? body.targetDate.slice(0, 10) : null;
+  // M9C: optional enrichment fields (present when coachContextEnrichment flag ON)
+  const completionRate7d: number | null = typeof body?.completionRate7d === "number" ? body.completionRate7d : null;
+  const streakCount: number = typeof body?.streakCount === "number" ? body.streakCount : 0;
 
   const keyMaterial = JSON.stringify({ scores, horizonDays, examId, targetDate });
   const payloadHash = crypto.createHash("sha256").update(keyMaterial).digest("hex");
@@ -302,7 +305,7 @@ export async function handleCoach(
   let finalData: Record<string, unknown>;
 
   if (jsonMode) {
-    finalData = await generateJsonPlan(ai, admin, uid, { scoresText, horizonDays, examId, targetDate });
+    finalData = await generateJsonPlan(ai, admin, uid, { scoresText, horizonDays, examId, targetDate, completionRate7d, streakCount });
   } else {
     const text = await generateMarkdownPlan(ai, scoresText);
     finalData = { text, format: "markdown" };
@@ -324,7 +327,16 @@ async function generateJsonPlan(
   ai: GenAI,
   admin: Admin,
   uid: string,
-  ctx: { scoresText: string; horizonDays: number; examId: string | null; targetDate: string | null }
+  ctx: {
+    scoresText: string;
+    horizonDays: number;
+    examId: string | null;
+    targetDate: string | null;
+    /** M9C: 7-day mission completion rate 0-100, null if no data */
+    completionRate7d?: number | null;
+    /** M9C: current study streak in days */
+    streakCount?: number;
+  }
 ): Promise<Record<string, unknown>> {
   // Constrain subjectId hallucination: hand the model the real published
   // subjects to choose from. Failure here is non-fatal (empty list).
@@ -350,7 +362,12 @@ async function generateJsonPlan(
     `dayIndex 0..${ctx.horizonDays - 1}. Each task.taskRef must be unique ("d{dayIndex}.{position}"). ` +
     `Prioritise the weakest topics. Mix task types: drill (MCQs), review (spaced repetition, scope "due"), ` +
     `viva, flashcard, mini_test, mock. version must be 1.` +
-    subjectsText;
+    subjectsText +
+    (ctx.completionRate7d != null
+      ? `\n\nRecent effort context: the student completed ${ctx.completionRate7d}% of scheduled missions in the last 7 days.` +
+        (ctx.streakCount ? ` Current study streak: ${ctx.streakCount} days.` : "") +
+        ` Adjust workload intensity accordingly: if completion rate is low, reduce daily task count; if high, maintain or increase.`
+      : "");
 
   try {
     const response = await ai.models.generateContent({
