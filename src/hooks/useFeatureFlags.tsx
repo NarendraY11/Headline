@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-export type FlagKeys = "aiExplain" | "aiCoach" | "aiDiagnosis" | "aiPractice" | "weatherBriefing" | "mockExams" | "topicPractice" | "qotd" | "spacedRepetition" | "flashcards" | "cockpitLayouts" | "analytics" | "masteryCharts" | "blog" | "examSeoPages" | "a320Systems" | "adsense" | "pricingCheckout" | "freeTrial" | "proGating" | "maintenanceMode" | "cookieConsent" | "announcementBanner" | "announcementText" | "signupsOpen" | "themeToggle" | "vivaPractice" | "referralProgram" | "notifications" | "bookmarksEnabled" | "searchEnabled" | "leaderboard" | "offlineMode" | "pwaInstallPrompt" | "aiStudyScheduler" | "masterySnapshots" | "examReadinessDashboard" | "sm2Algorithm" | "adaptiveRegen";
+export type FlagKeys = "aiExplain" | "aiCoach" | "aiDiagnosis" | "aiPractice" | "weatherBriefing" | "mockExams" | "topicPractice" | "qotd" | "spacedRepetition" | "flashcards" | "cockpitLayouts" | "analytics" | "masteryCharts" | "blog" | "examSeoPages" | "a320Systems" | "adsense" | "pricingCheckout" | "freeTrial" | "proGating" | "maintenanceMode" | "cookieConsent" | "announcementBanner" | "announcementText" | "signupsOpen" | "themeToggle" | "vivaPractice" | "referralProgram" | "notifications" | "bookmarksEnabled" | "searchEnabled" | "leaderboard" | "offlineMode" | "pwaInstallPrompt" | "aiStudyScheduler" | "masterySnapshots" | "examReadinessDashboard" | "sm2Algorithm" | "adaptiveRegen" | "masteryAnalytics";
 
 export type Flags = Record<FlagKeys, any>;
 
@@ -45,6 +45,7 @@ export const defaultFlags: Flags = {
   examReadinessDashboard: false, // M8B: exam readiness gauge + subject ranking (OFF by default)
   sm2Algorithm: false,           // M8C: full SM-2 spaced repetition (gradual rollout 5→50→100%)
   adaptiveRegen: false,          // M8D: adaptive regeneration engine (OFF by default)
+  masteryAnalytics: false,       // M8E: mastery heatmap + trend graph (pro users only, OFF by default)
 };
 
 const FeatureFlagsContext = createContext<{ flags: Flags; loading: boolean }>({ flags: defaultFlags, loading: true });

@@ -31,13 +31,17 @@ import { ExamReadinessGauge } from "./today/ExamReadinessGauge";
 import { SubjectRanking } from "./today/SubjectRanking";
 import { RecommendedFocus } from "./today/RecommendedFocus";
 import { AdaptiveRegenBanner } from "./today/AdaptiveRegenBanner";
+import { MasteryHeatmap } from "./today/MasteryHeatmap";
 import { useExamReadiness } from "../hooks/useExamReadiness";
 import { useMasterySnapshots } from "../hooks/useMasterySnapshots";
 import { useAdaptiveRegen } from "../hooks/useAdaptiveRegen";
+import { useMasteryHistory } from "../hooks/useMasteryHistory";
+import { isPaidActive } from "../lib/plan";
 import { trackPlanRebalanced } from "../lib/studyAnalytics";
 
 const MasteryRadar = lazy(() => import("./today/MasteryRadar"));
 const PacingChart = lazy(() => import("./today/PacingChart"));
+const MasteryTrendGraph = lazy(() => import("./today/MasteryTrendGraph"));
 
 const ChartFallback = () => <div className="w-full h-full min-h-[260px] bg-bg-2 animate-pulse rounded-md" />;
 import { WeatherWidget } from "./today/WeatherWidget";
@@ -52,11 +56,14 @@ export default function TodayView() {
   const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
   const examReadinessDashboardEnabled = useFeature("examReadinessDashboard");
   const adaptiveRegenEnabled = useFeature("adaptiveRegen");
+  const masteryAnalyticsEnabled = useFeature("masteryAnalytics");
   const { stats: progressStats } = useUserProgress();
   const { snapshots: masterySnapshots } = useMasterySnapshots();
   const [subjectsCount, setSubjectsCount] = useState(0);
   const examReadiness = useExamReadiness(subjectsCount);
   const adaptiveRegen = useAdaptiveRegen();
+  // useMasteryHistory called unconditionally; internally gates on flag + userId
+  const masteryHistory = useMasteryHistory(8);
   const [notificationStatus, setNotificationStatus] = useState<
     NotificationPermission | "unsupported"
   >("default");
@@ -314,6 +321,8 @@ export default function TodayView() {
   for (const sub of subjectsList) {
     subjectTitleMap[sub.id] = sub.title;
   }
+
+  const isPro = isPaidActive(userData);
 
 
   const handleEnableNotifications = async () => {
@@ -883,6 +892,26 @@ export default function TodayView() {
                 />
               </>
             )}
+          </div>
+        )}
+
+        {/* M8E: Mastery Analytics — pro-only, flag-gated, lazy-loaded */}
+        {masteryAnalyticsEnabled && isPro && (
+          <div className="space-y-3 mb-8">
+            <MasteryHeatmap
+              weeks={masteryHistory.weeks}
+              subjects={masteryHistory.subjects}
+              subjectTitles={subjectTitleMap}
+              loading={masteryHistory.loading}
+            />
+            <Suspense fallback={<div className="h-[260px] bg-bg-2 animate-pulse rounded-2xl" />}>
+              <MasteryTrendGraph
+                weeks={masteryHistory.weeks}
+                snapshots={masterySnapshots}
+                subjectTitles={subjectTitleMap}
+                loading={masteryHistory.loading}
+              />
+            </Suspense>
           </div>
         )}
 
