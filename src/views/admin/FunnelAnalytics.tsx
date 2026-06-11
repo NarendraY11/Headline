@@ -71,7 +71,7 @@ async function fetchFunnelData(days: number): Promise<FunnelData> {
     { data: quizCompletes },
     { data: plansRows },
     { data: missionsRows },
-    { data: events30d },
+    sevenDayResult,
     { data: subsRows },
   ] = await Promise.all([
     supabase.from("events").select("user_id").eq("event_type", "page_view").gte("created_at", start).limit(10000),
@@ -80,28 +80,19 @@ async function fetchFunnelData(days: number): Promise<FunnelData> {
     supabase.from("events").select("user_id,created_at").eq("event_type", "quiz_complete").gte("created_at", start).limit(10000),
     supabase.from("study_plans").select("user_id").gte("created_at", start).limit(10000),
     supabase.from("study_missions").select("user_id").eq("status", "completed").gte("completed_at", start).limit(10000),
-    supabase.from("events").select("user_id,created_at").gte("created_at", start30).limit(50000),
+    supabase.rpc("count_seven_day_active_users", { window_start: start30 }),
     supabase.from("events").select("user_id").eq("event_type", "upgrade_pro_success").gte("created_at", start).limit(10000),
   ]);
 
   // Step counts
-  const visitorCount     = distinctUsers(pageViews ?? []);
-  const signupCount      = (newProfiles ?? []).length;
+  const visitorCount      = distinctUsers(pageViews ?? []);
+  const signupCount       = (newProfiles ?? []).length;
+  const sevenDayActive    = (sevenDayResult.data as number | null) ?? 0;
   const quizStartCount   = distinctUsers(quizStarts ?? []);
   const quizCompleteCount = distinctUsers(quizCompletes ?? []);
   const planCount        = distinctUsers(plansRows ?? []);
   const missionCount     = distinctUsers(missionsRows ?? []);
   const subCount         = distinctUsers(subsRows ?? []);
-
-  // 7-day active: users with events on 7+ distinct days within 30d window
-  const userDays: Record<string, Set<string>> = {};
-  for (const e of events30d ?? []) {
-    if (!e.user_id) continue;
-    const day = (e.created_at as string).slice(0, 10);
-    if (!userDays[e.user_id]) userDays[e.user_id] = new Set();
-    userDays[e.user_id].add(day);
-  }
-  const sevenDayActive = Object.values(userDays).filter((s) => s.size >= 7).length;
 
   // Total active = distinct users with any event in period
   const allEventRows = [...(pageViews ?? []), ...(quizStarts ?? []), ...(quizCompletes ?? []), ...(subsRows ?? [])];
