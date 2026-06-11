@@ -20,6 +20,7 @@ import { completeMission } from "../lib/studyScheduler";
 import { supabase } from "../lib/supabase";
 import { trackEvent } from "../lib/track";
 import { trackStudyPlanGenerated } from "../lib/studyAnalytics";
+import { snapshotMastery } from "../lib/masterySnapshot";
 
 const EditorialLayout = lazy(() => import("./quiz-layouts/EditorialLayout"));
 const SplitLayout = lazy(() => import("./quiz-layouts/SplitLayout"));
@@ -71,6 +72,7 @@ export default function QuizView() {
   const aiExplainEnabled = useFeature("aiExplain");
   const flashcardsEnabled = useFeature("flashcards");
   const cockpitEnabled = useFeature("cockpitLayouts");
+  const masterySnapshotsEnabled = useFeature("masterySnapshots");
 
   // Load questions
   const customQuestions = location.state?.customQuestions as
@@ -777,6 +779,23 @@ export default function QuizView() {
         }
       };
       await saveAttempt();
+
+      // M8A: refresh mastery_snapshots for subjects touched in this session.
+      // Fire-and-forget — non-blocking, non-fatal.
+      if (masterySnapshotsEnabled && user?.id) {
+        const sessionSubjectIds = [
+          ...new Set(
+            questions
+              .map((q) => (q as { subjectId?: string }).subjectId)
+              .filter((id): id is string => !!id)
+          ),
+        ];
+        if (sessionSubjectIds.length > 0) {
+          snapshotMastery(user.id, sessionSubjectIds).catch((err) => {
+            console.warn("snapshotMastery: non-critical failure:", err);
+          });
+        }
+      }
 
       updateUserData({
         attempts: {
