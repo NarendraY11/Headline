@@ -58,6 +58,7 @@ const PricingManager = lazy(() => import("./views/admin/PricingManager"));
 const SiteContentManager = lazy(() => import("./views/admin/SiteContentManager"));
 const AiSettingsManager = lazy(() => import("./views/admin/AiSettingsManager"));
 const FunnelAnalytics = lazy(() => import("./views/admin/FunnelAnalytics"));
+const BillingManager = lazy(() => import("./views/admin/BillingManager"));
 
 import { CookieConsent } from "./components/CookieConsent";
 import { GlobalToastListener } from "./components/GlobalToastListener";
@@ -178,6 +179,7 @@ export default function App() {
             <Route path="/admin/site-content" element={<SiteContentManager />} />
             <Route path="/admin/ai-settings" element={<AiSettingsManager />} />
             <Route path="/admin/funnel" element={<FunnelAnalytics />} />
+            <Route path="/admin/billing" element={<BillingManager />} />
           </Route>
 
           {/* AUTHENTICATED APP ROUTES (With App Shell) */}
