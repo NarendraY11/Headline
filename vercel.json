@@ -37,6 +37,8 @@
     { "source": "/api/auth-event", "destination": "/api/system?fn=auth-event" },
     { "source": "/api/study/materialize", "destination": "/api/system?fn=study-materialize" },
     { "source": "/api/study/metrics", "destination": "/api/system?fn=study-metrics" },
+    { "source": "/api/study/mastery-check", "destination": "/api/system?fn=study-mastery-check" },
+    { "source": "/api/study/adaptive-regen", "destination": "/api/system?fn=study-adaptive-regen" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
