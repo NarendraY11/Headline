@@ -27,6 +27,11 @@ import { TodayLoader } from "./today/DashboardLoaders";
 import { TodayMissions } from "./today/TodayMissions";
 import { TodayStops } from "./today/TodayStops";
 import { getPacingData } from "./today/utils";
+import { ExamReadinessGauge } from "./today/ExamReadinessGauge";
+import { SubjectRanking } from "./today/SubjectRanking";
+import { RecommendedFocus } from "./today/RecommendedFocus";
+import { useExamReadiness } from "../hooks/useExamReadiness";
+import { useMasterySnapshots } from "../hooks/useMasterySnapshots";
 
 const MasteryRadar = lazy(() => import("./today/MasteryRadar"));
 const PacingChart = lazy(() => import("./today/PacingChart"));
@@ -42,7 +47,11 @@ export default function TodayView() {
   const { addNotification } = useNotifications();
   const weatherBriefingEnabled = useFeature("weatherBriefing");
   const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
+  const examReadinessDashboardEnabled = useFeature("examReadinessDashboard");
   const { stats: progressStats } = useUserProgress();
+  const { snapshots: masterySnapshots } = useMasterySnapshots();
+  const [subjectsCount, setSubjectsCount] = useState(0);
+  const examReadiness = useExamReadiness(subjectsCount);
   const [notificationStatus, setNotificationStatus] = useState<
     NotificationPermission | "unsupported"
   >("default");
@@ -85,6 +94,7 @@ export default function TodayView() {
       try {
         const merged = await fetchMergedSubjects();
         setSubjectsList(merged);
+        setSubjectsCount(merged.length);
       } catch (err) {
         console.error("Failed loading subjects in TodayView:", err);
       } finally {
@@ -293,6 +303,12 @@ export default function TodayView() {
   const readinessPercentage = progressStats.examReadiness;
 
   const pacingData = getPacingData(savedDate, logbook);
+
+  // Subject id → display title for M8B components
+  const subjectTitleMap: Record<string, string> = {};
+  for (const sub of subjectsList) {
+    subjectTitleMap[sub.id] = sub.title;
+  }
 
 
   const handleEnableNotifications = async () => {
@@ -810,6 +826,30 @@ export default function TodayView() {
           <TodayMissions
             subjectMastery={progressStats.subjectMastery}
           />
+        )}
+
+        {/* M8B: Exam Readiness Dashboard — flag-gated */}
+        {examReadinessDashboardEnabled && (
+          <div className="space-y-3 mb-8">
+            <ExamReadinessGauge
+              score={examReadiness.score}
+              band={examReadiness.band}
+              components={examReadiness.components}
+              loading={examReadiness.loading}
+            />
+            {masterySnapshots.length > 0 && (
+              <>
+                <SubjectRanking
+                  snapshots={masterySnapshots}
+                  subjectTitles={subjectTitleMap}
+                />
+                <RecommendedFocus
+                  snapshots={masterySnapshots}
+                  subjectTitles={subjectTitleMap}
+                />
+              </>
+            )}
+          </div>
         )}
 
         {/* TodayStops: primary when flag OFF, supplemental when flag ON */}

@@ -53,3 +53,20 @@ export function trackCalendarOpened() {
 export function trackScheduleRegenerated(oldPlanId: string | null, newPlanId: string) {
   posthogCapture("schedule_regenerated", { old_plan_id: oldPlanId, new_plan_id: newPlanId });
 }
+
+export function trackReadinessImproved(
+  oldBand: string,
+  newBand: string,
+  score: number,
+  components: { mastery: number; coverage: number; consistency: number; recency: number }
+) {
+  posthogCapture("readiness_improved", {
+    old_band: oldBand,
+    new_band: newBand,
+    score,
+    component_mastery:     Math.round(components.mastery * 100),
+    component_coverage:    Math.round(components.coverage * 100),
+    component_consistency: Math.round(components.consistency * 100),
+    component_recency:     Math.round(components.recency * 100),
+  });
+}
