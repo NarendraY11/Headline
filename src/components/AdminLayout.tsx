@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Wordmark } from "./branding/Wordmark";
-import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity, ShieldCheck, FileText, SlidersHorizontal, ChevronDown, ChevronRight, Bell, IndianRupee, Globe, UserCog, Bot } from "lucide-react";
+import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity, ShieldCheck, FileText, SlidersHorizontal, ChevronDown, ChevronRight, Bell, IndianRupee, Globe, UserCog, Bot, Filter } from "lucide-react";
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
@@ -19,6 +19,7 @@ export function AdminLayout() {
     { label: "Questions Catalog", path: "/admin/questions", icon: HelpCircle },
     { label: "Bulk Importer", path: "/admin/import", icon: UploadCloud },
     { label: "Student cohorts", path: "/admin/users", icon: Users },
+    { label: "Funnel Analytics", path: "/admin/funnel", icon: Filter },
     { label: "Notifications", path: "/admin/notifications", icon: Bell },
   ];
 
