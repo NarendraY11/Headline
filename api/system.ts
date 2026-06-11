@@ -227,6 +227,279 @@ async function studyMetrics(req: VercelRequest, res: VercelResponse) {
   });
 }
 
+// ── Trigger thresholds (M8D) ─────────────────────────────────────────────────
+const DRIFT_THRESHOLD     = -8;
+const RECOVERY_THRESHOLD  = 80;
+const STALENESS_DAYS      = 21;
+const CRITICAL_THRESHOLD  = 50;
+const MIN_ANSWERS_FOR_NEW_CRITICAL = 5;
+const AUTO_REGEN_COOLDOWN_MS  = 3 * 24 * 60 * 60 * 1000;
+// Per-plan-cycle cap: regen_count carries forward to each new plan.
+// After this many auto-regens the user must manually initiate.
+// New plan from a manual regen starts at regen_count=0, resetting the cap.
+const MAX_AUTO_REGENS_PER_PLAN_CYCLE = 3;
+
+// ---- /api/system?fn=study-mastery-check ------------------------------------
+
+async function studyMasteryCheck(req: VercelRequest, res: VercelResponse) {
+  const admin = getSupabaseAdmin();
+  const user = await getAuthenticatedUser(req, res);
+  if (!user) return;
+
+  if (!(await isFeatureEnabled("adaptiveRegen"))) {
+    return res.status(403).json({ error: "Adaptive regen not enabled." });
+  }
+
+  const { data: planRow, error: planErr } = await admin
+    .from("study_plans")
+    .select("id, plan, generated_at, last_regen_at, regen_count, auto_regen_enabled")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (planErr) return res.status(500).json({ error: "Failed to load plan." });
+  if (!planRow) return res.status(404).json({ error: "No active study plan." });
+
+  const { data: snapRows } = await admin
+    .from("mastery_snapshots")
+    .select("subject_id, mastery, baseline_mastery, answers_total, correct_7d, total_7d")
+    .eq("user_id", user.id);
+
+  const snapshots = (snapRows ?? []) as {
+    subject_id: string;
+    mastery: number;
+    baseline_mastery: number;
+    answers_total: number;
+    correct_7d: number;
+    total_7d: number;
+  }[];
+
+  const now = Date.now();
+  const planAge = planRow.generated_at ? now - new Date(planRow.generated_at).getTime() : 0;
+  const lastRegenAt = planRow.last_regen_at ? new Date(planRow.last_regen_at).getTime() : null;
+  const cooldownRemaining = lastRegenAt
+    ? Math.max(0, AUTO_REGEN_COOLDOWN_MS - (now - lastRegenAt))
+    : 0;
+
+  const planWeakAreaIds = new Set<string>(
+    ((planRow.plan as { weakAreas?: { subjectId: string }[] })?.weakAreas ?? []).map((a) => a.subjectId)
+  );
+
+  type TriggerType = "mastery_drift" | "recovery" | "staleness" | "new_critical" | null;
+  let triggerReason: TriggerType = null;
+
+  const subjectDetails: {
+    subjectId: string;
+    currentMastery: number;
+    baselineMastery: number;
+    delta: number;
+    trend: string;
+    classification: string;
+  }[] = [];
+
+  for (const s of snapshots) {
+    const delta = s.mastery - s.baseline_mastery;
+    const recentAcc = s.total_7d >= 5 ? s.correct_7d / s.total_7d : null;
+
+    let trend = "STABLE";
+    if (delta >= 10) trend = "IMPROVING";
+    else if (delta >= 3) trend = "PROGRESSING";
+    else if (delta > -3) trend = "STABLE";
+    else if (delta > -10) trend = "REGRESSING";
+    else trend = "DECLINING";
+    if (recentAcc !== null && recentAcc < 0.5 && (trend === "STABLE" || trend === "PROGRESSING")) trend = "REGRESSING";
+
+    const classification =
+      s.mastery < 50 ? "CRITICAL"
+      : s.mastery < 65 ? "WEAK"
+      : s.mastery < 80 ? "DEVELOPING"
+      : "STRONG";
+
+    subjectDetails.push({ subjectId: s.subject_id, currentMastery: s.mastery, baselineMastery: s.baseline_mastery, delta, trend, classification });
+
+    if (!triggerReason) {
+      if (delta <= DRIFT_THRESHOLD) triggerReason = "mastery_drift";
+      else if (s.mastery >= RECOVERY_THRESHOLD && planWeakAreaIds.has(s.subject_id)) triggerReason = "recovery";
+      else if (!planWeakAreaIds.has(s.subject_id) && s.mastery < CRITICAL_THRESHOLD && s.answers_total >= MIN_ANSWERS_FOR_NEW_CRITICAL) triggerReason = "new_critical";
+    }
+  }
+
+  if (!triggerReason && planAge > STALENESS_DAYS * 864e5) triggerReason = "staleness";
+
+  const onCooldown = cooldownRemaining > 0;
+  const autoRegenDisabled = planRow.auto_regen_enabled === false;
+  const shouldRegen = !!triggerReason && !onCooldown && !autoRegenDisabled;
+
+  res.setHeader("Cache-Control", "no-store");
+  return res.status(200).json({
+    shouldRegen,
+    reason: shouldRegen ? triggerReason : null,
+    cooldownRemaining: Math.round(cooldownRemaining / 1000),
+    autoRegenEnabled: planRow.auto_regen_enabled !== false,
+    subjects: subjectDetails,
+    lastRegenAt: planRow.last_regen_at ?? null,
+    regenCount: planRow.regen_count ?? 0,
+    planId: planRow.id,
+  });
+}
+
+// ---- /api/system?fn=study-adaptive-regen -----------------------------------
+
+async function studyAdaptiveRegen(req: VercelRequest, res: VercelResponse) {
+  const admin = getSupabaseAdmin();
+  const user = await getAuthenticatedUser(req, res);
+  if (!user) return;
+
+  if (!(await isFeatureEnabled("adaptiveRegen"))) return res.status(403).json({ error: "Adaptive regen not enabled." });
+  if (!(await isFeatureEnabled("aiStudyScheduler"))) return res.status(403).json({ error: "Study scheduler not enabled." });
+
+  const screen = await screenSubmission({ formId: "study:adaptive-regen", identity: user.id, body: req.body, req });
+  if (!screen.ok) return res.status(screen.status).json({ error: screen.error });
+
+  const { data: planRow, error: planErr } = await admin
+    .from("study_plans")
+    .select("id, plan, generated_at, last_regen_at, regen_count, auto_regen_enabled")
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (planErr || !planRow) return res.status(404).json({ error: "No active study plan." });
+
+  const now = Date.now();
+  const regenCount = planRow.regen_count ?? 0;
+
+  // Cooldown enforcement (3-day minimum between auto-regens)
+  if (planRow.last_regen_at) {
+    const elapsed = now - new Date(planRow.last_regen_at).getTime();
+    if (elapsed < AUTO_REGEN_COOLDOWN_MS) {
+      const secs = Math.round((AUTO_REGEN_COOLDOWN_MS - elapsed) / 1000);
+      return res.status(429).json({ error: "Regen on cooldown.", rateLimited: true, cooldownRemaining: secs });
+    }
+  }
+
+  // Per-plan-cycle cap: auto only; manual always allowed
+  if (regenCount >= MAX_AUTO_REGENS_PER_PLAN_CYCLE && req.body?.source !== "manual") {
+    await admin.from("study_plans").update({ auto_regen_enabled: false }).eq("id", planRow.id);
+    return res.status(429).json({ error: "Auto-regen limit reached for this plan cycle. Manual regen still available.", rateLimited: true });
+  }
+
+  // FIX: advisory lock — same key as studyMaterialize so both ops
+  // are mutually exclusive per user, preventing concurrent plan edits.
+  const lockKey = advisoryLockKey(user.id);
+  const { data: lockData, error: lockErr } = await admin.rpc("pg_try_advisory_lock", { key: lockKey });
+  if (lockErr) {
+    console.warn("adaptive-regen: advisory lock unavailable:", lockErr.message);
+  } else if (!lockData) {
+    return res.status(409).json({ error: "Another plan operation is in progress for this user." });
+  }
+
+  let newPlanId: string | undefined;
+
+  try {
+    // Build coach scores from mastery snapshots
+    const { data: snapRows } = await admin
+      .from("mastery_snapshots")
+      .select("subject_id, mastery")
+      .eq("user_id", user.id);
+
+    const scores: Record<string, { correct: number; total: number }> = {};
+    for (const s of (snapRows ?? []) as { subject_id: string; mastery: number }[]) {
+      scores[s.subject_id] = { correct: s.mastery, total: 100 };
+    }
+    if (Object.keys(scores).length === 0) return res.status(422).json({ error: "No mastery data to regenerate plan." });
+
+    // Generate new plan via coach (reuses coach infra + caching)
+    const { handleCoach } = await import("./_lib/coach.js");
+    const { GoogleGenAI } = await import("@google/genai");
+    const GEMINI_KEY = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY ?? "";
+    if (!GEMINI_KEY) return res.status(503).json({ error: "AI service unavailable." });
+
+    const ai = new GoogleGenAI({ apiKey: GEMINI_KEY });
+    const coachResult = await handleCoach(ai, admin, user.id, {
+      scores,
+      examId: (planRow.plan as { meta?: { examId?: string } })?.meta?.examId ?? null,
+      targetDate: (planRow.plan as { meta?: { targetDate?: string } })?.meta?.targetDate ?? null,
+    });
+    if (coachResult.status !== 200) return res.status(coachResult.status).json(coachResult.body);
+
+    newPlanId = (coachResult.body as { planId?: string }).planId;
+    if (!newPlanId) return res.status(500).json({ error: "Coach did not return plan ID." });
+
+    // Materialize new plan inline
+    const { data: newPlanRow, error: newPlanErr } = await admin
+      .from("study_plans").select("id, plan").eq("id", newPlanId).single();
+    if (newPlanErr || !newPlanRow) return res.status(500).json({ error: "Failed to load new plan." });
+
+    const validation = validateStudyPlan(newPlanRow.plan);
+    if (!validation.ok) return res.status(422).json({ error: `Invalid plan: ${validation.error}` });
+
+    const baseDate = new Date();
+    const todayISO = baseDate.toISOString().slice(0, 10);
+    const missionRows = expandPlanToMissions(validation.plan, { planId: newPlanId, userId: user.id, baseDate });
+
+    // Delete future pending old-plan missions
+    const { error: delErr } = await admin.from("study_missions")
+      .delete()
+      .eq("plan_id", planRow.id)
+      .eq("source", "plan")
+      .eq("status", "pending")
+      .gte("scheduled_date", todayISO);
+    if (delErr) {
+      console.error("adaptive-regen: delete missions failed:", delErr.message);
+      return res.status(500).json({ error: "Failed to clear old missions." });
+    }
+
+    // FIX: compensate orphan — if insert fails, restore old plan as active
+    if (missionRows.length > 0) {
+      const { error: insErr } = await admin.from("study_missions").insert(missionRows);
+      if (insErr) {
+        console.error("adaptive-regen: mission insert failed:", insErr.message);
+        // New plan is already active (set by handleCoach). Restore old plan to
+        // active so user has a working schedule while we fail gracefully.
+        await admin.from("study_plans").update({ status: "archived" }).eq("id", newPlanId);
+        await admin.from("study_plans").update({ status: "active" }).eq("id", planRow.id);
+        return res.status(500).json({ error: "Failed to create missions. Plan restored to previous state." });
+      }
+    }
+
+    // Re-baseline mastery snapshots: baseline_mastery = current mastery
+    const rebaseRows = (snapRows ?? []).map((s: { subject_id: string; mastery: number }) => ({
+      user_id: user.id,
+      subject_id: s.subject_id,
+      baseline_mastery: s.mastery,
+      updated_at: new Date().toISOString(),
+    }));
+    if (rebaseRows.length > 0) {
+      await admin.from("mastery_snapshots").upsert(rebaseRows, { onConflict: "user_id,subject_id" });
+    }
+
+    const daysSinceLast = planRow.last_regen_at
+      ? Math.round((now - new Date(planRow.last_regen_at).getTime()) / 864e5)
+      : Math.round((now - new Date(planRow.generated_at ?? 0).getTime()) / 864e5);
+
+    await admin.from("study_plans")
+      .update({ last_regen_at: new Date().toISOString(), regen_count: regenCount + 1 })
+      .eq("id", newPlanId);
+
+    return res.status(200).json({
+      ok: true,
+      newPlanId,
+      missionsCreated: missionRows.length,
+      regenCount: regenCount + 1,
+      daysSinceLastRegen: daysSinceLast,
+    });
+  } finally {
+    // Release advisory lock regardless of success or failure
+    if (!lockErr && lockData) {
+      try {
+        await admin.rpc("pg_advisory_unlock", { key: lockKey });
+      } catch (e: unknown) {
+        console.warn("adaptive-regen: advisory unlock failed:", e);
+      }
+    }
+  }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const fnParam = req.query.fn;
   const fn = Array.isArray(fnParam) ? fnParam[0] : fnParam;
@@ -261,6 +534,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: "Method Not Allowed" });
     }
     return studyMetrics(req, res);
+  }
+
+  if (fn === "study-mastery-check") {
+    if (req.method !== "GET") {
+      res.setHeader("Allow", "GET");
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
+    return studyMasteryCheck(req, res);
+  }
+
+  if (fn === "study-adaptive-regen") {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
+    return studyAdaptiveRegen(req, res);
   }
 
   return res.status(404).json({ error: "Not Found" });

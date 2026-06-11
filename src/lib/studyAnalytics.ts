@@ -70,3 +70,25 @@ export function trackReadinessImproved(
     component_recency:     Math.round(components.recency * 100),
   });
 }
+
+export function trackPlanRebalanced(payload: {
+  planId: string;
+  trigger: "mastery_drift" | "recovery" | "staleness" | "new_critical" | "manual";
+  subjectsImproved: string[];
+  subjectsRegressed: string[];
+  oldWeakCount: number;
+  newWeakCount: number;
+  daysSinceLastRegen: number;
+  regenCount: number;
+}) {
+  posthogCapture("plan_rebalanced", {
+    plan_id:              payload.planId,
+    trigger:              payload.trigger,
+    subjects_improved:    payload.subjectsImproved,
+    subjects_regressed:   payload.subjectsRegressed,
+    old_weak_count:       payload.oldWeakCount,
+    new_weak_count:       payload.newWeakCount,
+    days_since_last_regen: payload.daysSinceLastRegen,
+    regen_count:          payload.regenCount,
+  });
+}

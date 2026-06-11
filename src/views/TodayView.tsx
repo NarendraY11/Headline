@@ -30,8 +30,11 @@ import { getPacingData } from "./today/utils";
 import { ExamReadinessGauge } from "./today/ExamReadinessGauge";
 import { SubjectRanking } from "./today/SubjectRanking";
 import { RecommendedFocus } from "./today/RecommendedFocus";
+import { AdaptiveRegenBanner } from "./today/AdaptiveRegenBanner";
 import { useExamReadiness } from "../hooks/useExamReadiness";
 import { useMasterySnapshots } from "../hooks/useMasterySnapshots";
+import { useAdaptiveRegen } from "../hooks/useAdaptiveRegen";
+import { trackPlanRebalanced } from "../lib/studyAnalytics";
 
 const MasteryRadar = lazy(() => import("./today/MasteryRadar"));
 const PacingChart = lazy(() => import("./today/PacingChart"));
@@ -48,10 +51,12 @@ export default function TodayView() {
   const weatherBriefingEnabled = useFeature("weatherBriefing");
   const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
   const examReadinessDashboardEnabled = useFeature("examReadinessDashboard");
+  const adaptiveRegenEnabled = useFeature("adaptiveRegen");
   const { stats: progressStats } = useUserProgress();
   const { snapshots: masterySnapshots } = useMasterySnapshots();
   const [subjectsCount, setSubjectsCount] = useState(0);
   const examReadiness = useExamReadiness(subjectsCount);
+  const adaptiveRegen = useAdaptiveRegen();
   const [notificationStatus, setNotificationStatus] = useState<
     NotificationPermission | "unsupported"
   >("default");
@@ -821,6 +826,35 @@ export default function TodayView() {
             </div>
           </div>
         </div>
+
+        {/* M8D: Adaptive Regen Banner — flag-gated, shows when drift/recovery/staleness detected */}
+        {adaptiveRegenEnabled && adaptiveRegen.checkResult && !adaptiveRegen.dismissed && (
+          <AdaptiveRegenBanner
+            checkResult={adaptiveRegen.checkResult}
+            regenning={adaptiveRegen.regenning}
+            onDismiss={adaptiveRegen.dismiss}
+            onAccept={async () => {
+              const result = await adaptiveRegen.triggerRegen("manual");
+              if (result.ok && adaptiveRegen.checkResult) {
+                trackPlanRebalanced({
+                  planId: adaptiveRegen.checkResult.planId,
+                  trigger: adaptiveRegen.checkResult.reason ?? "manual",
+                  subjectsImproved: adaptiveRegen.checkResult.subjects
+                    .filter(s => s.delta >= 5).map(s => s.subjectId),
+                  subjectsRegressed: adaptiveRegen.checkResult.subjects
+                    .filter(s => s.delta <= -5).map(s => s.subjectId),
+                  oldWeakCount: adaptiveRegen.checkResult.subjects
+                    .filter(s => s.classification === "CRITICAL" || s.classification === "WEAK").length,
+                  newWeakCount: 0,
+                  daysSinceLastRegen: adaptiveRegen.checkResult.lastRegenAt
+                    ? Math.round((Date.now() - new Date(adaptiveRegen.checkResult.lastRegenAt).getTime()) / 864e5)
+                    : 0,
+                  regenCount: adaptiveRegen.checkResult.regenCount + 1,
+                });
+              }
+            }}
+          />
+        )}
 
         {aiStudySchedulerEnabled && (
           <TodayMissions
