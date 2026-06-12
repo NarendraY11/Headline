@@ -117,6 +117,20 @@ export default defineConfig(({ command }) => {
               url: "/mock-exams",
               icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }],
             },
+            {
+              name: "Exam Centre",
+              short_name: "Exams",
+              description: "Adaptive mocks and DGCA simulator",
+              url: "/exam-centre",
+              icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }],
+            },
+            {
+              name: "Flight Schedule",
+              short_name: "Schedule",
+              description: "Your study mission calendar",
+              url: "/schedule",
+              icons: [{ src: "/pwa-192x192.png", sizes: "192x192", type: "image/png" }],
+            },
           ],
         },
         workbox: {

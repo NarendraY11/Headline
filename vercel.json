@@ -39,6 +39,7 @@
     { "source": "/api/study/metrics", "destination": "/api/system?fn=study-metrics" },
     { "source": "/api/study/mastery-check", "destination": "/api/system?fn=study-mastery-check" },
     { "source": "/api/study/adaptive-regen", "destination": "/api/system?fn=study-adaptive-regen" },
+    { "source": "/api/push/subscribe", "destination": "/api/system?fn=push-subscribe" },
     { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]

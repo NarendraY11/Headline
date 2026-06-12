@@ -525,6 +525,34 @@ async function studyAdaptiveRegen(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+// ---- /api/system?fn=push-subscribe ----------------------------------------
+async function pushSubscribe(req: VercelRequest, res: VercelResponse) {
+  const user = await getAuthenticatedUser(req, res);
+  if (!user) return;
+
+  const { endpoint, p256dh, auth } = req.body ?? {};
+  if (!endpoint || !p256dh || !auth) {
+    return res.status(400).json({ error: "endpoint, p256dh, auth required." });
+  }
+
+  const admin = getSupabaseAdmin();
+  const { error } = await admin.from("push_subscriptions").upsert(
+    {
+      user_id: user.id,
+      endpoint,
+      p256dh,
+      auth,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id,endpoint" }
+  );
+  if (error) {
+    console.error("push-subscribe upsert failed:", error.message);
+    return res.status(500).json({ error: "Failed to save push subscription." });
+  }
+  return res.status(200).json({ success: true });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const fnParam = req.query.fn;
   const fn = Array.isArray(fnParam) ? fnParam[0] : fnParam;
@@ -575,6 +603,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: "Method Not Allowed" });
     }
     return studyAdaptiveRegen(req, res);
+  }
+
+  if (fn === "push-subscribe") {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
+    return pushSubscribe(req, res);
   }
 
   return res.status(404).json({ error: "Not Found" });

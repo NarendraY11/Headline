@@ -43,6 +43,10 @@ import { useScheduleRange } from "../../hooks/useStudyMissions";
 import { launchMission } from "../../lib/launchMission";
 import { trackCalendarOpened } from "../../lib/studyAnalytics";
 import type { MissionStatus, MissionType, StudyMissionRow } from "../../types/studyScheduler";
+import { CalendarSyncPanel } from "./CalendarSyncPanel";
+import { ReminderSettings } from "./ReminderSettings";
+import { ExamCountdown } from "../../components/ExamCountdown";
+import { useStudyReminders } from "../../hooks/useStudyReminders";
 
 // ── Constants & helpers ───────────────────────────────────────────────────────
 
@@ -658,6 +662,10 @@ export default function StudyCalendarView() {
   // FIX #9: Hook called unconditionally (Rules of Hooks). The early return
   // is deferred until after all hooks have been called — see below.
   const schedulerEnabled = useFeature("aiStudyScheduler");
+  const calendarSyncEnabled = useFeature("calendarSync");
+
+  // M13: fire study/streak/exam reminders when app is open
+  useStudyReminders();
 
   useEffect(() => {
     if (schedulerEnabled) trackCalendarOpened();
@@ -943,6 +951,17 @@ export default function StudyCalendarView() {
             </div>
           )}
         </div>
+
+        {/* M13: Calendar sync + reminders sidebar */}
+        {calendarSyncEnabled && (
+          <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <CalendarSyncPanel missions={missions} planTitle="Heading Study Plan" />
+            <ReminderSettings />
+          </div>
+        )}
+
+        {/* M13: Exam countdown (always visible when exam date set) */}
+        <ExamCountdown className="mt-4 w-full" />
 
         {/* Day panel — mobile bottom sheet */}
         {showPanel && selectedDate && (
