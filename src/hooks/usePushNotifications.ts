@@ -21,15 +21,16 @@ export interface UsePushNotificationsState {
 export function usePushNotifications(): UsePushNotificationsState {
   const enabled = useFeature("pushNotifications");
   const { user } = useAuth();
-  const userId = user?.id ?? null;
+  // AuthContext exposes `uid` not `id` — this was the primary bug causing userId=null
+  const userId = (user as any)?.uid ?? (user as any)?.id ?? null;
 
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Read current SW subscription state on mount
+  // Read current SW subscription state on mount — runs regardless of flag so
+  // the UI can show existing subscription state even if flag was toggled off.
   useEffect(() => {
-    if (!enabled) return;
     if (!("Notification" in window)) { setPermission("unsupported"); return; }
     setPermission(Notification.permission);
 
@@ -41,17 +42,28 @@ export function usePushNotifications(): UsePushNotificationsState {
       setSubscribed(!!sub);
     }
     void checkExisting();
-  }, [enabled]);
+  }, []);
 
   const enable = useCallback(async () => {
-    if (!enabled || !userId) return;
+    if (!userId) {
+      console.error("[push] enable() called with no userId — user not logged in?");
+      return;
+    }
+    console.log("[push] enable() called. userId:", userId, "flagEnabled:", enabled);
     setLoading(true);
     try {
       const perm = await requestPushPermission();
+      console.log("[push] Notification.permission after request:", perm);
       setPermission(perm);
-      if (perm !== "granted") return;
+      if (perm !== "granted") {
+        console.warn("[push] Permission not granted — subscription aborted. Permission:", perm);
+        return;
+      }
       const sub = await subscribePush();
-      if (!sub) return;
+      if (!sub) {
+        console.error("[push] subscribePush() returned null — check console for reason.");
+        return;
+      }
       await savePushSubscription(userId, sub);
       setSubscribed(true);
     } finally {

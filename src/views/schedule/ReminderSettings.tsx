@@ -23,6 +23,26 @@ function savePrefs(prefs: Record<string, boolean>) {
 export function ReminderSettings() {
   const push = usePushNotifications();
   const [prefs, setPrefs] = useState<Record<string, boolean>>(getPrefs);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
+
+  async function runDiagnostic() {
+    const lines: string[] = [];
+    lines.push(`Notification API: ${"Notification" in window ? "supported" : "missing"}`);
+    lines.push(`Notification.permission: ${("Notification" in window) ? Notification.permission : "N/A"}`);
+    lines.push(`ServiceWorker: ${"serviceWorker" in navigator ? "supported" : "missing"}`);
+    lines.push(`PushManager: ${"PushManager" in window ? "supported" : "missing"}`);
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+      lines.push(`SW registered: ${reg ? "yes (" + reg.scope + ")" : "no"}`);
+      if (reg) {
+        const sub = await reg.pushManager?.getSubscription().catch(() => null);
+        lines.push(`Existing subscription: ${sub ? "yes (endpoint prefix: " + sub.endpoint.slice(0, 40) + "…)" : "none"}`);
+      }
+    }
+    const vapidPresent = !!(import.meta.env.VITE_VAPID_PUBLIC_KEY);
+    lines.push(`VITE_VAPID_PUBLIC_KEY: ${vapidPresent ? "present (len " + (import.meta.env.VITE_VAPID_PUBLIC_KEY as string).length + ")" : "MISSING"}`);
+    setDebugInfo(lines.join("\n"));
+  }
 
   function toggle(key: string) {
     const next = { ...prefs, [key]: !prefs[key] };
@@ -113,6 +133,21 @@ export function ReminderSettings() {
       <p className="font-mono text-[7px] text-muted-2 mt-3 leading-snug">
         In-app reminders fire when the app is open. Push notifications work in the background on supported devices.
       </p>
+
+      {/* Diagnostic tool */}
+      <div className="border-t border-rule/40 pt-3">
+        <button
+          onClick={runDiagnostic}
+          className="font-mono text-[8px] text-muted-2 hover:text-ink underline underline-offset-2"
+        >
+          Run push diagnostic
+        </button>
+        {debugInfo && (
+          <pre className="mt-2 p-2 bg-bg-2 rounded-lg font-mono text-[8px] text-ink leading-relaxed whitespace-pre-wrap border border-rule">
+            {debugInfo}
+          </pre>
+        )}
+      </div>
     </div>
   );
 }
