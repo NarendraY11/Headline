@@ -1,19 +1,52 @@
 import {
     AlertCircle,
     Bell,
+    BellRing,
     Check,
     CheckCircle,
     Clock,
     Mail,
     Search,
     Send,
+    Smartphone,
     User,
     Users,
+    Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "../../components/Atoms";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
+
+// ── Supabase Edge Function URL for push delivery ─────────────────────────────
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const SEND_PUSH_URL = `${SUPABASE_URL}/functions/v1/send-push`;
+
+async function triggerPushDelivery(
+  userIds: string[],
+  notification: { title: string; body: string; url?: string },
+  token: string
+): Promise<{ sent: number; pruned: number; error?: string }> {
+  try {
+    const res = await fetch(SEND_PUSH_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+        "apikey": SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify({ userIds, notification }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      return { sent: 0, pruned: 0, error: (err as any).error ?? `HTTP ${res.status}` };
+    }
+    return await res.json() as { sent: number; pruned: number };
+  } catch (e: unknown) {
+    return { sent: 0, pruned: 0, error: e instanceof Error ? e.message : "Network error" };
+  }
+}
 
 interface ProfileLite {
   id: string;
@@ -49,6 +82,14 @@ export default function NotificationsManager() {
   const [sending, setSending] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [pushStats, setPushStats] = useState<{ sent: number; pruned: number } | null>(null);
+
+  // Push test panel state
+  const [pushTestTitle, setPushTestTitle] = useState("Test from Heading Admin");
+  const [pushTestBody, setPushTestBody] = useState("This is a test push notification.");
+  const [pushTestUsers, setPushTestUsers] = useState<"self" | "all">("self");
+  const [pushTesting, setPushTesting] = useState(false);
+  const [pushTestResult, setPushTestResult] = useState<string | null>(null);
 
   // History.
   const [history, setHistory] = useState<AdminNotificationRow[]>([]);
@@ -166,6 +207,18 @@ export default function NotificationsManager() {
       const { error: deliverErr } = await supabase.from("notifications").insert(rows);
       if (deliverErr) throw deliverErr;
 
+      // 3. Fire web push to subscribed devices (best-effort — fails silently on error).
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (token) {
+        const pushResult = await triggerPushDelivery(
+          recipientIds,
+          { title: "Message from Admin", body: trimmed, url: "/today" },
+          token
+        );
+        setPushStats({ sent: pushResult.sent, pruned: pushResult.pruned ?? 0 });
+      }
+
       setSuccessMsg(
         mode === "personal"
           ? "Notification sent to the selected user."
@@ -195,6 +248,34 @@ export default function NotificationsManager() {
     if (row.admin_id && row.admin_id === user?.uid) return user?.email || "You";
     const p = row.admin_id ? profileMap.get(row.admin_id) : undefined;
     return p?.email || p?.display_name || (row.admin_id ? row.admin_id.slice(0, 8) : "—");
+  };
+
+  const handlePushTest = async () => {
+    if (!user) return;
+    setPushTesting(true);
+    setPushTestResult(null);
+    try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      if (!token) { setPushTestResult("Not authenticated."); return; }
+
+      const targetIds = pushTestUsers === "self"
+        ? [user.uid ?? user.id]
+        : profiles.map(p => p.id);
+
+      const result = await triggerPushDelivery(
+        targetIds,
+        { title: pushTestTitle, body: pushTestBody, url: "/today" },
+        token
+      );
+      if (result.error) {
+        setPushTestResult(`Error: ${result.error}`);
+      } else {
+        setPushTestResult(`Delivered: ${result.sent} device(s). Pruned: ${result.pruned} expired subscription(s).`);
+      }
+    } finally {
+      setPushTesting(false);
+    }
   };
 
   return (
@@ -338,8 +419,16 @@ export default function NotificationsManager() {
           </div>
 
           {successMsg && (
-            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs flex items-center gap-2">
-              <CheckCircle size={14} className="shrink-0" /> {successMsg}
+            <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg text-xs flex items-start gap-2">
+              <CheckCircle size={14} className="shrink-0 mt-0.5" />
+              <div>
+                {successMsg}
+                {pushStats !== null && (
+                  <span className="block font-mono text-[9px] mt-0.5 text-emerald-700">
+                    Push: {pushStats.sent} device(s) reached · {pushStats.pruned} expired subscription(s) pruned
+                  </span>
+                )}
+              </div>
             </div>
           )}
           {errorMsg && (
@@ -357,6 +446,98 @@ export default function NotificationsManager() {
             >
               <Send size={14} />
               <span>{sending ? "Sending…" : `Send${recipientIds.length ? ` to ${recipientIds.length}` : ""}`}</span>
+            </button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Push Test Panel */}
+      <Card className="bg-paper border border-rule shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-rule bg-bg-2/20 flex items-center gap-2">
+          <Smartphone size={16} className="text-navy" />
+          <h3 className="font-serif text-lg font-medium text-ink">Push Notification Test</h3>
+          <span className="ml-auto font-mono text-[9px] uppercase tracking-wide text-muted-2 bg-bg-2 border border-rule px-2 py-0.5 rounded">Admin only</span>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="font-sans text-xs text-muted-2">
+            Send a real Web Push notification to subscribed devices. Requires <code className="font-mono bg-bg-2 px-1 rounded">pushNotifications</code> flag ON and VAPID keys configured.
+          </p>
+
+          {/* Title */}
+          <div>
+            <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Notification title</label>
+            <input
+              type="text"
+              value={pushTestTitle}
+              onChange={e => setPushTestTitle(e.target.value)}
+              className="w-full bg-panel border border-rule rounded-md text-xs px-3.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sky/60"
+            />
+          </div>
+
+          {/* Body */}
+          <div>
+            <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Body</label>
+            <input
+              type="text"
+              value={pushTestBody}
+              onChange={e => setPushTestBody(e.target.value)}
+              className="w-full bg-panel border border-rule rounded-md text-xs px-3.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sky/60"
+            />
+          </div>
+
+          {/* Target */}
+          <div>
+            <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Target</label>
+            <div className="inline-flex rounded-lg border border-rule overflow-hidden">
+              {(["self", "all"] as const).map(opt => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setPushTestUsers(opt)}
+                  className={`flex items-center gap-1.5 px-4 py-2 font-mono text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer ${
+                    pushTestUsers === opt ? "bg-navy text-bg" : "bg-paper text-muted hover:bg-bg-2"
+                  } ${opt === "all" ? "border-l border-rule" : ""}`}
+                >
+                  {opt === "self" ? <><User size={11} /> Just me</> : <><Users size={11} /> All users ({profiles.length})</>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
+          <div className="p-3 bg-ink rounded-xl flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-paper/10 flex items-center justify-center flex-shrink-0">
+              <BellRing size={14} className="text-paper" />
+            </div>
+            <div>
+              <p className="font-sans text-[12px] text-paper font-semibold leading-none mb-0.5">{pushTestTitle || "No title"}</p>
+              <p className="font-sans text-[10px] text-paper/60">{pushTestBody || "No body"}</p>
+              <p className="font-mono text-[8px] text-paper/40 mt-1">heading.app</p>
+            </div>
+          </div>
+
+          {pushTestResult && (
+            <div className={`p-3 rounded-lg text-xs flex items-start gap-2 ${
+              pushTestResult.startsWith("Error")
+                ? "bg-rose-50 border border-rose-200 text-rose-800"
+                : "bg-emerald-50 border border-emerald-200 text-emerald-800"
+            }`}>
+              {pushTestResult.startsWith("Error")
+                ? <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                : <Check size={14} className="shrink-0 mt-0.5" />}
+              {pushTestResult}
+            </div>
+          )}
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={handlePushTest}
+              disabled={pushTesting || !pushTestTitle.trim()}
+              className="flex items-center gap-2 px-5 py-2.5 bg-amber text-white hover:opacity-90 font-mono text-[10px] uppercase font-bold rounded-lg tracking-wider transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Zap size={14} />
+              {pushTesting ? "Sending push…" : "Send test push"}
             </button>
           </div>
         </div>
