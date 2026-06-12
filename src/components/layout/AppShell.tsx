@@ -6,6 +6,7 @@ import {
     Compass,
     Flame,
     Gift,
+    GraduationCap,
     Layers, LayoutGrid,
     Menu,
     Mic,
@@ -266,10 +267,12 @@ export function AppShell() {
   const mockExamsEnabled = useFeature("mockExams");
   const a320SystemsEnabled = useFeature("a320Systems");
   const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
+  const advancedTestingEnabled = useFeature("advancedTesting");
 
   const navItems = [
     { label: "Today", to: "/today", icon: Compass },
     { label: "Question bank", to: "/modules", icon: Layers },
+    ...(advancedTestingEnabled ? [{ label: "Exam Centre", to: "/exam-centre", icon: GraduationCap }] : []),
     ...(mockExamsEnabled ? [{ label: "Mock exams", to: "/mock-exams", icon: LayoutGrid }] : []),
     ...(a320SystemsEnabled ? [{ label: "A320 systems", to: "/topic/a320-systems", icon: Plane }] : []),
     { label: "VIVA practice", to: "/quiz/viva", icon: Mic },

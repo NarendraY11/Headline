@@ -59,6 +59,7 @@ const SiteContentManager = lazy(() => import("./views/admin/SiteContentManager")
 const AiSettingsManager = lazy(() => import("./views/admin/AiSettingsManager"));
 const FunnelAnalytics = lazy(() => import("./views/admin/FunnelAnalytics"));
 const BillingManager = lazy(() => import("./views/admin/BillingManager"));
+const ExamCentreView = lazy(() => import("./views/ExamCentreView"));
 
 import { CookieConsent } from "./components/CookieConsent";
 import { GlobalToastListener } from "./components/GlobalToastListener";
@@ -194,6 +195,7 @@ export default function App() {
             <Route path="/referral" element={<ReferralView />} />
             <Route path="/study-plan" element={<StudySchedulerView />} />
             <Route path="/schedule" element={<StudyCalendarView />} />
+            <Route path="/exam-centre" element={<ExamCentreView />} />
           </Route>
 
           {/* FULLSCREEN QUIZ (authed, NO App Shell — each quiz layout is its
