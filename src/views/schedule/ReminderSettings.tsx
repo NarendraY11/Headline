@@ -1,6 +1,6 @@
 // M13: ReminderSettings — push notifications + reminder preferences
 
-import { Bell, BellOff, Loader2 } from "lucide-react";
+import { Bell } from "lucide-react";
 import { useState } from "react";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
 
@@ -60,18 +60,18 @@ export function ReminderSettings() {
         <span className="font-mono text-[9px] uppercase tracking-widest text-muted-2">Reminders</span>
       </div>
 
-      {/* Push notification toggle */}
+      {/* Push notification toggle — same pill style as in-app reminders */}
       <div className="mb-4 p-3 rounded-xl border border-rule bg-bg-2/30">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
             <p className="font-sans text-[12px] text-ink font-medium">Push notifications</p>
             <p className="font-mono text-[8px] text-muted-2 mt-0.5">
               {isPushUnsupported
                 ? "Not supported on this device"
                 : isPushDenied
-                ? "Blocked in browser — update site permissions"
+                ? "Blocked — update site permissions to allow"
                 : push.subscribed
-                ? "Active — notifications enabled"
+                ? "Active — background reminders enabled"
                 : "Enable to receive background reminders"}
             </p>
           </div>
@@ -79,20 +79,31 @@ export function ReminderSettings() {
             <button
               onClick={push.subscribed ? push.disable : push.enable}
               disabled={push.loading}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono text-[9px] uppercase tracking-wide font-semibold transition-colors ${
-                push.subscribed
-                  ? "bg-signal/10 border border-signal/20 text-signal hover:bg-signal/15"
-                  : "bg-mint/10 border border-mint/20 text-mint hover:bg-mint/15"
+              className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 relative disabled:opacity-50 ${
+                push.subscribed ? "bg-mint" : "bg-bg-2 border border-rule"
               }`}
+              aria-checked={push.subscribed}
+              role="switch"
+              aria-label="Toggle push notifications"
             >
               {push.loading ? (
-                <Loader2 size={10} className="animate-spin" />
-              ) : push.subscribed ? (
-                <><BellOff size={10} /> Disable</>
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span className="w-2.5 h-2.5 rounded-full border-2 border-paper border-t-transparent animate-spin" />
+                </span>
               ) : (
-                <><Bell size={10} /> Enable</>
+                <span
+                  className={`absolute top-0.5 w-4 h-4 rounded-full bg-paper shadow transition-transform ${
+                    push.subscribed ? "translate-x-4" : "translate-x-0.5"
+                  }`}
+                />
               )}
             </button>
+          )}
+          {isPushDenied && (
+            <span className="font-mono text-[8px] text-signal flex-shrink-0">Blocked</span>
+          )}
+          {isPushUnsupported && (
+            <span className="font-mono text-[8px] text-muted-2 flex-shrink-0">N/A</span>
           )}
         </div>
       </div>
