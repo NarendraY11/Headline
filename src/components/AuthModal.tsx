@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "./ui/Toast";
@@ -36,6 +36,19 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  const scrollInputIntoView = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, []);
+
+  function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out. Check your connection and try again.")), ms)
+      ),
+    ]);
+  }
 
   // Sync state if defaultTab changes when opening modal
   useEffect(() => {
@@ -75,10 +88,10 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
     setSuccessMsg(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await withTimeout(
+        supabase.auth.signInWithPassword({ email, password }),
+        15_000
+      );
 
       if (error) {
         throw error;
@@ -141,17 +154,20 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
         return;
       }
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-          data: {
-            display_name: displayName,
-            full_name: displayName,
+      const { data, error } = await withTimeout(
+        supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`,
+            data: {
+              display_name: displayName,
+              full_name: displayName,
+            },
           },
-        },
-      });
+        }),
+        15_000
+      );
 
       if (error) {
         throw error;
@@ -254,7 +270,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                 aria-modal="true"
                 aria-labelledby="modal-title"
               >
-                <Card className="p-6 md:p-8 bg-paper border border-rule-strong shadow-2xl relative">
+                <Card className="p-6 md:p-8 bg-paper border border-rule-strong shadow-2xl relative max-h-[calc(100dvh-2rem)] overflow-y-auto">
                   {/* Close button */}
                   <button
                     onClick={onClose}
@@ -318,6 +334,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         disabled={loading}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        onFocus={scrollInputIntoView}
                         placeholder="pilot@airline.com"
                         className="w-full h-[40px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
@@ -350,6 +367,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         disabled={loading}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        onFocus={scrollInputIntoView}
                         placeholder="••••••••"
                         className="w-full h-[40px] pl-10 pr-10 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
@@ -408,6 +426,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         disabled={loading}
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
+                        onFocus={scrollInputIntoView}
                         placeholder="FirstOfficer John"
                         className="w-full h-[40px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
@@ -431,6 +450,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         disabled={loading}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        onFocus={scrollInputIntoView}
                         placeholder="pilot@airline.com"
                         className="w-full h-[40px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
@@ -454,6 +474,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         disabled={loading}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        onFocus={scrollInputIntoView}
                         placeholder="••••••••"
                         className="w-full h-[40px] pl-10 pr-10 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
@@ -467,7 +488,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       </button>
                     </div>
                     <span id="signup-password-hint" className="block mt-1.5 font-sans text-[10px] text-muted-2">
-                      Password must be at least 8 characters long.
+                      At least 8 characters. Common or previously-breached passwords are rejected.
                     </span>
                   </div>
 
@@ -488,6 +509,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         disabled={loading}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
+                        onFocus={scrollInputIntoView}
                         placeholder="••••••••"
                         className="w-full h-[40px] pl-10 pr-10 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
@@ -540,6 +562,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         disabled={loading}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        onFocus={scrollInputIntoView}
                         placeholder="pilot@airline.com"
                         className="w-full h-[40px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />

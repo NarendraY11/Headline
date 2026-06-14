@@ -47,7 +47,7 @@ const SettingsOverlay = lazy(() => import('./SettingsOverlay').then((m) => ({ de
 const ShortcutsOverlay = lazy(() => import('./ShortcutsOverlay').then((m) => ({ default: m.ShortcutsOverlay })));
 
 export function AppShell() {
-  const { userData } = useAuth();
+  const { userData, user, openAuthModal } = useAuth();
   const { isAdmin } = useIsAdmin();
   const location = useLocation();
   const outlet = useOutlet();
@@ -599,6 +599,19 @@ export function AppShell() {
                        <span className="flex items-center gap-1"><Flame size={12} className="text-signal" /> Streak: {displayedStreakValue} {displayedStreakValue === 1 ? "Day" : "Days"}</span>
                        <Link to="/about" onClick={() => setMobileMenuOpen(false)} className="underline hover:text-ink transition-colors">Mission Specs</Link>
                     </div>
+                    {!user && (
+                      <button
+                        onClick={() => { setMobileMenuOpen(false); openAuthModal("signin"); }}
+                        className="w-full py-2 px-4 rounded-xl border border-rule text-xs font-sans font-medium text-ink hover:bg-panel/40 transition-colors text-center"
+                      >
+                        Sign In / Create Account
+                      </button>
+                    )}
+                    {user && (
+                      <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="w-full py-2 px-4 rounded-xl border border-rule text-xs font-sans font-medium text-ink hover:bg-panel/40 transition-colors text-center">
+                        My Profile
+                      </Link>
+                    )}
                     <Link to="/quiz/ata-27" className="w-full" onClick={() => setMobileMenuOpen(false)}>
                       <Button variant="primary" className="w-full justify-center h-9 text-xs">
                         Start studying <ArrowUpRight size={13} />

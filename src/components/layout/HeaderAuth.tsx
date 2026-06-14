@@ -11,11 +11,11 @@ export function HeaderAuth() {
   const { user, loading, openAuthModal } = useAuth();
   const [avatarError, setAvatarError] = useState(false);
   
-  if (loading) return <div className="w-8 h-8 rounded-full bg-rule animate-pulse hidden sm:block md:hidden" />;
-  
+  if (loading) return <div className="w-8 h-8 rounded-full bg-rule animate-pulse block md:hidden" />;
+
   if (user) {
     return (
-      <Link to="/profile" aria-label="Profile" className="hidden sm:flex md:hidden items-center gap-2 hover:opacity-80 transition-opacity">
+      <Link to="/profile" aria-label="Profile" className="flex md:hidden items-center gap-2 hover:opacity-80 transition-opacity">
         {user.photoURL && !avatarError ? (
           <img src={user.photoURL} alt="Avatar" className="w-8 h-8 rounded-full border border-rule object-cover" onError={() => setAvatarError(true)} />
         ) : (
@@ -28,7 +28,7 @@ export function HeaderAuth() {
   }
   
   return (
-    <Button variant="ghost" onClick={() => openAuthModal("signin")} className="text-sm px-3 hidden sm:flex md:hidden">
+    <Button variant="ghost" onClick={() => openAuthModal("signin")} className="text-sm px-3 flex md:hidden">
       Sign In
     </Button>
   );
