@@ -65,7 +65,7 @@
     "@vercel/node": "^5.8.5",
     "autoprefixer": "^10.4.21",
     "beasties": "^0.4.2",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.1",
     "eslint": "^10.4.0",
     "rollup-plugin-visualizer": "^7.0.1",
     "sharp": "^0.34.5",
