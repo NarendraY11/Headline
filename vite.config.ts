@@ -4,6 +4,7 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { visualizer } from 'rollup-plugin-visualizer';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 // Inject <link rel=preload> for the above-the-fold fonts so the hero text is
 // painted in the real face at FCP instead of swapping from a fallback (FOUT =
@@ -76,6 +77,14 @@ export default defineConfig(({ command }) => {
       tailwindcss(),
       fontPreloadPlugin(),
       ...(process.env.ANALYZE ? [visualizer({ filename: 'dist/stats.json', template: 'raw-data' }) as any] : []),
+      // Upload source maps to Sentry on prod builds when auth token is present.
+      // Hidden source maps: build emits them but they are not served publicly.
+      ...(process.env.SENTRY_AUTH_TOKEN ? [sentryVitePlugin({
+        org: process.env.SENTRY_ORG,
+        project: process.env.SENTRY_PROJECT,
+        authToken: process.env.SENTRY_AUTH_TOKEN,
+        telemetry: false,
+      })] : []),
       VitePWA({
         registerType: 'autoUpdate',
         // New builds activate immediately so users never get stuck on a stale
@@ -183,6 +192,9 @@ export default defineConfig(({ command }) => {
     ],
     build: {
       target: "esnext",
+      // Hidden source maps: Sentry vite plugin uploads then strips the
+      // sourceMappingURL comment so maps are never served to end users.
+      sourcemap: true,
       rollupOptions: {
         output: {
           manualChunks(id) {

@@ -2,6 +2,8 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { getSupabaseAdmin, checkFormRateLimit, getClientIdentity, getAuthenticatedUser, isFeatureEnabled, screenSubmission } from "./_lib/utils.js";
 import { logSecurityEvent, type Severity } from "./_lib/securityLog.js";
 import { validateStudyPlan, expandPlanToMissions } from "./_lib/studyPlan.js";
+import { getInngestHandler } from "./_lib/inngest.js";
+import { verifyQStashSignature } from "./_lib/qstash.js";
 
 // Consolidated "system" function. Serves /api/health, /api/auth-event and
 // /api/study/materialize from ONE serverless function to stay under the
@@ -611,6 +613,81 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: "Method Not Allowed" });
     }
     return pushSubscribe(req, res);
+  }
+
+  // ---- /api/inngest (Inngest serve — GET/POST/PUT) ---------------------------
+  if (fn === "inngest") {
+    const method = req.method ?? "";
+    if (!["GET", "POST", "PUT"].includes(method)) {
+      res.setHeader("Allow", "GET, POST, PUT");
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
+    return getInngestHandler()(req as any, res as any);
+  }
+
+  // ---- /api/qstash (QStash receiver — POST only) -----------------------------
+  if (fn === "qstash-receiver") {
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return res.status(405).json({ error: "Method Not Allowed" });
+    }
+    const signature = (req.headers["upstash-signature"] as string) ?? "";
+    const rawBody = JSON.stringify(req.body);
+    const valid = await verifyQStashSignature(rawBody, signature);
+    if (!valid) return res.status(401).json({ error: "Invalid QStash signature." });
+
+    const { type, payload } = (req.body ?? {}) as {
+      type?: string;
+      payload?: Record<string, unknown>;
+    };
+    if (!type) return res.status(400).json({ error: "Missing job type." });
+
+    const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+    const SEND_PUSH_URL = `${SUPABASE_URL}/functions/v1/send-push`;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+
+    // ── push.broadcast — send push to all subscribed users ──────────────────
+    if (type === "push.broadcast") {
+      const { title, body, url, tag, notificationId } = payload ?? {};
+      if (!title) return res.status(400).json({ error: "payload.title required." });
+      const pushRes = await fetch(SEND_PUSH_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": serviceKey,
+          "X-Internal-Secret": serviceKey,
+        },
+        body: JSON.stringify({
+          userIds: ["*"],
+          notification: { title, body, url: url ?? "/today", tag: tag ?? "broadcast", type: "broadcast" },
+          notificationId,
+        }),
+      });
+      const result = await pushRes.json().catch(() => ({}));
+      return res.status(pushRes.ok ? 200 : 502).json({ ok: pushRes.ok, result });
+    }
+
+    // ── push.targeted — send push to specific user IDs ───────────────────────
+    if (type === "push.targeted") {
+      const { userIds, notification, notificationId, ttl } = payload ?? {};
+      if (!Array.isArray(userIds) || !userIds.length) {
+        return res.status(400).json({ error: "payload.userIds required." });
+      }
+      const pushRes = await fetch(SEND_PUSH_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": serviceKey,
+          "X-Internal-Secret": serviceKey,
+        },
+        body: JSON.stringify({ userIds, notification, notificationId, ttl }),
+      });
+      const result = await pushRes.json().catch(() => ({}));
+      return res.status(pushRes.ok ? 200 : 502).json({ ok: pushRes.ok, result });
+    }
+
+    console.warn("QStash: unknown job type:", type);
+    return res.status(400).json({ error: `Unknown job type: ${type}` });
   }
 
   return res.status(404).json({ error: "Not Found" });

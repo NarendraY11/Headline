@@ -23,11 +23,26 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
 const SEND_PUSH_URL = `${SUPABASE_URL}/functions/v1/send-push`;
 
+interface PushNotificationParams {
+  title: string;
+  body: string;
+  url?: string;
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  renotify?: boolean;
+  requireInteraction?: boolean;
+  silent?: boolean;
+  type?: string;
+  actions?: { action: string; title: string; url?: string }[];
+}
+
 async function triggerPushDelivery(
   userIds: string[],
-  notification: { title: string; body: string; url?: string },
-  token: string
-): Promise<{ sent: number; pruned: number; error?: string }> {
+  notification: PushNotificationParams,
+  token: string,
+  opts?: { ttl?: number; notificationId?: string }
+): Promise<{ sent: number; failed: number; pruned: number; total: number; error?: string }> {
   try {
     const res = await fetch(SEND_PUSH_URL, {
       method: "POST",
@@ -36,15 +51,20 @@ async function triggerPushDelivery(
         "Authorization": `Bearer ${token}`,
         "apikey": SUPABASE_ANON_KEY,
       },
-      body: JSON.stringify({ userIds, notification }),
+      body: JSON.stringify({
+        userIds,
+        notification,
+        ttl: opts?.ttl ?? 86400,
+        notificationId: opts?.notificationId,
+      }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      return { sent: 0, pruned: 0, error: (err as any).error ?? `HTTP ${res.status}` };
+      return { sent: 0, failed: 0, pruned: 0, total: 0, error: (err as any).error ?? `HTTP ${res.status}` };
     }
-    return await res.json() as { sent: number; pruned: number };
+    return await res.json() as { sent: number; failed: number; pruned: number; total: number };
   } catch (e: unknown) {
-    return { sent: 0, pruned: 0, error: e instanceof Error ? e.message : "Network error" };
+    return { sent: 0, failed: 0, pruned: 0, total: 0, error: e instanceof Error ? e.message : "Network error" };
   }
 }
 
@@ -87,6 +107,10 @@ export default function NotificationsManager() {
   // Push test panel state
   const [pushTestTitle, setPushTestTitle] = useState("Test from Heading Admin");
   const [pushTestBody, setPushTestBody] = useState("This is a test push notification.");
+  const [pushTestUrl, setPushTestUrl] = useState("/today");
+  const [pushTestTag, setPushTestTag] = useState("heading-test");
+  const [pushTestRequireInteraction, setPushTestRequireInteraction] = useState(false);
+  const [pushTestTtl, setPushTestTtl] = useState(86400);
   const [pushTestUsers, setPushTestUsers] = useState<"self" | "all">("self");
   const [pushTesting, setPushTesting] = useState(false);
   const [pushTestResult, setPushTestResult] = useState<string | null>(null);
@@ -211,10 +235,18 @@ export default function NotificationsManager() {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
       if (token) {
+        const notificationId = `admin-${Date.now()}`;
         const pushResult = await triggerPushDelivery(
           recipientIds,
-          { title: "Message from Admin", body: trimmed, url: "/today" },
-          token
+          {
+            title: "Message from Admin",
+            body: trimmed,
+            url: "/today",
+            tag: "heading-admin",
+            type: "broadcast",
+          },
+          token,
+          { ttl: 86400, notificationId }
         );
         setPushStats({ sent: pushResult.sent, pruned: pushResult.pruned ?? 0 });
       }
@@ -260,18 +292,33 @@ export default function NotificationsManager() {
       if (!token) { setPushTestResult("Not authenticated."); return; }
 
       const targetIds = pushTestUsers === "self"
-        ? [user.uid ?? user.id]
-        : profiles.map(p => p.id);
+        ? [user.uid ?? (user as any).id]
+        : ["*"];
 
+      const notificationId = `test-${Date.now()}`;
       const result = await triggerPushDelivery(
         targetIds,
-        { title: pushTestTitle, body: pushTestBody, url: "/today" },
-        token
+        {
+          title: pushTestTitle,
+          body: pushTestBody,
+          url: pushTestUrl || "/today",
+          tag: pushTestTag || "heading-test",
+          requireInteraction: pushTestRequireInteraction,
+          type: "test",
+          actions: [
+            { action: "open", title: "Open App", url: pushTestUrl || "/today" },
+            { action: "dismiss", title: "Dismiss" },
+          ],
+        },
+        token,
+        { ttl: pushTestTtl, notificationId }
       );
       if (result.error) {
         setPushTestResult(`Error: ${result.error}`);
       } else {
-        setPushTestResult(`Delivered: ${result.sent} device(s). Pruned: ${result.pruned} expired subscription(s).`);
+        setPushTestResult(
+          `Delivered: ${result.sent}/${result.total} device(s). Failed: ${result.failed}. Pruned: ${result.pruned} expired.`
+        );
       }
     } finally {
       setPushTesting(false);
@@ -464,25 +511,58 @@ export default function NotificationsManager() {
           </p>
 
           {/* Title */}
-          <div>
-            <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Notification title</label>
-            <input
-              type="text"
-              value={pushTestTitle}
-              onChange={e => setPushTestTitle(e.target.value)}
-              className="w-full bg-panel border border-rule rounded-md text-xs px-3.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sky/60"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Notification title</label>
+              <input type="text" value={pushTestTitle} onChange={e => setPushTestTitle(e.target.value)}
+                className="w-full bg-panel border border-rule rounded-md text-xs px-3.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sky/60" />
+            </div>
+            <div>
+              <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Tag (grouping)</label>
+              <input type="text" value={pushTestTag} onChange={e => setPushTestTag(e.target.value)}
+                className="w-full bg-panel border border-rule rounded-md text-xs px-3.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sky/60" />
+            </div>
           </div>
 
           {/* Body */}
           <div>
             <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Body</label>
-            <input
-              type="text"
-              value={pushTestBody}
-              onChange={e => setPushTestBody(e.target.value)}
-              className="w-full bg-panel border border-rule rounded-md text-xs px-3.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sky/60"
-            />
+            <input type="text" value={pushTestBody} onChange={e => setPushTestBody(e.target.value)}
+              className="w-full bg-panel border border-rule rounded-md text-xs px-3.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sky/60" />
+          </div>
+
+          {/* URL + TTL */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Click URL</label>
+              <input type="text" value={pushTestUrl} onChange={e => setPushTestUrl(e.target.value)}
+                className="w-full bg-panel border border-rule rounded-md text-xs px-3.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sky/60" />
+            </div>
+            <div>
+              <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">TTL (seconds)</label>
+              <select value={pushTestTtl} onChange={e => setPushTestTtl(Number(e.target.value))}
+                className="w-full bg-panel border border-rule rounded-md text-xs px-3.5 py-2 outline-none focus-visible:ring-2 focus-visible:ring-sky/60">
+                <option value={0}>0 — instant or drop</option>
+                <option value={3600}>3,600 — 1 hour</option>
+                <option value={86400}>86,400 — 24 hours (default)</option>
+                <option value={604800}>604,800 — 7 days</option>
+              </select>
+            </div>
+          </div>
+
+          {/* requireInteraction toggle */}
+          <div className="flex items-center justify-between p-3 rounded-xl border border-rule bg-bg-2/30">
+            <div>
+              <p className="font-sans text-[12px] text-ink font-medium">Require Interaction</p>
+              <p className="font-mono text-[8px] text-muted-2">Keep notification on screen until user acts (important alerts only)</p>
+            </div>
+            <button
+              onClick={() => setPushTestRequireInteraction(v => !v)}
+              className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 relative ${pushTestRequireInteraction ? "bg-amber" : "bg-bg-2 border border-rule"}`}
+              role="switch" aria-checked={pushTestRequireInteraction}
+            >
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-paper shadow transition-transform ${pushTestRequireInteraction ? "translate-x-4" : "translate-x-0.5"}`} />
+            </button>
           </div>
 
           {/* Target */}
@@ -490,15 +570,12 @@ export default function NotificationsManager() {
             <label className="block font-mono text-[9px] uppercase tracking-wider text-muted-2 mb-1.5 font-bold">Target</label>
             <div className="inline-flex rounded-lg border border-rule overflow-hidden">
               {(["self", "all"] as const).map(opt => (
-                <button
-                  key={opt}
-                  type="button"
-                  onClick={() => setPushTestUsers(opt)}
+                <button key={opt} type="button" onClick={() => setPushTestUsers(opt)}
                   className={`flex items-center gap-1.5 px-4 py-2 font-mono text-[10px] uppercase font-bold tracking-wider transition-colors cursor-pointer ${
                     pushTestUsers === opt ? "bg-navy text-bg" : "bg-paper text-muted hover:bg-bg-2"
                   } ${opt === "all" ? "border-l border-rule" : ""}`}
                 >
-                  {opt === "self" ? <><User size={11} /> Just me</> : <><Users size={11} /> All users ({profiles.length})</>}
+                  {opt === "self" ? <><User size={11} /> Just me</> : <><Users size={11} /> All subscribers</>}
                 </button>
               ))}
             </div>
@@ -509,10 +586,19 @@ export default function NotificationsManager() {
             <div className="w-8 h-8 rounded-lg bg-paper/10 flex items-center justify-center flex-shrink-0">
               <BellRing size={14} className="text-paper" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="font-sans text-[12px] text-paper font-semibold leading-none mb-0.5">{pushTestTitle || "No title"}</p>
               <p className="font-sans text-[10px] text-paper/60">{pushTestBody || "No body"}</p>
-              <p className="font-mono text-[8px] text-paper/40 mt-1">heading.app</p>
+              <div className="flex items-center gap-3 mt-1.5">
+                <p className="font-mono text-[8px] text-paper/40">heading.app · {pushTestTag}</p>
+                {pushTestRequireInteraction && (
+                  <span className="font-mono text-[7px] text-amber/80 bg-amber/10 px-1.5 py-0.5 rounded">Persistent</span>
+                )}
+              </div>
+              <div className="flex gap-2 mt-2">
+                <span className="font-mono text-[8px] text-paper/50 bg-paper/10 px-2 py-0.5 rounded">Open App</span>
+                <span className="font-mono text-[8px] text-paper/50 bg-paper/10 px-2 py-0.5 rounded">Dismiss</span>
+              </div>
             </div>
           </div>
 

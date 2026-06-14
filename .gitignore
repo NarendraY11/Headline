@@ -21,3 +21,4 @@ coverage/
 .claude/
 .playwright-mcp/
 lh-out/
+.vercel
