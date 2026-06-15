@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthContext";
 
@@ -38,7 +38,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Helper to load localStorage fallback
+  // Abort flag: set to true to cancel an in-flight refreshNotifications call
+  // when the user changes or the component unmounts.
+  const refreshAbortRef = useRef(false);
+
   const getLocalNotifications = useCallback((): NotificationItem[] => {
     try {
       const saved = localStorage.getItem("heading_notifications_local");
@@ -58,10 +61,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, []);
 
   const refreshNotifications = useCallback(async () => {
+    refreshAbortRef.current = false;
+
     if (!user) {
-      // Load offline notifications from local storage
       const local = getLocalNotifications();
-      // If empty, seed with high-fidelity realistic starter notifications
       if (local.length === 0) {
         const seeded: NotificationItem[] = [
           {
@@ -71,7 +74,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             body: "Welcome aboard Heading. Premium aviation prep environment is operational. Clear telemetry is active.",
             type: "system",
             read: false,
-            created_at: new Date(Date.now() - 3600000 * 2).toISOString(), // 2 hours ago
+            created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
           },
           {
             id: "system-content",
@@ -80,32 +83,28 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             body: "Air Navigation and Meteorology questions updated with latest DGCA/FAA public specifications.",
             type: "system",
             read: false,
-            created_at: new Date(Date.now() - 3600000 * 24).toISOString(), // 1 day ago
+            created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
           }
         ];
         saveLocalNotifications(seeded);
-        setNotifications(seeded);
+        if (!refreshAbortRef.current) setNotifications(seeded);
       } else {
-        setNotifications(local);
+        if (!refreshAbortRef.current) setNotifications(local);
       }
-      setLoading(false);
+      if (!refreshAbortRef.current) setLoading(false);
       return;
     }
 
     setLoading(true);
     try {
-      // Scope to the signed-in user's own rows. Admins satisfy the table's
-      // RLS `is_admin()` clause, so an unfiltered select would pull EVERY
-      // user's notifications into their personal bell — and mark-all-read
-      // (which filters by user_id) could never clear the others, so they
-      // reappear unread on every reload. The personal bell must be personal.
       const { data, error } = await supabase
         .from("notifications")
-        .select("*")
+        .select("id, user_id, title, body, message, type, read, created_at")
         .eq("user_id", user.uid)
         .order("created_at", { ascending: false });
 
-      // DB column is `message`; the app uses `body`. Map between them.
+      if (refreshAbortRef.current) return;
+
       const mapRows = (rows: any[]): NotificationItem[] =>
         (rows || []).map((r) => ({
           id: r.id,
@@ -118,7 +117,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }));
 
       if (error) {
-        // Fallback to local storage if relation not enabled yet
         console.warn("Fall back to local notifications:", error.message);
         const local = getLocalNotifications();
         if (local.length === 0) {
@@ -143,27 +141,40 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             }
           ];
           saveLocalNotifications(seeded);
-          setNotifications(seeded);
+          if (!refreshAbortRef.current) setNotifications(seeded);
         } else {
-          setNotifications(local);
+          if (!refreshAbortRef.current) setNotifications(local);
         }
       } else {
-        setNotifications(mapRows(data || []));
+        if (!refreshAbortRef.current) setNotifications(mapRows(data || []));
       }
     } catch (e) {
       console.warn("Unexpected database error for notifications. Using fallback.", e);
-      setNotifications(getLocalNotifications());
+      if (!refreshAbortRef.current) setNotifications(getLocalNotifications());
     } finally {
-      setLoading(false);
+      if (!refreshAbortRef.current) setLoading(false);
     }
   }, [user?.uid, getLocalNotifications, saveLocalNotifications]);
 
+  // Cancel any in-flight refresh when user changes or component unmounts.
+  useEffect(() => {
+    refreshAbortRef.current = false;
+    return () => { refreshAbortRef.current = true; };
+  }, [user?.uid]);
+
+  // Initial load — depends on refreshNotifications which is stable per user?.uid.
   useEffect(() => {
     refreshNotifications();
-  }, [user?.uid, refreshNotifications]);
+  }, [refreshNotifications]);
 
-  // Realtime: push new notifications to the user the moment they're inserted
-  // (e.g. admin broadcast, plan grant) without a manual refresh.
+  // Hold latest refreshNotifications in a ref so the Realtime handler always
+  // calls the current version without the channel needing to be recreated.
+  const refreshRef = useRef(refreshNotifications);
+  useEffect(() => { refreshRef.current = refreshNotifications; }, [refreshNotifications]);
+
+  // Realtime: push new rows to the client the moment they're inserted/updated.
+  // Dep is [user?.uid] only — the channel is recreated only when user changes,
+  // not on every refreshNotifications identity change (which was the bug).
   useEffect(() => {
     if (!user) return;
     const channel = supabase
@@ -171,41 +182,16 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${user.uid}` },
-        () => { refreshNotifications(); }
+        () => { refreshRef.current(); }
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${user.uid}` },
-        () => { refreshNotifications(); }
+        () => { refreshRef.current(); }
       )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user?.uid, refreshNotifications]);
-
-  // Handle countdown exam date reminders dynamically
-  useEffect(() => {
-    const savedName = localStorage.getItem("heading_nextCheckName") || "";
-    const savedDate = localStorage.getItem("heading_nextCheckDate") || "";
-    const savedTime = localStorage.getItem("heading_nextCheckTime") || "09:00";
-
-    if (savedDate) {
-      const targetDate = new Date(`${savedDate}T${savedTime}:00`);
-      const now = new Date();
-      const diff = targetDate.getTime() - now.getTime();
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-
-      if (days >= 0) {
-        const title = `Countdown: ${savedName || "Aviation Exam"}`;
-        const body = `Your check flight exam is in ${days === 0 ? "today" : `${days} days`}. Stay sharp, keep training!`;
-        
-        // Find if we already have an active countdown notification to avoid spamming
-        const exists = notifications.some(n => n.type === "countdown" && n.title === title && n.body === body);
-        if (!exists) {
-          addNotification(title, body, "countdown");
-        }
-      }
-    }
-  }, [notifications.length]);
+  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addNotification = useCallback(async (
     title: string,
@@ -232,14 +218,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       const { error } = await supabase.from("notifications").insert({
         title,
-        message: body, // DB column is `message`
+        message: body,
         type,
         user_id: user.uid,
         read: false,
       });
 
       if (error) {
-        // Fallback to local
         const local = [newNotif, ...getLocalNotifications()];
         saveLocalNotifications(local);
         setNotifications(local);
@@ -253,8 +238,40 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [user?.uid, getLocalNotifications, saveLocalNotifications, refreshNotifications]);
 
+  // Countdown exam date reminder — runs once when notifications stabilise.
+  // Uses a ref to avoid repeatedly calling addNotification across re-renders.
+  const countdownAddedRef = useRef(false);
+  useEffect(() => {
+    if (loading) return;
+    if (countdownAddedRef.current) return;
+
+    const savedName = localStorage.getItem("heading_nextCheckName") || "";
+    const savedDate = localStorage.getItem("heading_nextCheckDate") || "";
+    const savedTime = localStorage.getItem("heading_nextCheckTime") || "09:00";
+
+    if (!savedDate) return;
+
+    const targetDate = new Date(`${savedDate}T${savedTime}:00`);
+    const now = new Date();
+    const diff = targetDate.getTime() - now.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (days < 0) return;
+
+    const title = `Countdown: ${savedName || "Aviation Exam"}`;
+    const body = `Your check flight exam is in ${days === 0 ? "today" : `${days} days`}. Stay sharp, keep training!`;
+
+    const exists = notifications.some(n => n.type === "countdown" && n.title === title && n.body === body);
+    if (!exists) {
+      countdownAddedRef.current = true;
+      addNotification(title, body, "countdown");
+    } else {
+      countdownAddedRef.current = true;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, notifications]);
+
   const markAsRead = useCallback(async (id: string) => {
-    // Optimistic update
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, read: true } : n))
     );
@@ -269,7 +286,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .from("notifications")
         .update({ read: true })
         .eq("id", id);
-      
+
       if (error) {
         console.warn("Supabase update fail, local fallback active.");
       }
@@ -293,7 +310,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .from("notifications")
         .update({ read: true })
         .eq("user_id", user.uid);
-      
+
       if (error) {
         console.warn("Supabase markAllAsRead failed.");
       }
@@ -304,7 +321,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const deleteNotification = useCallback(async (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
-    
+
     const localList = getLocalNotifications().filter(n => n.id !== id);
     saveLocalNotifications(localList);
 
@@ -315,7 +332,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         .from("notifications")
         .delete()
         .eq("id", id);
-      
+
       if (error) {
         console.warn("Supabase delete fail.");
       }

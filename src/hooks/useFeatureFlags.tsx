@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
 export type FlagKeys = "aiExplain" | "aiCoach" | "aiDiagnosis" | "aiPractice" | "weatherBriefing" | "mockExams" | "topicPractice" | "qotd" | "spacedRepetition" | "flashcards" | "cockpitLayouts" | "analytics" | "masteryCharts" | "blog" | "examSeoPages" | "a320Systems" | "adsense" | "pricingCheckout" | "freeTrial" | "proGating" | "maintenanceMode" | "cookieConsent" | "announcementBanner" | "announcementText" | "signupsOpen" | "themeToggle" | "vivaPractice" | "referralProgram" | "notifications" | "bookmarksEnabled" | "searchEnabled" | "leaderboard" | "offlineMode" | "pwaInstallPrompt" | "aiStudyScheduler" | "masterySnapshots" | "examReadinessDashboard" | "sm2Algorithm" | "adaptiveRegen" | "masteryAnalytics" | "missionScores" | "sm2QualityTiming" | "coachContextEnrichment" | "examReadinessEta" | "predictiveIntelligence" | "advancedTesting" | "pwaEnhanced" | "offlineMissions" | "pushNotifications" | "calendarSync";
@@ -75,7 +75,8 @@ export const FeatureFlagsProvider = ({ children }: { children: React.ReactNode }
     fetchFlags();
   }, []);
 
-  return <FeatureFlagsContext.Provider value={{ flags, loading }}>{children}</FeatureFlagsContext.Provider>;
+  const value = useMemo(() => ({ flags, loading }), [flags, loading]);
+  return <FeatureFlagsContext.Provider value={value}>{children}</FeatureFlagsContext.Provider>;
 };
 
 export const useFeature = (key: FlagKeys) => {

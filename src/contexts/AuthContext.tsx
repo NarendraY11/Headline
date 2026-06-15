@@ -205,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 1. Fetch profile
       let { data: profile, error: profileErr } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, email, display_name, target_exam, next_exam, settings, plan, plan_status, plan_started_at, plan_expires_at, trial_started_at, trial_ends_at, trial_used, daily_goal, streak_count, last_activity_date, questions_answered_today, referral_code, referred_by, newsletter_opt_in, onboarding_completed')
         .eq('id', uid)
         .maybeSingle();
 
@@ -267,7 +267,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (referrer && !findReferrerErr) {
               // Write referral tracking row and populate referred_by on current profile
               await supabase.from('profiles').update({ referred_by: pendingRefCode }).eq('id', uid);
-              profile.referred_by = pendingRefCode;
+              if (profile) profile.referred_by = pendingRefCode;
               
               const { error: insErr } = await supabase.from('referrals').insert({
                 referrer_id: referrer.id,
@@ -327,7 +327,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 3. Fetch attempts
       const { data: attemptsData, error: attemptsErr } = await supabase
         .from('attempts')
-        .select('*')
+        .select('topic_id, data, created_at')
         .eq('user_id', uid);
 
       if (!attemptsErr && attemptsData) {
@@ -386,7 +386,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 1. Get current Profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, settings, next_exam, target_exam, referral_code, referred_by, plan')
         .eq('id', uid)
         .maybeSingle();
 

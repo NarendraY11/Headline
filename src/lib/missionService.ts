@@ -12,7 +12,6 @@
 // =====================================================================
 
 import { apiFetch, readError } from "./api.js";
-import { getMissionsForDate } from "./studyScheduler.js";
 import { trackStudyPlanMaterialized, trackScheduleRegenerated } from "./studyAnalytics.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -23,13 +22,6 @@ export interface MaterializeResult {
   planId?: string;
   /** Number of mission rows inserted. */
   missions?: number;
-  error?: string;
-}
-
-export interface EnsureResult {
-  ok: boolean;
-  /** true when missions already existed (no API call made). */
-  alreadyMaterialized?: boolean;
   error?: string;
 }
 
@@ -76,36 +68,6 @@ export async function materializePlan(): Promise<MaterializeResult> {
     errorMsg = await readError(result.response, errorMsg);
   }
   return { ok: false, error: errorMsg };
-}
-
-// ── ensureTodayMaterialized ───────────────────────────────────────────────────
-
-/**
- * Check whether today already has plan-source missions; if not, trigger
- * materialize. Returns `alreadyMaterialized: true` if no API call was needed.
- *
- * Safe to call on every mount — the guard means at most one network round-trip
- * when missions are absent, and zero when they exist.
- */
-export async function ensureTodayMaterialized(
-  userId: string
-): Promise<EnsureResult> {
-  try {
-    // Use local date to match scheduled_date values set by the materialize
-    // endpoint (which also computes today relative to the server's local time).
-    const now = new Date();
-    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-    const existing = await getMissionsForDate(userId, todayISO);
-    if (existing.some((m) => m.source === "plan")) {
-      return { ok: true, alreadyMaterialized: true };
-    }
-    const r = await materializePlan();
-    return r.ok ? { ok: true, alreadyMaterialized: false } : { ok: false, error: r.error };
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "Unknown error";
-    console.warn("ensureTodayMaterialized:", msg);
-    return { ok: false, error: msg };
-  }
 }
 
 // ── regeneratePlan ────────────────────────────────────────────────────────────
