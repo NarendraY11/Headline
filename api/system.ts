@@ -99,7 +99,13 @@ async function studyMaterialize(req: VercelRequest, res: VercelResponse) {
     return res.status(screen.status).json({ error: screen.error });
   }
 
-  const admin = getSupabaseAdmin();
+  let admin;
+  try {
+    admin = getSupabaseAdmin();
+  } catch (err) {
+    console.error("materialize: admin client unavailable:", err instanceof Error ? err.message : err);
+    return res.status(503).json({ error: "Service temporarily unavailable." });
+  }
 
   // FIX #7: The delete-then-insert pattern is not atomic. Two concurrent
   // materialize calls for the same user could both execute the delete, then

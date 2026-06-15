@@ -727,15 +727,16 @@ export default function MockExamsView() {
                           </div>
 
                           <div className="border-t border-rule mt-5 pt-3 flex justify-between items-center">
-                            <span className="text-[10px] font-mono text-muted tracking-wider uppercase">
-                              {isDry ? "CHAPTER UNREADY" : hasSavedState ? "Resume Cabin Set" : "Launch Block Prep"}
-                            </span>
                             {!isDry ? (
-                              <button 
+                              <button
                                 onClick={() => handleStartSubcategoryPractice(topic.id)}
-                                className="w-7 h-7 rounded-full border border-rule flex items-center justify-center group-hover:bg-ink group-hover:text-paper group-hover:border-ink transition-all cursor-pointer"
+                                className={`h-9 px-4 rounded-full border text-[11px] font-mono font-semibold uppercase tracking-wider flex items-center gap-2 transition-all ${
+                                  hasSavedState
+                                    ? "border-mint text-mint bg-mint-soft hover:bg-mint hover:text-bg"
+                                    : "border-ink text-ink bg-paper hover:bg-ink hover:text-bg"
+                                }`}
                               >
-                                <ArrowUpRight size={12} />
+                                {hasSavedState ? "Resume" : "Start"} <ArrowUpRight size={12} />
                               </button>
                             ) : (
                               <span className="text-xs text-muted-2 font-mono">Coming Soon</span>

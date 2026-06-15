@@ -51,9 +51,10 @@ export default function EditorialLayout({
         <div className="flex flex-col gap-3 md:hidden w-full">
            <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                 <button 
+                 <button
                    onClick={() => setShowAbortPrompt(true)}
-                   className="p-1 -ml-1 text-ink"
+                   aria-label="Exit quiz"
+                   className="p-1 -ml-1 text-ink hover:text-ink-2 transition-colors"
                  >
                    <ArrowLeft size={20} strokeWidth={1.5} />
                  </button>
@@ -453,14 +454,15 @@ export default function EditorialLayout({
             <Button
               variant="ghost"
               onClick={handlePrev}
-              className={`h-9 px-4 text-[13px] transition-opacity ${currentIndex === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+              aria-label="Previous question"
+              className={`h-9 px-4 text-[13px] text-ink border border-rule hover:bg-bg-2 transition-colors ${currentIndex === 0 ? 'invisible pointer-events-none' : ''}`}
             >
                <ArrowLeft size={16} className="mr-1.5" /> Previous
             </Button>
 
             <div className="flex items-center gap-3">
                {mode === "practice" && !isSubmittedPractice && (
-                 <Button variant="ghost" className="h-9 px-4 text-[13px]" onClick={handleNext}>
+                 <Button variant="ghost" className="h-9 px-4 text-[13px] text-ink border border-rule hover:bg-bg-2 transition-colors" onClick={handleNext}>
                    Skip
                  </Button>
                )}
