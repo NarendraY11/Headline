@@ -1,5 +1,21 @@
 import { useEffect, useRef } from "react";
 
+interface PreviewErrorContext {
+  featureKey?: string;
+  context?: "panel" | "route" | "component";
+  componentStack?: string;
+}
+
+export function logPreviewError(error: Error, ctx: PreviewErrorContext = {}): void {
+  if (!import.meta.env.DEV) return;
+  const tag = ctx.featureKey ? ` [${ctx.featureKey}]` : "";
+  const scope = ctx.context ?? "panel";
+  console.error(`[preview:${scope}${tag}] render error:`, error);
+  if (ctx.componentStack) {
+    console.error("[preview] component stack:", ctx.componentStack);
+  }
+}
+
 const SLOW_PREVIEW_THRESHOLD_MS = Number(
   import.meta.env.VITE_PREVIEW_SLOW_THRESHOLD_MS ?? 16
 );
