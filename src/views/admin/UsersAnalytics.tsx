@@ -250,7 +250,7 @@ export default function UsersAnalytics() {
     // mastery snapshots
     (async () => {
       setDrawerMasteryLoading(true);
-      const { data } = await supabase.from("mastery_snapshots").select("subject_id,mastery,total_7d,correct_7d,trend").eq("user_id", uid).order("mastery", { ascending: true });
+      const { data } = await supabase.from("mastery_snapshots").select("subject_id,mastery,total_7d,correct_7d").eq("user_id", uid).order("mastery", { ascending: true });
       if (!cancelled) { setDrawerMastery(data ?? []); setDrawerMasteryLoading(false); }
     })();
 

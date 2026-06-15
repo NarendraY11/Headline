@@ -50,7 +50,7 @@ export function ReadinessTimelineChart({ timeline, currentScore, loading }: Prop
       <p className="font-mono text-[8px] text-muted-2 mb-4">Projected 8-week readiness trajectory</p>
 
       <div style={{ width: "100%", height: 200 }}>
-        <ResponsiveContainer>
+        <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={timeline} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="readinessGrad" x1="0" y1="0" x2="0" y2="1">

@@ -58,7 +58,7 @@ export function SuccessProbabilityTimeline({ timeline, loading }: Props) {
       <p className="font-mono text-[8px] text-muted-2 mb-4">Pass probability projection over 8 weeks</p>
 
       <div style={{ width: "100%", height: 200 }}>
-        <ResponsiveContainer>
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-rule, #e5e7eb)" strokeOpacity={0.5} />
             <XAxis dataKey="weekLabel" tick={{ fontFamily: "monospace", fontSize: 9, fill: "#9ca3af" }} axisLine={false} tickLine={false} />

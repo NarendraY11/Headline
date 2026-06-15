@@ -198,8 +198,12 @@ async function studyMetrics(req: VercelRequest, res: VercelResponse) {
   const user = await getAuthenticatedUser(req, res);
   if (!user) return;
 
-  const { data: isAdmin } = await admin.rpc("is_admin", { uid: user.id });
-  if (!isAdmin) return res.status(403).json({ error: "Admin only." });
+  const { data: adminRow } = await admin
+    .from("admins")
+    .select("email")
+    .or(`user_id.eq.${user.id},email.eq.${user.email}`)
+    .maybeSingle();
+  if (!adminRow) return res.status(403).json({ error: "Admin only." });
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

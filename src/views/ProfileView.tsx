@@ -19,6 +19,7 @@ export default function ProfileView() {
   const [tempExamDate, setTempExamDate] = useState("");
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [confirmSignOutAll, setConfirmSignOutAll] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -263,8 +264,8 @@ export default function ProfileView() {
         <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
           <div className="relative group">
             <div className="w-24 h-24 rounded-full border-2 border-rule overflow-hidden bg-navy flex items-center justify-center relative shadow-sm">
-              {currentPhotoURL ? (
-                <img src={currentPhotoURL} alt={user.displayName ? `Profile photo of ${user.displayName}` : "Profile photo"} className="w-full h-full object-cover" />
+              {currentPhotoURL && !avatarError ? (
+                <img src={currentPhotoURL} alt={user.displayName ? `Profile photo of ${user.displayName}` : "Profile photo"} className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
               ) : (
                 <span className="font-serif text-3xl text-bg uppercase">
                   {user.displayName?.charAt(0) || "P"}
