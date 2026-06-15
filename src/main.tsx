@@ -21,11 +21,13 @@ import { ToastProvider } from './components/ui/Toast.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
 import { FeatureFlagsProvider } from './hooks/useFeatureFlags';
 import { PWAUpdatePrompt } from './components/PWAUpdatePrompt.tsx';
-// SpeedInsights is lazy + idle-mounted (below) so it never competes with first
-// paint. Lazy import keeps it out of the entry chunk.
-const SpeedInsights = lazy(() =>
-  import("@vercel/speed-insights/react").then((m) => ({ default: m.SpeedInsights }))
-);
+// SpeedInsights only loads on Vercel infra — /_vercel/speed-insights/script.js
+// is only served there. Guarded by VITE_ON_VERCEL (baked at build time via
+// vite.config.ts define) so the component is null during local dev / prerender,
+// preventing SyntaxError from the server returning HTML for the missing script.
+const SpeedInsights = import.meta.env.VITE_ON_VERCEL
+  ? lazy(() => import("@vercel/speed-insights/react").then((m) => ({ default: m.SpeedInsights })))
+  : null;
 
 // Defer product analytics init until the browser is idle after first paint, so
 // it doesn't add startup main-thread cost. (No-op until VITE_POSTHOG_KEY is set;
@@ -68,9 +70,11 @@ createRoot(document.getElementById('root')!, {
             <LoadingProvider>
               <App />
               <PWAUpdatePrompt />
-              <Suspense fallback={null}>
-                <SpeedInsights />
-              </Suspense>
+              {SpeedInsights && (
+                <Suspense fallback={null}>
+                  <SpeedInsights />
+                </Suspense>
+              )}
             </LoadingProvider>
           </ToastProvider>
         </NotificationProvider>

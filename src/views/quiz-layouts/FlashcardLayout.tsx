@@ -128,26 +128,29 @@ export default function FlashcardLayout({
              </motion.div>
            </AnimatePresence>
 
-           {/* FOOTER TOOLBAR */}
-           <div className="mt-8 flex flex-wrap items-center justify-center gap-2 sm:gap-3 px-2 z-20">
+           {/* FOOTER TOOLBAR — 1 primary + 1 secondary + 1 escape (exit in header) */}
+           <div className="mt-8 flex items-center justify-center gap-2 sm:gap-3 px-2 z-20">
+             {/* Previous — invisible at Q1 but holds layout space */}
              <Button
                variant="ghost"
                onClick={handlePrev}
-               className={`w-11 h-11 rounded-full border border-rule text-[#8a94a6] hover:text-ink flex justify-center items-center bg-paper shadow-sm transition-colors shrink-0 ${currentIndex === 0 ? 'opacity-0 pointer-events-none' : ''}`}
+               className={`w-11 h-11 rounded-full border border-rule text-ink flex justify-center items-center bg-paper shadow-sm transition-colors shrink-0 hover:bg-bg-2 ${currentIndex === 0 ? 'invisible pointer-events-none' : ''}`}
                aria-label="Previous question"
              >
                <ArrowLeft size={18} strokeWidth={1.5} />
              </Button>
 
+             {/* Bookmark — secondary persistent action */}
              <Button
                variant="ghost"
                onClick={() => toggleBookmark(currentQ)}
                aria-label={isBookmarked ? "Remove bookmark" : "Bookmark this question"}
-               className={`h-11 px-4 sm:px-5 rounded-full border bg-paper shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center gap-2 ${isBookmarked ? 'border-transparent text-paper bg-signal hover:bg-signal/90 shadow-md' : 'border-rule text-ink hover:bg-bg-2'}`}
+               className={`w-11 h-11 rounded-full border bg-paper shadow-sm transition-colors flex items-center justify-center shrink-0 ${isBookmarked ? 'border-signal text-signal bg-signal-soft hover:bg-signal hover:text-bg' : 'border-rule text-ink hover:bg-bg-2'}`}
              >
-               <Bookmark size={15} strokeWidth={isBookmarked ? 2.5 : 1.5} fill={isBookmarked ? "currentColor" : "none"} className={isBookmarked ? 'mb-px' : ''} /> Save
+               <Bookmark size={16} strokeWidth={isBookmarked ? 2.5 : 1.5} fill={isBookmarked ? "currentColor" : "none"} />
              </Button>
 
+             {/* Primary CTA — changes by state */}
              {!isRevealedViva ? (
                <Button
                  variant="ghost"
@@ -182,14 +185,6 @@ export default function FlashcardLayout({
                  {currentIndex === totalQuestions - 1 ? 'Complete →' : 'Next →'}
                </Button>
              )}
-
-             <Button
-               variant="ghost"
-               onClick={handleNext}
-               className="h-11 px-5 sm:px-6 rounded-full border border-rule bg-paper hover:bg-bg-2 text-ink shadow-sm transition-colors text-[13px] font-medium font-sans flex items-center"
-             >
-               Pass
-             </Button>
            </div>
          </div>
       </main>

@@ -58,7 +58,11 @@ export default defineConfig(({ command }) => {
         process.env.VERCEL_GIT_COMMIT_SHA ||
         process.env.npm_package_version ||
         '0.0.0'
-      )
+      ),
+      // True only when building on Vercel infra (VERCEL=1 is a Vercel system
+      // env var). Used to gate @vercel/speed-insights so it never renders during
+      // local dev or the prerender step (where /_vercel/* paths don't exist).
+      'import.meta.env.VITE_ON_VERCEL': JSON.stringify(!!process.env.VERCEL),
     },
     resolve: {
       alias: {

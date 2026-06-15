@@ -309,10 +309,31 @@ export default function QuizView() {
   const [studyPlan, setStudyPlan] = useState<string | null>(null);
   const [isCoachLoading, setIsCoachLoading] = useState(false);
 
-  // Toast state
+  // Silent autosave — toast shows only on first successful save per session
+  // and when connectivity is restored after offline. Repeated saves are silent.
   const [saveToastVisible, setSaveToastVisible] = useState(false);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedStateRef = useRef<string>("");
+  const hasSavedOnceRef = useRef(false);
+  const wasOfflineRef = useRef(false);
+
+  useEffect(() => {
+    const handleOffline = () => { wasOfflineRef.current = true; };
+    const handleOnline = () => {
+      if (wasOfflineRef.current) {
+        wasOfflineRef.current = false;
+        setSaveToastVisible(true);
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => setSaveToastVisible(false), 2500);
+      }
+    };
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+    };
+  }, []);
 
   useEffect(() => {
     if (status === "results") {
@@ -433,12 +454,12 @@ export default function QuizView() {
       revealedIds: Array.from(revealedIds),
     };
     const stateStr = JSON.stringify(meaningfulState);
-    if (lastSavedStateRef.current && lastSavedStateRef.current !== stateStr) {
+    const isFirstSave = !hasSavedOnceRef.current && lastSavedStateRef.current !== stateStr;
+    if (isFirstSave) {
+      hasSavedOnceRef.current = true;
       setSaveToastVisible(true);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = setTimeout(() => {
-        setSaveToastVisible(false);
-      }, 2000);
+      toastTimerRef.current = setTimeout(() => setSaveToastVisible(false), 2000);
     }
     lastSavedStateRef.current = stateStr;
   }, [

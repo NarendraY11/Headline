@@ -234,7 +234,7 @@ export default function BookmarksView() {
             <button
               onClick={() => removeBookmark(q.id)}
               aria-label="Remove bookmark"
-              className="absolute top-4 right-4 p-2 text-muted hover:text-signal hover:bg-signal-soft rounded-full transition-colors md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none"
+              className="absolute top-4 right-4 p-2 text-muted hover:text-signal hover:bg-signal-soft rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none"
               title="Remove bookmark"
             >
               <BookmarkMinus size={20} />
