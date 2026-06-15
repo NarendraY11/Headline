@@ -70,7 +70,7 @@ createRoot(document.getElementById('root')!, {
             <LoadingProvider>
               <App />
               <PWAUpdatePrompt />
-              {SpeedInsights && (
+              {import.meta.env.VITE_VERCEL && (
                 <Suspense fallback={null}>
                   <SpeedInsights />
                 </Suspense>
