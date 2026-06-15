@@ -80,7 +80,7 @@ export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
   try {
     const { data, error } = await supabase
       .from("questions")
-      .select("id, subcategory_id, subject_id, exam_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs, references, is_ai_generated")
+      .select("id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs")
       .in("id", ids);
 
     if (error || !data) {
@@ -126,7 +126,7 @@ export async function fetchQuizQuestionsForTopic(
   randomize = true
 ): Promise<Question[]> {
   try {
-    const Q_COLS = "id, subcategory_id, subject_id, exam_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs, references, is_ai_generated";
+    const Q_COLS = "id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
     let { data, error } = await supabase
       .from("questions")
       .select(Q_COLS)
@@ -234,7 +234,7 @@ export async function fetchPublishedQuestions(options?: {
 }): Promise<Question[]> {
   if (options) {
     try {
-      const Q_COLS = "id, subcategory_id, subject_id, exam_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs, references, is_ai_generated";
+      const Q_COLS = "id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
       let query = supabase
         .from("questions")
         .select(Q_COLS)
@@ -323,7 +323,7 @@ export async function fetchPublishedQuestions(options?: {
   if (cachedQuestions) return cachedQuestions;
 
   try {
-    const Q_COLS = "id, subcategory_id, subject_id, exam_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs, references, is_ai_generated";
+    const Q_COLS = "id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
     const { data, error } = await supabase
       .from("questions")
       .select(Q_COLS)
@@ -390,7 +390,7 @@ export async function fetchPublishedSubjects(): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from("subjects")
-      .select("id, title, description, status, sort_order, exam_authority, license, is_free, exam_id")
+      .select("id, title, description, status, sort_order, exam_authority, license, exam_id")
       .order("sort_order", { ascending: true });
 
     if (error) {
@@ -447,7 +447,7 @@ export async function fetchPublishedSubcategories(): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from("subcategories")
-      .select("id, subject_id, title, code, description, status, sort_order, free_chapter")
+      .select("id, subject_id, title, code, description, status, sort_order")
       .eq("status", "published");
 
     if (error) {

@@ -99,7 +99,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       const { data, error } = await supabase
         .from("notifications")
-        .select("id, user_id, title, body, message, type, read, created_at")
+        .select("id, user_id, title, message, type, read, created_at")
         .eq("user_id", user.uid)
         .order("created_at", { ascending: false });
 
