@@ -58,7 +58,7 @@ export const defaultFlags: Flags = {
   calendarSync: false,           // M13: ICS export + Google/Outlook/Apple calendar sync
 };
 
-const FeatureFlagsContext = createContext<{ flags: Flags; loading: boolean }>({ flags: defaultFlags, loading: true });
+export const FeatureFlagsContext = createContext<{ flags: Flags; loading: boolean }>({ flags: defaultFlags, loading: true });
 
 export const FeatureFlagsProvider = ({ children }: { children: React.ReactNode }) => {
   const [flags, setFlags] = useState<Flags>(defaultFlags);

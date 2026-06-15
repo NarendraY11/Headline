@@ -4,6 +4,8 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-d
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAuth } from "./contexts/AuthContext";
 import { useFeature } from "./hooks/useFeatureFlags";
+import { PreviewModeProvider } from "./preview/PreviewModeProvider";
+import { defaultFlags } from "./hooks/useFeatureFlags";
 
 // Landing route is eager (not lazy): it's the LCP/entry page, so lazy-loading it
 // only adds a chunk round-trip and a Suspense skeleton->content swap that caused
@@ -59,6 +61,7 @@ const SiteContentManager = lazy(() => import("./views/admin/SiteContentManager")
 const AiSettingsManager = lazy(() => import("./views/admin/AiSettingsManager"));
 const FunnelAnalytics = lazy(() => import("./views/admin/FunnelAnalytics"));
 const BillingManager = lazy(() => import("./views/admin/BillingManager"));
+const FeaturePreviewRoute = lazy(() => import("./views/admin/FeaturePreviewRoute"));
 const ExamCentreView = lazy(() => import("./views/ExamCentreView"));
 
 import { CookieConsent } from "./components/CookieConsent";
@@ -173,6 +176,14 @@ export default function App() {
             <Route path="/admin/activity" element={<AdminActivity />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/features" element={<FeatureControl />} />
+            <Route
+              path="/admin/features/preview/:featureKey"
+              element={
+                <PreviewModeProvider draftFlags={defaultFlags}>
+                  <FeaturePreviewRoute />
+                </PreviewModeProvider>
+              }
+            />
             <Route path="/admin/blog" element={<BlogManager />} />
             <Route path="/admin/notifications" element={<NotificationsManager />} />
             <Route path="/admin/roles" element={<RolesManager />} />
