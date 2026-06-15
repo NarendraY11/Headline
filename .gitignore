@@ -22,3 +22,25 @@ coverage/
 .playwright-mcp/
 lh-out/
 .vercel
+.impeccable/
+graphify-out/
+agent-skills/
+ui-ux-pro-max-skill/
+claude-marketplace/
+chrome/
+supabase/
+
+# Screenshot / audit artifacts
+*.png
+!public/**/*.png
+!src/**/*.png
+audit-report.md
+mobile-audit-report.md
+launch-audit-2026-06-07.md
+today.png
+preview-home.png
+pricing.png
+dashboard.png
+
+# Local scripts not part of build
+scripts/graphify-scoped-update.py
