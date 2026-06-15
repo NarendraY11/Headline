@@ -144,8 +144,11 @@ export async function generateOgImages() {
     fs.writeFileSync(svgPath, svgContent, "utf8");
 
     const pngPath = path.join(outputDir, `${post.slug}.png`);
-    await sharp(Buffer.from(svgContent)).png().toFile(pngPath);
-    console.log(`Saved OG image: ${post.slug}.png`);
+    const webpPath = path.join(outputDir, `${post.slug}.webp`);
+    const svgBuf = Buffer.from(svgContent);
+    await sharp(svgBuf).png().toFile(pngPath);
+    await sharp(svgBuf).webp({ quality: 85 }).toFile(webpPath);
+    console.log(`Saved OG image: ${post.slug}.png + .webp`);
   }
 
   console.log("Completed dynamic OG image batch generation.");

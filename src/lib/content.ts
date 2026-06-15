@@ -80,7 +80,7 @@ export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
   try {
     const { data, error } = await supabase
       .from("questions")
-      .select("*")
+      .select("id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs")
       .in("id", ids);
 
     if (error || !data) {
@@ -126,16 +126,17 @@ export async function fetchQuizQuestionsForTopic(
   randomize = true
 ): Promise<Question[]> {
   try {
+    const Q_COLS = "id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
     let { data, error } = await supabase
       .from("questions")
-      .select("*")
+      .select(Q_COLS)
       .eq("status", "published")
       .eq("subcategory_id", topicId);
 
     if (error || !data || data.length === 0) {
       const res = await supabase
         .from("questions")
-        .select("*")
+        .select(Q_COLS)
         .eq("status", "published")
         .eq("subject_id", topicId);
       data = res.data;
@@ -145,7 +146,7 @@ export async function fetchQuizQuestionsForTopic(
     if (error || !data || data.length === 0) {
       const res = await supabase
         .from("questions")
-        .select("*")
+        .select(Q_COLS)
         .eq("status", "published");
       
       const normTarget = normalizeSlug(topicId);
@@ -233,9 +234,10 @@ export async function fetchPublishedQuestions(options?: {
 }): Promise<Question[]> {
   if (options) {
     try {
+      const Q_COLS = "id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
       let query = supabase
         .from("questions")
-        .select("*")
+        .select(Q_COLS)
         .eq("status", "published");
 
       if (options.subjectId) {
@@ -321,9 +323,10 @@ export async function fetchPublishedQuestions(options?: {
   if (cachedQuestions) return cachedQuestions;
 
   try {
+    const Q_COLS = "id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
     const { data, error } = await supabase
       .from("questions")
-      .select("*")
+      .select(Q_COLS)
       .eq("status", "published");
 
     if (error) {
@@ -387,7 +390,7 @@ export async function fetchPublishedSubjects(): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from("subjects")
-      .select("*")
+      .select("id, title, description, status, sort_order, exam_authority, license, exam_id")
       .order("sort_order", { ascending: true });
 
     if (error) {
@@ -444,7 +447,7 @@ export async function fetchPublishedSubcategories(): Promise<any[]> {
   try {
     const { data, error } = await supabase
       .from("subcategories")
-      .select("*")
+      .select("id, subject_id, title, code, description, status, sort_order")
       .eq("status", "published");
 
     if (error) {
@@ -794,7 +797,7 @@ export async function fetchExams(): Promise<ExamInfo[]> {
   try {
     const { data, error } = await supabase
       .from("exams")
-      .select("*")
+      .select("id, authority, license, title, pass_mark, total_questions, question_count, duration_min, negative_marking, neg_marking_percent, subject_ids, status")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -910,7 +913,7 @@ export async function fetchMockPapersForExam(examId: string): Promise<MockPaperS
   try {
     const { data, error } = await supabase
       .from("mock_papers")
-      .select("*")
+      .select("id, exam_id, title, duration_min, pass_mark, neg_marking_percent, total_questions, rules, status")
       .eq("exam_id", examId)
       .order("created_at", { ascending: true });
 
