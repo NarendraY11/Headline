@@ -28,11 +28,12 @@ export function trackEvent(
         lastPageViewPath = currentPath;
       }
 
-      // Fetch current session (retrieved from local state/cookie or network)
       const { data: { session } } = await supabase.auth.getSession();
-      const userId = session?.user?.id || null;
-      const userEmail = session?.user?.email || null;
-      const userName = session?.user?.user_metadata?.display_name || session?.user?.user_metadata?.full_name || null;
+      if (!session) return;
+
+      const userId = session.user.id;
+      const userEmail = session.user.email || null;
+      const userName = session.user.user_metadata?.display_name || session.user.user_metadata?.full_name || null;
 
       const row = {
         user_id: userId,
