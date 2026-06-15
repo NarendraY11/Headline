@@ -47,7 +47,7 @@
     "react-dom": "^19.0.1",
     "react-router-dom": "^7.15.1",
     "recharts": "^3.8.1",
-    "vite": "^6.2.3"
+    "vite": "^8.0.16"
   },
   "overrides": {
     "node-domexception": "file:packages/node-domexception",
@@ -81,7 +81,7 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.22.4",
     "typescript": "~5.8.2",
-    "vite": "^6.2.3",
+    "vite": "^8.0.16",
     "dotenv": "^17.2.3",
     "vite-plugin-pwa": "^1.3.0"
   }
