@@ -1,5 +1,6 @@
 import { Bot } from "lucide-react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { ChartContainer } from "../../../components/ChartContainer.js";
 
 interface Props {
   aiUsageData: any[];
@@ -20,7 +21,7 @@ export function AiUsageHardestQuestions({ aiUsageData, hardestQuestions, COLORS 
           </h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Metrics representing smart service execution rates</p>
         </div>
-        <div className="flex-1 w-full min-h-0 py-2" role="img" aria-label="Donut pie chart showing AI Copilot diagnostics usage rates">
+        <ChartContainer className="flex-1 w-full min-h-0 py-2" role="img" aria-label="Donut pie chart showing AI Copilot diagnostics usage rates">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -47,7 +48,7 @@ export function AiUsageHardestQuestions({ aiUsageData, hardestQuestions, COLORS 
               />
             </PieChart>
           </ResponsiveContainer>
-        </div>
+        </ChartContainer>
       </div>
 
       {/* Hardest Questions table */}

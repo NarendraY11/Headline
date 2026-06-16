@@ -141,3 +141,21 @@ self.addEventListener('notificationclose', (event) => {
     })
   );
 });
+
+// ── unhandledrejection guard ───────────────────────────────────────────────────
+// Analytics / monitoring SDKs (Sentry, PostHog) make fetch calls from the page
+// context that the SW sometimes sees as navigation errors when blocked by an
+// adblocker. Suppress those so the SW console stays clean.
+
+self.addEventListener('unhandledrejection', (event) => {
+  const msg = String(event.reason?.message || event.reason || '');
+  if (
+    msg.includes('no-response') ||
+    msg.includes('posthog') ||
+    msg.includes('sentry') ||
+    msg.includes('ingest.') ||
+    msg.includes('ERR_BLOCKED')
+  ) {
+    event.preventDefault();
+  }
+});

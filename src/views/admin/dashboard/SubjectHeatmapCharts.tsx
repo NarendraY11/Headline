@@ -1,4 +1,5 @@
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ChartContainer } from "../../../components/ChartContainer.js";
 
 interface Props {
   usageBySubject: any[];
@@ -15,7 +16,7 @@ export function SubjectHeatmapCharts({ usageBySubject, heatmapData }: Props) {
           <h3 className="font-serif text-lg font-medium text-ink">Most Popular Subjects</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Total quiz simulation requests (top 10 subjects)</p>
         </div>
-        <div className="flex-1 w-full min-h-0" role="img" aria-label="Vertical bar chart displaying quiz simulation usage count across subjects">
+        <ChartContainer className="flex-1 w-full min-h-0" role="img" aria-label="Vertical bar chart displaying quiz simulation usage count across subjects">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               layout="vertical"
@@ -38,7 +39,7 @@ export function SubjectHeatmapCharts({ usageBySubject, heatmapData }: Props) {
               <Bar dataKey="usage_count" fill="#E5A93C" radius={[0, 3, 3, 0]} barSize={12} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </ChartContainer>
       </div>
 
       {/* Sub-category Heatmap */}

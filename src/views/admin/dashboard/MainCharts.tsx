@@ -10,6 +10,7 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
+import { ChartContainer } from "../../../components/ChartContainer.js";
 
 interface Props {
   signupsOverTime: any[];
@@ -20,14 +21,14 @@ interface Props {
 export function MainCharts({ signupsOverTime, conversionsOverTime, activeUsersOverTime }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
+
       {/* Signups over time */}
       <div className="bg-paper border border-rule rounded-xl p-6 flex flex-col h-[240px] sm:h-[280px] lg:h-[320px] shadow-sm">
         <div className="mb-4">
           <h3 className="font-serif text-lg font-medium text-ink">New Signups Timeline</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Cohort growth trajectory over selected range</p>
         </div>
-        <div className="flex-1 w-full min-h-0" role="img" aria-label="Line chart showing new user registrations timeline">
+        <ChartContainer className="flex-1 w-full min-h-0" role="img" aria-label="Line chart showing new user registrations timeline">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={signupsOverTime} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
               <XAxis dataKey="day" stroke="var(--muted)" fontSize={9} strokeWidth={1} tickLine={false} />
@@ -38,7 +39,7 @@ export function MainCharts({ signupsOverTime, conversionsOverTime, activeUsersOv
               <Line type="monotone" dataKey="Signups" stroke="#0F1E3C" strokeWidth={1.8} dot={{ r: 2 }} activeDot={{ r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
-        </div>
+        </ChartContainer>
       </div>
 
       {/* Paid conversions */}
@@ -47,7 +48,7 @@ export function MainCharts({ signupsOverTime, conversionsOverTime, activeUsersOv
           <h3 className="font-serif text-lg font-medium text-teal-850">Paid License Acquisitions</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Success of upgrade_pro upgrade cycles</p>
         </div>
-        <div className="flex-1 w-full min-h-0" role="img" aria-label="Area chart showing paid license acquisitions timeline">
+        <ChartContainer className="flex-1 w-full min-h-0" role="img" aria-label="Area chart showing paid license acquisitions timeline">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={conversionsOverTime} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
               <defs>
@@ -64,7 +65,7 @@ export function MainCharts({ signupsOverTime, conversionsOverTime, activeUsersOv
               <Area type="monotone" dataKey="Upgrades" stroke="#557B96" strokeWidth={1.5} fillOpacity={1} fill="url(#colorUpgrades)" />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
+        </ChartContainer>
       </div>
 
       {/* Daily active users */}
@@ -73,7 +74,7 @@ export function MainCharts({ signupsOverTime, conversionsOverTime, activeUsersOv
           <h3 className="font-serif text-lg font-medium text-ink">Active User Frequency</h3>
           <p className="font-mono text-[9px] text-muted uppercase tracking-wider">Daily distinct active pilots (DAU timeline)</p>
         </div>
-        <div className="flex-1 w-full min-h-0" role="img" aria-label="Bar chart showing daily active user frequency over time">
+        <ChartContainer className="flex-1 w-full min-h-0" role="img" aria-label="Bar chart showing daily active user frequency over time">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={activeUsersOverTime} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
               <XAxis dataKey="day" stroke="var(--muted)" fontSize={9} strokeWidth={1} tickLine={false} />
@@ -85,7 +86,7 @@ export function MainCharts({ signupsOverTime, conversionsOverTime, activeUsersOv
               <Bar dataKey="Actives" fill="#0F1E3C" radius={[3, 3, 0, 0]} barSize={16} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </ChartContainer>
       </div>
 
     </div>

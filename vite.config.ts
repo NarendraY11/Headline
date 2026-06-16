@@ -161,6 +161,18 @@ export default defineConfig(({ command }) => {
           navigateFallback: '/index.html',
           navigateFallbackDenylist: [/^\/api\//, /^\/sitemap\.xml$/, /^\/robots\.txt$/, /^\/llms\.txt$/],
           runtimeCaching: [
+            // Analytics / monitoring hosts: pass through with NetworkOnly so the SW
+            // never caches them and never throws "no-response" when an adblocker
+            // drops the request. Must be first so they are matched before the
+            // catch-all image/font rule below.
+            {
+              urlPattern: ({ url }) =>
+                url.hostname.endsWith('.posthog.com') ||
+                url.hostname.endsWith('.sentry.io') ||
+                url.hostname.includes('ingest.') ||
+                url.hostname.endsWith('.googleusercontent.com'),
+              handler: 'NetworkOnly',
+            },
             // Supabase auth: NEVER cache tokens / session.
             {
               urlPattern: ({ url }) =>

@@ -72,6 +72,18 @@ function scrubUrl(url: unknown): string | undefined {
 }
 
 if (dsn) {
+  // Sentry transport errors (network blocked / adblocker) produce console noise.
+  // Monkey-patch the global XHR/fetch error only when Sentry is active, so that
+  // transport failures degrade silently. Sentry's own retry logic is fine; we
+  // just suppress the browser-level unhandled rejection that leaks to the console.
+  window.addEventListener("unhandledrejection", (e) => {
+    const msg = String(e.reason?.message || e.reason || "");
+    if (msg.includes("sentry.io") || msg.includes("ingest.") || msg.includes("ERR_BLOCKED")) {
+      e.preventDefault();
+    }
+  }, { passive: true });
+
+  try {
   Sentry.init({
     dsn,
     environment: import.meta.env.MODE,
@@ -125,6 +137,13 @@ if (dsn) {
       return event;
     },
     beforeBreadcrumb(crumb) {
+      // Drop breadcrumbs for requests to analytics/monitoring hosts — when
+      // blocked by an adblocker these produce high-volume network-error crumbs
+      // that fill the event payload with noise.
+      const url = crumb.data?.url as string | undefined;
+      if (url && (url.includes("sentry.io") || url.includes("posthog.com") || url.includes("ingest."))) {
+        return null;
+      }
       if (typeof crumb.data?.url === "string") {
         crumb.data.url = scrubUrl(crumb.data.url);
       }
@@ -137,4 +156,8 @@ if (dsn) {
       return crumb;
     },
   });
+  } catch {
+    // Sentry init failed (e.g. DSN invalid, network blocked during setup).
+    // App continues without monitoring.
+  }
 }
