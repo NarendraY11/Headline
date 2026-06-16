@@ -86,7 +86,13 @@ async function prerender() {
         
         await page.setRequestInterception(true);
         page.on('request', (req) => {
-          if (['image', 'stylesheet', 'font'].includes(req.resourceType()) || req.url().includes('google') || req.url().includes('doubleclick')) {
+          const url = req.url();
+          if (
+            ['image', 'stylesheet', 'font'].includes(req.resourceType()) ||
+            url.includes('google') ||
+            url.includes('doubleclick') ||
+            url.includes('/_vercel/')
+          ) {
             req.abort();
           } else {
             req.continue();
