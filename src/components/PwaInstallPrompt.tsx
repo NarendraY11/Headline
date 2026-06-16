@@ -24,6 +24,22 @@ export function PwaInstallPrompt() {
 
     if (localStorage.getItem(DISMISS_KEY) === "true") return;
 
+    // Defer until the user has completed at least 1 quiz session.
+    // Logbook entries are stored as JSON arrays in localStorage.
+    const hasSession = (() => {
+      try {
+        const logbook = localStorage.getItem("heading_logbook");
+        if (logbook) {
+          const parsed = JSON.parse(logbook);
+          return Array.isArray(parsed) && parsed.length > 0;
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    })();
+    if (!hasSession) return;
+
     const onPrompt = (e: Event) => {
       e.preventDefault(); // suppress the default mini-infobar
       setDeferred(e as BeforeInstallPromptEvent);

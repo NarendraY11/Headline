@@ -112,12 +112,12 @@ export function TodayStops({ subjectsList, subjectMastery, dueCount }: TodayStop
             className="group block border-b border-rule py-4 transition-colors hover:bg-bg-2 active:bg-rule -mx-4 px-4 md:mx-0 md:px-2 rounded-md"
           >
             <div className="flex items-center gap-4">
-              <span className={`font-mono text-[9px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full border ${h.text} ${h.border} ${h.bg}`}>
+              <span className={`font-mono text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full border ${h.text} ${h.border} ${h.bg}`}>
                 {stop.type}
               </span>
               <div className="min-w-0 flex-1">
                 <span className="font-serif text-lg text-ink font-medium block truncate">{stop.label}</span>
-                <span className="font-mono text-[9px] text-muted-2 tracking-wide">{stop.subLabel}</span>
+                <span className="font-mono text-[10px] text-muted-2 tracking-wide">{stop.subLabel}</span>
               </div>
               <span className="font-mono text-[10px] text-muted-2 uppercase shrink-0">{stop.duration}</span>
               <ArrowUpRight size={16} className="text-muted ml-1 shrink-0 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />

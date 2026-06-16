@@ -411,7 +411,7 @@ export default function TodayView() {
   }
 
   const tileBaseClasses =
-    "bg-paper border border-rule rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between";
+    "bg-paper border border-rule dark:border-rule-strong dark:shadow-md rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between";
 
   const renderTile = (tile: string) => {
     switch (tile) {
@@ -540,7 +540,7 @@ export default function TodayView() {
                 <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
                   HOURS · 7D
                 </span>
-                </div>
+              </div>
               <div className="font-serif text-[26px] text-ink leading-none mt-2">
                 {hasAttempts ? <AnimatedCounter value={hoursThisWeek} /> : 0}{" "}
                 <span className="font-sans text-xl text-muted font-normal lowercase tracking-normal">
@@ -550,6 +550,11 @@ export default function TodayView() {
               <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
                 Total: {hoursStudied}h
               </div>
+              {hoursStudied === 0 && (
+                <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide leading-relaxed">
+                  Complete a session to track hours
+                </div>
+              )}
             </div>
           </div>
         );
@@ -698,7 +703,14 @@ export default function TodayView() {
               <span>Exam Readiness Track</span>
               <span className="text-mint font-bold">{readinessPercentage}% ({passedCount}/{subjectsList.length} subjects ≥ 80%)</span>
             </div>
-            <div className="w-full bg-bg/20 h-2.5 rounded-full relative overflow-hidden">
+            <div
+              className="w-full bg-bg/20 h-2.5 rounded-full relative overflow-hidden"
+              role="progressbar"
+              aria-valuenow={readinessPercentage}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Exam readiness: ${readinessPercentage}%`}
+            >
               <div
                 className="bg-mint h-full rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(34,197,94,0.5)]"
                 style={{ width: `${readinessPercentage}%` }}

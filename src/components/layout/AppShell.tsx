@@ -379,7 +379,7 @@ export function AppShell() {
                     title={!isSidebarExpanded ? item.label : undefined}
                     aria-label={!isSidebarExpanded ? item.label : undefined}
                     aria-current={active ? "page" : undefined}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 ${
+                    className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 ${
                       active
                         ? "bg-panel text-ink border-rule shadow-sm"
                         : "bg-transparent text-muted hover:text-ink hover:bg-panel/40 border-transparent"
@@ -439,7 +439,7 @@ export function AppShell() {
                   }
                   if (isTablet && isSidebarTappedForTablet) setIsSidebarTappedForTablet(false);
                 }}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 bg-transparent text-muted hover:text-ink hover:bg-panel/40 border-transparent w-full`}
+                className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 bg-transparent text-muted hover:text-ink hover:bg-panel/40 border-transparent w-full`}
                 title={!isSidebarExpanded ? "Night Mode" : undefined}
               >
                 <Moon size={16} className="text-muted-2 flex-shrink-0 hidden dark:block" />
@@ -454,7 +454,7 @@ export function AppShell() {
                   setShowSettings(true);
                   if (isTablet && isSidebarTappedForTablet) setIsSidebarTappedForTablet(false);
                 }}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 bg-transparent text-muted hover:text-ink hover:bg-panel/40 border-transparent w-full`}
+                className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 bg-transparent text-muted hover:text-ink hover:bg-panel/40 border-transparent w-full`}
                 title={!isSidebarExpanded ? "Settings" : undefined}
               >
                 <Settings size={16} className="text-muted-2 flex-shrink-0" />
@@ -505,9 +505,10 @@ export function AppShell() {
                 <NotificationCenter />
                 
                 {/* Settings button - mobile only */}
-                <button 
+                <button
                   onClick={() => setShowSettings(true)}
-                  className="p-3 -m-1.5 text-muted hover:text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none md:hidden"
+                  className="p-3 -m-1.5 text-muted hover:text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center"
+                  aria-label="Settings"
                   title="Settings"
                 >
                   <Settings size={18} />

@@ -47,7 +47,14 @@ function ComponentBar({
         </p>
         <p className="font-mono text-[7px] text-muted-2 opacity-60">{weight}</p>
       </div>
-      <div className="flex-1 h-1.5 bg-bg-2 rounded-full overflow-hidden">
+      <div
+        className="flex-1 h-1.5 bg-bg-2 rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${label}: ${pct}%`}
+      >
         <div
           className={`h-full rounded-full transition-all duration-700 ${barColor}`}
           style={{ width: `${pct}%` }}

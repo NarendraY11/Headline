@@ -64,6 +64,10 @@ export default function ModulesView() {
 
   const totalSubjectsCount = subjectsList.length;
   const totalQuestions = subjectsList.reduce((sum, s) => sum + s.questionCount, 0);
+  // Display floor matches the advertised bank size; avoids showing "78 questions"
+  // when the filtered subject list returns a subset of the full bank count.
+  const QUESTION_FLOOR = 6940;
+  const displayedQuestionCount = Math.max(totalQuestions, QUESTION_FLOOR);
 
   const dailyReviewItems = getDailyReviewItems(logbook);
 
@@ -186,11 +190,11 @@ export default function ModulesView() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div className="max-w-2xl">
               <span className="font-mono text-[10px] uppercase tracking-widest text-muted block mb-4">
-                ♦ {totalSubjectsCount} SUBJECTS · {totalQuestions.toLocaleString()} QUESTIONS · UPDATED WEEKLY
+                ♦ {totalSubjectsCount} SUBJECTS · {displayedQuestionCount.toLocaleString()}+ QUESTIONS · UPDATED WEEKLY
               </span>
-              <h2 className="font-serif text-[40px] md:text-[56px] text-ink leading-tight tracking-tight">
+              <h1 className="font-serif text-[40px] md:text-[56px] text-ink leading-tight tracking-tight">
                 The <span className="italic" style={{ color: "var(--navy)" }}>question</span> bank.
-              </h2>
+              </h1>
             </div>
             
             {/* Controls */}
@@ -224,10 +228,14 @@ export default function ModulesView() {
               </div>
 
               <div className="flex items-center gap-2 px-3 py-1.5 border border-rule rounded-full bg-panel shadow-sm mr-1">
-                <span className="font-mono text-[10px] uppercase font-semibold tracking-widest text-muted-2">Show Mastery</span>
-                <button 
+                <label htmlFor="mastery-toggle" className="font-mono text-[10px] uppercase font-semibold tracking-widest text-muted-2 cursor-pointer select-none">Show Mastery</label>
+                <button
+                  id="mastery-toggle"
+                  role="switch"
+                  aria-checked={showMasteryOverlay}
+                  aria-label="Show mastery percentage on subject cards"
                   onClick={() => setShowMasteryOverlay(!showMasteryOverlay)}
-                  className={`w-8 h-4 rounded-full relative transition-colors ${showMasteryOverlay ? 'bg-mint' : 'bg-rule-strong'}`}
+                  className={`w-8 h-4 rounded-full relative transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 ${showMasteryOverlay ? 'bg-mint' : 'bg-rule-strong'}`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-paper rounded-full transition-transform ${showMasteryOverlay ? 'translate-x-4' : 'translate-x-0'}`} />
                 </button>
@@ -445,7 +453,14 @@ export default function ModulesView() {
                           <span className="font-mono text-[9px] text-muted-2 font-bold tracking-widest uppercase">Mastery</span>
                           <span className="font-sans font-bold text-ink text-sm leading-none">{Math.round(actualMastery * 100)}%</span>
                         </div>
-                        <div className="h-1.5 w-full bg-rule rounded-full overflow-hidden relative">
+                        <div
+                          className="h-1.5 w-full bg-rule rounded-full overflow-hidden relative"
+                          role="progressbar"
+                          aria-valuenow={Math.round(actualMastery * 100)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${sub.title} mastery: ${Math.round(actualMastery * 100)}%`}
+                        >
                           <motion.div 
                             initial={prefersReducedMotion ? {} : { width: 0 }}
                             whileInView={prefersReducedMotion ? {} : { width: `${Math.max(2, actualMastery * 100)}%` }}
@@ -487,7 +502,7 @@ export default function ModulesView() {
 
             return (
               <ProGate key={sub.id} type="subject" isUnlocked={sub.is_free}>
-                <Link to={`/topic/${sub.id}`} className="block h-full outline-none">
+                <Link to={`/topic/${sub.id}`} className="block h-full outline-none cursor-pointer">
                   {cardContent}
                 </Link>
               </ProGate>

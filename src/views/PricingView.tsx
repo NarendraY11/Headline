@@ -335,19 +335,19 @@ export default function PricingView() {
             
             {/* PRO TIER */}
             <FadeUp delay={250} className="h-full relative">
-               <div className="absolute top-0 right-0 -tr-translate-y-1/2 translate-x-1/4 translate-y-[-16px] z-10">
-                 <Chip variant="solid" className="bg-[#DF9D38] border-[#CF8E28] text-[#0d1a2d] text-[9px] px-3.5 py-1.5 shadow-md transform rotate-2 tracking-widest font-mono uppercase font-bold">★ PREFLIGHT CLEARANCE</Chip>
-               </div>
                <div className={`border-2 ${isPro ? "border-mint" : "border-navy"} bg-paper rounded-[24px] p-10 h-full flex flex-col shadow-xl relative overflow-hidden`}>
                   <div className="absolute top-0 right-0 w-64 h-64 bg-navy/5 blur-3xl rounded-full translate-x-1/3 -translate-y-1/3" />
-                  
+
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-sans font-semibold text-[22px] text-navy relative z-10">Captain (Pro)</h3>
-                    {isPro && (
-                      <span className="bg-mint text-bg font-mono font-bold text-[9px] py-1 px-2.5 rounded-full uppercase leading-none tracking-widest">
-                        Active Plan
-                      </span>
-                    )}
+                    <div className="flex flex-col items-end gap-1.5 z-10">
+                      <Chip variant="solid" className="bg-[#DF9D38] border-[#CF8E28] text-[#0d1a2d] text-[9px] px-3 py-1 shadow-md transform rotate-1 tracking-widest font-mono uppercase font-bold">★ PREFLIGHT CLEARANCE</Chip>
+                      {isPro && (
+                        <span className="bg-mint text-bg font-mono font-bold text-[9px] py-1 px-2.5 rounded-full uppercase leading-none tracking-widest">
+                          Active Plan
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <p className="font-sans text-[13px] text-navy/70 mb-8 font-medium relative z-10">The complete high-altitude arsenal.</p>
                   
