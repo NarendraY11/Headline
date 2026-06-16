@@ -72,16 +72,39 @@ function scrubUrl(url: unknown): string | undefined {
 }
 
 if (dsn) {
-  // Sentry transport errors (network blocked / adblocker) produce console noise.
-  // Monkey-patch the global XHR/fetch error only when Sentry is active, so that
-  // transport failures degrade silently. Sentry's own retry logic is fine; we
-  // just suppress the browser-level unhandled rejection that leaks to the console.
+  // Suppress unhandled rejections originating from blocked Sentry transport.
+  // NOTE: must NOT use { passive: true } — passive listeners cannot call
+  // e.preventDefault(), so the event would still propagate to the console.
   window.addEventListener("unhandledrejection", (e) => {
     const msg = String(e.reason?.message || e.reason || "");
-    if (msg.includes("sentry.io") || msg.includes("ingest.") || msg.includes("ERR_BLOCKED")) {
+    if (
+      msg.includes("sentry.io") ||
+      msg.includes("ingest.") ||
+      msg.includes("ERR_BLOCKED") ||
+      msg.includes("Failed to fetch") && (e.reason?.stack || "").includes("sentry")
+    ) {
       e.preventDefault();
     }
-  }, { passive: true });
+  });
+
+  // Custom transport that swallows network errors silently. Sentry's default
+  // fetch transport throws on ERR_BLOCKED_BY_CLIENT, which leaks to the console
+  // even after the unhandledrejection guard above (browser logs the network error
+  // before JS sees the rejection). Wrapping the transport stops both.
+  function makeSilentTransport(options: Parameters<typeof Sentry.makeFetchTransport>[0]) {
+    const inner = Sentry.makeFetchTransport(options);
+    return {
+      send: async (request: Parameters<typeof inner.send>[0]) => {
+        try {
+          return await inner.send(request);
+        } catch {
+          // Transport blocked — discard silently, app continues.
+          return {};
+        }
+      },
+      flush: (timeout?: number) => inner.flush(timeout),
+    };
+  }
 
   try {
   Sentry.init({
@@ -91,6 +114,7 @@ if (dsn) {
     // Never attach default PII (IP address, cookies, user from headers). We
     // identify users explicitly elsewhere with non-sensitive ids only.
     sendDefaultPii: false,
+    transport: makeSilentTransport,
     // Capture browser perf traces + session replays for user-facing debugging.
     integrations: [
       Sentry.browserTracingIntegration(),

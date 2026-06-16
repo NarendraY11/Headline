@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { MasteryTrendProjectionPoint } from "../../lib/forecastEngine";
+import { ChartContainer } from "../../components/ChartContainer";
 
 interface Props {
   projection: MasteryTrendProjectionPoint[];
@@ -51,7 +52,7 @@ export function MasteryTrendProjectionChart({ projection, loading }: Props) {
       </div>
       <p className="font-mono text-[8px] text-muted-2 mb-4">Average accuracy — historical + linear extrapolation</p>
 
-      <div style={{ width: "100%", height: 190 }}>
+      <ChartContainer className="w-full h-[190px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={projection} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-rule, #e5e7eb)" strokeOpacity={0.5} />
@@ -83,7 +84,7 @@ dot={(props: any) => {
             />
           </LineChart>
         </ResponsiveContainer>
-      </div>
+      </ChartContainer>
 
       <div className="flex items-center gap-4 mt-2">
         <div className="flex items-center gap-1.5">

@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { ReadinessTimelinePoint } from "../../lib/forecastEngine";
+import { ChartContainer } from "../../components/ChartContainer";
 
 interface Props {
   timeline: ReadinessTimelinePoint[];
@@ -49,7 +50,7 @@ export function ReadinessTimelineChart({ timeline, currentScore, loading }: Prop
       </div>
       <p className="font-mono text-[8px] text-muted-2 mb-4">Projected 8-week readiness trajectory</p>
 
-      <div style={{ width: "100%", height: 200 }}>
+      <ChartContainer className="w-full h-[200px]">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={timeline} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
             <defs>
@@ -86,7 +87,7 @@ export function ReadinessTimelineChart({ timeline, currentScore, loading }: Prop
             />
           </AreaChart>
         </ResponsiveContainer>
-      </div>
+      </ChartContainer>
 
       <div className="flex items-center gap-4 mt-2">
         <div className="flex items-center gap-1.5">

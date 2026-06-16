@@ -9,6 +9,7 @@ import {
     YAxis,
 } from "recharts";
 import { useChartTokens } from "./useChartTokens";
+import { ChartContainer } from "../../components/ChartContainer";
 
 interface PacingChartProps {
     data: any[];
@@ -19,6 +20,7 @@ interface PacingChartProps {
 export default function PacingChart({ data }: PacingChartProps) {
     const t = useChartTokens();
     return (
+        <ChartContainer className="w-full h-full">
         <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
@@ -68,5 +70,6 @@ export default function PacingChart({ data }: PacingChartProps) {
                 />
             </ComposedChart>
         </ResponsiveContainer>
+        </ChartContainer>
     );
 }
