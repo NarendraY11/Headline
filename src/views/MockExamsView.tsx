@@ -492,7 +492,7 @@ export default function MockExamsView() {
                             minute: "2-digit"
                           });
                           
-                          const title = attempt.data?.topicTitle || attempt.topic_id || "Simulator Session";
+                          const title = attempt.data?.topicTitle || (attempt.topic_id ? attempt.topic_id.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) : "Simulator Session");
                           const passThreshold = attempt.data?.overridePassMark || 70;
                           const scoreRatio = `${attempt.score} / ${attempt.total}`;
                           const pct = attempt.percentage !== undefined ? attempt.percentage : Math.round((attempt.score / attempt.total) * 100);

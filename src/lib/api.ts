@@ -180,14 +180,22 @@ export async function apiFetchRaw(
 }
 
 /** Best-effort extraction of an error message from a Response. */
+// Infrastructure error patterns that must never appear in UI.
+const INFRA_ERROR_RE = /FUNCTION_INVOCATION_FAILED|bom\d+::|iad\d+::|sin\d+::|sfo\d+::|A server error has occurred|Internal Server Error/i;
+
 export async function readError(res: Response, fallback = "Request failed."): Promise<string> {
   try {
     const data = await res.clone().json();
-    return data?.error || data?.message || fallback;
+    const msg: string = data?.error || data?.message || "";
+    if (msg && !INFRA_ERROR_RE.test(msg)) return msg;
+    return fallback;
   } catch {
     try {
-      const text = await res.text();
-      return text || fallback;
+      const text = (await res.text()).trim();
+      // Never surface raw Vercel/infra error pages — return the fallback instead.
+      if (!text || INFRA_ERROR_RE.test(text)) return fallback;
+      // Cap length so even unexpected text doesn't flood the UI.
+      return text.length <= 200 ? text : fallback;
     } catch {
       return fallback;
     }

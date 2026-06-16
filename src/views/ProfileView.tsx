@@ -94,7 +94,19 @@ export default function ProfileView() {
     );
   }
 
-  const { targetExam = "DGCA CPL", streakCount = 0, photoURL: firestorePhotoURL } = userData || {};
+  const TARGET_EXAM_LABELS: Record<string, string> = {
+    "dgca-cpl-mock": "DGCA CPL",
+    "dgca-atpl": "DGCA ATPL",
+    "easa-atpl": "EASA ATPL",
+    "faa-ppl": "FAA PPL",
+    "faa-cpl": "FAA CPL",
+    "faa-atpl": "FAA ATPL",
+    "a320-type-rating": "A320 Type Rating",
+    "atr72-type-rating": "ATR 72 Type Rating",
+  };
+  const rawTargetExam: string = (userData as any)?.targetExam ?? (userData as any)?.target_exam ?? "";
+  const targetExam = TARGET_EXAM_LABELS[rawTargetExam] || rawTargetExam || "DGCA CPL";
+  const { streakCount = 0, photoURL: firestorePhotoURL } = userData || {};
   const currentPhotoURL = firestorePhotoURL || user.photoURL;
 
   // Subscription / clearance details.

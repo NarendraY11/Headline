@@ -566,6 +566,17 @@ async function pushSubscribe(req: VercelRequest, res: VercelResponse) {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  try {
+    return await _handler(req, res);
+  } catch (err) {
+    console.error("[system] unhandled error:", err instanceof Error ? err.stack : err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "An unexpected error occurred. Please try again." });
+    }
+  }
+}
+
+async function _handler(req: VercelRequest, res: VercelResponse) {
   const fnParam = req.query.fn;
   const fn = Array.isArray(fnParam) ? fnParam[0] : fnParam;
 

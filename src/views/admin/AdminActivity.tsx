@@ -35,6 +35,49 @@ interface ProfileRecord {
   display_name: string | null;
 }
 
+/** Generate a human-readable description from an event record. */
+function describeEvent(ev: EventRecord): string {
+  const entity = ev.question_id || ev.subcategory_id || ev.subject_id || ev.metadata?.topic_id || ev.metadata?.exam_id || null;
+  const custom = ev.metadata?.details || ev.metadata?.description || ev.metadata?.message;
+  if (custom) return String(custom);
+  switch (ev.event_type) {
+    case "PAGE_VIEW":
+    case "page_view": {
+      const page = ev.metadata?.path || ev.metadata?.page || "";
+      return page ? `Viewed page ${page}` : "Viewed a page";
+    }
+    case "QUESTION_ANSWERED":
+    case "question_answered": {
+      const correct = ev.metadata?.is_correct;
+      const suffix = correct === true ? " — correct" : correct === false ? " — incorrect" : "";
+      return entity ? `Answered question ${entity}${suffix}` : `Answered a question${suffix}`;
+    }
+    case "QUIZ_START":
+    case "quiz_start": return entity ? `Started quiz: ${entity}` : "Started a quiz session";
+    case "QUIZ_COMPLETE":
+    case "quiz_complete": {
+      const score = ev.metadata?.score != null ? ` (score: ${ev.metadata.score}%)` : "";
+      return entity ? `Completed quiz: ${entity}${score}` : `Completed a quiz${score}`;
+    }
+    case "AI_USED":
+    case "ai_used": {
+      const action = ev.metadata?.action || "interaction";
+      return `Used AI instructor: ${action}`;
+    }
+    case "BOOKMARK_ADDED": return entity ? `Bookmarked question ${entity}` : "Added a bookmark";
+    case "BOOKMARK_REMOVED": return entity ? `Removed bookmark on ${entity}` : "Removed a bookmark";
+    case "NOTE_SAVED": return entity ? `Saved note on ${entity}` : "Saved a note";
+    case "PLAN_GENERATED": return "Generated a new study plan";
+    case "PLAN_REGENERATED": return "Regenerated study plan";
+    case "MISSION_STARTED": return entity ? `Started mission: ${entity}` : "Started a mission";
+    case "MISSION_COMPLETED": return entity ? `Completed mission: ${entity}` : "Completed a mission";
+    default: {
+      const readable = ev.event_type.replace(/_/g, " ").toLowerCase();
+      return entity ? `${readable}: ${entity}` : readable;
+    }
+  }
+}
+
 // DEDICATED TABLE COMPONENT
 // Fetches & displays the last 50 events showing email, action, affected entity id, and timestamp with type filtering.
 interface RecentEventsAuditTableProps {
@@ -171,7 +214,7 @@ export function RecentEventsAuditTable({ profiles }: RecentEventsAuditTableProps
                 });
 
                 const affectedEntityId = ev.question_id || ev.subcategory_id || ev.subject_id || "None";
-                const detailsStr = ev.metadata?.details || `Performed administrative action type configuration.`;
+                const detailsStr = describeEvent(ev);
 
                 return (
                   <tr key={ev.id} className="hover:bg-bg-2/10 transition-colors">
@@ -580,7 +623,7 @@ export default function AdminActivity() {
 
                     const icon = getEventIcon(ev.event_type);
                     const label = cleanEventName(ev.event_type);
-                    const detailsStr = ev.metadata?.details || `Operation on hierarchy type.`;
+                    const detailsStr = describeEvent(ev);
 
                     return (
                       <tr key={ev.id} className="hover:bg-bg-2/20 transition-colors">

@@ -1,4 +1,4 @@
-import { inngest } from "./inngest.js";
+import { inngest } from "./inngestClient.js";
 import { getSupabaseAdmin } from "./utils.js";
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";

@@ -186,7 +186,7 @@ export default function ReferralView() {
           </div>
           <h4 className="font-serif text-sm font-bold text-ink">Double Rewards Granted</h4>
           <p className="text-muted text-xs leading-relaxed">
-            Our Stripe verification webhook immediately triggers. Adding +30 days on your account and an extra +30 days on theirs!
+            Our payment verification webhook immediately triggers. Adding +30 days on your account and an extra +30 days on theirs!
           </p>
         </div>
       </div>

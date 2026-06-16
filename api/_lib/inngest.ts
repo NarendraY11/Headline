@@ -1,12 +1,9 @@
-import { Inngest } from "inngest";
 import { serve } from "inngest/express";
+import { inngest } from "./inngestClient.js";
 import { allFunctions } from "./inngestFunctions.js";
 
-export const inngest = new Inngest({
-  id: "headline",
-  signingKey: process.env.INNGEST_SIGNING_KEY,
-  eventKey: process.env.INNGEST_EVENT_KEY,
-});
+// Re-export so existing callers of `import { inngest } from "./inngest.js"` keep working.
+export { inngest };
 
 let _handler: ReturnType<typeof serve> | null = null;
 

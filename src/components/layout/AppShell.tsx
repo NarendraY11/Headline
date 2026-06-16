@@ -169,7 +169,20 @@ export function AppShell() {
     if (path === "/analytics") return "Progress";
     if (path === "/profile") return "Profile";
     if (path === "/about") return "About";
-    return "System";
+    if (path === "/schedule") return "Flight Schedule";
+    if (path === "/referral") return "Refer & Earn";
+    if (path === "/mock-exams") return "Mock Exams";
+    if (path === "/a320-systems" || path.startsWith("/topic/a320")) return "A320 Systems";
+    if (path.startsWith("/topic/")) {
+      const slug = path.replace("/topic/", "");
+      return slug.split("-").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    }
+    if (path === "/admin") return "Admin Dashboard";
+    if (path.startsWith("/admin/")) {
+      const sub = path.replace("/admin/", "");
+      return sub.split("-").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    }
+    return "Heading";
   };
 
   const uniqueDates = [

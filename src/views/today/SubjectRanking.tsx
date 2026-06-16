@@ -64,6 +64,23 @@ export function SubjectRanking({ snapshots, subjectTitles }: Props) {
   if (snapshots.length === 0) return null;
 
   const sorted = [...snapshots].sort((a, b) => b.mastery - a.mastery);
+
+  // Need at least 2 distinct subjects for a meaningful strongest/weakest split.
+  if (snapshots.length < 2) {
+    const only = sorted[0];
+    return (
+      <div className="bg-paper border border-rule rounded-2xl p-5">
+        <span className="font-mono text-[9px] uppercase tracking-widest text-muted-2 block mb-3">
+          § SUBJECT RANKING
+        </span>
+        <p className="font-sans text-[12px] text-muted-2">
+          Study more subjects to see a ranking. Currently tracking:{" "}
+          <strong className="text-ink">{subjectTitles[only.subject_id] ?? only.subject_id.replace(/-/g, " ")}</strong>
+        </p>
+      </div>
+    );
+  }
+
   const strongest = sorted.slice(0, 3);
   const weakest = sorted.slice(-3).reverse();  // lowest mastery first
 

@@ -69,19 +69,48 @@ export function useAdminAnalytics() {
         totalAttempts: absoluteAttempts || 0,
       });
 
-      const { data: logData } = await supabase
+      // Fetch attempts and question_reports WITHOUT PostgREST join expansion —
+      // both tables FK to auth.users (not public.profiles), so PGRST200 fires.
+      // Instead, fetch profiles for the relevant user_ids and join in memory.
+      const { data: rawLogData } = await supabase
         .from("attempts")
-        .select("id, mode, score, total, percentage, created_at, profiles(display_name, email)")
+        .select("id, user_id, mode, score, total, percentage, created_at")
         .order("created_at", { ascending: false })
         .limit(6);
-      setRecentAttempts(logData || []);
+      const logUserIds = [...new Set((rawLogData || []).map((r: any) => r.user_id).filter(Boolean))];
+      const logProfileMap: Record<string, any> = {};
+      if (logUserIds.length > 0) {
+        const { data: logProfs } = await supabase
+          .from("profiles")
+          .select("id, display_name, email")
+          .in("id", logUserIds);
+        (logProfs || []).forEach((p: any) => { logProfileMap[p.id] = p; });
+      }
+      const logData = (rawLogData || []).map((r: any) => ({
+        ...r,
+        profiles: logProfileMap[r.user_id] ?? null,
+      }));
+      setRecentAttempts(logData);
 
-      const { data: reportData } = await supabase
+      const { data: rawReportData } = await supabase
         .from("question_reports")
-        .select("id, question_id, category, comment, status, created_at, profiles(display_name, email)")
+        .select("id, user_id, question_id, category, comment, status, created_at")
         .order("created_at", { ascending: false })
         .limit(10);
-      setReports(reportData || []);
+      const reportUserIds = [...new Set((rawReportData || []).map((r: any) => r.user_id).filter(Boolean))];
+      const reportProfileMap: Record<string, any> = {};
+      if (reportUserIds.length > 0) {
+        const { data: repProfs } = await supabase
+          .from("profiles")
+          .select("id, display_name, email")
+          .in("id", reportUserIds);
+        (repProfs || []).forEach((p: any) => { reportProfileMap[p.id] = p; });
+      }
+      const reportData = (rawReportData || []).map((r: any) => ({
+        ...r,
+        profiles: reportProfileMap[r.user_id] ?? null,
+      }));
+      setReports(reportData);
 
       const { data: contactData } = await supabase
         .from("contact_messages")
@@ -142,7 +171,9 @@ export function useAdminAnalytics() {
 
       const [profilesRes, attemptsRes, eventsRes] = await Promise.all([
         supabase.from("profiles").select("*").gte("created_at", limitStr),
-        supabase.from("attempts").select("*, profiles(display_name, email)").gte("created_at", limitStr),
+        // No PostgREST join — attempts.user_id FKs to auth.users, not profiles.
+        // profilesMap (built below) is used by consumers that need user details.
+        supabase.from("attempts").select("*").gte("created_at", limitStr),
         supabase.from("events").select("*").gte("created_at", limitStr)
       ]);
 
