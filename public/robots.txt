@@ -1,0 +1,21 @@
+User-agent: *
+
+# Authenticated & admin areas — not indexable
+Disallow: /today
+Disallow: /modules
+Disallow: /topic/
+Disallow: /mock-exams
+Disallow: /analytics
+Disallow: /bookmarks
+Disallow: /profile
+Disallow: /referral
+Disallow: /quiz/
+Disallow: /admin/
+Disallow: /dashboard
+Disallow: /study-plan
+Disallow: /schedule
+Disallow: /exam-centre
+Disallow: /reset-password
+Disallow: /login
+
+Sitemap: https://headline-blush.vercel.app/sitemap.xml

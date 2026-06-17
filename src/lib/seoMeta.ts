@@ -29,6 +29,9 @@ export function getMetaForRoute(path: string): RouteMeta {
   } else if (path === "/qotd") {
     title = "Question of the Day — Heading";
     description = "Practice a high-fidelity mock pilot study question of the day with instant diagnostic feedback and technical logic summaries.";
+  } else if (path === "/contact") {
+    title = "Contact — Heading";
+    description = "Get in touch with the Heading team for support, partnerships, or feedback about your pilot exam preparation.";
   } else if (path === "/a320-systems") {
     title = "A320 Systems — Heading";
     description = "Practice A320 systems ECAM and FCOM questions with deep logic explanations.";

@@ -17,7 +17,8 @@
     "test:e2e:report": "playwright show-report",
     "postinstall": "node scripts/patch-vercel-node-deps.cjs",
     "validate:preview": "tsx scripts/validate-preview-registry.ts",
-    "audit:preview": "tsx scripts/validate-preview-registry.ts --json"
+    "audit:preview": "tsx scripts/validate-preview-registry.ts --json",
+    "build:sitemap": "tsx scripts/generate-sitemap.ts"
   },
   "dependencies": {
     "@fontsource/geist-sans": "^5.2.5",

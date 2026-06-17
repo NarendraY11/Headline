@@ -12,6 +12,27 @@ import { sentryVitePlugin } from '@sentry/vite-plugin';
 // (geist-sans body, instrument-serif display); other weights/subsets still
 // lazy-load via the stylesheet. Runs in closeBundle so the hashed filenames
 // are known; the prerender step re-snapshots dist/index.html afterwards.
+function sitemapPlugin() {
+  return {
+    name: 'generate-sitemap',
+    apply: 'build' as const,
+    async closeBundle() {
+      try {
+        const { spawnSync } = await import('child_process');
+        const result = spawnSync(
+          'node_modules/.bin/tsx',
+          ['scripts/generate-sitemap.ts'],
+          { cwd: process.cwd(), encoding: 'utf-8', shell: true }
+        );
+        if (result.stdout) process.stdout.write(result.stdout);
+        if (result.stderr) process.stderr.write(result.stderr);
+      } catch (e) {
+        console.warn('[sitemap] generation skipped:', e);
+      }
+    },
+  };
+}
+
 function fontPreloadPlugin() {
   const TARGETS = [/^geist-sans-latin-400-normal-.*\.woff2$/, /^instrument-serif-latin-400-normal-.*\.woff2$/];
   return {
@@ -79,6 +100,7 @@ export default defineConfig(({ command }) => {
     plugins: [
       react(),
       tailwindcss(),
+      sitemapPlugin(),
       fontPreloadPlugin(),
       ...(process.env.ANALYZE ? [visualizer({ filename: 'dist/stats.json', template: 'raw-data' }) as any] : []),
       // Upload source maps to Sentry on prod builds when auth token is present.
