@@ -15,7 +15,7 @@ import fs from "fs";
 import path from "path";
 import { blogPosts } from "../src/data/blog.js";
 
-const PROD_ORIGIN = "https://headline-blush.vercel.app";
+const PROD_ORIGIN = "https://www.heading380.in";
 const OUT_PATH = path.resolve(process.cwd(), "public", "sitemap.xml");
 
 interface SitemapEntry {

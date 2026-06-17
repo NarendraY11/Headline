@@ -7,7 +7,7 @@ dotenv.config({ path: ".env.test" });
 // E2E config. Target defaults to the live production site; override with
 // BASE_URL to point at a preview deploy or local server. Auth credentials
 // come from env (see .env.test.example) — never hardcode them.
-const BASE_URL = process.env.BASE_URL || "https://headline-blush.vercel.app";
+const BASE_URL = process.env.BASE_URL || "https://www.heading380.in";
 
 export default defineConfig({
   testDir: "./tests/e2e",

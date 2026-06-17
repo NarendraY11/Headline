@@ -14,7 +14,7 @@ export function useDocumentMeta() {
     // window.location.origin would bake "localhost" into the canonical, og:url
     // and og:image of every static snapshot. Pin the public origin instead;
     // fall back to window.location.origin only for non-prod hosts (preview).
-    const PROD_ORIGIN = "https://headline-blush.vercel.app";
+    const PROD_ORIGIN = "https://www.heading380.in";
     const runtimeOrigin =
       typeof window !== "undefined" ? window.location.origin : PROD_ORIGIN;
     const isLocalhost = /localhost|127\.0\.0\.1/.test(runtimeOrigin);

@@ -6,23 +6,23 @@ Heading is a single-page web app (also installable as a PWA). Authenticated stud
 
 ## Product
 
-- [Question Bank](https://headline-blush.vercel.app/modules): Adaptive practice across 28 subjects with spaced repetition, bookmarks, and notes.
-- [Mock Exams](https://headline-blush.vercel.app/mock-exams): DGCA & EASA paper templates with real sectional weighting, strict timers, and negative marking.
-- [A320 Systems](https://headline-blush.vercel.app/a320-systems): Interactive cockpit-grade reference — ATA chapters, ECAM logic, and schematics you can study from or quiz against.
-- [Pricing](https://headline-blush.vercel.app/pricing): Free Cadet tier and Captain (Pro) subscription, monthly or annual.
+- [Question Bank](https://www.heading380.in/modules): Adaptive practice across 28 subjects with spaced repetition, bookmarks, and notes.
+- [Mock Exams](https://www.heading380.in/mock-exams): DGCA & EASA paper templates with real sectional weighting, strict timers, and negative marking.
+- [A320 Systems](https://www.heading380.in/a320-systems): Interactive cockpit-grade reference — ATA chapters, ECAM logic, and schematics you can study from or quiz against.
+- [Pricing](https://www.heading380.in/pricing): Free Cadet tier and Captain (Pro) subscription, monthly or annual.
 
 ## Company
 
-- [About](https://headline-blush.vercel.app/about): What Heading is and who it is built for.
-- [Blog](https://headline-blush.vercel.app/blog): Ground-school theory tips and exam-prep articles.
-- [Contact](https://headline-blush.vercel.app/contact): Support and enquiries.
+- [About](https://www.heading380.in/about): What Heading is and who it is built for.
+- [Blog](https://www.heading380.in/blog): Ground-school theory tips and exam-prep articles.
+- [Contact](https://www.heading380.in/contact): Support and enquiries.
 
 ## Legal
 
-- [Privacy Policy](https://headline-blush.vercel.app/privacy)
-- [Terms of Service](https://headline-blush.vercel.app/terms)
-- [Refund Policy](https://headline-blush.vercel.app/refund)
+- [Privacy Policy](https://www.heading380.in/privacy)
+- [Terms of Service](https://www.heading380.in/terms)
+- [Refund Policy](https://www.heading380.in/refund)
 
 ## Optional
 
-- [Sitemap](https://headline-blush.vercel.app/sitemap.xml): Full list of crawlable URLs.
+- [Sitemap](https://www.heading380.in/sitemap.xml): Full list of crawlable URLs.

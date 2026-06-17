@@ -46,4 +46,4 @@ Disallow: /exam-centre
 Disallow: /reset-password
 Disallow: /login
 
-Sitemap: https://headline-blush.vercel.app/sitemap.xml
+Sitemap: https://www.heading380.in/sitemap.xml

@@ -86,7 +86,7 @@ VITE_VAPID_PUBLIC_KEY=xxx     # client-safe VAPID public key
 ## App URL
 
 ```
-VITE_APP_PUBLIC_URL=https://headline-blush.vercel.app
+VITE_APP_PUBLIC_URL=https://www.heading380.in
 ```
 
 ## Auto-injected by Vercel (do NOT set manually)

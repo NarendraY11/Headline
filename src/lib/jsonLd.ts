@@ -1,6 +1,6 @@
 import { blogPosts } from "../data/blog";
 
-const PROD_ORIGIN = "https://headline-blush.vercel.app";
+const PROD_ORIGIN = "https://www.heading380.in";
 
 function getBaseUrl(): string {
   // @ts-ignore
