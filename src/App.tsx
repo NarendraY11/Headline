@@ -66,6 +66,7 @@ const ExamCentreView = lazy(() => import("./views/ExamCentreView"));
 
 import { CookieConsent } from "./components/CookieConsent";
 import { GlobalToastListener } from "./components/GlobalToastListener";
+import { MicrosoftClarity } from "./components/MicrosoftClarity";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { PwaInstallPrompt } from "./components/PwaInstallPrompt";
 import { AuthModalTrigger } from './components/layout/AuthModalTrigger';
@@ -133,6 +134,7 @@ export default function App() {
       <RouteMetaHelper />
       <AuthModalTrigger />
       <CookieConsent />
+      <MicrosoftClarity />
       <GlobalToastListener />
       <PwaInstallPrompt />
       <OfflineBanner />

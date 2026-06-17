@@ -29,6 +29,7 @@ export function CookieConsent() {
       console.warn("Failed to write cookie consent state:", e);
     }
     posthogConsentGranted();
+    window.dispatchEvent(new CustomEvent("heading:cookieConsent", { detail: { consent: true } }));
     setVisible(false);
   };
 
