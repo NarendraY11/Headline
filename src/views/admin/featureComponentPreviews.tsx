@@ -1,6 +1,6 @@
 import { Bell, Bookmark, CalendarDays, Moon, Search, ShieldAlert, Smartphone, Sun, Users, Wind } from "lucide-react";
 import { useFeature } from "../../hooks/useFeatureFlags";
-import { previewAnalyticsService, previewNotificationService, previewWeatherService } from "../../preview/services";
+import { previewAnalyticsService, previewMockData } from "../../preview/services";
 
 interface PreviewScaffoldProps {
   title: string;
@@ -338,8 +338,8 @@ export function ThemeTogglePreview() {
 
 export function NotificationsPreview() {
   const notifications = useFeature("notifications");
-  const notificationItems = previewNotificationService.getNotifications();
-  const unreadCount = previewNotificationService.getUnreadCount();
+  const notificationItems = previewMockData.notifications;
+  const unreadCount = previewMockData.notifications.filter((n) => n.unread).length;
 
   return (
     <PreviewScaffold
@@ -384,7 +384,7 @@ export function NotificationsPreview() {
 
 export function WeatherBriefingPreview() {
   const weatherBriefing = useFeature("weatherBriefing");
-  const briefing = previewWeatherService.getBriefing();
+  const briefing = previewMockData.weatherBriefing;
 
   return (
     <PreviewScaffold
@@ -433,8 +433,8 @@ export function WeatherBriefingPreview() {
 
 export function PushNotificationsPreview() {
   const pushNotifications = useFeature("pushNotifications");
-  const subscription = previewNotificationService.getPushSubscriptionStatus();
-  const pushExamples = previewNotificationService.getPushExamples();
+  const subscription = previewMockData.pushSubscriptionStatus;
+  const pushExamples = previewMockData.pushExamples;
 
   return (
     <PreviewScaffold
@@ -486,7 +486,7 @@ export function PushNotificationsPreview() {
 
 export function CalendarSyncPreview() {
   const calendarSync = useFeature("calendarSync");
-  const snapshot = previewNotificationService.getCalendarSyncSnapshot();
+  const snapshot = previewMockData.calendarSyncSnapshot;
 
   return (
     <PreviewScaffold

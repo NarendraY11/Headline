@@ -1,4 +1,5 @@
-import * as d3 from "d3";
+import { select, scaleLinear, hierarchy, partition, arc, interpolate } from "d3";
+import type { HierarchyRectangularNode } from "d3";
 import { AlertTriangle, Archive, CheckCircle, Info, Star, Target } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { SubjectItem } from "../data/topics";
@@ -30,8 +31,8 @@ export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps)
   const tokens = useChartTokens();
 
   // Interaction State
-  const [hoveredNode, setHoveredNode] = useState<d3.HierarchyRectangularNode<SunburstNodeData> | null>(null);
-  const [selectedNode, setSelectedNode] = useState<d3.HierarchyRectangularNode<SunburstNodeData> | null>(null);
+  const [hoveredNode, setHoveredNode] = useState<HierarchyRectangularNode<SunburstNodeData> | null>(null);
+  const [selectedNode, setSelectedNode] = useState<HierarchyRectangularNode<SunburstNodeData> | null>(null);
   const [sizeMode, setSizeMode] = useState<"questions" | "equal">("questions");
 
   // Load question-level progress map from local storage
@@ -172,9 +173,9 @@ export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps)
     const innerRadius = 75;
 
     // Clear previous elements
-    d3.select(svgRef.current).selectAll("*").remove();
+    select(svgRef.current).selectAll("*").remove();
 
-    const svg = d3.select(svgRef.current)
+    const svg = select(svgRef.current)
       .attr("viewBox", `0 0 ${width} ${height}`)
       .attr("width", "100%")
       .attr("height", "100%")
@@ -182,27 +183,27 @@ export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps)
       .attr("transform", `translate(${width / 2}, ${height / 2})`);
 
     // D3 Scales for layout calculations
-    const x = d3.scaleLinear().range([0, 2 * Math.PI]);
-    const y = d3.scaleLinear().range([innerRadius, radius]);
+    const x = scaleLinear().range([0, 2 * Math.PI]);
+    const y = scaleLinear().range([innerRadius, radius]);
 
     // Format hierarchy
-    const root = d3.hierarchy<SunburstNodeData>(hierarchyData)
+    const root = hierarchy<SunburstNodeData>(hierarchyData)
       .sum(d => d.value || 0)
-      .sort((a, b) => (b.value || 0) - (a.value || 0)) as unknown as d3.HierarchyRectangularNode<SunburstNodeData>;
+      .sort((a, b) => (b.value || 0) - (a.value || 0)) as unknown as HierarchyRectangularNode<SunburstNodeData>;
 
     // Create D3 Partition
-    const partition = d3.partition<SunburstNodeData>();
-    partition(root);
+    const partitionLayout = partition<SunburstNodeData>();
+    partitionLayout(root);
 
     // Arc Generator
-    const arc = d3.arc<d3.HierarchyRectangularNode<SunburstNodeData>>()
+    const arcGen = arc<HierarchyRectangularNode<SunburstNodeData>>()
       .startAngle(d => Math.max(0, Math.min(2 * Math.PI, x(d.x0))))
       .endAngle(d => Math.max(0, Math.min(2 * Math.PI, x(d.x1))))
       .innerRadius(d => Math.max(0, y(d.y0)))
       .outerRadius(d => Math.max(0, y(d.y1)));
 
     // Color mapper based on actual telemetry
-    const getNodeColor = (d: d3.HierarchyRectangularNode<SunburstNodeData>) => {
+    const getNodeColor = (d: HierarchyRectangularNode<SunburstNodeData>) => {
       if (d.depth === 0) return "transparent";
 
       if (d.data.score !== null) {
@@ -230,10 +231,10 @@ export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps)
     };
 
     // Slice paths
-    const path = svg.selectAll<SVGPathElement, d3.HierarchyRectangularNode<SunburstNodeData>>("path")
+    const path = svg.selectAll<SVGPathElement, HierarchyRectangularNode<SunburstNodeData>>("path")
       .data(root.descendants().filter(d => d.depth > 0))
       .enter().append("path")
-      .attr("d", arc)
+      .attr("d", arcGen)
       .style("fill", d => getNodeColor(d))
       .style("stroke", "var(--color-paper)")
       .style("stroke-width", "1.5px")
@@ -266,22 +267,22 @@ export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps)
       });
 
     // Handle zoom behavior using SVG path interpolation
-    function zoomToNode(p: d3.HierarchyRectangularNode<SunburstNodeData>) {
+    function zoomToNode(p: HierarchyRectangularNode<SunburstNodeData>) {
       setSelectedNode(p.depth === 0 ? null : p);
 
       // Transition the scale domains
       path.transition()
         .duration(750)
         .tween("data", () => {
-          const xd = d3.interpolate(x.domain(), [p.x0, p.x1]);
-          const yd = d3.interpolate(y.domain(), [p.y0, 1]);
-          const yr = d3.interpolate(y.range(), [p.depth > 0 ? 40 : innerRadius, radius]);
+          const xd = interpolate(x.domain(), [p.x0, p.x1]);
+          const yd = interpolate(y.domain(), [p.y0, 1]);
+          const yr = interpolate(y.range(), [p.depth > 0 ? 40 : innerRadius, radius]);
           return (t) => {
             x.domain(xd(t));
             y.domain(yd(t)).range(yr(t));
           };
         })
-        .attrTween("d", d => () => arc(d) || "");
+        .attrTween("d", d => () => arcGen(d) || "");
     }
 
   }, [hierarchyData, sizeMode, progressMap, selectedNode, tokens]);
