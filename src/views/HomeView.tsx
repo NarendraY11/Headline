@@ -8,6 +8,7 @@ import { FlightControlsDiagram } from "../components/SystemDiagram";
 import { useAuth } from "../contexts/AuthContext";
 import { Question } from "../data/questions";
 import { fetchMergedSubjects, fetchPublishedQuestions } from "../lib/content";
+import { HOME_FAQ } from "../lib/jsonLd";
 import { supabase } from "../lib/supabase";
 import { FadeUp } from "./home/FadeUp";
 import { FAQItem } from "./home/FAQItem";
@@ -584,22 +585,9 @@ export default function HomeView() {
             </FadeUp>
             
             <FadeUp delay={100} className="border-t border-rule-strong">
-              <FAQItem 
-                question="Which official syllabi do you cover?" 
-                answer="We currently map to EASA Part-FCL and the Indian DGCA curriculum. The question logic handles both standard and complex negative-marking environments. You can select your region during account setup."
-              />
-              <FAQItem 
-                question="Can I use the app offline?" 
-                answer="Yes. Bookmarks and recent quizzes are cached in your local encrypted storage. You can undertake mock exams inflight or without wifi. The AI Instructor features, however, require an active data link."
-              />
-              <FAQItem 
-                question="Do you support actual Type Rating prep?" 
-                answer="Yes. Our A320 modules dive deep into ATA systems and ECAM logic, suitable for cadets entering their first transition course or captains brushing up for recurrent sim checks."
-              />
-              <FAQItem 
-                question="Is there a refund policy for Pro?" 
-                answer="If you are dissatisfied with the telemetry or question bank quality within the first 7 days, we clear an immediate, no-questions-asked refund."
-              />
+              {HOME_FAQ.map((item) => (
+                <FAQItem key={item.question} question={item.question} answer={item.answer} />
+              ))}
             </FadeUp>
          </div>
       </section>
