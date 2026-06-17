@@ -42,7 +42,10 @@ export default function HomeView() {
   const [siteContent, setSiteContent] = useState<SiteContent>({});
 
   useEffect(() => {
-    async function loadStatsAndContent() {
+    // Defer all Supabase queries until after first paint so they don't compete
+    // with the critical render path. Trust-stat fallbacks already provide
+    // realistic floor values, so the hero and stats are immediately visible.
+    const timer = setTimeout(async () => {
       try {
         const [previewQuestions, mergedSubjects, countResponse, profilesResponse, attemptsResponse, settingsResponse] = await Promise.all([
           fetchPublishedQuestions({ limit: 10 }),
@@ -75,8 +78,8 @@ export default function HomeView() {
       } catch (e) {
         console.warn("Error loading home stats and content:", e);
       }
-    }
-    loadStatsAndContent();
+    }, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   const orgJsonLd = {

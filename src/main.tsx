@@ -43,11 +43,15 @@ runWhenIdle(() => {
   initPostHog();
 });
 
-runWhenIdle(() => {
+// Delay Clarity past first paint. Using setTimeout(3000) instead of
+// requestIdleCallback: rIC fires during React's first commit phase which still
+// races the LCP element. A fixed 3s delay ensures Clarity's chunk download
+// never lands in the critical network chain.
+setTimeout(() => {
   import('@microsoft/clarity').then(({ default: Clarity }) => {
     Clarity.init('x8h37kdqmc');
   });
-});
+}, 3000);
 
 // Recover from stale-chunk errors after a new deploy: a lazy route's dynamic
 // import 404s because the hashed filenames changed under the running tab. Reload

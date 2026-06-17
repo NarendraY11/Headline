@@ -34,7 +34,11 @@ function sitemapPlugin() {
 }
 
 function fontPreloadPlugin() {
-  const TARGETS = [/^geist-sans-latin-400-normal-.*\.woff2$/, /^instrument-serif-latin-400-normal-.*\.woff2$/];
+  const TARGETS = [
+    /^geist-sans-latin-400-normal-.*\.woff2$/,
+    /^instrument-serif-latin-400-normal-.*\.woff2$/,
+    /^instrument-serif-latin-400-italic-.*\.woff2$/,
+  ];
   return {
     name: 'font-preload',
     apply: 'build' as const,
@@ -115,6 +119,7 @@ export default defineConfig(({ command }) => {
         registerType: 'autoUpdate',
         // New builds activate immediately so users never get stuck on a stale
         // precached shell (important given the prerender + esbuild server pipeline).
+        injectRegister: 'script-defer',
         includeAssets: ['favicon.svg', 'apple-touch-icon.png', 'offline.html'],
         manifest: {
           id: '/',

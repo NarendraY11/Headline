@@ -115,11 +115,10 @@ if (dsn) {
     // identify users explicitly elsewhere with non-sensitive ids only.
     sendDefaultPii: false,
     transport: makeSilentTransport,
-    // Capture browser perf traces + session replays for user-facing debugging.
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
-    ],
+    // browserTracingIntegration and replayIntegration are deferred to after
+    // first paint to avoid forced-reflow during LCP (Sentry replay queries
+    // geometric properties synchronously at init, costing 135ms on main thread).
+    integrations: [],
     // Sample 20% of transactions in prod; full rate in dev.
     tracesSampleRate: import.meta.env.PROD ? 0.2 : 1.0,
     // Only propagate trace headers to our own API (avoids CORS noise to 3rd parties).
@@ -180,6 +179,18 @@ if (dsn) {
       return crumb;
     },
   });
+  // Add performance/replay integrations after first paint so they don't
+  // contribute to LCP delay. requestIdleCallback fires post-paint; setTimeout
+  // is the fallback for browsers that don't support it (Safari <16).
+  const addSentryIntegrationsWhenIdle = () => {
+    Sentry.addIntegration(Sentry.browserTracingIntegration());
+    Sentry.addIntegration(Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }));
+  };
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(addSentryIntegrationsWhenIdle, { timeout: 3000 });
+  } else {
+    setTimeout(addSentryIntegrationsWhenIdle, 3000);
+  }
   } catch {
     // Sentry init failed (e.g. DSN invalid, network blocked during setup).
     // App continues without monitoring.
