@@ -853,6 +853,7 @@ export default function QuizView() {
 
       const newLogbook = [...localLogbook, attemptRecord];
       localStorage.setItem("heading_logbook", JSON.stringify(newLogbook));
+      localStorage.setItem("pwa_has_session", "true");
     }
 
     // Milestone logic:
