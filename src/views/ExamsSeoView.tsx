@@ -38,6 +38,7 @@ interface ExamDetails {
     a: string;
   }[];
   prepTime: string;
+  directAnswer: string;
   overview: string;
   syllabusOverview: string;
   weightageText: string;
@@ -56,6 +57,7 @@ const examsData: Record<string, ExamDetails> = {
     metaDesc: "Pass your DGCA CPL theory papers on your first attempt. Free trial mock exams, complete Air Navigation, Meteorology, Regulations, and Technical syllabus.",
     tagline: "India's Premiere Syllabus-Aligned Pilot Theory Simulation Deck",
     prepTime: "3 to 4 Months",
+    directAnswer: "The DGCA CPL theory exam covers 5 subjects — Air Navigation, Aviation Meteorology, Air Regulations, Technical General, and Technical Specific. Each paper is 100 multiple-choice questions in 2.5 hours with a 70% passing mark. No negative marking applies.",
     overview: "The Directorate General of Civil Aviation (DGCA) CPL theory exams assess core pilot knowledge across five highly competitive papers. Known for rigorous testing environments and high precision margins, passing requires structured conceptual reading alongside active exam simulation. Heading provides Indian flight cadets with modern, syllabus-aligned simulation interfaces that build speed, accuracy, and stress resilience.",
     syllabusOverview: "The exam structure is parted into Air Navigation, Aviation Meteorology, Air Regulations, Technical General, and Technical Specific. Air Navigation remains the most challenging subject, featuring heavy wind triangle calculations on the mechanical physical computer (E6B/CX-3) and complex radial track geometries.",
     weightageText: "Navigation formulas, VOR tracking, and Altimeter altimetry correction calculations carry approximately 60% of the total marking weight in the Air Navigation paper.",
@@ -83,6 +85,7 @@ const examsData: Record<string, ExamDetails> = {
     metaDesc: "Pass your DGCA ATPL theoretical knowledge examinations. High-quality mock papers for General Navigation, Aviation Meteorology, and Air Regulations.",
     tagline: "India's Premiere Syllabus-Aligned ATPL Theory Simulation Deck",
     prepTime: "4 to 6 Months",
+    directAnswer: "The DGCA ATPL theory exam spans 3 subjects — General Navigation, Aviation Meteorology, and Air Regulations — each 100 questions over 3 hours with a 70% cutoff. Passing all three is mandatory for an Indian Airline Transport Pilot License.",
     overview: "The Directorate General of Civil Aviation (DGCA) ATPL theory exams represent the highest tier of pilot licensing in India. Designed to evaluate commanders-in-waiting, these papers require unmatched conceptual depth, advanced mathematical charting under extreme time pressure, and a total mastery of instrumentation abnormal profiles. Heading offers active simulation decks to secure your command papers.",
     syllabusOverview: "The ATPL syllabus spans Aviation Meteorology, Air Regulations, and General Navigation (including Instruments & Radio Aids). General Navigation requires navigating around spherical geometry, complex scale conversions, and high-latitude charts.",
     weightageText: "Advanced spherical calculations, grid-navigation tracks, and high-density weather charts make up 65% of the ATPL exam layout.",
@@ -109,6 +112,7 @@ const examsData: Record<string, ExamDetails> = {
     metaDesc: "Comprehensive study guides and active simulations for EASA 14 ATPL subjects. Realistic mock trials matching actual ECQB criteria and Jeppesen map grids.",
     tagline: "High-Fidelity Theoretical Stress Training For European Flight Cadets",
     prepTime: "9 to 12 Months",
+    directAnswer: "EASA ATPL theoretical knowledge tests cover 14 subjects drawn from the European Central Question Bank (ECQB). Candidates need 75% on each subject and must pass all 14 within 6 sittings over 18 months to qualify for an EASA ATPL.",
     overview: "EASA Part-FCL theoretical knowledge tests represent the global gold standard for commercial aviation theory. To secure an ATPL, pilots must pass 14 theoretical exams covering air law, instruments, performance, human performance, and meteorological tracking. Heading's smart analytics tracking isolates system-level memory gaps in these wide-extent subject sheets.",
     syllabusOverview: "The curriculum spans 14 discrete subjects, normally studied in three modules. Exams are highly technical, utilizing Jeppesen student route manuals, performance tables, and flight planning computers. Success requires a thorough grasp of structural aerodynamics, meteorology, and operational limits.",
     weightageText: "Performance calculation tasks, Jeppesen route computations, and Mass & Balance grids are highly weighted across Flight Planning fields.",
@@ -135,6 +139,7 @@ const examsData: Record<string, ExamDetails> = {
     metaDesc: "Master the FAA Knowledge Tests with Heading guidance. Practice Private Pilot (PAR), Instrument Rating (IRA), and Commercial (CAX) aligned with current ACS rules.",
     tagline: "Airman Certification Standards (ACS) Aligned Mock Tests",
     prepTime: "1 to 2 Months",
+    directAnswer: "FAA Knowledge Tests are computer-based exams at PSI Testing Centers covering FAR regulations, aerodynamics, weather, and cross-country planning. The Private Pilot (PAR) and Instrument (IRA) tests are 60 questions; the Commercial (CAX) is 100. All require 70% to pass.",
     overview: "The Federal Aviation Administration utilizes FAA Knowledge Exams to test commercial theoretical competencies before flight checkrides. These written papers are strictly mapped to the current FAA Airman Certification Standards (ACS), stressing safe risk management alongside raw flight math.",
     syllabusOverview: "The exams verify practical airmanship regulations, airport lighting schemes, Federal Aviation Regulations (FAR) Part 61/91, cross-country chart reading (Sectionals), weight and balance, and weather briefings (METAR, TAF, Winds Aloft).",
     weightageText: "Airspace limitations, weather charts, and aerodynamic force laws cover 70% of FAA written test tasks.",
@@ -159,6 +164,7 @@ const examsData: Record<string, ExamDetails> = {
     metaDesc: "The ultimate training suite for A320 flight rating exam prep. Study flight control computers (ELAC, SEC, FAC), hydraulics, pneumatic valves, and ECAM abnormal logic.",
     tagline: "High-Fidelity Airbus System Training For Cadet & Active Transition Pilots",
     prepTime: "2 to 4 Weeks",
+    directAnswer: "The A320 Type Rating systems exam tests FCOM knowledge across ATA chapters 21–80: flight controls (ELAC/SEC/FAC), hydraulics, electrical bus architecture, pneumatics, and ECAM abnormal procedures. Most airlines and TRTOs require a minimum score of 80% to proceed to simulator entries.",
     overview: "Transitioning to the active fleet of Airbus A320 family aircraft demands precision limits knowledge. The systems rating theoretical examination checks your memory of pneumatic configs, hydraulic pumps, fuel flow valves, flight computer transfers, and ECAM commands. Heading offers an intense interactive engine simulating technical system failures.",
     syllabusOverview: "Topics correspond strictly to standard FCOM (Flight Crew Operating Manual) chapters (ATA Subject Chapters 21 to 80). Systems include ATA 27 (Flight Controls), ATA 24 (Electrical Power), ATA 29 (Hydraulics), and ATA 36 (Pneumatics).",
     weightageText: "Flight Control computer configurations (ELAC/SEC/FAC) and Electrical bus distribution have critical marking weighting in technical exams.",
@@ -342,6 +348,10 @@ export default function ExamsSeoView() {
               <h2 className="font-mono text-xs tracking-widest uppercase text-muted font-bold flex items-center gap-2">
                 <Info size={14} className="text-navy" /> Exam Overview
               </h2>
+              {/* Inverted pyramid: direct answer block first for AEO crawlers */}
+              <p className="font-sans text-[15px] text-ink font-medium leading-relaxed border-l-4 border-navy pl-4 py-1 bg-navy-soft/5 rounded-r">
+                {exam.directAnswer}
+              </p>
               <div className="font-sans text-ink-2 space-y-4 leading-relaxed text-[15px]">
                 <p>{exam.overview}</p>
                 <p>{exam.syllabusOverview}</p>

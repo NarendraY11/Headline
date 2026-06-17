@@ -49,6 +49,41 @@ export default function A320SystemsView() {
             <FlightControlsDiagram />
           </div>
         </div>
+
+        {/* AEO CONTENT SECTIONS — inverted pyramid: direct answer first under every H2 */}
+        <div className="max-w-3xl mx-auto space-y-16 border-t border-rule pt-20">
+
+          <section className="space-y-4">
+            <h2 className="font-serif text-2xl font-bold text-ink tracking-tight">What Does the A320 Systems Module Cover?</h2>
+            <p className="font-sans text-[15px] text-ink font-medium leading-relaxed border-l-4 border-navy pl-4 py-1 bg-navy-soft/5 rounded-r">
+              The Heading A320 Systems module covers all ATA chapters from 21 to 80 in the Airbus FCOM, including flight controls (ELAC/SEC/FAC), hydraulics, electrical bus architecture, pneumatics, fuel systems, pressurisation, and ECAM abnormal procedures — structured for Type Rating exam preparation.
+            </p>
+            <p className="font-sans text-[15px] text-ink-2 leading-relaxed">
+              Each ATA chapter is broken into interactive question sets mapped to examiner-level knowledge requirements. Rather than reading static PDF manuals, candidates interact with schematic logic questions that mirror the exact failure-scenario format used in TRTO technical papers.
+            </p>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="font-serif text-2xl font-bold text-ink tracking-tight">Which A320 Systems Are Most Heavily Tested?</h2>
+            <p className="font-sans text-[15px] text-ink font-medium leading-relaxed border-l-4 border-navy pl-4 py-1 bg-navy-soft/5 rounded-r">
+              The most heavily tested A320 systems in TRTO technical exams are ATA 27 (Flight Controls — ELAC/SEC/FAC computer logic), ATA 24 (Electrical power bus distribution), ATA 29 (Hydraulic systems — Green, Blue, Yellow circuits), and ATA 36 (Pneumatics — bleed air and pressurisation).
+            </p>
+            <p className="font-sans text-[15px] text-ink-2 leading-relaxed">
+              Flight control computer transfer sequences attract the highest question density. Examiners test what happens at each stage of ELAC/SEC/FAC degradation — from Normal Law through Alternate Law to Direct Law — and which surfaces remain available to the pilot at each failure step.
+            </p>
+          </section>
+
+          <section className="space-y-4">
+            <h2 className="font-serif text-2xl font-bold text-ink tracking-tight">How Should I Prepare for the A320 Type Rating Technical Exam?</h2>
+            <p className="font-sans text-[15px] text-ink font-medium leading-relaxed border-l-4 border-navy pl-4 py-1 bg-navy-soft/5 rounded-r">
+              Effective A320 Type Rating preparation requires daily ATA-chapter question drilling, spaced repetition of ECAM abnormal logic, and full timed mock exams under exam conditions. Most operators require 80% to pass the technical systems paper before a candidate enters the simulator phase.
+            </p>
+            <p className="font-sans text-[15px] text-ink-2 leading-relaxed">
+              Heading's A320 module provides 1,478 FCOM-aligned questions across all ATA chapters with Gemini-powered explanations for each answer, an Analytics Sunburst to identify weak chapters by error rate, and a full 100-question timed mock paper replicating TRTO exam conditions.
+            </p>
+          </section>
+
+        </div>
       </main>
       
       <footer className="w-full max-w-[1400px] mx-auto px-6 py-8 border-t border-rule font-serif text-sm text-muted-2 text-center mt-auto">
