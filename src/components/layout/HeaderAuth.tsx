@@ -17,7 +17,7 @@ export function HeaderAuth() {
     return (
       <Link to="/profile" aria-label="Profile" className="flex md:hidden items-center gap-2 hover:opacity-80 transition-opacity">
         {user.photoURL && !avatarError ? (
-          <img src={user.photoURL} alt="Avatar" className="w-8 h-8 rounded-full border border-rule object-cover" onError={() => setAvatarError(true)} />
+          <img src={user.photoURL} alt={user.displayName ? `${user.displayName}'s profile photo` : "Profile photo"} className="w-8 h-8 rounded-full border border-rule object-cover" onError={() => setAvatarError(true)} />
         ) : (
           <div className="w-8 h-8 rounded-full bg-navy text-bg flex items-center justify-center">
             <UserIcon size={16} />

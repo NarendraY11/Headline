@@ -1,29 +1,49 @@
 export function generateRobotsTxt(baseUrl: string): string {
-  let content = `User-agent: *\n`;
-  content += `Allow: /\n`;
-  content += `Disallow: /admin\n`;
-  content += `Disallow: /admin/\n`;
-  content += `Disallow: /api/*\n\n`;
-
-  // Explicitly allow AI and Search crawler bots
-  const allowedBots = [
+  const AI_BOTS = [
     "GPTBot",
+    "OAI-SearchBot",
+    "ChatGPT-User",
     "ClaudeBot",
+    "Claude-User",
     "PerplexityBot",
+    "Perplexity-User",
+    "Applebot-Extended",
     "Google-Extended",
     "Bingbot",
-    "Applebot-Extended"
   ];
-  
-  allowedBots.forEach(bot => {
-    content += `User-agent: ${bot}\n`;
-    content += `Allow: /\n`;
-    content += `Disallow: /admin\n`;
-    content += `Disallow: /admin/\n`;
-    content += `Disallow: /api/*\n\n`;
-  });
 
+  // Authenticated + admin areas — not indexable
+  const DISALLOW = [
+    "/today",
+    "/modules",
+    "/topic/",
+    "/mock-exams",
+    "/analytics",
+    "/bookmarks",
+    "/profile",
+    "/referral",
+    "/quiz/",
+    "/admin/",
+    "/dashboard",
+    "/study-plan",
+    "/schedule",
+    "/exam-centre",
+    "/reset-password",
+    "/login",
+    "/api/",
+  ];
+
+  const disallowBlock = DISALLOW.map((p) => `Disallow: ${p}`).join("\n");
+
+  // AI crawlers get explicit Allow: / before the disallows so the wildcard
+  // block's Disallow lines don't shadow the allow-all intent.
+  let content = "";
+  for (const bot of AI_BOTS) {
+    content += `User-agent: ${bot}\nAllow: /\n\n`;
+  }
+
+  content += `User-agent: *\n${disallowBlock}\n\n`;
   content += `Sitemap: ${baseUrl}/sitemap.xml\n`;
-  
+
   return content;
 }

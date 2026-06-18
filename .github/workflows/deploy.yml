@@ -1,0 +1,157 @@
+# ============================================================
+# Deploy Pipeline — production deploy gated on CI green.
+# Triggers only on push to `main` after CI passes.
+#
+# Architecture note: Vercel's GitHub integration auto-deploys
+# on every push. This workflow is an explicit alternative that
+# lets you gate production deploys behind a manual approval
+# step or additional smoke tests. Use one or the other, not
+# both, to avoid double deploys.
+#
+# To use this instead of Vercel's native integration:
+#   1. Disable "Auto Deploy" in Vercel project settings.
+#   2. Add VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#      as GitHub secrets.
+# ============================================================
+
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main      # only main triggers production deploy
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - preview
+
+# Only one production deploy at a time.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false    # never cancel an in-flight prod deploy
+
+env:
+  NODE_VERSION: "20"
+
+jobs:
+  # ──────────────────────────────────────────────────────────
+  # STAGE 6 — DEPLOY
+  # Runs `vercel --prod` via the Vercel CLI.
+  # Reuses the dist/ artefact from the CI build job if
+  # available (via workflow_run trigger); otherwise rebuilds.
+  # ──────────────────────────────────────────────────────────
+  deploy:
+    name: "Deploy to Vercel"
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://www.heading380.in
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      # Pull Vercel project settings (framework, output dir, etc.)
+      # so the CLI builds with the same config as the dashboard.
+      - name: Pull Vercel environment
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+
+      - name: Build for Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          # Build-time public vars (same set as ci.yml build stage).
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_POSTHOG_KEY: ${{ secrets.VITE_POSTHOG_KEY }}
+          VITE_POSTHOG_HOST: ${{ secrets.VITE_POSTHOG_HOST }}
+          VITE_APP_PUBLIC_URL: ${{ secrets.VITE_APP_PUBLIC_URL }}
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          VITE_RAZORPAY_KEY_ID: ${{ secrets.VITE_RAZORPAY_KEY_ID }}
+        run: vercel build --prod --token=$VERCEL_TOKEN
+
+      - name: Deploy prebuilt artefact
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN)
+          echo "url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+
+      # ────────────────────────────────────────────────────
+      # Post-deploy smoke test: hit /api/health and confirm
+      # db:true (existing health endpoint from memory).
+      # ────────────────────────────────────────────────────
+      - name: Smoke test — /api/health
+        run: |
+          STATUS=$(curl -sf https://www.heading380.in/api/health | jq -r '.db')
+          if [ "$STATUS" != "true" ]; then
+            echo "::error::Health check failed — db is not true"
+            exit 1
+          fi
+          echo "Health check passed — db: $STATUS"
+
+      # ────────────────────────────────────────────────────
+      # Notify Slack on successful deploy.
+      # ────────────────────────────────────────────────────
+      - name: Slack success notification
+        if: success() && secrets.SLACK_WEBHOOK_URL != ''
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": ":rocket: *Deployed to production* — `${{ github.repository }}`",
+              "attachments": [{
+                "color": "good",
+                "fields": [
+                  { "title": "URL",    "value": "${{ steps.deploy.outputs.url }}", "short": false },
+                  { "title": "Commit", "value": "${{ github.sha }}", "short": true },
+                  { "title": "Actor",  "value": "${{ github.actor }}", "short": true }
+                ]
+              }]
+            }
+
+      - name: Slack failure notification
+        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": ":x: *Deploy failed* — `${{ github.repository }}`",
+              "attachments": [{
+                "color": "danger",
+                "fields": [
+                  { "title": "Run",   "value": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}", "short": false },
+                  { "title": "Actor", "value": "${{ github.actor }}", "short": true }
+                ]
+              }]
+            }

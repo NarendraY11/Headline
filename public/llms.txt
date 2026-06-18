@@ -6,10 +6,17 @@ Heading is a single-page web app (also installable as a PWA). Authenticated stud
 
 ## Product
 
-- [Question Bank](https://www.heading380.in/modules): Adaptive practice across 28 subjects with spaced repetition, bookmarks, and notes.
-- [Mock Exams](https://www.heading380.in/mock-exams): DGCA & EASA paper templates with real sectional weighting, strict timers, and negative marking.
 - [A320 Systems](https://www.heading380.in/a320-systems): Interactive cockpit-grade reference — ATA chapters, ECAM logic, and schematics you can study from or quiz against.
+- [Try a Free Question](https://www.heading380.in/qotd): One high-fidelity pilot theory question daily with instant diagnostic feedback — no account required.
 - [Pricing](https://www.heading380.in/pricing): Free Cadet tier and Captain (Pro) subscription, monthly or annual.
+
+## Exam Preparation Guides
+
+- [DGCA CPL Exam Prep](https://www.heading380.in/exams/dgca-cpl): Mock papers, syllabus coverage, and study diagnostics for the Indian DGCA Commercial Pilot Licence theory papers.
+- [DGCA ATPL Exam Prep](https://www.heading380.in/exams/dgca-atpl): Full syllabus preparation for DGCA Airline Transport Pilot Licence theoretical knowledge examinations.
+- [EASA ATPL Exam Prep](https://www.heading380.in/exams/easa-atpl): Comprehensive study guides and simulations for all 14 EASA Part-FCL ATPL subjects.
+- [FAA Knowledge Tests](https://www.heading380.in/exams/faa-written): Practice for FAA Private, Instrument, and Commercial Pilot knowledge tests aligned with current ACS.
+- [A320 Type Rating Prep](https://www.heading380.in/exams/a320-type-rating): ATA chapter questions, ECAM abnormal logic, and FCOM procedure prep for A320 type rating ground exams.
 
 ## Company
 

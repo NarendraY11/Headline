@@ -13,9 +13,9 @@ export default function AboutView() {
           
           <div className="space-y-4">
             <span className="eyebrow">HEADING EDITORIAL MISSION STATEMENT</span>
-            <h2 className="h-section text-ink font-semibold mt-2">
+            <h1 className="h-section text-ink font-semibold mt-2">
               Philosophical Instrument Alignment
-            </h2>
+            </h1>
           </div>
 
           {/* Blockquote / Elegant Display statement */}

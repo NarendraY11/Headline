@@ -160,7 +160,7 @@ export function FlightControlsDiagram() {
       </div>
 
       <div role="button" tabIndex={0} aria-label="Interactive flight controls diagram — activate to explore aircraft systems" onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }} className="relative w-full max-w-[800px] aspect-[2/1] mx-auto z-0 mt-12 md:mt-16 mb-4 md:mb-8" onClick={handleSVGClick}>
-        <svg className={`absolute inset-0 w-full h-full ${blueprintMode ? '' : 'drop-shadow-sm'}`} viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet">
+        <svg role="img" aria-label="A320 flight controls schematic diagram" className={`absolute inset-0 w-full h-full ${blueprintMode ? '' : 'drop-shadow-sm'}`} viewBox="0 0 600 300" preserveAspectRatio="xMidYMid meet"><title>A320 flight controls schematic diagram</title>
           <g stroke="var(--ink)" strokeWidth="1.5" fill="none" opacity={blueprintMode ? "0.2" : "0.4"}>
             {PATHS.map(p => (
               <path key={`base-${p.id}`} d={p.d} strokeDasharray={p.isDashed ? "4 4" : "none"} />

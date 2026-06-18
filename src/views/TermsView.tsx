@@ -13,9 +13,9 @@ export default function TermsView() {
           
           <div className="space-y-4">
             <span className="eyebrow block">HEADING REGULATORY COMPLIANCE</span>
-            <h2 className="h-section text-ink font-semibold mt-2">
+            <h1 className="h-section text-ink font-semibold mt-2">
               Terms & Conditions of Service
-            </h2>
+            </h1>
             <p className="font-mono text-xs text-muted-2 uppercase tracking-wider">
               Last Updated: May 24, 2026 · Doc-ID: H-POL-TMS-4.0
             </p>

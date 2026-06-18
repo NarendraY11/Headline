@@ -22,11 +22,18 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       // Store in sessionStorage for full reloads and Google OAuth redirects
       sessionStorage.setItem("auth_redirect_path", targetPath);
 
-      // Trigger standard 'Session Expired' toast notification immediately
+      // Distinguish first-time visitors (no stored token) from expired sessions.
+      // Supabase persists the session under a "sb-*-auth-token" key in localStorage.
+      const hadPriorSession =
+        typeof window !== "undefined" &&
+        Object.keys(localStorage).some((k) => k.startsWith("sb-") && k.includes("auth-token"));
+
       showToast({
-        type: "error",
-        title: "Session Expired",
-        message: "Your authentication session is required or has expired. Please sign in to access details.",
+        type: hadPriorSession ? "error" : "info",
+        title: hadPriorSession ? "Session Expired" : "Sign in to continue",
+        message: hadPriorSession
+          ? "Your session has expired. Please sign in again to resume studying."
+          : "Create a free account or sign in to access this feature.",
         duration: 5000,
       });
 

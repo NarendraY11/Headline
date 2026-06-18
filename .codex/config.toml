@@ -1,0 +1,5 @@
+[mcp_servers.sentry]
+url = "https://mcp.sentry.dev/mcp/heading-x0"
+
+[mcp_servers.supabase]
+url = "https://mcp.supabase.com/mcp?project_ref=iwamrscqmedyklafiqvu"

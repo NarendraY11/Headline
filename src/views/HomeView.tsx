@@ -1,4 +1,4 @@
-import { ArrowUpRight, CheckCircle2, MoveRight, User } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Menu, MoveRight, User, X } from "lucide-react";
 import { type CSSProperties, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, Card, Chip, CompassLogomark, Wordmark } from "../components/Atoms";
@@ -32,6 +32,7 @@ interface SiteContent {
 
 export default function HomeView() {
   const { user, openAuthModal } = useAuth();
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
   // Never render 0 for these trust stats: if the live count query is blocked
   // (RLS) or returns null, fall back to a realistic floor rather than "0".
@@ -112,7 +113,6 @@ export default function HomeView() {
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">Question bank</Link>
           <Link to="/mock-exams" className="hover:text-ink transition-colors px-2 py-2">Mock exams</Link>
           <Link to="/a320-systems" className="hover:text-ink transition-colors px-2 py-2">A320 systems</Link>
-          <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">VIVA</Link>
           <Link to="/pricing" className="hover:text-ink transition-colors px-2 py-2">Pricing</Link>
         </nav>
         <div className="flex items-center gap-3 sm:gap-6">
@@ -126,11 +126,45 @@ export default function HomeView() {
           ) : (
             <>
               <button onClick={() => openAuthModal("signin")} className="hidden sm:block text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors cursor-pointer">Sign in</button>
-              <Button onClick={() => openAuthModal("signup")} variant="primary" className="h-[44px] px-4 sm:px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2">Start studying <MoveRight size={14} className="ml-1.5" /></Button>
+              <Button onClick={() => openAuthModal("signup")} variant="primary" className="h-[44px] px-4 sm:px-5 text-[13px] font-sans font-medium rounded-full bg-ink text-bg border-0 hover:bg-ink-2 hidden sm:flex">Start studying <MoveRight size={14} className="ml-1.5" /></Button>
             </>
           )}
+          {/* Mobile hamburger — home has its own header so PublicLayout's menu doesn't apply here */}
+          <button
+            onClick={() => setMobileNavOpen(!mobileNavOpen)}
+            className="lg:hidden p-2 text-ink hover:bg-rule/20 rounded-lg transition-colors"
+            aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileNavOpen}
+          >
+            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </header>
+
+      {/* MOBILE NAV DRAWER */}
+      {mobileNavOpen && (
+        <div className="fixed inset-0 top-[72px] z-40 bg-bg/95 backdrop-blur-xl flex flex-col lg:hidden overflow-y-auto">
+          <nav className="flex flex-col p-4 gap-1 font-sans text-base mt-2">
+            <Link to="/qotd" onClick={() => setMobileNavOpen(false)} className="py-3 px-4 rounded-lg hover:bg-bg-2 transition-colors flex justify-between items-center text-ink">Try a free question <MoveRight size={16} className="text-muted" /></Link>
+            <Link to="/modules" onClick={() => setMobileNavOpen(false)} className="py-3 px-4 rounded-lg hover:bg-bg-2 transition-colors flex justify-between items-center text-ink">Question bank <MoveRight size={16} className="text-muted" /></Link>
+            <Link to="/mock-exams" onClick={() => setMobileNavOpen(false)} className="py-3 px-4 rounded-lg hover:bg-bg-2 transition-colors flex justify-between items-center text-ink">Mock exams <MoveRight size={16} className="text-muted" /></Link>
+            <Link to="/a320-systems" onClick={() => setMobileNavOpen(false)} className="py-3 px-4 rounded-lg hover:bg-bg-2 transition-colors flex justify-between items-center text-ink">A320 systems <MoveRight size={16} className="text-muted" /></Link>
+            <Link to="/pricing" onClick={() => setMobileNavOpen(false)} className="py-3 px-4 rounded-lg hover:bg-bg-2 transition-colors flex justify-between items-center text-ink">Pricing <MoveRight size={16} className="text-muted" /></Link>
+            <div className="border-t border-rule mt-4 pt-4 flex flex-col gap-2 px-4">
+              {user ? (
+                <Link to="/today" onClick={() => setMobileNavOpen(false)}>
+                  <Button variant="primary" className="w-full h-[48px] rounded-full bg-ink text-bg border-0">Resume studying <MoveRight size={14} className="ml-1.5" /></Button>
+                </Link>
+              ) : (
+                <>
+                  <button onClick={() => { setMobileNavOpen(false); openAuthModal("signup"); }} className="w-full h-[48px] rounded-full bg-ink text-bg font-sans text-[14px] font-medium flex items-center justify-center gap-2">Start studying <MoveRight size={14} /></button>
+                  <button onClick={() => { setMobileNavOpen(false); openAuthModal("signin"); }} className="w-full h-[48px] rounded-full border border-rule text-ink font-sans text-[14px] font-medium flex items-center justify-center">Sign in</button>
+                </>
+              )}
+            </div>
+          </nav>
+        </div>
+      )}
 
       {/* MAIN CONTENT */}
       <main>
@@ -183,9 +217,9 @@ export default function HomeView() {
             </p>
             
             <div className="flex flex-col sm:flex-row items-center gap-4 mb-10 md:mb-14 lg:mb-16">
-               <Link to="/quiz/ata27" className="w-full sm:w-auto">
+               <Link to="/qotd" className="w-full sm:w-auto">
                  <Button variant="primary" className="h-[56px] min-h-[56px] px-8 text-[16px] font-medium w-full shadow-lg rounded-full bg-ink text-bg hover:bg-ink-2 transition-colors">
-                   Take a free mock <MoveRight size={16} className="ml-2" />
+                   Try a free question <MoveRight size={16} className="ml-2" />
                  </Button>
                </Link>
                <Link to="/modules" className="w-full sm:w-auto">
@@ -485,8 +519,8 @@ export default function HomeView() {
              </h2>
            </div>
            
-           <div className="border border-rule rounded-2xl overflow-hidden bg-bg shadow-sm">
-             <div className="grid grid-cols-3 border-b border-rule bg-paper">
+           <div className="border border-rule rounded-2xl overflow-x-auto bg-bg shadow-sm">
+             <div className="grid grid-cols-3 border-b border-rule bg-paper min-w-[480px]">
                <div className="p-4 md:p-6 font-mono text-[11px] text-muted-2 tracking-widest uppercase flex items-center">Feature</div>
                <div className="p-4 md:p-6 font-sans font-semibold text-ink border-l border-rule flex items-center bg-bg relative">
                  <div className="absolute top-0 left-0 w-full h-1 bg-ink"></div>
@@ -502,7 +536,7 @@ export default function HomeView() {
                { feat: 'A320 Type Rating Prep', h: 'Interactive schematics & ECAM logic', s: 'Dense manuals (FCOM/FCTM)' },
                { feat: 'Data Analytics', h: 'Session-by-session telemetry trends', s: 'Mental guesswork' }
              ].map((r, i) => (
-               <div key={i} className="grid grid-cols-3 border-b border-rule last:border-0 hover:bg-bg-2 transition-colors">
+               <div key={i} className="grid grid-cols-3 border-b border-rule last:border-0 hover:bg-bg-2 transition-colors min-w-[480px]">
                  <div className="p-4 md:p-6 font-sans text-[13px] md:text-[14px] text-ink font-medium">{r.feat}</div>
                  <div className="p-4 md:p-6 font-sans text-[13px] md:text-[14px] text-ink border-l border-rule bg-bg/50">
                     <div className="flex items-start gap-2">
@@ -526,10 +560,10 @@ export default function HomeView() {
             Seen enough? Fly a paper before you commit.
           </p>
           <Link
-            to="/quiz/ata27"
+            to="/qotd"
             className="shrink-0 inline-flex items-center gap-2 font-sans text-[15px] font-medium text-ink hover:text-navy transition-colors"
           >
-            Take a free mock <MoveRight size={16} />
+            Try a free question <MoveRight size={16} />
           </Link>
         </div>
       </section>

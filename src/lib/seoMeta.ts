@@ -81,7 +81,7 @@ export function getMetaForRoute(path: string): RouteMeta {
       title = "FAA Knowledge Tests Prep — Private, Instrument & Commercial";
       description = "Master the FAA Knowledge Tests with Heading guidance. Practice Private Pilot (PAR), Instrument Rating (IRA), and Commercial (CAX) aligned with current ACS rules.";
     } else if (examId === "a320-type-rating") {
-      title = "Airbus A320 Type Rating Prep — System Systems & FCOM Exams";
+      title = "Airbus A320 Type Rating Prep — A320 Systems & FCOM Exams";
       description = "The ultimate training suite for A320 flight rating exam prep. Study flight control computers (ELAC, SEC, FAC), hydraulics, pneumatic valves, and ECAM abnormal logic.";
     } else {
       title = "Aviation Theoretical Exam Prep — Heading";

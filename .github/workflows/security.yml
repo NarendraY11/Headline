@@ -1,0 +1,65 @@
+# ============================================================
+# Security scan — runs weekly + on every push to main.
+# Catches supply-chain vulnerabilities before they reach prod.
+# Separate from CI so a new CVE doesn't block feature PRs
+# (teams triage security separately from build failures).
+# ============================================================
+
+name: Security
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 3 * * 1"   # every Monday 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  audit:
+    name: "npm audit"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      # Fail on high/critical CVEs. Moderate and below are
+      # reported but don't break the workflow (--audit-level).
+      - name: npm audit
+        run: npm audit --audit-level=high
+
+      # CodeQL static analysis (JavaScript / TypeScript).
+      # Scans src/ for common vulnerability patterns.
+  codeql:
+    name: "CodeQL Analysis"
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:javascript-typescript

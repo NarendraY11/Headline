@@ -85,9 +85,9 @@ export default function ContactView() {
           
           <div className="space-y-4">
             <span className="eyebrow block">HEADING COMMUNICATIONS SYSTEMS</span>
-            <h2 className="h-section text-ink font-semibold mt-2">
+            <h1 className="h-section text-ink font-semibold mt-2">
               Contact Ground Crew Dispatch
-            </h2>
+            </h1>
             <p className="font-mono text-xs text-muted-2 uppercase tracking-wider">
               Channel: 121.5 MHz · Dispatch Support Desk
             </p>

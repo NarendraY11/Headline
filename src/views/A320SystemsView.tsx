@@ -18,8 +18,7 @@ export default function A320SystemsView() {
           <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">Question bank</Link>
           <Link to="/mock-exams" className="hover:text-ink transition-colors px-2 py-2">Mock exams</Link>
           <Link to="/a320-systems" className="hover:text-ink text-ink transition-colors px-2 py-2 font-medium">A320 systems</Link>
-          <Link to="/modules" className="hover:text-ink transition-colors px-2 py-2">VIVA</Link>
-          <Link to="/pricing" className="hover:text-ink transition-colors px-2 py-2">Pricing</Link>
+<Link to="/pricing" className="hover:text-ink transition-colors px-2 py-2">Pricing</Link>
         </div>
         <div className="flex items-center gap-6">
             <button onClick={() => openAuthModal("signin")} className="text-[13px] font-sans font-medium text-ink hover:text-ink-2 transition-colors hidden sm:block cursor-pointer">Sign in</button>

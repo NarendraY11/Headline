@@ -27,7 +27,7 @@ export function SidebarAuth({ isExpanded }: { isExpanded: boolean }) {
       >
         <div className="flex-shrink-0 flex items-center justify-center w-4 h-4">
           {user.photoURL && !avatarError ? (
-            <img src={user.photoURL} alt="Avatar" className="w-[18px] h-[18px] rounded-full border border-rule object-cover" onError={() => setAvatarError(true)} />
+            <img src={user.photoURL} alt={user.displayName ? `${user.displayName}'s profile photo` : "Profile photo"} className="w-[18px] h-[18px] rounded-full border border-rule object-cover" onError={() => setAvatarError(true)} />
           ) : (
             <div className="w-[18px] h-[18px] rounded-full bg-navy text-bg flex items-center justify-center">
               <UserIcon size={10} />
