@@ -216,8 +216,9 @@ jobs:
           CI: "true"
           BASE_URL: ${{ secrets.BASE_URL || 'https://www.heading380.in' }}
           # Auth credentials stored as GitHub secrets — never in source.
-          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          # Env names must match what tests/e2e/helpers/auth.ts reads.
+          TEST_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
         run: npm run test:e2e
 
       # Always upload the HTML report so failures are inspectable.
