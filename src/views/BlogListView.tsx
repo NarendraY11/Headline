@@ -143,7 +143,7 @@ export default function BlogListView() {
                 <Search className="absolute left-3.5 top-3.5 text-muted-2" size={16} />
                 <input 
                   type="text" 
-                  placeholder="Search aviation articles, exam questions, systems..." 
+                  placeholder="Search articles, topics, exams…"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full h-12 bg-paper border border-rule hover:border-rule-strong focus:border-navy focus:outline-none pl-11 pr-4 rounded font-sans text-sm text-ink transition-all shadow-sm"

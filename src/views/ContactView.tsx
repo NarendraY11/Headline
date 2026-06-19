@@ -109,40 +109,35 @@ export default function ContactView() {
                 </p>
               </div>
 
-              {/* EDIT THESE - Contact card info */}
-              <div className="border border-dashed border-rule-strong p-6 bg-panel/30 space-y-5 rounded-sm">
-                <span className="font-mono text-[10px] tracking-widest text-amber block font-semibold uppercase">
-                  ⚙️ OPERATOR CONTACT DIRECTORY (EDIT THESE DETAILS)
+              {/* Contact card info */}
+              <div className="border border-rule-strong p-6 bg-panel/30 space-y-5 rounded-sm">
+                <span className="font-mono text-[10px] tracking-widest text-muted-2 block font-semibold uppercase">
+                  Operator Contact Directory
                 </span>
-                
+
                 <div className="space-y-4">
-                  
+
                   <div className="flex gap-3 items-start">
                     <Mail size={16} className="text-signal shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wider block">Central Support Mail</span>
-                      <strong className="text-sm text-ink break-all font-mono">[EDIT: support@headingeditorial.com]</strong>
+                      <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wider block">Support Email</span>
+                      <a href="mailto:support@heading380.in" className="text-sm text-navy break-all font-mono hover:underline">support@heading380.in</a>
                     </div>
                   </div>
 
                   <div className="flex gap-3 items-start">
                     <MapPin size={16} className="text-signal shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wider block">Registered Corporate HQ</span>
-                      <strong className="text-sm text-ink font-sans font-light block">
-                        [EDIT: Runway 3, Chakeri Airport Area]
-                      </strong>
-                      <span className="text-xs text-muted font-sans font-light">
-                        [EDIT: Kanpur, Uttar Pradesh, 208008, India]
-                      </span>
+                      <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wider block">Registered Office</span>
+                      <strong className="text-sm text-ink font-sans font-light block">Kanpur, Uttar Pradesh, India</strong>
                     </div>
                   </div>
 
                   <div className="flex gap-3 items-start">
                     <Phone size={16} className="text-signal shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wider block">Operational Hotline</span>
-                      <strong className="text-sm text-ink font-mono">[EDIT: +91 512 555 0192]</strong>
+                      <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wider block">Response Time</span>
+                      <strong className="text-sm text-ink font-sans font-light">Within 18 hours on weekdays</strong>
                     </div>
                   </div>
 

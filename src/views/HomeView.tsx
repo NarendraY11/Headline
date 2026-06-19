@@ -132,7 +132,7 @@ export default function HomeView() {
           {/* Mobile hamburger — home has its own header so PublicLayout's menu doesn't apply here */}
           <button
             onClick={() => setMobileNavOpen(!mobileNavOpen)}
-            className="lg:hidden p-2 text-ink hover:bg-rule/20 rounded-lg transition-colors"
+            className="lg:hidden p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-ink hover:bg-rule/20 rounded-lg transition-colors"
             aria-label={mobileNavOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileNavOpen}
           >
@@ -169,7 +169,7 @@ export default function HomeView() {
       {/* MAIN CONTENT */}
       <main>
         {/* 1. SEC: HERO */}
-        <section className="relative pt-10 pb-12 md:pt-20 md:pb-20 w-full flex justify-center overflow-hidden">
+        <section className="relative pt-[calc(72px+1.5rem)] pb-12 md:pt-20 md:pb-20 w-full flex justify-center overflow-hidden">
         {/* REPLACED WATERMARKED VIDEO WITH ELEGANT BLUEPRINT AND AMBIENT GRADIENT */}
         <div className="absolute inset-0 bg-gradient-to-tr from-[#f3eee0] via-[#f8f5ed] to-[#ede8dc] z-0" />
         <div className="absolute inset-0 blueprint pointer-events-none opacity-[0.25] z-[1]" />
@@ -188,10 +188,14 @@ export default function HomeView() {
           {/* LEFT COLUMN */}
           {/* The hero sits on a fixed cream gradient in BOTH themes, so pin the
               ink/navy/muted tokens to their light-theme values here. Otherwise
-              the dark theme flips `text-ink` to near-white → invisible on cream. */}
+              the dark theme flips `text-ink` to near-white → invisible on cream.
+              --color-bg is also pinned so bg-ink/text-bg buttons stay readable:
+              button uses bg-ink (pinned dark navy) + text-bg (pinned cream) = ✓ */}
           <div
             className="flex-1 md:max-w-[50%] lg:max-w-2xl relative z-10 w-full min-w-0"
             style={{
+              "--color-bg": "#f5f2ea",
+              "--color-bg-2": "#ebe7dc",
               "--color-ink": "#0d1a2d",
               "--color-ink-2": "#1a2c47",
               "--color-navy": "#14305a",

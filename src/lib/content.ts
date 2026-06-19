@@ -1,10 +1,60 @@
 import { supabase } from "./supabase";
-import { Question } from "../data/questions";
-import { rawSubjects, SubjectItem } from "../data/topics";
+import { Question, Choice } from "../data/questions";
+import { rawSubjects, SubjectItem, SubTopic } from "../data/topics";
 import { getCachedQuestions, getCachedQuestionsByIds, putQuestions } from "./offline/questionCache";
 import { normalizeSlug } from "./slug";
 
 const CACHE_TTL = 300000; // 5 minutes in milliseconds
+
+// Raw `questions` row as returned by Supabase (snake_case, loosely typed —
+// choices/refs may arrive as arrays or JSON strings depending on column type).
+interface QuestionRow {
+  id: string;
+  subcategory_id?: string | null;
+  subject_id?: string | null;
+  exam_id?: string | null;
+  ata?: string | null;
+  difficulty?: string | null;
+  prompt: string;
+  diagram_caption?: string | null;
+  choices?: Choice[] | string | null;
+  correct?: string | null;
+  explanation?: string | null;
+  refs?: string[] | string | null;
+  references?: string[] | string | null;
+  is_ai_generated?: boolean | null;
+}
+
+// Single source of truth for DB-row → Question mapping. Previously this exact
+// object literal was copy-pasted in four fetch functions; any change to the
+// shape had to be made in four places. Tolerant of both array and JSON-string
+// encodings for choices/refs (legacy rows stored them as text).
+function parseJsonish<T>(value: unknown, fallback: T): T {
+  if (Array.isArray(value)) return value as T;
+  if (typeof value === "string") {
+    try { return JSON.parse(value) as T; } catch { return fallback; }
+  }
+  return fallback;
+}
+
+export function mapQuestionRow(q: QuestionRow): Question {
+  return {
+    id: q.id,
+    topicId: q.subcategory_id || q.subject_id || "",
+    subjectId: q.subject_id || "",
+    subcategoryId: q.subcategory_id || "",
+    examId: q.exam_id || "",
+    ata: q.ata || "Uncategorized",
+    difficulty: (q.difficulty as Question["difficulty"]) || "standard",
+    prompt: q.prompt,
+    diagramCaption: q.diagram_caption || undefined,
+    choices: parseJsonish<Choice[]>(q.choices, []),
+    correct: q.correct || "",
+    explanation: q.explanation || "",
+    references: parseJsonish<string[]>(q.refs ?? q.references, []),
+    isAiGenerated: !!q.is_ai_generated,
+  };
+}
 
 function getLocalCache<T>(key: string): T | null {
   try {
@@ -88,30 +138,7 @@ export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
       return fillFromStatic([]);
     }
 
-    const mapped = data.map((q: any) => ({
-      id: q.id,
-      topicId: q.subcategory_id || q.subject_id || "",
-      subjectId: q.subject_id || "",
-      subcategoryId: q.subcategory_id || "",
-      examId: q.exam_id || "",
-      ata: q.ata || "Uncategorized",
-      difficulty: q.difficulty || "standard",
-      prompt: q.prompt,
-      diagramCaption: q.diagram_caption || undefined,
-      choices: Array.isArray(q.choices)
-        ? q.choices
-        : (typeof q.choices === "string" ? JSON.parse(q.choices) : []),
-      correct: q.correct,
-      explanation: q.explanation || "",
-      references: Array.isArray(q.refs)
-        ? q.refs
-        : (Array.isArray(q.references)
-          ? q.references
-          : (typeof q.refs === "string"
-            ? JSON.parse(q.refs)
-            : (typeof q.references === "string" ? JSON.parse(q.references) : []))),
-      isAiGenerated: !!q.is_ai_generated,
-    }));
+    const mapped = data.map(mapQuestionRow);
     void putQuestions(mapped);
     return fillFromStatic(mapped);
   } catch (err) {
@@ -151,36 +178,13 @@ export async function fetchQuizQuestionsForTopic(
       
       const normTarget = normalizeSlug(topicId);
 
-      data = (res.data || []).filter((q: any) =>
-        normalizeSlug(q.subject_id) === normTarget ||
-        normalizeSlug(q.subcategory_id) === normTarget
+      data = (res.data || []).filter((q: QuestionRow) =>
+        normalizeSlug(q.subject_id || "") === normTarget ||
+        normalizeSlug(q.subcategory_id || "") === normTarget
       );
     }
 
-    let questions: Question[] = (data || []).map((q: any) => ({
-      id: q.id,
-      topicId: q.subcategory_id || q.subject_id || "",
-      subjectId: q.subject_id || "",
-      subcategoryId: q.subcategory_id || "",
-      examId: q.exam_id || "",
-      ata: q.ata || "Uncategorized",
-      difficulty: q.difficulty || "standard",
-      prompt: q.prompt,
-      diagramCaption: q.diagram_caption || undefined,
-      choices: Array.isArray(q.choices)
-        ? q.choices
-        : (typeof q.choices === "string" ? JSON.parse(q.choices) : []),
-      correct: q.correct,
-      explanation: q.explanation || "",
-      references: Array.isArray(q.refs)
-        ? q.refs
-        : (Array.isArray(q.references)
-          ? q.references
-          : (typeof q.refs === "string"
-            ? JSON.parse(q.refs)
-            : (typeof q.references === "string" ? JSON.parse(q.references) : []))),
-      isAiGenerated: !!q.is_ai_generated,
-    }));
+    let questions: Question[] = (data || []).map(mapQuestionRow);
 
     // Write successful DB results through to the offline cache so this topic
     // can be practised offline later.
@@ -275,30 +279,7 @@ export async function fetchPublishedQuestions(options?: {
         return staticFallback();
       }
 
-      const mapped: Question[] = (data || []).map((q: any) => ({
-        id: q.id,
-        topicId: q.subcategory_id || q.subject_id || "",
-        subjectId: q.subject_id || "",
-        subcategoryId: q.subcategory_id || "",
-        examId: q.exam_id || "",
-        ata: q.ata || "Uncategorized",
-        difficulty: q.difficulty || "standard",
-        prompt: q.prompt,
-        diagramCaption: q.diagram_caption || undefined,
-        choices: Array.isArray(q.choices)
-          ? q.choices
-          : (typeof q.choices === "string" ? JSON.parse(q.choices) : []),
-        correct: q.correct,
-        explanation: q.explanation || "",
-        references: Array.isArray(q.refs)
-          ? q.refs
-          : (Array.isArray(q.references)
-            ? q.references
-            : (typeof q.refs === "string"
-              ? JSON.parse(q.refs)
-              : (typeof q.references === "string" ? JSON.parse(q.references) : []))),
-        isAiGenerated: !!q.is_ai_generated,
-      }));
+      const mapped: Question[] = (data || []).map(mapQuestionRow);
       if (mapped.length > 0) {
         void putQuestions(mapped);
         return mapped;
@@ -335,30 +316,7 @@ export async function fetchPublishedQuestions(options?: {
       const { staticQuestionBank } = await import("../data/staticQuestions");
       cachedQuestions = cached.length > 0 ? cached : staticQuestionBank;
     } else if (data && data.length > 0) {
-      cachedQuestions = data.map((q: any) => ({
-        id: q.id,
-        topicId: q.subcategory_id || q.subject_id || "",
-        subjectId: q.subject_id || "",
-        subcategoryId: q.subcategory_id || "",
-        examId: q.exam_id || "",
-        ata: q.ata || "Uncategorized",
-        difficulty: q.difficulty || "standard",
-        prompt: q.prompt,
-        diagramCaption: q.diagram_caption || undefined,
-        choices: Array.isArray(q.choices)
-          ? q.choices
-          : (typeof q.choices === "string" ? JSON.parse(q.choices) : []),
-        correct: q.correct,
-        explanation: q.explanation || "",
-        references: Array.isArray(q.refs)
-          ? q.refs
-          : (Array.isArray(q.references)
-            ? q.references
-            : (typeof q.refs === "string"
-              ? JSON.parse(q.refs)
-              : (typeof q.references === "string" ? JSON.parse(q.references) : []))),
-        isAiGenerated: !!q.is_ai_generated,
-      }));
+      cachedQuestions = data.map(mapQuestionRow);
       void putQuestions(cachedQuestions);
     } else {
       const cached = await getCachedQuestions();
@@ -530,7 +488,7 @@ export async function fetchMergedSubjects(forceRefresh = false): Promise<Subject
          spec: stMatch?.spec || undefined,
          figure: stMatch?.figure || undefined,
          sections: stMatch?.sections || undefined,
-         status: (dbSubcat.status || "reviewed") as any,
+         status: (dbSubcat.status || "reviewed") as SubTopic["status"],
          questionCount: questionsList.filter(q => q.topicId === dbSubcat.id).length,
          free_chapter: idx === 0 || !!dbSubcat.free_chapter || !!stMatch?.free_chapter,
        };
@@ -545,7 +503,7 @@ export async function fetchMergedSubjects(forceRefresh = false): Promise<Subject
        title: dbSub.title,
        questionCount: totalCount,
        mastery: pMatch?.mastery || 0,
-       hue: (pMatch?.hue || "navy") as any,
+       hue: (pMatch?.hue || "navy") as SubjectItem["hue"],
        blurb: dbSub.description || pMatch?.blurb || "",
        status: isComingSoon ? "coming-soon" as const : "active" as const,
        tags: pMatch?.tags || [],
@@ -571,7 +529,7 @@ export async function fetchMergedSubjects(forceRefresh = false): Promise<Subject
          spec: st.spec || undefined,
          figure: st.figure || undefined,
          sections: st.sections || undefined,
-         status: (st.status || "reviewed") as any,
+         status: (st.status || "reviewed") as SubTopic["status"],
          questionCount: questionsList.filter(q => q.topicId === st.id).length || st.questionCount || 0,
          free_chapter: idx === 0 || !!st.free_chapter,
        };
@@ -586,7 +544,7 @@ export async function fetchMergedSubjects(forceRefresh = false): Promise<Subject
        title: rs.title,
        questionCount: totalCount,
        mastery: rs.mastery || 0,
-       hue: (rs.hue || "navy") as any,
+       hue: (rs.hue || "navy") as SubjectItem["hue"],
        blurb: rs.blurb || "",
        status: isComingSoon ? "coming-soon" as const : "active" as const,
        tags: rs.tags || [],

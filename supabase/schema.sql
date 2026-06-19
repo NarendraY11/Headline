@@ -576,7 +576,7 @@ create policy "Users update own notifications"
 drop policy if exists "System insert notifications" on public.notifications;
 create policy "System insert notifications"
   on public.notifications for insert
-  with check (auth.uid() = user_id or auth.uid() is not null);
+  with check (auth.uid() = user_id or public.is_admin());
 
 
 -- Question Reports table

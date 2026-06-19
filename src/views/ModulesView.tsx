@@ -254,9 +254,9 @@ export default function ModulesView() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-1.5 text-[13px] rounded-full font-sans transition-colors ${
-                    activeTab === tab 
-                      ? "bg-ink text-paper font-bold shadow-sm" 
+                  className={`px-4 py-2.5 min-h-[44px] text-[13px] rounded-full font-sans transition-colors flex items-center ${
+                    activeTab === tab
+                      ? "bg-ink text-paper font-bold shadow-sm"
                       : "text-muted font-medium hover:text-ink hover:bg-panel"
                   }`}
                 >

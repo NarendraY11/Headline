@@ -200,24 +200,26 @@ function CustomMarkdown({ content }: { content: string }) {
       continue;
     }
 
-    // Headings
+    // Headings — the article title is the page's single <h1>, so body headings
+    // are demoted one level (#→h2, ##→h3, ###→h4) to keep one h1 per page and a
+    // valid descending outline. Visual styling is unchanged (classNames kept).
     if (line.startsWith("# ")) {
       renderedElements.push(
-        <h1 key={`h1-${keyIdx++}`} className="font-serif text-3xl sm:text-4xl font-bold text-ink tracking-tight mt-8 mb-4 leading-tight">
+        <h2 key={`h2-${keyIdx++}`} className="font-serif text-3xl sm:text-4xl font-bold text-ink tracking-tight mt-8 mb-4 leading-tight">
           {line.substring(2)}
-        </h1>
+        </h2>
       );
     } else if (line.startsWith("## ")) {
       renderedElements.push(
-        <h2 key={`h2-${keyIdx++}`} className="font-serif text-xl sm:text-2xl font-bold text-ink tracking-tight mt-8 mb-3 border-b border-rule pb-1 leading-snug">
+        <h3 key={`h3-${keyIdx++}`} className="font-serif text-xl sm:text-2xl font-bold text-ink tracking-tight mt-8 mb-3 border-b border-rule pb-1 leading-snug">
           {line.substring(3)}
-        </h2>
+        </h3>
       );
     } else if (line.startsWith("### ")) {
       renderedElements.push(
-        <h3 key={`h3-${keyIdx++}`} className="font-serif text-lg font-bold text-ink mt-6 mb-2 leading-snug">
+        <h4 key={`h4-${keyIdx++}`} className="font-serif text-lg font-bold text-ink mt-6 mb-2 leading-snug">
           {line.substring(4)}
-        </h3>
+        </h4>
       );
     } else if (line.startsWith("> ") || line.startsWith(">")) {
       renderedElements.push(

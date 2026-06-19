@@ -103,10 +103,15 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Restore node_modules
+        id: cache
         uses: actions/cache@v4
         with:
           path: node_modules
           key: node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies (cache-miss fallback)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline
 
       - name: TypeScript type-check (tsc --noEmit)
         run: npm run lint
@@ -117,6 +122,42 @@ jobs:
         # `|| true` keeps the job green while the current eslint config
         # only carries Firebase rules that don't apply to .ts/.tsx files.
         # Remove `|| true` once you add @typescript-eslint rules.
+
+  # ──────────────────────────────────────────────────────────
+  # STAGE 3b — UNIT TESTS (Vitest)
+  # Fast, deterministic, no secrets, no network. This is the
+  # real pre-build gate: it validates THIS commit's logic,
+  # unlike the E2E job which exercises the already-deployed
+  # prod site (the previous release, not this PR).
+  # ──────────────────────────────────────────────────────────
+  unit:
+    name: "Unit Tests (Vitest)"
+    runs-on: ubuntu-latest
+    needs: checkout-install
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+
+      - name: Restore node_modules
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies (cache-miss fallback)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline
+
+      - name: Run unit tests
+        run: npm test
 
   # ──────────────────────────────────────────────────────────
   # STAGE 4 — TEST
@@ -145,12 +186,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
 
       - name: Restore node_modules
+        id: cache
         uses: actions/cache@v4
         with:
           path: node_modules
           key: node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies (cache-miss fallback)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline
 
       - name: Install Playwright browsers
         # Cache browser binaries so re-runs skip the ~200 MB download.
@@ -169,8 +216,9 @@ jobs:
           CI: "true"
           BASE_URL: ${{ secrets.BASE_URL || 'https://www.heading380.in' }}
           # Auth credentials stored as GitHub secrets — never in source.
-          TEST_USER_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
-          TEST_USER_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
+          # Env names must match what tests/e2e/helpers/auth.ts reads.
+          TEST_EMAIL: ${{ secrets.TEST_USER_EMAIL }}
+          TEST_PASSWORD: ${{ secrets.TEST_USER_PASSWORD }}
         run: npm run test:e2e
 
       # Always upload the HTML report so failures are inspectable.
@@ -194,7 +242,10 @@ jobs:
   build:
     name: "Build"
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    # Gated on deterministic checks (lint + unit). NOT on the E2E job:
+    # E2E runs against live prod (the previous release), so gating a fresh
+    # build artefact on it is backwards and couples builds to prod flakiness.
+    needs: [lint, unit]
 
     steps:
       - uses: actions/checkout@v4
@@ -204,12 +255,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
 
       - name: Restore node_modules
+        id: cache
         uses: actions/cache@v4
         with:
           path: node_modules
           key: node-modules-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies (cache-miss fallback)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline
 
       - name: Build application
         env:
@@ -240,14 +297,20 @@ jobs:
   notify-failure:
     name: "Notify on Failure"
     runs-on: ubuntu-latest
-    needs: [lint, test, build]
-    if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+    needs: [lint, unit, test, build]
+    # NOTE: the `secrets` context is NOT available in job-level `if:`, so the
+    # webhook presence is checked at step level via env instead. Gate the job
+    # purely on failure of any upstream job.
+    if: failure()
 
     steps:
       - name: Slack failure notification
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: env.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v2
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook: ${{ env.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
             {

@@ -4,7 +4,8 @@ import crypto from "crypto";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { getRazorpay, getSupabaseAdmin, grantReferralRewards, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity } from "./api/_lib/utils.js";
+import { getRazorpay, getSupabaseAdmin, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity } from "./api/_lib/utils.js";
+import { processVerifiedPayment } from "./api/_lib/processVerifiedPayment.js";
 import { validateStudyPlan, expandPlanToMissions } from "./api/_lib/studyPlan.js";
 import { handleCoach } from "./api/_lib/coach.js";
 
@@ -360,109 +361,17 @@ async function startServer() {
     }
     try {
       const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
-      const signaturePayload = `${razorpay_order_id}|${razorpay_payment_id}`;
-      
-      const keySecret = process.env.RAZORPAY_KEY_SECRET;
-      if (!keySecret) {
-        throw new Error("RAZORPAY_KEY_SECRET is missing.");
-      }
 
-      const isValid = verifyWebhookSignature(signaturePayload, razorpay_signature, keySecret);
-      if (!isValid) {
-        return res.status(400).json({ error: "Signature verification failed." });
-      }
-
-      const rz = getRazorpay();
-      const order = await rz.orders.fetch(razorpay_order_id);
-
-      // Authorization: order must belong to the caller (see api/payment/verify.ts).
-      if ((order as any)?.notes?.userId && (order as any).notes.userId !== (req as any).uid) {
-        return res.status(403).json({ error: "Order does not belong to this account." });
-      }
-      if ((order as any)?.status !== "paid") {
-        return res.status(400).json({ error: "Order is not paid." });
-      }
-
-      const admin = getSupabaseAdmin();
-
-      // Idempotency: skip re-granting if this payment was already recorded.
-      // Keyed on the unique payments.razorpay_payment_id.
-      const { data: priorPayment } = await admin
-        .from("payments")
-        .select("id")
-        .eq("razorpay_payment_id", razorpay_payment_id)
-        .maybeSingle();
-      if (priorPayment) {
-        return res.json({ success: true, alreadyProcessed: true });
-      }
-
-      const PLAN_PRICE_MONTHLY = 499 * 100;
-      const PLAN_PRICE_YEARLY = 2999 * 100;
-
-      const paidAmount = order.amount;
-
-      let verifiedInterval = "monthly";
-      if (paidAmount === PLAN_PRICE_YEARLY) {
-        verifiedInterval = "yearly";
-      } else if (paidAmount === PLAN_PRICE_MONTHLY) {
-        verifiedInterval = "monthly";
-      } else {
-        return res.status(400).json({ error: "Paid amount does not match any known plan price." });
-      }
-
-      const startedAt = new Date().toISOString();
-      const expiresAt = new Date();
-      if (verifiedInterval === "yearly") {
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-      } else {
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
-      }
-
-      const { error } = await admin
-        .from("profiles")
-        .update({
-          plan: "pro",
-          plan_started_at: startedAt,
-          plan_expires_at: expiresAt.toISOString(),
-        })
-        .eq("id", (req as any).uid);
-
-      if (error) {
-        throw error;
-      }
-
-      // Durable payment ledger + idempotency key checked above.
-      try {
-        await admin.from("payments").insert({
-          user_id: (req as any).uid,
-          razorpay_payment_id,
-          razorpay_order_id,
-          amount: paidAmount,
-          currency: order.currency || "INR",
-          status: order.status,
-          interval: verifiedInterval,
-          source: "verify",
-          notes: order.notes ?? null,
-        });
-      } catch (payErr) {
-        console.warn("payments insert failed:", payErr);
-      }
-
-      // Audit trail.
-      try {
-        await admin.from("plan_changes").insert({
-          user_id: (req as any).uid,
-          new_plan: "pro",
-          expires_at: expiresAt.toISOString(),
-          note: `razorpay payment ${razorpay_payment_id} (${verifiedInterval})`,
-        });
-      } catch (auditErr) {
-        console.warn("plan_changes audit insert failed:", auditErr);
-      }
-
-      await grantReferralRewards(admin, (req as any).uid, expiresAt);
-
-      res.json({ success: true });
+      // Security-critical grant logic is shared with api/payment/verify.ts via
+      // processVerifiedPayment so dev and prod can never drift.
+      const result = await processVerifiedPayment({
+        user: { id: (req as any).uid },
+        razorpay_payment_id,
+        razorpay_order_id,
+        razorpay_signature,
+        req: req as any,
+      });
+      res.status(result.status).json(result.body);
     } catch (error: any) {
       console.error("Payment verification failed:", error);
       res.status(500).json({ error: error.message || "Failed to verify signature." });

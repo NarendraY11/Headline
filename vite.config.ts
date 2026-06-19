@@ -19,10 +19,13 @@ function sitemapPlugin() {
     async closeBundle() {
       try {
         const { spawnSync } = await import('child_process');
+        // Invoke the tsx CLI through the current node binary (no shell). Avoids
+        // the Node DEP0190 deprecation warning emitted by spawnSync with
+        // shell:true + an args array, and is cross-platform without a shell.
         const result = spawnSync(
-          'node_modules/.bin/tsx',
-          ['scripts/generate-sitemap.ts'],
-          { cwd: process.cwd(), encoding: 'utf-8', shell: true }
+          process.execPath,
+          ['node_modules/tsx/dist/cli.mjs', 'scripts/generate-sitemap.ts'],
+          { cwd: process.cwd(), encoding: 'utf-8' }
         );
         if (result.stdout) process.stdout.write(result.stdout);
         if (result.stderr) process.stderr.write(result.stderr);
@@ -114,6 +117,9 @@ export default defineConfig(({ command }) => {
         project: process.env.SENTRY_PROJECT,
         authToken: process.env.SENTRY_AUTH_TOKEN,
         telemetry: false,
+        // Strip maps from the deployed bundle after they're uploaded to Sentry,
+        // so source maps are never served publicly.
+        sourcemaps: { filesToDeleteAfterUpload: ['./dist/**/*.map'] },
       })] : []),
       VitePWA({
         registerType: 'autoUpdate',
@@ -235,9 +241,11 @@ export default defineConfig(({ command }) => {
     ],
     build: {
       target: "esnext",
-      // Hidden source maps: Sentry vite plugin uploads then strips the
-      // sourceMappingURL comment so maps are never served to end users.
-      sourcemap: true,
+      // Hidden source maps: emitted for Sentry symbolication but the
+      // sourceMappingURL comment is omitted from the JS, so browsers never
+      // request them and they aren't discoverable in prod. When Sentry is
+      // configured the plugin also deletes them from dist after upload.
+      sourcemap: "hidden",
       rollupOptions: {
         output: {
           manualChunks(id) {

@@ -49,11 +49,11 @@ export function usePushNotifications(): UsePushNotificationsState {
       console.error("[push] enable() called with no userId — user not logged in?");
       return;
     }
-    console.log("[push] enable() called. userId:", userId, "flagEnabled:", enabled);
+    if (import.meta.env.DEV) console.log("[push] enable() called. userId:", userId, "flagEnabled:", enabled);
     setLoading(true);
     try {
       const perm = await requestPushPermission();
-      console.log("[push] Notification.permission after request:", perm);
+      if (import.meta.env.DEV) console.log("[push] Notification.permission after request:", perm);
       setPermission(perm);
       if (perm !== "granted") {
         console.warn("[push] Permission not granted — subscription aborted. Permission:", perm);
