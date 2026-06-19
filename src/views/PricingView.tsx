@@ -288,13 +288,13 @@ export default function PricingView() {
            <div className="bg-panel border border-rule p-1.5 rounded-full flex gap-1 shadow-sm">
              <button
                onClick={() => setBillingInterval("monthly")}
-               className={`px-5 py-2.5 rounded-full text-xs font-mono tracking-wider uppercase transition-all duration-300 focus:outline-none ${billingInterval === "monthly" ? "bg-navy text-bg font-semibold shadow-sm" : "text-muted hover:text-ink"}`}
+               className={`px-5 py-2.5 rounded-full text-xs font-mono tracking-wider uppercase whitespace-nowrap transition-all duration-300 focus:outline-none ${billingInterval === "monthly" ? "bg-navy text-bg font-semibold shadow-sm" : "text-muted hover:text-ink"}`}
              >
                Monthly Access
              </button>
              <button
                onClick={() => setBillingInterval("yearly")}
-               className={`px-5 py-2.5 rounded-full text-xs font-mono tracking-wider uppercase transition-all duration-300 focus:outline-none relative flex items-center gap-1.5 ${billingInterval === "yearly" ? "bg-navy text-bg font-semibold shadow-sm" : "text-muted hover:text-ink"}`}
+               className={`px-5 py-2.5 rounded-full text-xs font-mono tracking-wider uppercase whitespace-nowrap transition-all duration-300 focus:outline-none relative flex items-center gap-1.5 ${billingInterval === "yearly" ? "bg-navy text-bg font-semibold shadow-sm" : "text-muted hover:text-ink"}`}
              >
                Annual Access
                <span className="bg-[#DF9D38] text-[#0d1a2d] font-sans font-bold text-[8px] tracking-normal px-1.5 py-0.5 rounded uppercase leading-none">

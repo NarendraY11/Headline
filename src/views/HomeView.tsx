@@ -188,10 +188,14 @@ export default function HomeView() {
           {/* LEFT COLUMN */}
           {/* The hero sits on a fixed cream gradient in BOTH themes, so pin the
               ink/navy/muted tokens to their light-theme values here. Otherwise
-              the dark theme flips `text-ink` to near-white → invisible on cream. */}
+              the dark theme flips `text-ink` to near-white → invisible on cream.
+              --color-bg is also pinned so bg-ink/text-bg buttons stay readable:
+              button uses bg-ink (pinned dark navy) + text-bg (pinned cream) = ✓ */}
           <div
             className="flex-1 md:max-w-[50%] lg:max-w-2xl relative z-10 w-full min-w-0"
             style={{
+              "--color-bg": "#f5f2ea",
+              "--color-bg-2": "#ebe7dc",
               "--color-ink": "#0d1a2d",
               "--color-ink-2": "#1a2c47",
               "--color-navy": "#14305a",
