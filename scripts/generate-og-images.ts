@@ -46,6 +46,16 @@ export async function generateOgImages() {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
+  // Site-wide og:image (homepage + all non-post pages). Rasterized from the
+  // committed og-image.svg every build so a corrupted/stale PNG can't ship —
+  // social scrapers (FB/LinkedIn/X/Slack/Discord) only render PNG, not SVG.
+  const mainSvgPath = path.join(__dirname, "../public/og-image.svg");
+  if (fs.existsSync(mainSvgPath)) {
+    const mainSvg = fs.readFileSync(mainSvgPath);
+    await sharp(mainSvg).png().toFile(path.join(__dirname, "../public/og-image.png"));
+    console.log("Saved site OG image: og-image.png (from og-image.svg)");
+  }
+
   console.log(`Generating OG images for ${blogPosts.length} posts...`);
 
   for (const post of blogPosts) {

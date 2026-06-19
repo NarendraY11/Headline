@@ -58,18 +58,24 @@ export function useDocumentMeta() {
     setElementAttr("meta", 'meta[name="description"]', "name", "description", "content", description);
 
     // Open Graph dynamic tags
+    const ogImageUrl = ogImage.startsWith("http") ? ogImage : `${origin}${ogImage}`;
+    const imageAlt = `${title} — Heading pilot exam prep`;
     setElementAttr("meta", 'meta[property="og:title"]', "property", "og:title", "content", title);
     setElementAttr("meta", 'meta[property="og:description"]', "property", "og:description", "content", description);
     setElementAttr("meta", 'meta[property="og:url"]', "property", "og:url", "content", canonicalUrl);
+    setElementAttr("meta", 'meta[property="og:site_name"]', "property", "og:site_name", "content", "Heading");
+    setElementAttr("meta", 'meta[property="og:locale"]', "property", "og:locale", "content", "en_US");
     const ogType = /^\/blog\/.+/.test(path) ? "article" : "website";
     setElementAttr("meta", 'meta[property="og:type"]', "property", "og:type", "content", ogType);
-    setElementAttr("meta", 'meta[property="og:image"]', "property", "og:image", "content", ogImage.startsWith("http") ? ogImage : `${origin}${ogImage}`);
+    setElementAttr("meta", 'meta[property="og:image"]', "property", "og:image", "content", ogImageUrl);
+    setElementAttr("meta", 'meta[property="og:image:alt"]', "property", "og:image:alt", "content", imageAlt);
 
     // Twitter card tags
     setElementAttr("meta", 'meta[name="twitter:card"]', "name", "twitter:card", "content", "summary_large_image");
     setElementAttr("meta", 'meta[name="twitter:title"]', "name", "twitter:title", "content", title);
     setElementAttr("meta", 'meta[name="twitter:description"]', "name", "twitter:description", "content", description);
-    setElementAttr("meta", 'meta[name="twitter:image"]', "name", "twitter:image", "content", ogImage.startsWith("http") ? ogImage : `${origin}${ogImage}`);
+    setElementAttr("meta", 'meta[name="twitter:image"]', "name", "twitter:image", "content", ogImageUrl);
+    setElementAttr("meta", 'meta[name="twitter:image:alt"]', "name", "twitter:image:alt", "content", imageAlt);
 
     // Inject JSON-LD
     let scriptElem = document.querySelector('script[type="application/ld+json"]');
