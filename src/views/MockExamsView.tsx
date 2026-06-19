@@ -310,7 +310,7 @@ export default function MockExamsView() {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
               <div className="max-w-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <span className="eyebrow block mb-3">AUTHORIZED SIMULATION FEED</span>
-                <h2 className="h-section text-ink font-semibold">Mock Examinations</h2>
+                <h1 className="h-section text-ink font-semibold">Mock Examinations</h1>
                 <p className="mt-4 font-sans font-light text-muted text-md leading-relaxed">
                   Experience standard authority-aligned virtual testing. Heading administers fully certified 
                   simulators dynamically generated from our rich high-fidelity DB question banks.

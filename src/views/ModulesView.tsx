@@ -202,6 +202,7 @@ export default function ModulesView() {
               <div className="relative">
                 <select 
                   className="appearance-none bg-panel border border-rule rounded-full pl-5 pr-10 py-2.5 text-[13px] font-sans font-medium text-ink outline-none hover:border-rule-strong transition-colors cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                  aria-label="Sort subjects"
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value as any)}
                 >
@@ -215,6 +216,7 @@ export default function ModulesView() {
               <div className="relative">
                 <select 
                   className="appearance-none bg-panel border border-rule rounded-full pl-5 pr-10 py-2.5 text-[13px] font-sans font-medium text-ink outline-none hover:border-rule-strong transition-colors cursor-pointer shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                  aria-label="Filter by syllabus authority"
                   value={syllabus}
                   onChange={(e) => setSyllabus(e.target.value as any)}
                 >

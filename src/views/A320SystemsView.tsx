@@ -26,7 +26,7 @@ export default function A320SystemsView() {
         </div>
       </header>
       
-      <main className="flex-1 max-w-[1400px] mx-auto w-full px-6 py-20 md:py-32">
+      <div className="flex-1 max-w-[1400px] mx-auto w-full px-6 py-20 md:py-32">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center mb-24">
           <div>
             <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase mb-6 flex items-center gap-2.5">
@@ -83,8 +83,8 @@ export default function A320SystemsView() {
           </section>
 
         </div>
-      </main>
-      
+      </div>
+
       <footer className="w-full max-w-[1400px] mx-auto px-6 py-8 border-t border-rule font-serif text-sm text-muted-2 text-center mt-auto">
         <p>&copy; {new Date().getFullYear()} Heading Simulator.</p>
       </footer>
