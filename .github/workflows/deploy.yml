@@ -117,13 +117,36 @@ jobs:
           echo "Health check passed — db: $STATUS"
 
       # ────────────────────────────────────────────────────
+      # AUTO-ROLLBACK — if the smoke test (or anything above)
+      # failed, the bad deployment already holds the production
+      # alias. `vercel rollback` re-promotes the previous
+      # production deployment so prod self-heals without manual
+      # intervention. Runs only on failure.
+      # ────────────────────────────────────────────────────
+      - name: Rollback on failed deploy
+        if: failure()
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          echo "::warning::Deploy failed — rolling back production to the previous deployment."
+          vercel rollback --yes --token=$VERCEL_TOKEN || \
+            echo "::error::Automatic rollback failed — roll back manually in the Vercel dashboard."
+
+      # ────────────────────────────────────────────────────
       # Notify Slack on successful deploy.
+      # The `secrets` context is unavailable in `if:`, so the
+      # webhook is exposed via env and the presence-check reads
+      # env instead.
       # ────────────────────────────────────────────────────
       - name: Slack success notification
-        if: success() && secrets.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: success() && env.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v2
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook: ${{ env.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
             {
@@ -139,14 +162,16 @@ jobs:
             }
 
       - name: Slack failure notification
-        if: failure() && secrets.SLACK_WEBHOOK_URL != ''
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        if: failure() && env.SLACK_WEBHOOK_URL != ''
         uses: slackapi/slack-github-action@v2
         with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook: ${{ env.SLACK_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
             {
-              "text": ":x: *Deploy failed* — `${{ github.repository }}`",
+              "text": ":x: *Deploy failed (rolled back)* — `${{ github.repository }}`",
               "attachments": [{
                 "color": "danger",
                 "fields": [
