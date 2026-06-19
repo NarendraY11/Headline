@@ -258,7 +258,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
           <FocusTrap focusTrapOptions={{ initialFocus: false, escapeDeactivates: false, clickOutsideDeactivates: false, returnFocusOnDeactivate: true }}>
             <div className="fixed inset-0 flex items-center justify-center pointer-events-none">
               {/* Backdrop overlay */}
-              <div role="button" tabIndex={0} onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
+              <div role="button" tabIndex={0} aria-label="Close dialog" onKeyDown={(e) => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.currentTarget.click(); } }}
                 onClick={loading ? undefined : onClose}
                 className="anim-fade fixed inset-0 bg-ink/40 dark:bg-black/60 backdrop-blur-md pointer-events-auto"
               />

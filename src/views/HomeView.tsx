@@ -166,8 +166,8 @@ export default function HomeView() {
         </div>
       )}
 
-      {/* MAIN CONTENT */}
-      <main>
+      {/* MAIN CONTENT — plain wrapper; PublicLayout supplies the <main> landmark */}
+      <div>
         {/* 1. SEC: HERO */}
         <section className="relative pt-[calc(72px+1.5rem)] pb-12 md:pt-20 md:pb-20 w-full flex justify-center overflow-hidden">
         {/* REPLACED WATERMARKED VIDEO WITH ELEGANT BLUEPRINT AND AMBIENT GRADIENT */}
@@ -523,7 +523,7 @@ export default function HomeView() {
              </h2>
            </div>
            
-           <div className="border border-rule rounded-2xl overflow-x-auto bg-bg shadow-sm">
+           <div className="border border-rule rounded-2xl overflow-x-auto bg-bg shadow-sm" tabIndex={0} role="region" aria-label="Feature comparison table">
              <div className="grid grid-cols-3 border-b border-rule bg-paper min-w-[480px]">
                <div className="p-4 md:p-6 font-mono text-[11px] text-muted-2 tracking-widest uppercase flex items-center">Feature</div>
                <div className="p-4 md:p-6 font-sans font-semibold text-ink border-l border-rule flex items-center bg-bg relative">
@@ -646,7 +646,7 @@ export default function HomeView() {
             </Link>
          </div>
       </section>
-      </main>
+      </div>
 
       {/* 9. FOOTER */}
       <footer className="bg-bg py-16 border-t border-rule" style={{ borderColor: 'var(--rule-strong)' }}>
