@@ -141,7 +141,7 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
 
         {/* Header */}
         <div className="flex-shrink-0 px-8 pt-7 pb-5">
-          <button onClick={onClose} aria-label="Close settings" className="absolute top-7 right-7 text-muted-2 hover:text-ink transition-colors"><X size={24} /></button>
+          <button onClick={onClose} aria-label="Close settings" className="absolute top-4 right-4 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center text-muted-2 hover:text-ink transition-colors rounded-full hover:bg-bg-2"><X size={22} /></button>
           <h2 className="font-serif text-[30px] text-ink m-0 leading-none mb-5">Settings</h2>
 
           {/* Plan strip — status, kept compact on one row so it never eats a section */}
@@ -155,7 +155,7 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
               )}
             </div>
             <Link to="/pricing" onClick={onClose} className="shrink-0">
-              <Button variant="primary" className="h-8 text-[11px] px-3.5 bg-navy hover:bg-navy/90 text-bg rounded-md font-mono uppercase tracking-wider">
+              <Button variant="primary" className="h-[44px] text-[11px] px-3.5 bg-navy hover:bg-navy/90 text-bg rounded-md font-mono uppercase tracking-wider">
                 {isPaidActive(userData) ? "Manage" : "Upgrade"}
               </Button>
             </Link>
@@ -169,7 +169,7 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
                 role="tab"
                 aria-selected={activeTab === t.id}
                 onClick={() => setActiveTab(t.id)}
-                className={`flex-1 px-3 py-2 rounded-full text-[11px] font-mono uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-panel ${
+                className={`flex-1 px-3 py-2.5 min-h-[44px] rounded-full text-[11px] font-mono uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-panel ${
                   activeTab === t.id ? "bg-navy text-bg font-semibold shadow-sm" : "text-muted hover:text-ink"
                 }`}
               >

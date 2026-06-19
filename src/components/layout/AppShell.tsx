@@ -558,7 +558,7 @@ export function AppShell() {
                   className="anim-drawer md:hidden fixed top-[64px] left-0 right-0 z-40 bg-paper border-b border-rule shadow-2xl rounded-b-2xl px-4 py-4 flex flex-col gap-4"
                   style={{
                     borderColor: "var(--rule)",
-                    maxHeight: "calc(100vh - 4.5rem)",
+                    maxHeight: "calc(100dvh - 64px - 70px - var(--sab, 0px))",
                     overflowY: "auto",
                   }}
                 >

@@ -270,12 +270,12 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                 aria-modal="true"
                 aria-labelledby="modal-title"
               >
-                <Card className="p-6 md:p-8 bg-paper border border-rule-strong shadow-2xl relative max-h-[calc(100dvh-2rem)] overflow-y-auto">
+                <Card className="p-6 md:p-8 pb-[max(1.5rem,env(safe-area-inset-bottom))] bg-paper border border-rule-strong shadow-2xl relative max-h-[calc(100dvh-2rem)] overflow-y-auto">
                   {/* Close button */}
                   <button
                     onClick={onClose}
                     disabled={loading}
-                    className="absolute top-4 right-4 p-1.5 text-muted hover:text-ink hover:bg-bg-2 rounded-full cursor-pointer transition-colors"
+                    className="absolute top-4 right-4 p-2.5 min-w-[44px] min-h-[44px] text-muted hover:text-ink hover:bg-bg-2 rounded-full cursor-pointer transition-colors flex items-center justify-center"
                     aria-label="Close authentication modal"
                   >
                     <X size={18} />
@@ -322,7 +322,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       Email Address
                     </label>
                     <div className="relative">
-                      <Mail size={16} className="absolute left-3.5 top-3 text-muted-2" />
+                      <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2 pointer-events-none" />
                       <input
                         id="signin-email"
                         name="email"
@@ -336,7 +336,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         onChange={(e) => setEmail(e.target.value)}
                         onFocus={scrollInputIntoView}
                         placeholder="pilot@airline.com"
-                        className="w-full h-[40px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
+                        className="w-full h-[44px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
                     </div>
                   </div>
@@ -349,13 +349,13 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       <button
                         type="button"
                         onClick={() => setActiveTab("forgot")}
-                        className="text-xs font-sans text-sky hover:text-sky/80 cursor-pointer"
+                        className="text-xs font-sans text-sky hover:text-sky/80 cursor-pointer min-h-[44px] flex items-center px-1"
                       >
                         Forgot password?
                       </button>
                     </div>
                     <div className="relative">
-                      <Lock size={16} className="absolute left-3.5 top-3 text-muted-2" />
+                      <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2 pointer-events-none" />
                       <input
                         id="signin-password"
                         name="password"
@@ -369,13 +369,13 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         onChange={(e) => setPassword(e.target.value)}
                         onFocus={scrollInputIntoView}
                         placeholder="••••••••"
-                        className="w-full h-[40px] pl-10 pr-10 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
+                        className="w-full h-[44px] pl-10 pr-10 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
                       <button
                         type="button"
                         aria-label={showPassword ? "Hide password" : "Show password"}
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-3 text-muted-2 hover:text-ink cursor-pointer"
+                        className="absolute right-0 top-0 bottom-0 px-3 flex items-center text-muted-2 hover:text-ink cursor-pointer"
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -415,7 +415,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       Display Name
                     </label>
                     <div className="relative">
-                      <User size={16} className="absolute left-3.5 top-3 text-muted-2" />
+                      <User size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2 pointer-events-none" />
                       <input
                         id="signup-name"
                         name="name"
@@ -428,7 +428,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         onChange={(e) => setDisplayName(e.target.value)}
                         onFocus={scrollInputIntoView}
                         placeholder="FirstOfficer John"
-                        className="w-full h-[40px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
+                        className="w-full h-[44px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
                     </div>
                   </div>
@@ -438,7 +438,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       Email Address
                     </label>
                     <div className="relative">
-                      <Mail size={16} className="absolute left-3.5 top-3 text-muted-2" />
+                      <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2 pointer-events-none" />
                       <input
                         id="signup-email"
                         name="email"
@@ -452,7 +452,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         onChange={(e) => setEmail(e.target.value)}
                         onFocus={scrollInputIntoView}
                         placeholder="pilot@airline.com"
-                        className="w-full h-[40px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
+                        className="w-full h-[44px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
                     </div>
                   </div>
@@ -462,7 +462,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       Create Password
                     </label>
                     <div className="relative">
-                      <Lock size={16} className="absolute left-3.5 top-3 text-muted-2" />
+                      <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2 pointer-events-none" />
                       <input
                         id="signup-password"
                         name="new-password"
@@ -476,13 +476,13 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         onChange={(e) => setPassword(e.target.value)}
                         onFocus={scrollInputIntoView}
                         placeholder="••••••••"
-                        className="w-full h-[40px] pl-10 pr-10 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
+                        className="w-full h-[44px] pl-10 pr-10 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
                       <button
                         type="button"
                         aria-label={showPassword ? "Hide password" : "Show password"}
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-3 text-muted-2 hover:text-ink cursor-pointer"
+                        className="absolute right-0 top-0 bottom-0 px-3 flex items-center text-muted-2 hover:text-ink cursor-pointer"
                       >
                         {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -497,7 +497,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       Confirm Password
                     </label>
                     <div className="relative">
-                      <Lock size={16} className="absolute left-3.5 top-3 text-muted-2" />
+                      <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2 pointer-events-none" />
                       <input
                         id="signup-confirm"
                         name="confirm-password"
@@ -511,13 +511,13 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         onFocus={scrollInputIntoView}
                         placeholder="••••••••"
-                        className="w-full h-[40px] pl-10 pr-10 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
+                        className="w-full h-[44px] pl-10 pr-10 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
                       <button
                         type="button"
                         aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3.5 top-3 text-muted-2 hover:text-ink cursor-pointer"
+                        className="absolute right-0 top-0 bottom-0 px-3 flex items-center text-muted-2 hover:text-ink cursor-pointer"
                       >
                         {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
@@ -549,7 +549,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       Registered Email Address
                     </label>
                     <div className="relative">
-                      <Mail size={16} className="absolute left-3.5 top-3 text-muted-2" />
+                      <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-2 pointer-events-none" />
                       <input
                         id="forgot-email"
                         name="email"
@@ -564,7 +564,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                         onChange={(e) => setEmail(e.target.value)}
                         onFocus={scrollInputIntoView}
                         placeholder="pilot@airline.com"
-                        className="w-full h-[40px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
+                        className="w-full h-[44px] pl-10 pr-4 bg-bg-2 border border-rule-strong rounded-lg text-sm text-ink font-sans focus:outline-none focus:border-ink transition-colors"
                       />
                     </div>
                     <p className="mt-1.5 text-[10px] text-muted-2 leading-normal">
@@ -651,7 +651,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                       <button
                         type="button"
                         onClick={() => setActiveTab("signup")}
-                        className="text-indigo-600 dark:text-sky font-semibold hover:underline cursor-pointer"
+                        className="text-indigo-600 dark:text-sky font-semibold hover:underline cursor-pointer py-2 px-1 inline-flex items-center min-h-[44px]"
                       >
                         Sign up
                       </button>
@@ -666,7 +666,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = "signin" }: Au
                     <button
                       type="button"
                       onClick={() => setActiveTab("signin")}
-                      className="text-indigo-600 dark:text-sky font-semibold hover:underline cursor-pointer"
+                      className="text-indigo-600 dark:text-sky font-semibold hover:underline cursor-pointer py-2 px-1 inline-flex items-center min-h-[44px]"
                     >
                       Sign in
                     </button>

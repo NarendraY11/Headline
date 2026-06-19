@@ -1088,6 +1088,9 @@ export default function QuizView() {
     setTouchStartY(e.targetTouches[0].clientY);
   };
 
+  // Guard: skip swipe if touch started within 30px of left/right edge (iOS back gesture zone)
+  const isEdgeSwipe = (x: number) => x < 30 || x > window.innerWidth - 30;
+
   const onTouchMove = (e: React.TouchEvent) => {
     setTouchEndX(e.targetTouches[0].clientX);
     setTouchEndY(e.targetTouches[0].clientY);
@@ -1095,6 +1098,9 @@ export default function QuizView() {
 
   const onTouchEndEvent = () => {
     if (!touchStartX || !touchEndX || !touchStartY || !touchEndY) return;
+
+    // Skip gesture if it originated from the screen edge (iOS back/forward swipe zone)
+    if (isEdgeSwipe(touchStartX)) return;
 
     const distanceX = touchStartX - touchEndX;
     const distanceY = touchStartY - touchEndY;
@@ -1320,7 +1326,7 @@ export default function QuizView() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[var(--z-toast)] max-w-md w-[92%] bg-ink text-bg border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3"
+            className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-[var(--z-toast)] max-w-md w-[92%] bg-ink text-bg border border-white/10 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3"
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2.5">
@@ -1334,10 +1340,11 @@ export default function QuizView() {
                   </p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setDismissedSavePrompt(true)}
-                className="text-white/70 hover:text-white transition-colors p-1"
+                className="text-white/70 hover:text-white transition-colors p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0"
                 title="Continue as guest"
+                aria-label="Dismiss save progress prompt"
               >
                 <X size={14} />
               </button>
@@ -1345,7 +1352,7 @@ export default function QuizView() {
             <div className="flex gap-2.5 justify-end">
               <button
                 onClick={() => setDismissedSavePrompt(true)}
-                className="font-mono text-[9px] uppercase tracking-widest text-white/75 hover:text-white transition-colors px-3 py-1.5"
+                className="font-mono text-[9px] uppercase tracking-widest text-white/75 hover:text-white transition-colors px-3 py-1.5 min-h-[44px] flex items-center"
               >
                 Keep practicing
               </button>
@@ -1353,7 +1360,7 @@ export default function QuizView() {
                 onClick={() => {
                   openAuthModal("signup");
                 }}
-                className="font-mono text-[10px] uppercase tracking-wider font-bold bg-mint text-bg hover:bg-mint/95 transition-colors px-4 py-1.5 rounded-full"
+                className="font-mono text-[10px] uppercase tracking-wider font-bold bg-mint text-bg hover:bg-mint/95 transition-colors px-4 py-1.5 rounded-full min-h-[44px] flex items-center"
               >
                 Secure Streak
               </button>

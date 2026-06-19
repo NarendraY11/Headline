@@ -647,12 +647,12 @@ export default function MockExamsView() {
             </div>
 
             {/* TAB SELECTOR FOR THE THREE PRACTICING MODES */}
-            <div className="border-b border-rule flex gap-8 font-mono text-xs">
+            <div className="border-b border-rule flex gap-4 md:gap-8 font-mono text-xs overflow-x-auto no-scrollbar -mx-4 md:mx-0 px-4 md:px-0">
               <button 
                 onClick={() => setActiveTab("practice")}
-                className={`pb-4 px-1 border-b-2 font-bold tracking-widest uppercase flex items-center gap-1.5 transition-all outline-none ${
-                  activeTab === "practice" 
-                    ? "border-ink text-ink font-bold" 
+                className={`pb-4 px-1 border-b-2 font-bold tracking-widest uppercase flex items-center gap-1.5 transition-all outline-none whitespace-nowrap shrink-0 min-h-[44px] ${
+                  activeTab === "practice"
+                    ? "border-ink text-ink font-bold"
                     : "border-transparent text-muted hover:text-ink"
                 }`}
               >
@@ -661,9 +661,9 @@ export default function MockExamsView() {
               </button>
               <button 
                 onClick={() => setActiveTab("subject")}
-                className={`pb-4 px-1 border-b-2 font-bold tracking-widest uppercase flex items-center gap-1.5 transition-all outline-none ${
-                  activeTab === "subject" 
-                    ? "border-ink text-ink font-bold" 
+                className={`pb-4 px-1 border-b-2 font-bold tracking-widest uppercase flex items-center gap-1.5 transition-all outline-none whitespace-nowrap shrink-0 min-h-[44px] ${
+                  activeTab === "subject"
+                    ? "border-ink text-ink font-bold"
                     : "border-transparent text-muted hover:text-ink"
                 }`}
               >
@@ -672,9 +672,9 @@ export default function MockExamsView() {
               </button>
               <button 
                 onClick={() => setActiveTab("full")}
-                className={`pb-4 px-1 border-b-2 font-bold tracking-widest uppercase flex items-center gap-1.5 transition-all outline-none ${
-                  activeTab === "full" 
-                    ? "border-ink text-ink font-bold" 
+                className={`pb-4 px-1 border-b-2 font-bold tracking-widest uppercase flex items-center gap-1.5 transition-all outline-none whitespace-nowrap shrink-0 min-h-[44px] ${
+                  activeTab === "full"
+                    ? "border-ink text-ink font-bold"
                     : "border-transparent text-muted hover:text-ink"
                 }`}
               >

@@ -636,14 +636,14 @@ export default function TodayView() {
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={handleEnableNotifications}
-                className="font-mono text-[10px] font-bold tracking-wide uppercase text-navy hover:opacity-70 transition-opacity"
+                className="font-mono text-[10px] font-bold tracking-wide uppercase text-navy hover:opacity-70 transition-opacity min-h-[44px] flex items-center px-2"
               >
                 Enable
               </button>
               <button
                 onClick={handleDismissNotifBanner}
-                className="text-muted-2 hover:text-ink transition-colors p-2 -m-1.5"
-                aria-label="Dismiss"
+                className="text-muted-2 hover:text-ink transition-colors p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
+                aria-label="Dismiss notification banner"
               >
                 <X size={13} />
               </button>
@@ -690,7 +690,7 @@ export default function TodayView() {
                 onClick={() =>
                   window.dispatchEvent(new CustomEvent("open-next-check-modal"))
                 }
-                className="font-mono text-[10px] tracking-wide uppercase opacity-80 text-bg hover:opacity-100 transition-opacity flex items-center gap-1"
+                className="font-mono text-[10px] tracking-wide uppercase opacity-80 text-bg hover:opacity-100 transition-opacity flex items-center gap-1 min-h-[44px] px-2"
               >
                 SET EXAM →
               </button>
@@ -821,7 +821,7 @@ export default function TodayView() {
               ) : (
                 <button
                   onClick={() => window.dispatchEvent(new CustomEvent("open-next-check-modal"))}
-                  className="font-mono text-[9px] text-signal uppercase tracking-wide bg-signal-soft border border-signal-soft/30 px-2.5 py-0.5 rounded-full hover:opacity-80 transition"
+                  className="font-mono text-[9px] text-signal uppercase tracking-wide bg-signal-soft border border-signal-soft/30 px-2.5 py-2 rounded-full hover:opacity-80 transition min-h-[44px] flex items-center"
                 >
                   Set Target Exam Date →
                 </button>
@@ -1030,14 +1030,14 @@ export default function TodayView() {
             <div className="flex items-center gap-2 px-5 py-3">
               <Link
                 to="/today"
-                className="flex-1 h-9 rounded-xl bg-navy text-paper font-sans text-[12px] font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
+                className="flex-1 h-[44px] rounded-xl bg-navy text-paper font-sans text-[12px] font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
               >
                 <Play size={12} aria-hidden="true" />
                 Start Today
               </Link>
               <Link
                 to="/schedule"
-                className="flex-1 h-9 rounded-xl border border-navy/30 text-navy dark:text-paper/70 font-sans text-[12px] font-medium flex items-center justify-center gap-1.5 hover:border-navy/50 transition-colors"
+                className="flex-1 h-[44px] rounded-xl border border-navy/30 text-navy dark:text-paper/70 font-sans text-[12px] font-medium flex items-center justify-center gap-1.5 hover:border-navy/50 transition-colors"
               >
                 <CalendarRange size={12} aria-hidden="true" />
                 View Schedule

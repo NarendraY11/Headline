@@ -290,10 +290,11 @@ export default function ProfileView() {
               )}
             </div>
             
-            <button 
+            <button
               onClick={() => fileInputRef.current?.click()}
-              title="Upload file"
-              className="absolute -bottom-1 -right-1 bg-paper border border-rule text-ink p-1.5 rounded-full shadow-md hover:bg-bg transition-colors"
+              title="Upload profile photo"
+              aria-label="Upload profile photo"
+              className="absolute -bottom-1 -right-1 bg-paper border border-rule text-ink p-2.5 min-w-[44px] min-h-[44px] rounded-full shadow-md hover:bg-bg transition-colors flex items-center justify-center"
             >
               <Upload size={14} />
             </button>
@@ -502,10 +503,11 @@ export default function ProfileView() {
                     setTempExamDate(savedDate);
                     setIsEditingExamDate(true);
                   }}
-                  className="text-muted-2 hover:text-sky transition-colors cursor-pointer"
+                  className="text-muted-2 hover:text-sky transition-colors cursor-pointer p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2"
                   title="Change Exam Date"
+                  aria-label="Change exam date"
                 >
-                  <Edit2 size={11} />
+                  <Edit2 size={14} />
                 </button>
               )}
             </div>
@@ -519,10 +521,10 @@ export default function ProfileView() {
                 className="w-full bg-bg border border-rule-strong rounded-md text-xs px-2 py-1 outline-none focus:border-ink text-ink text-center transition-colors"
               />
               <div className="flex gap-2">
-                <Button 
-                  variant="primary" 
-                  size="small" 
-                  className="flex-1 text-[10px] py-1 h-7 text-white"
+                <Button
+                  variant="primary"
+                  size="small"
+                  className="flex-1 text-[11px] py-2 min-h-[44px] text-white"
                   onClick={async () => {
                     await updateUserData({ nextExam: tempExamDate });
                     setIsEditingExamDate(false);
@@ -530,10 +532,10 @@ export default function ProfileView() {
                 >
                   Save
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="small" 
-                  className="flex-1 text-[10px] py-1 h-7 border border-rule text-ink hover:bg-paper/50"
+                <Button
+                  variant="ghost"
+                  size="small"
+                  className="flex-1 text-[11px] py-2 min-h-[44px] border border-rule text-ink hover:bg-paper/50"
                   onClick={() => setIsEditingExamDate(false)}
                 >
                   Cancel
@@ -691,10 +693,10 @@ export default function ProfileView() {
               <div className="border border-amber/30 bg-amber-soft/40 rounded-lg p-3 flex flex-col gap-2">
                 <p className="font-sans text-xs text-ink-2 leading-relaxed">This ends every active session, including this one. Continue?</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" className="flex-1 h-8 text-xs border border-amber/40 text-amber hover:bg-amber-soft" onClick={() => { setConfirmSignOutAll(false); logoutEverywhere(); }}>
+                  <Button variant="ghost" className="flex-1 min-h-[44px] text-xs border border-amber/40 text-amber hover:bg-amber-soft" onClick={() => { setConfirmSignOutAll(false); logoutEverywhere(); }}>
                     Sign out everywhere
                   </Button>
-                  <Button variant="ghost" className="h-8 text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmSignOutAll(false)}>
+                  <Button variant="ghost" className="min-h-[44px] text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmSignOutAll(false)}>
                     Cancel
                   </Button>
                 </div>
@@ -703,7 +705,7 @@ export default function ProfileView() {
               <button
                 type="button"
                 onClick={() => setConfirmSignOutAll(true)}
-                className="text-[11px] font-sans text-muted-2 hover:text-signal underline underline-offset-2 transition-colors self-center"
+                className="text-[11px] font-sans text-muted-2 hover:text-signal underline underline-offset-2 transition-colors self-center min-h-[44px] flex items-center px-2"
               >
                 Lost a device? Sign out of all devices
               </button>
@@ -726,10 +728,10 @@ export default function ProfileView() {
                 <p className="font-sans text-xs font-semibold">This action is permanent and cannot be undone.</p>
               </div>
               <div className="flex gap-2 mt-1">
-                <Button variant="ghost" className="flex-1 h-8 text-xs border border-signal text-signal hover:bg-signal-soft" onClick={() => { setConfirmWipe(false); resetAccount(); }}>
+                <Button variant="ghost" className="flex-1 min-h-[44px] text-xs border border-signal text-signal hover:bg-signal-soft" onClick={() => { setConfirmWipe(false); resetAccount(); }}>
                   Yes, wipe everything
                 </Button>
-                <Button variant="ghost" className="h-8 text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmWipe(false)}>
+                <Button variant="ghost" className="min-h-[44px] text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmWipe(false)}>
                   Cancel
                 </Button>
               </div>
