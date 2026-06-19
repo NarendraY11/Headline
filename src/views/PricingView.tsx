@@ -321,8 +321,8 @@ export default function PricingView() {
                     <li className="flex items-center gap-4"><CheckCircle2 size={18} className="text-muted/60 shrink-0" /> First Chapter of other courses</li>
                     <li className="flex items-center gap-4"><CheckCircle2 size={18} className="text-muted/60 shrink-0" /> 1 Free Authority Mock Exam</li>
                     <li className="flex items-center gap-4"><CheckCircle2 size={18} className="text-muted/60 shrink-0" /> Basic telemetry logbook</li>
-                    <li className="flex items-center gap-4 text-muted/60"><XCircle size={18} className="text-muted/40 shrink-0" /> No AI Instructor access</li>
-                    <li className="flex items-center gap-4 text-muted/60"><XCircle size={18} className="text-muted/40 shrink-0" /> No study plan coaching</li>
+                    <li className="flex items-center gap-4 text-muted-2"><XCircle size={18} className="text-muted/40 shrink-0" /> No AI Instructor access</li>
+                    <li className="flex items-center gap-4 text-muted-2"><XCircle size={18} className="text-muted/40 shrink-0" /> No study plan coaching</li>
                   </ul>
                   
                   <Link to="/modules" className="w-full">

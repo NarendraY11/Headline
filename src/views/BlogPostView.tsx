@@ -71,7 +71,7 @@ function NewsletterSubCard() {
           }}
           placeholder="Enter pilot flightline email..." 
           disabled={status === "submitting"}
-          className="flex-grow h-10 px-4.5 bg-bg/60 border border-rule hover:border-rule-strong focus:border-navy focus:outline-none rounded text-xs text-ink transition-all placeholder:text-muted/60"
+          className="flex-grow h-10 px-4.5 bg-bg/60 border border-rule hover:border-rule-strong focus:border-navy focus:outline-none rounded text-xs text-ink transition-all placeholder:text-muted-2"
         />
         <button 
           type="submit"

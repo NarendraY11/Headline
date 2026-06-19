@@ -19,7 +19,7 @@ const TREND_ARROW: Record<MasterySnapshot["trend"], string> = {
 
 const TREND_COLOR: Record<MasterySnapshot["trend"], string> = {
   IMPROVING:   "text-mint",
-  PROGRESSING: "text-mint/70",
+  PROGRESSING: "text-mint",
   STABLE:      "text-muted-2",
   REGRESSING:  "text-amber",
   DECLINING:   "text-signal",

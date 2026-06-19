@@ -45,7 +45,7 @@ function ComponentBar({
         <p className="font-mono text-[8px] uppercase tracking-wide text-muted-2 leading-none">
           {label}
         </p>
-        <p className="font-mono text-[7px] text-muted-2 opacity-60">{weight}</p>
+        <p className="font-mono text-[7px] text-muted-2">{weight}</p>
       </div>
       <div
         className="flex-1 h-1.5 bg-bg-2 rounded-full overflow-hidden"
