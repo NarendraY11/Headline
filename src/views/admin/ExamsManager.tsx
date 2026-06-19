@@ -534,7 +534,7 @@ export default function ExamsManager() {
                         />
                         <label htmlFor={`sub-feed-${sub.id}`} className="font-sans text-xs text-ink cursor-pointer select-none">
                           <span className="font-semibold block">{sub.title}</span>
-                          <span className="opacity-60 block font-mono text-[9px] uppercase tracking-wider">{sub.exam_authority} · {sub.license || "CPL"}</span>
+                          <span className="text-muted-2 block font-mono text-[9px] uppercase tracking-wider">{sub.exam_authority} · {sub.license || "CPL"}</span>
                         </label>
                       </div>
                     ))}
