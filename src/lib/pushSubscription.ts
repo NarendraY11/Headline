@@ -4,9 +4,15 @@ import { supabase } from "./supabase.js";
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined;
 
-// Debug helper — logs VAPID key presence on module load so it's visible in console.
+// Dev-only debug logger. Push subscription tracing is useful while developing
+// but shouldn't ship to production consoles (noise + leaks endpoint/key shape).
+// warn/error below are kept unconditionally — those are real failures.
+const dlog = import.meta.env.DEV
+  ? (...args: unknown[]) => console.log(...args)
+  : () => {};
+
 if (typeof window !== "undefined") {
-  console.log("[push] VITE_VAPID_PUBLIC_KEY present:", !!VAPID_PUBLIC_KEY, "length:", VAPID_PUBLIC_KEY?.length ?? 0);
+  dlog("[push] VITE_VAPID_PUBLIC_KEY present:", !!VAPID_PUBLIC_KEY, "length:", VAPID_PUBLIC_KEY?.length ?? 0);
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -37,22 +43,22 @@ export async function subscribePush(): Promise<PushSubscription | null> {
   }
 
   try {
-    console.log("[push] Waiting for SW to be ready…");
+    dlog("[push] Waiting for SW to be ready…");
     const reg = await navigator.serviceWorker.ready;
-    console.log("[push] SW ready. Scope:", reg.scope);
+    dlog("[push] SW ready. Scope:", reg.scope);
 
     const existing = await reg.pushManager.getSubscription();
     if (existing) {
-      console.log("[push] Existing subscription found — reusing.");
+      dlog("[push] Existing subscription found — reusing.");
       return existing;
     }
 
-    console.log("[push] Calling PushManager.subscribe()…");
+    dlog("[push] Calling PushManager.subscribe()…");
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
-    console.log("[push] Subscription created. Endpoint prefix:", sub.endpoint.slice(0, 60));
+    dlog("[push] Subscription created. Endpoint prefix:", sub.endpoint.slice(0, 60));
     return sub;
   } catch (e) {
     console.error("[push] PushManager.subscribe() failed:", e);
@@ -67,7 +73,7 @@ export async function savePushSubscription(
   const json = sub.toJSON();
   const p256dh = json.keys?.p256dh ?? "";
   const auth = json.keys?.auth ?? "";
-  console.log("[push] Saving subscription to DB. userId:", userId, "p256dh present:", !!p256dh, "auth present:", !!auth);
+  dlog("[push] Saving subscription to DB. userId:", userId, "p256dh present:", !!p256dh, "auth present:", !!auth);
   const { error } = await supabase.from("push_subscriptions").upsert(
     {
       user_id: userId,
@@ -81,7 +87,7 @@ export async function savePushSubscription(
   if (error) {
     console.error("[push] savePushSubscription DB upsert failed:", error.message, error.code);
   } else {
-    console.log("[push] Subscription saved to push_subscriptions ✓");
+    dlog("[push] Subscription saved to push_subscriptions ✓");
   }
 }
 
