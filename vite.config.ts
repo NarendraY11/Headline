@@ -19,10 +19,13 @@ function sitemapPlugin() {
     async closeBundle() {
       try {
         const { spawnSync } = await import('child_process');
+        // Invoke the tsx CLI through the current node binary (no shell). Avoids
+        // the Node DEP0190 deprecation warning emitted by spawnSync with
+        // shell:true + an args array, and is cross-platform without a shell.
         const result = spawnSync(
-          'node_modules/.bin/tsx',
-          ['scripts/generate-sitemap.ts'],
-          { cwd: process.cwd(), encoding: 'utf-8', shell: true }
+          process.execPath,
+          ['node_modules/tsx/dist/cli.mjs', 'scripts/generate-sitemap.ts'],
+          { cwd: process.cwd(), encoding: 'utf-8' }
         );
         if (result.stdout) process.stdout.write(result.stdout);
         if (result.stderr) process.stderr.write(result.stderr);
