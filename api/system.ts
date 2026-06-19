@@ -198,12 +198,19 @@ async function studyMetrics(req: VercelRequest, res: VercelResponse) {
   const user = await getAuthenticatedUser(req, res);
   if (!user) return;
 
-  const { data: adminRow } = await admin
-    .from("admins")
-    .select("email")
-    .or(`user_id.eq.${user.id},email.eq.${user.email}`)
-    .maybeSingle();
-  if (!adminRow) return res.status(403).json({ error: "Admin only." });
+  // Admin check by stable user_id OR verified email. Use two parameterized
+  // .eq() lookups instead of interpolating values into a PostgREST .or()
+  // filter string: a raw .or(`email.eq.${user.email}`) lets any character in
+  // the value (commas, parens, `.eq.`) be reparsed as filter grammar, so a
+  // crafted address could widen the match. .eq() passes the value as a
+  // discrete parameter and cannot break out of the filter.
+  const [byId, byEmail] = await Promise.all([
+    admin.from("admins").select("email").eq("user_id", user.id).maybeSingle(),
+    user.email
+      ? admin.from("admins").select("email").eq("email", user.email).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  if (!byId.data && !byEmail.data) return res.status(403).json({ error: "Admin only." });
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
