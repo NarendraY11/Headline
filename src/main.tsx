@@ -11,7 +11,7 @@ import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import '@fontsource/jetbrains-mono/600.css';
 import {StrictMode, Suspense, lazy} from 'react';
-import {createRoot} from 'react-dom/client';
+import {createRoot, hydrateRoot} from 'react-dom/client';
 import { initPostHog } from './lib/posthog';
 import App from './App.tsx';
 import './index.css';
@@ -43,15 +43,13 @@ runWhenIdle(() => {
   initPostHog();
 });
 
-// Delay Clarity past first paint. Using setTimeout(3000) instead of
-// requestIdleCallback: rIC fires during React's first commit phase which still
-// races the LCP element. A fixed 3s delay ensures Clarity's chunk download
-// never lands in the critical network chain.
-setTimeout(() => {
-  import('@microsoft/clarity').then(({ default: Clarity }) => {
-    Clarity.init('x8h37kdqmc');
-  });
-}, 3000);
+// Capture beforeinstallprompt as early as possible — the event fires once,
+// often before React mounts. Store on window so PwaInstallBanner can read it.
+(window as any).__pwaPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  (window as any).__pwaPrompt = e;
+});
 
 // Capture beforeinstallprompt as early as possible — the event fires once,
 // often before React mounts. Store on window so PwaInstallBanner can read it.
@@ -74,12 +72,14 @@ window.addEventListener('vite:preloadError', (event) => {
 });
 runWhenIdle(() => sessionStorage.removeItem('vite-preload-retry'));
 
-createRoot(document.getElementById('root')!, {
+const rootEl = document.getElementById('root')!;
+const errorHooks = {
   // React 19 error hooks → Sentry (complements the in-app ErrorBoundary).
   onUncaughtError: Sentry.reactErrorHandler(),
   onCaughtError: Sentry.reactErrorHandler(),
   onRecoverableError: Sentry.reactErrorHandler(),
-}).render(
+};
+const appTree = (
   <StrictMode>
     <FeatureFlagsProvider>
       <AuthProvider>
@@ -98,5 +98,22 @@ createRoot(document.getElementById('root')!, {
         </NotificationProvider>
       </AuthProvider>
     </FeatureFlagsProvider>
-  </StrictMode>,
+  </StrictMode>
 );
+
+// scripts/prerender.ts snapshots real React-committed markup into dist/index.html
+// per route. createRoot() was wiping that markup and rebuilding the entire tree
+// client-side from an empty root — the prerendered HTML painted for ~1 frame
+// then got discarded, so LCP measured the FRESH client render (3s+), not the
+// prerendered one. hydrateRoot() reuses the existing DOM instead of replacing
+// it, so the prerendered LCP element stays painted through to interactivity.
+// Falls back to createRoot when #root still has only the static #app-splash
+// shell (local dev `vite` server, or a route the prerender script doesn't
+// cover) — hydrating against the splash markup would mismatch the real tree
+// and React would silently discard it and re-render anyway, so skip straight
+// to createRoot for those.
+if (rootEl.childElementCount > 0 && !document.getElementById('app-splash')) {
+  hydrateRoot(rootEl, appTree, errorHooks);
+} else {
+  createRoot(rootEl, errorHooks).render(appTree);
+}

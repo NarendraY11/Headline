@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 
-export const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: string }> = ({ children, delay = 0, className = "" }) => {
+export const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, className?: string, immediate?: boolean }> = ({ children, delay = 0, className = "", immediate = false }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
+  // ponytail: immediate=true skips IO so above-fold LCP elements paint on first frame
+  const [inView, setInView] = useState(immediate);
 
   useEffect(() => {
+    if (immediate) return;
     const el = ref.current;
     if (!el) return;
     if (typeof IntersectionObserver === "undefined") {
@@ -22,7 +24,7 @@ export const FadeUp: React.FC<{ children: React.ReactNode, delay?: number, class
     );
     ob.observe(el);
     return () => ob.disconnect();
-  }, []);
+  }, [immediate]);
 
   return (
     <div

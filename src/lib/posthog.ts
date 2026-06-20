@@ -16,7 +16,7 @@
 import type { PostHog } from "posthog-js";
 
 const KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
-const HOST = (import.meta.env.VITE_POSTHOG_HOST as string) || "https://eu.i.posthog.com";
+const HOST = ((import.meta.env.VITE_POSTHOG_HOST as string) || "https://eu.i.posthog.com").trim();
 
 let ph: PostHog | null = null;
 let initialized = false;
