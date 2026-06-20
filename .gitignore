@@ -44,3 +44,7 @@ dashboard.png
 
 # Local scripts not part of build
 scripts/graphify-scoped-update.py
+
+# Runtime/debug artifacts
+server-run.*
+trace.json
