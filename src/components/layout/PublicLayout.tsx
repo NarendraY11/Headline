@@ -252,9 +252,7 @@ export function PublicLayout() {
       >
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
           <div className="space-y-3">
-            <div className="opacity-70">
-              <Wordmark compassSize={24} />
-            </div>
+            <Wordmark compassSize={24} />
             <p className="footnote text-[10px] text-muted-2">
               © {new Date().getFullYear()} HEADING EDITORIAL AVIATION. ALL RIGHTS RESERVED.
             </p>

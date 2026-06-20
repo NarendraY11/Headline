@@ -286,7 +286,7 @@ export default function HomeView() {
       </div>
 
       {/* 2. SEC: BUILT AROUND */}
-      <section className="py-24 md:py-32 w-full max-w-[1400px] mx-auto px-6">
+      <section className="py-24 md:py-32 w-full max-w-[1400px] mx-auto px-6" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 600px" }}>
         <FadeUp>
           <div className="mb-10">
             <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase mb-4">
@@ -412,7 +412,7 @@ export default function HomeView() {
       </section>
 
       {/* 3. DARK SEC: METHOD */}
-      <section className="bg-ink w-full text-paper py-24 md:py-32 shrink-0">
+      <section className="bg-ink w-full text-paper py-24 md:py-32 shrink-0" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 500px" }}>
         <div className="max-w-[1400px] mx-auto px-6 grid grid-cols-1 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1fr_1.2fr] gap-16 lg:gap-24">
            {/* Left */}
            <div>
@@ -453,7 +453,7 @@ export default function HomeView() {
       </section>
 
       {/* 4. SEC: ANALYTICS */}
-      <section className="py-24 md:py-32 max-w-[1400px] mx-auto px-6 w-full">
+      <section className="py-24 md:py-32 max-w-[1400px] mx-auto px-6 w-full" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 500px" }}>
          <FadeUp className="pb-16">
             <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase mb-4">
               § 03 / ANALYTICS
@@ -512,7 +512,7 @@ export default function HomeView() {
       </section>
 
       {/* 4.5 SEC: COMPARISON */}
-      <section className="py-24 bg-paper w-full border-t border-rule">
+      <section className="py-24 bg-paper w-full border-t border-rule" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 600px" }}>
         <FadeUp className="max-w-[1000px] mx-auto px-6">
            <div className="text-center mb-16">
              <div className="font-mono text-[10px] text-muted-2 tracking-[0.2em] uppercase mb-4">
@@ -573,7 +573,7 @@ export default function HomeView() {
       </section>
 
       {/* 5. TESTIMONIALS */}
-      <section className="py-24 bg-bg border-y border-rule overflow-hidden">
+      <section className="py-24 bg-bg border-y border-rule overflow-hidden" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 500px" }}>
         <FadeUp className="max-w-[1400px] mx-auto px-6">
            <h2 className="font-serif text-[40px] text-ink text-center mb-16 tracking-tight">Cleared for takeoff by pilot cadets.</h2>
            
@@ -610,7 +610,7 @@ export default function HomeView() {
       {/* Pricing moved to /pricing view */}
 
       {/* LEAD CAPTURE SYSTEM */}
-      <section className="py-12 bg-bg w-full">
+      <section className="py-12 bg-bg w-full" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 200px" }}>
          <div className="max-w-[1400px] mx-auto px-6">
             <FadeUp>
                <LeadCapture />
@@ -619,7 +619,7 @@ export default function HomeView() {
       </section>
 
       {/* 7. FAQ */}
-      <section className="py-24 bg-bg w-full border-t border-rule">
+      <section className="py-24 bg-bg w-full border-t border-rule" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 600px" }}>
          <div className="max-w-[800px] mx-auto px-6">
             <FadeUp className="mb-16">
                <h2 className="font-serif text-[40px] text-ink mb-2 tracking-tight">Flight Briefing (FAQ)</h2>
@@ -634,7 +634,7 @@ export default function HomeView() {
       </section>
 
       {/* 8. LAST CTA */}
-      <section className="w-full bg-ink relative overflow-hidden flex flex-col pb-12">
+      <section className="w-full bg-ink relative overflow-hidden flex flex-col pb-12" style={{ contentVisibility: "auto", containIntrinsicSize: "auto 400px" }}>
          <div className="absolute inset-0 blueprint opacity-10 pointer-events-none mix-blend-overlay" />
          
          <div className="max-w-[1400px] mx-auto px-6 py-24 md:py-32 text-center relative z-10 flex flex-col items-center">
