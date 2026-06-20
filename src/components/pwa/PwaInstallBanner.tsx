@@ -154,7 +154,7 @@ export function PwaInstallBanner() {
               <button
                 onClick={install}
                 aria-label="Install the Heading app"
-                className="inline-flex items-center gap-1.5 min-h-[44px] px-4 bg-navy text-bg hover:opacity-90 font-mono text-[10px] uppercase font-bold rounded-lg tracking-wider transition-opacity cursor-pointer"
+                className="inline-flex items-center gap-1.5 min-h-[44px] px-4 whitespace-nowrap bg-navy text-bg hover:opacity-90 font-mono text-[10px] uppercase font-bold rounded-lg tracking-wider transition-opacity cursor-pointer"
               >
                 <Download size={12} aria-hidden="true" />
                 Install App
