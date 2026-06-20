@@ -2,11 +2,27 @@ import React, { useState, useEffect } from "react";
 import { Button } from "../../components/Atoms";
 import { MoveRight, CheckCircle2, X, Clock } from "lucide-react";
 import { Question } from "../../data/questions";
-import { fetchPublishedQuestions } from "../../lib/content";
+import { staticQuestionBank } from "../../data/staticQuestions";
+
+// ponytail: static import, not dynamic. This is the homepage's right-column
+// LCP candidate — it used to always mount in a `loading=true` skeleton state
+// and run its OWN fetchPublishedQuestions() call regardless of the
+// `initialQuestions` prop, ignoring data HomeView already fetched. That
+// produced a guaranteed hydration mismatch against the prerendered HTML (which
+// captured the fully-loaded card) and a ~1.5-2s waterfall before the real
+// (larger) card replaced the skeleton — Chrome was crowning THAT late, bigger
+// paint as the page's LCP. Seeding state synchronously from the static bank
+// means there's always something full-sized to show on the very first render;
+// no skeleton, no internal fetch, no second late LCP candidate.
+function pickQuestions(source: Question[] | undefined): Question[] {
+  if (source && source.length > 0) {
+    return [...source].sort(() => 0.5 - Math.random()).slice(0, 10);
+  }
+  return [...(staticQuestionBank || [])].sort(() => 0.5 - Math.random()).slice(0, 10);
+}
 
 export function InteractiveSampleQuestion({ questions: initialQuestions }: { questions?: Question[] }) {
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [questions, setQuestions] = useState<Question[]>(() => pickQuestions(initialQuestions));
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
@@ -15,60 +31,17 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
   const [tooltipMessage, setTooltipMessage] = useState("");
   const [isHovered, setIsHovered] = useState(false);
 
-  // Load published questions safely with try-catch-finally
+  // Quietly swap in HomeView's live DB questions once that fetch resolves —
+  // same-sized card either way, so no skeleton/loading flash.
   useEffect(() => {
-    let active = true;
-    async function getDemoSet() {
-      try {
-        const dbQs = await fetchPublishedQuestions({ limit: 15 });
-        if (!active) return;
-
-        let filteredSet: Question[] = [];
-        if (dbQs && dbQs.length > 0) {
-          filteredSet = [...dbQs].sort(() => 0.5 - Math.random()).slice(0, 10);
-        }
-
-        // If DB returned empty/failed, fall back to the staticQuestionBank
-        if (filteredSet.length === 0) {
-          const { staticQuestionBank } = await import("../../data/staticQuestions");
-          filteredSet = [...(staticQuestionBank || [])].sort(() => 0.5 - Math.random()).slice(0, 10);
-        }
-
-        setQuestions(filteredSet);
-      } catch (err) {
-        console.warn("Error fetching demo questions, using static fallback:", err);
-        if (active) {
-          try {
-            const { staticQuestionBank } = await import("../../data/staticQuestions");
-            setQuestions((staticQuestionBank || []).slice(0, 10));
-          } catch (e) {
-            console.error(e);
-            setQuestions([]);
-          }
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    }
-
-    // Initialize with propQuestions first if available, then load/overwrite
     if (initialQuestions && initialQuestions.length > 0) {
-      setQuestions([...initialQuestions].sort(() => 0.5 - Math.random()).slice(0, 10));
-      setLoading(false);
-    } else {
-      getDemoSet();
+      setQuestions(pickQuestions(initialQuestions));
     }
-
-    return () => {
-      active = false;
-    };
   }, [initialQuestions]);
 
   // Handle auto-rotate interval: clean up correctly and pause on interaction or hover
   useEffect(() => {
-    if (loading || questions.length === 0) return;
+    if (questions.length === 0) return;
 
     // Pause if hovering, if an option is selected, or if the answer has been submitted
     const isPaused = isHovered || selected !== null || submitted;
@@ -81,10 +54,11 @@ export function InteractiveSampleQuestion({ questions: initialQuestions }: { que
     return () => {
       clearInterval(interval);
     };
-  }, [loading, questions.length, isHovered, selected, submitted]);
+  }, [questions.length, isHovered, selected, submitted]);
 
-  // Fallback Loading Skeleton - Never gets stuck loading!
-  if (loading || questions.length === 0) {
+  // Defensive fallback — pickQuestions always returns the static bank when
+  // empty, so this should be unreachable, but guard against an empty bank.
+  if (questions.length === 0) {
     return (
       <div className="bg-paper border border-rule rounded-2xl p-5 sm:p-6 md:p-8 shadow-sm text-center relative overflow-hidden w-full max-w-[90vw] sm:max-w-sm md:max-w-md mx-auto md:mx-0 shrink-0 min-h-[360px] sm:min-h-[420px] md:h-[450px] flex flex-col justify-between items-stretch animate-pulse">
         <div className="flex justify-between items-center pb-2">
