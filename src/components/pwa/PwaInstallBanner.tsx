@@ -41,8 +41,19 @@ export function PwaInstallBanner() {
   useEffect(() => {
     if (isStandalone() || isDismissed()) return;
 
+    // Check global captured before React mounted (main.tsx captures early)
+    const early = (window as any).__pwaPrompt as BeforeInstallPromptEvent | null;
+    if (early && !shownRef.current) {
+      shownRef.current = true;
+      setDeferred(early);
+      setVisible(true);
+      posthogCapture("pwa_banner_shown", { platform: "android_desktop" });
+    }
+
+    // Also listen for fires that happen after React mounts
     const onPrompt = (e: Event) => {
       e.preventDefault();
+      (window as any).__pwaPrompt = e;
       setDeferred(e as BeforeInstallPromptEvent);
       if (!shownRef.current) {
         shownRef.current = true;
