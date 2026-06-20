@@ -31,6 +31,7 @@ import { ExamReadinessGauge } from "./today/ExamReadinessGauge";
 import { SubjectRanking } from "./today/SubjectRanking";
 import { RecommendedFocus } from "./today/RecommendedFocus";
 import { AdaptiveRegenBanner } from "./today/AdaptiveRegenBanner";
+import { PwaInstallBanner } from "../components/pwa/PwaInstallBanner";
 import { MasteryHeatmap } from "./today/MasteryHeatmap";
 import { useExamReadiness } from "../hooks/useExamReadiness";
 import { computeETA } from "../lib/examReadiness";
@@ -650,6 +651,8 @@ export default function TodayView() {
             </div>
           </div>
         )}
+
+        <PwaInstallBanner />
 
         {/* Readiness Card */}
         <div className="bg-ink rounded-[20px] p-5 md:p-8 w-full mb-8 relative overflow-hidden text-bg shadow-lg">
