@@ -43,16 +43,6 @@ runWhenIdle(() => {
   initPostHog();
 });
 
-// Delay Clarity past first paint. Using setTimeout(3000) instead of
-// requestIdleCallback: rIC fires during React's first commit phase which still
-// races the LCP element. A fixed 3s delay ensures Clarity's chunk download
-// never lands in the critical network chain.
-setTimeout(() => {
-  import('@microsoft/clarity').then(({ default: Clarity }) => {
-    Clarity.init('x8h37kdqmc');
-  });
-}, 3000);
-
 // Capture beforeinstallprompt as early as possible — the event fires once,
 // often before React mounts. Store on window so PwaInstallBanner can read it.
 (window as any).__pwaPrompt = null;

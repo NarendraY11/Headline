@@ -204,7 +204,7 @@ export default function HomeView() {
               "--color-rule": "rgba(13, 26, 45, 0.10)",
             } as CSSProperties}
           >
-          <FadeUp>
+          <FadeUp immediate>
             <span className="eyebrow block mb-5 font-mono text-[10px] uppercase tracking-widest text-muted-2 flex items-center gap-2.5">
               <span className="w-1.5 h-1.5 rounded-sm bg-signal transform rotate-45" />
               <span className="tracking-[0.25em]">EXAM PREP · DGCA · EASA · ATPL · TYPE RATING</span>
