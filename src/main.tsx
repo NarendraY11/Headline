@@ -53,6 +53,14 @@ setTimeout(() => {
   });
 }, 3000);
 
+// Capture beforeinstallprompt as early as possible — the event fires once,
+// often before React mounts. Store on window so PwaInstallBanner can read it.
+(window as any).__pwaPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  (window as any).__pwaPrompt = e;
+});
+
 // Recover from stale-chunk errors after a new deploy: a lazy route's dynamic
 // import 404s because the hashed filenames changed under the running tab. Reload
 // once to pull the fresh index + chunk manifest. The session flag prevents a
