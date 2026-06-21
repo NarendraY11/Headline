@@ -422,7 +422,7 @@ function OnboardingDiagnostic({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="space-y-6"
+        className="space-y-6 py-4 md:py-8"
       >
         {/* Header badge */}
         <div className="inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-signal font-bold">
@@ -551,7 +551,7 @@ function OnboardingDiagnostic({
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label={`Diagnostic progress: ${completedCount} of 5 complete`}
-            className="h-[3px] w-full bg-rule rounded-full overflow-hidden"
+            className="h-1 w-full bg-rule rounded-full overflow-hidden"
           >
             <motion.div
               className="h-full bg-ink rounded-full"
