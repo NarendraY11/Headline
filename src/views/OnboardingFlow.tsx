@@ -609,7 +609,7 @@ function OnboardingDiagnostic({
                   >
                     {opt.key}
                   </span>
-                  <span className="flex-1">{opt.text}</span>
+                  <span className="flex-1 text-ink">{opt.text}</span>
                 </button>
               );
             })}
