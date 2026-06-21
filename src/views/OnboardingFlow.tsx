@@ -698,9 +698,8 @@ function OnboardingTelemetryPanel({
   const goalLabel = TRAINING_PATHS.find(p => p.id === pathway)?.goals.find(g => g.id === goal)?.label;
   const intensityLabel = intensityPresets.find(p => p.id === dailyGoal)?.label || "Active Aircrew";
   const completedCount = Object.keys(diagSubmitted).length;
-  const currentSubject = (completedCount > 0 || currentDiagIdx > 0)
-    ? DIAG_QUESTIONS[Math.min(currentDiagIdx, 4)].subject
-    : "Initializing";
+  // Show current subject immediately — it's always known from currentDiagIdx
+  const currentSubject = DIAG_QUESTIONS[Math.min(currentDiagIdx, 4)].subject;
   const formattedDate = customDate
     ? new Date(customDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })
     : "—";
@@ -732,8 +731,13 @@ function OnboardingTelemetryPanel({
   })();
 
   return (
-    <div className="mt-7 space-y-5">
-      {/* Step-specific telemetry card */}
+    <div className="mt-8 space-y-4">
+      {/* Section label */}
+      <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-2 font-bold">
+        Flight Status
+      </span>
+
+      {/* Step-specific telemetry card — visible border + tinted bg for containment */}
       <AnimatePresence mode="wait">
         <motion.div
           key={`telemetry-${step}`}
@@ -741,7 +745,7 @@ function OnboardingTelemetryPanel({
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -5 }}
           transition={{ duration: 0.3 }}
-          className="border border-rule/70 rounded-[12px] p-4 space-y-2.5"
+          className="border border-rule rounded-[12px] p-4 bg-bg-2/60 space-y-2.5"
           role="status"
           aria-label={`Step ${step} telemetry data`}
           aria-live="polite"
@@ -764,11 +768,11 @@ function OnboardingTelemetryPanel({
       </AnimatePresence>
 
       {/* Route waypoints — progress track */}
-      <div className="relative">
-        {/* Connecting line behind dots */}
+      <div className="relative pt-1">
+        {/* Connecting line — sits at vertical center of dots */}
         <div
-          className="absolute top-[5px] border-t border-dashed border-rule/50"
-          style={{ left: "12px", right: "12px" }}
+          className="absolute top-[7px] border-t border-dashed border-rule/60"
+          style={{ left: "14px", right: "14px" }}
           aria-hidden="true"
         />
         <div className="flex justify-between relative">
@@ -776,16 +780,16 @@ function OnboardingTelemetryPanel({
             const isDone = step > rs.id;
             const isCurrent = step === rs.id;
             return (
-              <div key={rs.id} className="flex flex-col items-center gap-1.5">
+              <div key={rs.id} className="flex flex-col items-center gap-2">
                 <div
-                  className={`w-2.5 h-2.5 rounded-full border-[1.5px] transition-colors bg-bg ${
+                  className={`w-3.5 h-3.5 rounded-full border-[1.5px] transition-colors ${
                     isDone ? "bg-mint border-mint" :
                     isCurrent ? "bg-ink border-ink" :
-                    "border-rule"
+                    "bg-bg border-rule"
                   }`}
                   aria-hidden="true"
                 />
-                <span className={`font-mono text-[7px] uppercase tracking-wide transition-colors ${
+                <span className={`font-mono text-[8px] uppercase tracking-wide transition-colors ${
                   isCurrent ? "text-ink font-bold" :
                   isDone ? "text-mint" :
                   "text-muted-2"
