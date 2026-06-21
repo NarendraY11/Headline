@@ -670,6 +670,141 @@ function OnboardingDiagnostic({
   );
 }
 
+// ─── Telemetry Panel ─────────────────────────────────────────────────────────
+
+const ROUTE_STEPS = [
+  { id: 1, label: "Destination" },
+  { id: 2, label: "Planning" },
+  { id: 3, label: "Diagnostics" },
+  { id: 4, label: "Mission" },
+];
+
+interface TelemetryPanelProps {
+  step: number;
+  pathway: string;
+  goal: string;
+  dailyGoal: string;
+  customDate: string;
+  currentDiagIdx: number;
+  diagSubmitted: Record<number, boolean>;
+  diagScore: number;
+}
+
+function OnboardingTelemetryPanel({
+  step, pathway, goal, dailyGoal, customDate,
+  currentDiagIdx, diagSubmitted, diagScore
+}: TelemetryPanelProps) {
+  const pathLabel = TRAINING_PATHS.find(p => p.id === pathway)?.label;
+  const goalLabel = TRAINING_PATHS.find(p => p.id === pathway)?.goals.find(g => g.id === goal)?.label;
+  const intensityLabel = intensityPresets.find(p => p.id === dailyGoal)?.label || "Active Aircrew";
+  const completedCount = Object.keys(diagSubmitted).length;
+  // Show current subject immediately — it's always known from currentDiagIdx
+  const currentSubject = DIAG_QUESTIONS[Math.min(currentDiagIdx, 4)].subject;
+  const formattedDate = customDate
+    ? new Date(customDate).toLocaleDateString("en-GB", { month: "short", year: "numeric" })
+    : "—";
+
+  type Row = { label: string; value: string; status?: "done" | "pending" | "neutral" };
+  const rows: Row[] = (() => {
+    if (step === 1) return [
+      { label: "Training Path", value: pathLabel || "Awaiting selection", status: pathLabel ? "neutral" : "pending" },
+      { label: "Target Goal", value: goalLabel || "Awaiting selection", status: goalLabel ? "neutral" : "pending" },
+      { label: "Flight Plan", value: (pathway && goal) ? "Configured" : "Pending", status: (pathway && goal) ? "done" : "pending" },
+    ];
+    if (step === 2) return [
+      { label: "Daily Questions", value: `${dailyGoal} / day`, status: "neutral" },
+      { label: "Intensity", value: intensityLabel, status: "neutral" },
+      { label: "Target Date", value: formattedDate, status: "neutral" },
+      { label: "Plan Status", value: "Optimised", status: "done" },
+    ];
+    if (step === 3) return [
+      { label: "Checks Completed", value: `${completedCount} / 5`, status: "neutral" },
+      { label: "Progress", value: `${Math.round((completedCount / 5) * 100)}%`, status: "neutral" },
+      { label: "Current System", value: currentSubject, status: "neutral" },
+    ];
+    // step 4
+    return [
+      { label: "Diagnostic Score", value: `${diagScore} / 5`, status: "neutral" },
+      { label: "Readiness", value: `${Math.round((diagScore / 5) * 100)}%`, status: "neutral" },
+      { label: "Mission Status", value: "Prepared", status: "done" },
+    ];
+  })();
+
+  return (
+    <div className="mt-8 space-y-4">
+      {/* Section label */}
+      <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-2 font-bold">
+        Flight Status
+      </span>
+
+      {/* Step-specific telemetry card — visible border + tinted bg for containment */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={`telemetry-${step}`}
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          transition={{ duration: 0.3 }}
+          className="border border-rule rounded-[12px] p-4 bg-bg-2/60 space-y-2.5"
+          role="status"
+          aria-label={`Step ${step} telemetry data`}
+          aria-live="polite"
+        >
+          {rows.map(row => (
+            <div key={row.label} className="flex items-center justify-between gap-4">
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-2 shrink-0">
+                {row.label}
+              </span>
+              <span className={`font-mono text-[10px] font-bold text-right truncate max-w-[60%] ${
+                row.status === "done" ? "text-mint" :
+                row.status === "pending" ? "text-muted" :
+                "text-ink"
+              }`}>
+                {row.value}{row.status === "done" ? " ✓" : ""}
+              </span>
+            </div>
+          ))}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Route waypoints — progress track */}
+      <div className="relative pt-1">
+        {/* Connecting line — sits at vertical center of dots */}
+        <div
+          className="absolute top-[7px] border-t border-dashed border-rule/60"
+          style={{ left: "14px", right: "14px" }}
+          aria-hidden="true"
+        />
+        <div className="flex justify-between relative">
+          {ROUTE_STEPS.map(rs => {
+            const isDone = step > rs.id;
+            const isCurrent = step === rs.id;
+            return (
+              <div key={rs.id} className="flex flex-col items-center gap-2">
+                <div
+                  className={`w-3.5 h-3.5 rounded-full border-[1.5px] transition-colors ${
+                    isDone ? "bg-mint border-mint" :
+                    isCurrent ? "bg-ink border-ink" :
+                    "bg-bg border-rule"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span className={`font-mono text-[8px] uppercase tracking-wide transition-colors ${
+                  isCurrent ? "text-ink font-bold" :
+                  isDone ? "text-mint" :
+                  "text-muted-2"
+                }`}>
+                  {rs.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FinalDebrief({
   exam,
   dailyGoal,
@@ -884,17 +1019,28 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
             <span className="w-1.5 h-1.5 rounded-sm bg-signal transform rotate-45" />
             PRE-FLIGHT BRIEF · STEP {step} OF 4
           </div>
-          
+
           <h1 className="font-serif text-[42px] md:text-[50px] lg:text-[60px] leading-[1.0] text-ink mb-6 tracking-tight">
-            {currentStepData.title.split(" ").map((w, i) => 
+            {currentStepData.title.split(" ").map((w, i) =>
               w.toLowerCase() === currentStepData.accent.toLowerCase()
-              ? <span key={i} className="italic text-navy">{w} </span> 
+              ? <span key={i} className="italic text-navy">{w} </span>
               : <span key={i}>{w} </span>
             )}
           </h1>
           <p className="font-sans text-[15px] md:text-[17px] text-ink-2 font-light leading-relaxed max-w-md">
             {currentStepData.subtitle}
           </p>
+
+          <OnboardingTelemetryPanel
+            step={step}
+            pathway={pathway}
+            goal={goal}
+            dailyGoal={dailyGoal}
+            customDate={customDate}
+            currentDiagIdx={currentDiagIdx}
+            diagSubmitted={diagSubmitted}
+            diagScore={diagScore}
+          />
         </div>
 
         <div className="hidden md:block font-mono text-[9px] text-muted tracking-[0.2em] uppercase">
