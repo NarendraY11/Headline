@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Flame, Lock, MoveLeft, MoveRight, ShieldAlert, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Flame, Lock, MoveLeft, MoveRight, Radar, ShieldAlert, Sparkles } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -350,6 +350,24 @@ function Step2Pacing({
   );
 }
 
+// Time estimates per question index (shown to user; not a live countdown to avoid pressure)
+const QUESTION_TIME_HINTS = ["~60s", "~48s", "~36s", "~24s", "~12s"];
+
+const PROCESSING_STEPS = [
+  "Evaluating Knowledge Areas",
+  "Mapping Study Route",
+  "Preparing Personalized Mission",
+];
+
+const BRIEFING_ITEMS = [
+  "Identify your strengths",
+  "Detect knowledge gaps",
+  "Build your study route",
+  "Estimate exam readiness",
+];
+
+type DiagPhase = "briefing" | "question" | "processing";
+
 function OnboardingDiagnostic({
   currentIdx,
   onAnswer,
@@ -365,105 +383,290 @@ function OnboardingDiagnostic({
   onSubmitAnswer: () => void;
   onNext: () => void;
 }) {
+  const [phase, setPhase] = useState<DiagPhase>("briefing");
+  const [processingDone, setProcessingDone] = useState(0); // 0–3 checklist items revealed
+
+  // Processing animation: reveal checklist items, then call onNext after 1400ms
+  useEffect(() => {
+    if (phase !== "processing") return;
+    const timers = [
+      setTimeout(() => setProcessingDone(1), 300),
+      setTimeout(() => setProcessingDone(2), 700),
+      setTimeout(() => setProcessingDone(3), 1100),
+      setTimeout(() => onNext(), 1600),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, [phase]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const q = DIAG_QUESTIONS[currentIdx];
   const selectedChoice = diagAnswers[currentIdx] || "";
   const isSubmitted = diagSubmitted[currentIdx] || false;
   const isCorrect = selectedChoice === q.correct;
+  const completedCount = Object.keys(diagSubmitted).length;
+  const progressPct = Math.round((completedCount / 5) * 100);
 
+  // After last question is submitted + user clicks "Assemble", show processing
+  const handleProceed = () => {
+    if (currentIdx < 4) {
+      onNext();
+    } else {
+      setPhase("processing");
+    }
+  };
+
+  // ── PHASE: BRIEFING ──────────────────────────────────────────────────────
+  if (phase === "briefing") {
+    return (
+      <motion.div
+        key="briefing"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="space-y-6 py-4 md:py-8"
+      >
+        {/* Header badge */}
+        <div className="inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.2em] text-signal font-bold">
+          <Radar size={11} className="text-signal" />
+          Pre-Flight Assessment
+        </div>
+
+        {/* Title */}
+        <div>
+          <h2 className="font-serif text-[36px] md:text-[44px] leading-[1.05] text-ink tracking-tight mb-3">
+            60-Second<br /><span className="italic text-navy">Flight Check</span>
+          </h2>
+          <p className="font-sans text-[14px] md:text-[15px] text-ink-2 leading-relaxed max-w-md">
+            We'll assess your current knowledge level and generate your first personalized study mission.
+          </p>
+        </div>
+
+        {/* Benefit list */}
+        <ul className="space-y-2.5" aria-label="What this diagnostic does">
+          {BRIEFING_ITEMS.map(item => (
+            <li key={item} className="flex items-center gap-3 font-sans text-[13px] text-ink-2">
+              <span className="w-5 h-5 rounded-full border border-mint/40 bg-mint/8 flex items-center justify-center shrink-0">
+                <Check size={11} className="text-mint" />
+              </span>
+              {item}
+            </li>
+          ))}
+        </ul>
+
+        {/* Meta pills */}
+        <div className="flex items-center gap-3">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule rounded-full font-mono text-[10px] tracking-widest text-muted-2 uppercase">
+            5 Questions
+          </span>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-rule rounded-full font-mono text-[10px] tracking-widest text-muted-2 uppercase">
+            ~60 Seconds
+          </span>
+        </div>
+
+        {/* CTA */}
+        <button
+          type="button"
+          onClick={() => setPhase("question")}
+          className="h-12 px-8 font-sans font-semibold text-sm bg-ink text-bg rounded-full hover:bg-ink-2 transition-all shadow-sm flex items-center gap-2"
+          autoFocus
+        >
+          Begin Diagnostic <ArrowRight size={15} />
+        </button>
+      </motion.div>
+    );
+  }
+
+  // ── PHASE: PROCESSING ────────────────────────────────────────────────────
+  if (phase === "processing") {
+    return (
+      <motion.div
+        key="processing"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="py-8 space-y-8"
+        aria-live="polite"
+        aria-label="Analyzing diagnostic results"
+      >
+        <div>
+          <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-signal font-bold mb-3">
+            Telemetry Analysis
+          </div>
+          <h2 className="font-serif text-[28px] md:text-[34px] text-ink leading-tight tracking-tight">
+            Analyzing Flight Data<span className="animate-pulse">...</span>
+          </h2>
+        </div>
+
+        <ul className="space-y-4" aria-label="Analysis progress">
+          {PROCESSING_STEPS.map((label, i) => (
+            <motion.li
+              key={label}
+              initial={{ opacity: 0, x: -8 }}
+              animate={processingDone > i ? { opacity: 1, x: 0 } : { opacity: 0, x: -8 }}
+              transition={{ duration: 0.25 }}
+              className="flex items-center gap-3 font-sans text-[14px] text-ink-2"
+            >
+              <span className="w-5 h-5 rounded-full bg-mint/10 border border-mint/30 flex items-center justify-center shrink-0">
+                <Check size={11} className="text-mint" />
+              </span>
+              {label}
+            </motion.li>
+          ))}
+        </ul>
+      </motion.div>
+    );
+  }
+
+  // ── PHASE: QUESTION ──────────────────────────────────────────────────────
   return (
-    <div className="space-y-6">
-      <div className="bg-bg border border-rule rounded-[20px] p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4 border-b border-rule/50 pb-3">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-signal font-bold">
-            {q.subject}
-          </span>
-          <span className="font-mono text-[10px] text-muted-2">
-            CHECK {currentIdx + 1} OF 5
-          </span>
-        </div>
-
-        <p className="font-serif text-lg leading-relaxed text-ink mb-6">
-          {q.question}
-        </p>
-
-        <div className="space-y-2.5">
-          {q.options.map((opt) => {
-            const isSelected = selectedChoice === opt.key;
-            let optClass = "border-rule hover:border-ink/20 hover:bg-bg-2/30";
-            
-            if (isSubmitted) {
-              if (opt.key === q.correct) {
-                optClass = "border-mint bg-mint-soft text-mint font-medium";
-              } else if (isSelected) {
-                optClass = "border-signal bg-signal-soft/35 text-signal";
-              } else {
-                optClass = "border-rule opacity-60";
-              }
-            } else if (isSelected) {
-              optClass = "border-ink ring-1 ring-ink bg-bg-2";
-            }
-
-            return (
-              <button
-                key={opt.key}
-                disabled={isSubmitted}
-                onClick={() => onAnswer(opt.key)}
-                className={`w-full text-left p-4 border rounded-[14px] transition-all flex items-start gap-3 text-sm leading-relaxed ${optClass}`}
-              >
-                <span className={`w-5 h-5 rounded-full border flex items-center justify-center shrink-0 font-mono text-[10px] uppercase font-bold ${isSelected ? 'bg-ink text-bg border-ink' : 'border-rule text-muted'}`}>
-                  {opt.key}
-                </span>
-                <span className="flex-1 mt-0.5">{opt.text}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {isSubmitted && (
-          <motion.div 
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 p-4 bg-muted-soft rounded-[12px] border border-rule/50 text-[13px] text-ink-2"
-          >
-            <div className="flex items-center gap-1.5 mb-1.5 font-bold font-mono text-[10px] uppercase">
-              {isCorrect ? (
-                <>
-                  <Check size={14} className="text-mint" /> 
-                  <span className="text-mint">Check Verified</span>
-                </>
-              ) : (
-                <>
-                  <ShieldAlert size={14} className="text-signal" />
-                  <span className="text-signal">Check Advisory</span>
-                </>
-              )}
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={`q-${currentIdx}`}
+        initial={{ opacity: 0, x: 12 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -12 }}
+        transition={{ duration: 0.22 }}
+        className="space-y-5"
+      >
+        {/* Telemetry strip */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {/* Subject badge */}
+              <span className="font-mono text-[9px] uppercase tracking-widest text-signal font-bold bg-signal/8 border border-signal/20 px-2 py-0.5 rounded-[4px]">
+                {q.subject}
+              </span>
+              <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest">
+                Check {currentIdx + 1} of 5
+              </span>
             </div>
-            <p className="font-sans leading-relaxed text-[12.5px] opacity-90">{q.explanation}</p>
-          </motion.div>
-        )}
-      </div>
+            <span className="font-mono text-[9px] text-muted-2 uppercase tracking-widest">
+              {QUESTION_TIME_HINTS[currentIdx]} remaining
+            </span>
+          </div>
 
-      <div className="flex justify-end gap-3 mt-4">
-        {!isSubmitted ? (
-          <button
-            type="button"
-            disabled={!selectedChoice}
-            onClick={onSubmitAnswer}
-            className="h-11 px-6 font-sans font-medium text-sm bg-ink text-bg rounded-xl hover:bg-ink-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+          {/* Aviation-style progress bar */}
+          <div
+            role="progressbar"
+            aria-valuenow={progressPct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`Diagnostic progress: ${completedCount} of 5 complete`}
+            className="h-1 w-full bg-rule rounded-full overflow-hidden"
           >
-            Lock Check
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onNext}
-            className="h-11 px-6 font-sans font-medium text-sm bg-ink text-bg rounded-xl hover:bg-ink-2 transition-all flex items-center gap-1"
+            <motion.div
+              className="h-full bg-ink rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPct}%` }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+            />
+          </div>
+        </div>
+
+        {/* Question card */}
+        <div className="bg-bg border border-rule rounded-[20px] p-6 md:p-8 shadow-sm">
+          <p className="font-serif text-[19px] md:text-[22px] leading-[1.45] text-ink mb-7">
+            {q.question}
+          </p>
+
+          <div
+            role="radiogroup"
+            aria-label={`Answer options for check ${currentIdx + 1}`}
+            className="space-y-3"
           >
-            {currentIdx < 4 ? "Proceed to Next Check" : "Assemble Study Plan"} <ArrowRight size={14} />
-          </button>
-        )}
-      </div>
-    </div>
+            {q.options.map((opt) => {
+              const isSelected = selectedChoice === opt.key;
+              let optClass = "border-rule hover:border-ink/25 hover:bg-bg-2/50 cursor-pointer";
+
+              if (isSubmitted) {
+                if (opt.key === q.correct) {
+                  optClass = "border-mint bg-mint-soft text-mint";
+                } else if (isSelected) {
+                  optClass = "border-signal bg-signal-soft/35 text-signal";
+                } else {
+                  optClass = "border-rule opacity-50";
+                }
+              } else if (isSelected) {
+                optClass = "border-ink ring-1 ring-ink bg-bg-2";
+              }
+
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  disabled={isSubmitted}
+                  onClick={() => onAnswer(opt.key)}
+                  className={`w-full text-left p-4 md:p-5 border rounded-[14px] transition-all flex items-start gap-4 text-[14px] leading-relaxed ${optClass}`}
+                >
+                  <span
+                    className={`w-6 h-6 rounded-full border flex items-center justify-center shrink-0 font-mono text-[10px] uppercase font-bold mt-0.5 transition-colors ${
+                      isSelected && !isSubmitted ? 'bg-ink text-bg border-ink'
+                      : isSubmitted && opt.key === q.correct ? 'bg-mint text-bg border-mint'
+                      : isSubmitted && isSelected ? 'bg-signal text-bg border-signal'
+                      : 'border-rule text-muted'
+                    }`}
+                  >
+                    {opt.key}
+                  </span>
+                  <span className="flex-1 text-ink">{opt.text}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Explanation (post-submit) */}
+          {isSubmitted && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="mt-6 p-4 md:p-5 bg-muted-soft rounded-[14px] border border-rule/50"
+            >
+              <div className="flex items-center gap-2 mb-2 font-mono text-[9px] uppercase tracking-widest font-bold">
+                {isCorrect ? (
+                  <>
+                    <Check size={13} className="text-mint" />
+                    <span className="text-mint">Check Verified</span>
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert size={13} className="text-signal" />
+                    <span className="text-signal">Check Advisory</span>
+                  </>
+                )}
+              </div>
+              <p className="font-sans text-[13px] leading-relaxed text-ink-2 opacity-90">
+                {q.explanation}
+              </p>
+            </motion.div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end">
+          {!isSubmitted ? (
+            <button
+              type="button"
+              disabled={!selectedChoice}
+              onClick={onSubmitAnswer}
+              className="h-11 px-7 font-sans font-medium text-sm bg-ink text-bg rounded-full hover:bg-ink-2 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              Lock Check
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleProceed}
+              className="h-11 px-7 font-sans font-medium text-sm bg-ink text-bg rounded-full hover:bg-ink-2 transition-all flex items-center gap-2 shadow-sm"
+            >
+              {currentIdx < 4 ? "Next Check" : "Assemble Study Plan"}
+              <ArrowRight size={14} />
+            </button>
+          )}
+        </div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
@@ -721,7 +924,7 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -15 }}
                 transition={{ duration: 0.25 }}
-                className="w-full max-w-lg"
+                className={`w-full ${step === 3 ? 'max-w-2xl' : 'max-w-lg'}`}
               >
                 {step === 1 && (
                   <Step1Exam pathway={pathway} setPathway={setPathway} goal={goal} setGoal={setGoal} />
