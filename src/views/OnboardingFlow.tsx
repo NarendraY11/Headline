@@ -1,10 +1,11 @@
-import { ArrowRight, Check, Flame, MoveLeft, MoveRight, ShieldAlert, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Flame, Lock, MoveLeft, MoveRight, ShieldAlert, Sparkles } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wordmark } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
-import { ExamInfo, fetchExams } from "../lib/content";
+import { TRAINING_PATHS, resolveTargetExam } from "../data/trainingPaths";
+import { trackEvent } from "../lib/track";
 
 const stepsData = [
   {
@@ -113,66 +114,151 @@ const datePresets = [
   { id: "flexible", label: "Flexible Schedule" }
 ];
 
-function Step1Exam({ 
-  selectedExam, 
-  setSelectedExam 
-}: { 
-  selectedExam: string; 
-  setSelectedExam: (v: string) => void;
+function Step1Exam({
+  pathway,
+  setPathway,
+  goal,
+  setGoal,
+}: {
+  pathway: string;
+  setPathway: (v: string) => void;
+  goal: string;
+  setGoal: (v: string) => void;
 }) {
-  const [examsDataList, setExamsDataList] = useState<ExamInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const activePaths = TRAINING_PATHS.filter(p => p.status === "active");
+  const comingSoon = TRAINING_PATHS.filter(p => p.status === "coming_soon");
+  const selectedPath = TRAINING_PATHS.find(p => p.id === pathway);
 
-  useEffect(() => {
-    fetchExams()
-      .then(res => {
-        setExamsDataList(res);
-        const published = res.filter(r => r.status === "published");
-        if (published.length > 0 && !selectedExam) {
-          setSelectedExam(published[0].id);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+  // ---- LEVEL 2: a pathway is chosen → pick a primary goal ----
+  if (selectedPath) {
+    const selectedGoal = selectedPath.goals.find(g => g.id === goal);
     return (
-      <div className="py-12 flex flex-col items-center justify-center space-y-3">
-        <div className="w-8 h-8 border-2 border-indigo border-t-transparent animate-spin rounded-full" />
-        <span className="font-mono text-[10px] uppercase text-muted tracking-wide">Syncing active certified specs...</span>
-      </div>
+      <motion.div
+        key="level2"
+        initial={{ opacity: 0, x: 12 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.22 }}
+        className="space-y-5"
+      >
+        <button
+          type="button"
+          onClick={() => { setPathway(""); setGoal(""); }}
+          className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted hover:text-ink transition-colors"
+        >
+          <MoveLeft size={13} /> {selectedPath.label}
+        </button>
+
+        <span className="block font-sans text-[11px] text-muted-2 font-bold uppercase tracking-wider">
+          {selectedPath.goalPrompt}
+        </span>
+
+        <div role="radiogroup" aria-label={selectedPath.goalPrompt} className="space-y-3">
+          {selectedPath.goals.map(g => {
+            const isSel = goal === g.id;
+            return (
+              <button
+                key={g.id}
+                type="button"
+                role="radio"
+                aria-checked={isSel}
+                onClick={() => setGoal(g.id)}
+                className={`w-full text-left p-4 sm:p-5 border rounded-[16px] transition-all flex items-center ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
+              >
+                <span className="flex-1 font-serif text-[18px] text-ink">{g.label}</span>
+                <span className={`w-[20px] h-[20px] rounded-full border flex items-center justify-center shrink-0 ml-4 transition-colors ${isSel ? 'border-ink bg-ink text-bg' : 'border-rule'}`}>
+                  {isSel && <Check size={12} />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Informational context panel — non-interactive */}
+        {selectedGoal?.includes && selectedGoal.includes.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            role="note"
+            aria-label={`${selectedGoal.label} includes`}
+            className="border border-rule rounded-[16px] p-4 bg-muted-soft/60"
+          >
+            <span className="block font-mono text-[9px] uppercase tracking-widest text-muted-2 font-bold mb-3">
+              {selectedGoal.label} · Includes
+            </span>
+            <ul className="space-y-2">
+              {selectedGoal.includes.map(subj => (
+                <li key={subj} className="flex items-center gap-2.5 font-sans text-[13px] text-ink-2">
+                  <Check size={13} className="text-mint shrink-0" /> {subj}
+                </li>
+              ))}
+            </ul>
+          </motion.div>
+        )}
+      </motion.div>
     );
   }
 
-  const published = examsDataList.filter(e => e.status === "published");
-
+  // ---- LEVEL 1: choose a training path ----
   return (
-    <div className="space-y-4">
-      <span className="block font-sans text-[11px] text-muted-2 font-bold uppercase tracking-wider mb-2">AVAILABLE SECTOR CHECKS</span>
-      {published.map(e => {
-        const isSel = selectedExam === e.id;
-        return (
-          <button 
-            key={e.id}
-            type="button"
-            onClick={() => setSelectedExam(e.id)}
-            className={`w-full text-left p-5 border rounded-[16px] transition-all flex items-center ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
-          >
-            <div className="flex-1">
-              <div className={`inline-block mb-1.5 px-2 py-0.5 rounded-[4px] font-mono text-[8px] tracking-widest font-bold uppercase ${isSel ? 'bg-ink text-bg' : 'bg-rule text-muted-2'}`}>
-                {e.authority} · {e.license}
+    <motion.div
+      key="level1"
+      initial={{ opacity: 0, x: 12 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.22 }}
+      className="space-y-6"
+    >
+      <div>
+        <span className="block font-sans text-[11px] text-muted-2 font-bold uppercase tracking-wider mb-3">AVAILABLE NOW</span>
+        <div role="radiogroup" aria-label="Training path" className="space-y-3">
+          {activePaths.map(p => {
+            const isSel = pathway === p.id;
+            return (
+              <button
+                key={p.id}
+                type="button"
+                role="radio"
+                aria-checked={isSel}
+                onClick={() => { setPathway(p.id); setGoal(""); }}
+                className={`w-full text-left p-5 border rounded-[16px] transition-all flex items-center ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
+              >
+                <div className="flex-1">
+                  <div className="font-serif text-[18px] text-ink mb-1">{p.label}</div>
+                  <div className="font-sans text-[12px] text-muted-2 leading-relaxed">{p.description}</div>
+                </div>
+                <MoveRight size={16} className="text-muted-2 shrink-0 ml-4" />
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {comingSoon.length > 0 && (
+        <div>
+          <span className="block font-sans text-[11px] text-muted-2 font-bold uppercase tracking-wider mb-3">COMING SOON</span>
+          <div className="space-y-3">
+            {comingSoon.map(p => (
+              <div
+                key={p.id}
+                aria-disabled="true"
+                aria-label={`${p.label} — coming soon`}
+                title={p.tooltip}
+                className="w-full text-left p-5 border border-rule rounded-[16px] flex items-center opacity-50 cursor-not-allowed select-none bg-bg"
+              >
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-serif text-[18px] text-ink">{p.label}</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rule text-muted-2 font-mono text-[8px] tracking-widest font-bold uppercase">
+                      <Lock size={8} /> Coming Soon
+                    </span>
+                  </div>
+                  <div className="font-sans text-[12px] text-muted-2 leading-relaxed">{p.description}</div>
+                </div>
               </div>
-              <div className="font-serif text-[18px] text-ink mb-1">{e.title}</div>
-              <div className="font-sans text-[12px] text-muted-2">{e.question_count} questions · {e.duration_min} minutes · Pass: {e.pass_mark}%</div>
-            </div>
-            <div className={`w-[20px] h-[20px] rounded-full border flex items-center justify-center shrink-0 ml-4 transition-colors ${isSel ? 'border-ink bg-ink text-bg' : 'border-rule'}`}>
-              {isSel && <Check size={12} />}
-            </div>
-          </button>
-        );
-      })}
-    </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
   );
 }
 
@@ -474,7 +560,9 @@ function FinalDebrief({
 
 export function OnboardingFlow({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1);
-  const [exam, setExam] = useState("");
+  const [pathway, setPathway] = useState("");
+  const [goal, setGoal] = useState("");
+  const [resolveError, setResolveError] = useState(false);
   const [dailyGoal, setDailyGoal] = useState("25");
   const [targetDatePreset, setTargetDatePreset] = useState("3-months");
   const [customDate, setCustomDate] = useState("");
@@ -507,15 +595,32 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
   };
 
   const finalizeOnboarding = () => {
+    const targetExam = resolveTargetExam(pathway, goal);
+
+    // Guard: resolveTargetExam returns null on unknown combinations.
+    // This should never happen in normal flow (Continue is disabled until
+    // both pathway + goal are set), but protects against edge cases.
+    if (!targetExam) {
+      setResolveError(true);
+      return;
+    }
+
+    // Funnel analytics: capture the two-level selection + derived target.
+    trackEvent("onboarding_completed", {
+      metadata: { pathway, goal, targetExam, diagnosticScore: diagScore }
+    });
+
     // Save onboarding data in profile & localStorage
-    updateUserData({ 
-      targetExam: exam || "dgca-cpl", 
-      nextExam: customDate, 
+    updateUserData({
+      targetExam,
+      nextExam: customDate,
       dailyGoal: parseInt(dailyGoal),
       onboardingCompleted: true,
       settings: {
         lastDiagnosticScore: diagScore,
-        onboardingCompletedAt: new Date().toISOString()
+        onboardingCompletedAt: new Date().toISOString(),
+        onboardingPath: pathway,
+        onboardingGoal: goal
       }
     }).catch(() => {});
 
@@ -619,7 +724,7 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
                 className="w-full max-w-lg"
               >
                 {step === 1 && (
-                  <Step1Exam selectedExam={exam} setSelectedExam={setExam} />
+                  <Step1Exam pathway={pathway} setPathway={setPathway} goal={goal} setGoal={setGoal} />
                 )}
                 {step === 2 && (
                   <Step2Pacing 
@@ -642,8 +747,8 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
                   />
                 )}
                 {step === 4 && (
-                  <FinalDebrief 
-                    exam={exam}
+                  <FinalDebrief
+                    exam={resolveTargetExam(pathway, goal) ?? ""}
                     dailyGoal={dailyGoal}
                     customDate={customDate}
                     score={diagScore}
@@ -664,23 +769,32 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
             ) : <div />}
 
             <div className="flex items-center gap-6">
-              {step < 3 && (
+              {/* SKIP only on step 2 (pacing has safe defaults). Step 1 pathway
+                  selection is required — no valid fallback targetExam exists. */}
+              {step === 2 && (
                 <button onClick={handleSkip} className="font-mono text-[10px] text-muted font-bold hover:text-ink tracking-widest uppercase transition-colors">
                   SKIP
                 </button>
               )}
               
-              <button 
-                onClick={finalizeOnboarding}
-                className={`h-11 px-6 font-sans font-semibold text-sm bg-ink text-bg rounded-full hover:bg-ink-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center ${step === 4 ? '' : 'hidden'}`}
-              >
-                Enter Study Path <ArrowRight size={14} className="ml-1.5" />
-              </button>
+              {resolveError && step === 4 && (
+                <span className="font-mono text-[10px] text-signal uppercase tracking-widest">
+                  Selection error — go back and reselect your pathway
+                </span>
+              )}
+              {!resolveError && (
+                <button
+                  onClick={finalizeOnboarding}
+                  className={`h-11 px-6 font-sans font-semibold text-sm bg-ink text-bg rounded-full hover:bg-ink-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center ${step === 4 ? '' : 'hidden'}`}
+                >
+                  Enter Study Path <ArrowRight size={14} className="ml-1.5" />
+                </button>
+              )}
 
               <button 
                 onClick={handleNext}
                 disabled={
-                  (step === 1 && !exam) ||
+                  (step === 1 && (!pathway || !goal)) ||
                   (step === 2 && (!dailyGoal || !customDate))
                 }
                 className={`h-11 px-6 font-sans font-semibold text-sm bg-ink text-bg rounded-full hover:bg-ink-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center ${step === 4 ? 'hidden' : ''}`}

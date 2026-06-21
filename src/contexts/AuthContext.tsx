@@ -45,6 +45,8 @@ export interface UserData {
     lastDiagnosticScore?: number;
     theme?: string;
     onboardingCompletedAt?: string;
+    onboardingPath?: string;
+    onboardingGoal?: string;
   };
   referralCode?: string;
   referredBy?: string;
