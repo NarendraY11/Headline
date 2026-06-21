@@ -105,7 +105,19 @@ const appTree = (
 // and React would silently discard it and re-render anyway, so skip straight
 // to createRoot for those.
 if (rootEl.childElementCount > 0 && !document.getElementById('app-splash')) {
-  hydrateRoot(rootEl, appTree, errorHooks);
+  // The prerendered DOM is fully painted-ready, but hydrateRoot() is a single
+  // synchronous ~700ms main-thread task. Running it at module-eval blocks the
+  // browser's first paint until hydration commits, so LCP measured time-to-
+  // hydrate (~1.1s+), not time-to-paint. Yield one frame first: the inner rAF
+  // fires only after the first paint commits, so the prerendered LCP element
+  // paints (~300ms) before hydration runs. Nothing mutates #root in the gap,
+  // so there's no hydration mismatch — only interactivity is deferred ~1 frame
+  // (hydration already cost 700ms anyway; prerendered <a> links work natively).
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => hydrateRoot(rootEl, appTree, errorHooks))
+  );
 } else {
+  // Dev / non-prerendered routes: #root is just the splash shell, nothing to
+  // paint early, so mount immediately.
   createRoot(rootEl, errorHooks).render(appTree);
 }
