@@ -1,6 +1,8 @@
-// Sentry init — must run before any other app code.
-import './instrument';
-import * as Sentry from '@sentry/react';
+// Tiny entry chunk. The goal here is to keep top-level evaluation cheap so the
+// browser can paint the prerendered hero (the LCP element) before any heavy JS
+// runs. Critical CSS stays static (it must be in the initial render-blocking
+// stylesheet); everything expensive — Sentry, the App route tree, providers —
+// lives in ./mountApp and is dynamically imported AFTER first paint.
 import '@fontsource/geist-sans/300.css';
 import '@fontsource/geist-sans/400.css';
 import '@fontsource/geist-sans/500.css';
@@ -10,24 +12,8 @@ import '@fontsource/instrument-serif/400-italic.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import '@fontsource/jetbrains-mono/600.css';
-import {StrictMode, Suspense, lazy} from 'react';
-import {createRoot, hydrateRoot} from 'react-dom/client';
-import { initPostHog } from './lib/posthog';
-import App from './App.tsx';
 import './index.css';
-import { AuthProvider } from './contexts/AuthContext.tsx';
-import { LoadingProvider } from './contexts/LoadingContext.tsx';
-import { ToastProvider } from './components/ui/Toast.tsx';
-import { NotificationProvider } from './contexts/NotificationContext.tsx';
-import { FeatureFlagsProvider } from './hooks/useFeatureFlags';
-import { PWAUpdatePrompt } from './components/PWAUpdatePrompt.tsx';
-// SpeedInsights only loads on Vercel infra — /_vercel/speed-insights/script.js
-// is only served there. Guarded by VITE_ON_VERCEL (baked at build time via
-// vite.config.ts define) so the component is null during local dev / prerender,
-// preventing SyntaxError from the server returning HTML for the missing script.
-const SpeedInsights = import.meta.env.VITE_ON_VERCEL
-  ? lazy(() => import("@vercel/speed-insights/react").then((m) => ({ default: m.SpeedInsights })))
-  : null;
+import { initPostHog } from './lib/posthog';
 
 // Defer product analytics init until the browser is idle after first paint, so
 // it doesn't add startup main-thread cost. (No-op until VITE_POSTHOG_KEY is set;
@@ -73,47 +59,31 @@ window.addEventListener('vite:preloadError', (event) => {
 runWhenIdle(() => sessionStorage.removeItem('vite-preload-retry'));
 
 const rootEl = document.getElementById('root')!;
-const errorHooks = {
-  // React 19 error hooks → Sentry (complements the in-app ErrorBoundary).
-  onUncaughtError: Sentry.reactErrorHandler(),
-  onCaughtError: Sentry.reactErrorHandler(),
-  onRecoverableError: Sentry.reactErrorHandler(),
-};
-const appTree = (
-  <StrictMode>
-    <FeatureFlagsProvider>
-      <AuthProvider>
-        <NotificationProvider>
-          <ToastProvider>
-            <LoadingProvider>
-              <App />
-              <PWAUpdatePrompt />
-              {SpeedInsights && (
-                <Suspense fallback={null}>
-                  <SpeedInsights />
-                </Suspense>
-              )}
-            </LoadingProvider>
-          </ToastProvider>
-        </NotificationProvider>
-      </AuthProvider>
-    </FeatureFlagsProvider>
-  </StrictMode>
-);
 
-// scripts/prerender.ts snapshots real React-committed markup into dist/index.html
-// per route. createRoot() was wiping that markup and rebuilding the entire tree
-// client-side from an empty root — the prerendered HTML painted for ~1 frame
-// then got discarded, so LCP measured the FRESH client render (3s+), not the
-// prerendered one. hydrateRoot() reuses the existing DOM instead of replacing
-// it, so the prerendered LCP element stays painted through to interactivity.
-// Falls back to createRoot when #root still has only the static #app-splash
-// shell (local dev `vite` server, or a route the prerender script doesn't
-// cover) — hydrating against the splash markup would mismatch the real tree
-// and React would silently discard it and re-render anyway, so skip straight
-// to createRoot for those.
-if (rootEl.childElementCount > 0 && !document.getElementById('app-splash')) {
-  hydrateRoot(rootEl, appTree, errorHooks);
+// Prerendered route: #root already holds real React-committed markup (and no
+// #app-splash shell), so we hydrate. Otherwise (dev server / uncovered route)
+// #root is just the splash shell and we mount fresh. mountApp re-applies this
+// distinction; we only need it here to decide whether to yield a paint first.
+const shouldHydrate = rootEl.childElementCount > 0 && !document.getElementById('app-splash');
+
+// Importing ./mountApp downloads AND evaluates the heavy app graph (React,
+// motion, supabase, the route tree) — that evaluation is the ~550ms task that
+// blocks first paint. It must run AFTER the browser has painted the prerendered
+// hero, and crucially in a separate macrotask: import().then() resolves on the
+// microtask queue, which the browser drains before it commits a paint, so a
+// plain rAF (or double-rAF) still lets the eval starve the paint. rAF gets us to
+// the frame boundary; setTimeout(0) then defers the import to a fresh macrotask,
+// which yields to rendering first. Net: prerendered LCP paints (~250ms), THEN
+// the graph loads and hydrates. Nothing mutates #root in the gap, so there's no
+// hydration mismatch; only interactivity is deferred (prerendered <a> links work
+// natively meanwhile).
+const boot = () =>
+  import('./mountApp').then((m) => m.mountApp(rootEl, shouldHydrate));
+
+if (shouldHydrate) {
+  requestAnimationFrame(() => setTimeout(boot, 0));
 } else {
-  createRoot(rootEl, errorHooks).render(appTree);
+  // Dev / non-prerendered routes: #root is just the splash shell, nothing to
+  // paint early, so mount as soon as the graph loads.
+  boot();
 }
