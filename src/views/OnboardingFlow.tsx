@@ -1047,9 +1047,9 @@ function FinalDebrief({
               <div className="font-mono text-[8px] uppercase tracking-widest text-mint font-bold mb-2 flex items-center gap-1.5">
                 <Check size={10} className="text-mint" /> Strong Areas
               </div>
-              <div className="space-y-1.5">
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
                 {report.strengths.map(s => (
-                  <div key={s} className="flex items-center gap-2 font-sans text-[12.5px] text-ink-2">
+                  <div key={s} className="flex items-center gap-1.5 font-sans text-[12px] text-ink-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-mint shrink-0" aria-hidden="true" />
                     {s}
                   </div>
@@ -1059,13 +1059,13 @@ function FinalDebrief({
           )}
 
           {report.weaknesses.length > 0 && (
-            <div className={report.strengths.length > 0 ? "pt-3 border-t border-rule/50" : ""}>
+            <div className={report.strengths.length > 0 ? "pt-2.5 border-t border-rule/50" : ""}>
               <div className="font-mono text-[8px] uppercase tracking-widest text-signal font-bold mb-2 flex items-center gap-1.5">
                 <TriangleAlert size={10} className="text-signal" /> Needs Attention
               </div>
-              <div className="space-y-1.5">
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
                 {report.weaknesses.map(w => (
-                  <div key={w} className="flex items-center gap-2 font-sans text-[12.5px] text-ink-2">
+                  <div key={w} className="flex items-center gap-1.5 font-sans text-[12px] text-ink-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-signal shrink-0" aria-hidden="true" />
                     {w}
                   </div>
@@ -1278,16 +1278,22 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
             {currentStepData.subtitle}
           </p>
 
-          <OnboardingTelemetryPanel
-            step={step}
-            pathway={pathway}
-            goal={goal}
-            dailyGoal={dailyGoal}
-            customDate={customDate}
-            currentDiagIdx={currentDiagIdx}
-            diagSubmitted={diagSubmitted}
-            diagScore={diagScore}
-          />
+          {/* Hide on step 4: FinalDebrief (right pane) contains all telemetry data
+              in much greater detail. Rendering it here too is redundant and
+              on mobile pushes the report below the fold (the left column stacks
+              first in the flex-col layout). */}
+          {step < 4 && (
+            <OnboardingTelemetryPanel
+              step={step}
+              pathway={pathway}
+              goal={goal}
+              dailyGoal={dailyGoal}
+              customDate={customDate}
+              currentDiagIdx={currentDiagIdx}
+              diagSubmitted={diagSubmitted}
+              diagScore={diagScore}
+            />
+          )}
         </div>
 
         <div className="hidden md:block font-mono text-[9px] text-muted tracking-[0.2em] uppercase">
