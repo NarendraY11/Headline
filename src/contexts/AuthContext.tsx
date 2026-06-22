@@ -592,9 +592,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      // Global scope revokes the refresh token server-side across all devices,
-      // not just this browser. Explicit (it is also the GoTrue default).
-      await supabase.auth.signOut({ scope: "global" });
+      // Race supabase signOut against a 4s timeout.
+      // PWA navigator.locks can deadlock the auth session indefinitely —
+      // the timeout guarantees the finally block always fires regardless.
+      await Promise.race([
+        supabase.auth.signOut({ scope: "global" }),
+        new Promise<void>((resolve) => setTimeout(resolve, 4000)),
+      ]);
     } catch (error) {
       console.error("Error signing out from Supabase:", error);
     } finally {
