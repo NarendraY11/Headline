@@ -779,22 +779,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     const uid = user.uid;
 
-    // Wipe all progress tables (errors propagate to caller for toast feedback)
-    const deletes = await Promise.allSettled([
-      supabase.from('attempts').delete().eq('user_id', uid),
-      supabase.from('bookmarks').delete().eq('user_id', uid),
-      supabase.from('question_progress').delete().eq('user_id', uid),
-      supabase.from('user_question_attempts').delete().eq('user_id', uid),
-      supabase.from('study_missions').delete().eq('user_id', uid),
-      supabase.from('study_plans').delete().eq('user_id', uid),
-      supabase.from('mastery_snapshots').delete().eq('user_id', uid),
-    ]);
+    // Wipe all progress + notification tables
+    const tables = [
+      'attempts', 'bookmarks', 'question_progress', 'user_question_attempts',
+      'study_missions', 'study_plans', 'mastery_snapshots', 'notifications',
+    ] as const;
+    const deletes = await Promise.allSettled(
+      tables.map(t => supabase.from(t).delete().eq('user_id', uid))
+    );
 
     // Log any individual table failures (non-fatal; continue with rest of wipe)
     deletes.forEach((r, i) => {
-      const tables = ['attempts','bookmarks','question_progress','user_question_attempts','study_missions','study_plans','mastery_snapshots'];
       if (r.status === 'rejected') console.error(`resetAccount: failed to delete from ${tables[i]}`, r.reason);
-      else if (r.value.error) console.error(`resetAccount: RLS/error on ${tables[i]}`, r.value.error.message);
+      else if ((r.value as any).error) console.error(`resetAccount: RLS/error on ${tables[i]}`, (r.value as any).error.message);
     });
 
     // Reset profile-level stats
