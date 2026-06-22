@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../components/ui/Toast";
 import { Button, Card } from "../components/Atoms";
 import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2, Sparkles, ShieldCheck, CalendarClock, ArrowRight, AlertTriangle } from "lucide-react";
 import { supabase } from "../lib/supabase";
@@ -8,6 +9,7 @@ import { isPaidActive, daysLeft, planLabel } from "../lib/plan";
 
 export default function ProfileView() {
   const { user, userData, logout, logoutEverywhere, resetAccount, loading, openAuthModal, updateUserData } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const [isUploading, setIsUploading] = useState(false);
@@ -20,6 +22,40 @@ export default function ProfileView() {
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [confirmSignOutAll, setConfirmSignOutAll] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isWiping, setIsWiping] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+    } catch {
+      setIsLoggingOut(false);
+      showToast({ type: 'error', title: 'Sign Out Failed', message: 'Could not sign out. Please try again.' });
+    }
+  };
+
+  const handleLogoutEverywhere = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logoutEverywhere();
+    } catch {
+      setIsLoggingOut(false);
+      showToast({ type: 'error', title: 'Sign Out Failed', message: 'Could not sign out of all devices. Please try again.' });
+    }
+  };
+
+  const handleWipe = async () => {
+    setIsWiping(true);
+    try {
+      await resetAccount();
+      showToast({ type: 'success', title: 'Logbook Wiped', message: 'All progress, attempts, and streaks have been cleared.' });
+    } catch (e: any) {
+      showToast({ type: 'error', title: 'Wipe Failed', message: e?.message || 'Could not clear progress. Please try again.' });
+    } finally {
+      setIsWiping(false);
+    }
+  };
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -686,15 +722,15 @@ export default function ProfileView() {
             Sign out of this device, or end every active session at once.
           </p>
           <div className="mt-auto flex flex-col gap-3 pt-2">
-            <Button variant="ghost" onClick={logout} className="gap-2 justify-center border border-rule-strong text-ink hover:bg-bg-2">
-              <LogOut size={16} /> Sign out
+            <Button variant="ghost" onClick={handleLogout} disabled={isLoggingOut} className="gap-2 justify-center border border-rule-strong text-ink hover:bg-bg-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              <LogOut size={16} /> {isLoggingOut ? 'Signing out…' : 'Sign out'}
             </Button>
             {confirmSignOutAll ? (
               <div className="border border-amber/30 bg-amber-soft/40 rounded-lg p-3 flex flex-col gap-2">
                 <p className="font-sans text-xs text-ink-2 leading-relaxed">This ends every active session, including this one. Continue?</p>
                 <div className="flex gap-2">
-                  <Button variant="ghost" className="flex-1 min-h-[44px] text-xs border border-amber/40 text-amber hover:bg-amber-soft" onClick={() => { setConfirmSignOutAll(false); logoutEverywhere(); }}>
-                    Sign out everywhere
+                  <Button variant="ghost" className="flex-1 min-h-[44px] text-xs border border-amber/40 text-amber hover:bg-amber-soft disabled:opacity-50" disabled={isLoggingOut} onClick={() => { setConfirmSignOutAll(false); handleLogoutEverywhere(); }}>
+                    {isLoggingOut ? 'Signing out…' : 'Sign out everywhere'}
                   </Button>
                   <Button variant="ghost" className="min-h-[44px] text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmSignOutAll(false)}>
                     Cancel
@@ -728,8 +764,8 @@ export default function ProfileView() {
                 <p className="font-sans text-xs font-semibold">This action is permanent and cannot be undone.</p>
               </div>
               <div className="flex gap-2 mt-1">
-                <Button variant="ghost" className="flex-1 min-h-[44px] text-xs border border-signal text-signal hover:bg-signal-soft" onClick={() => { setConfirmWipe(false); resetAccount(); }}>
-                  Yes, wipe everything
+                <Button variant="ghost" className="flex-1 min-h-[44px] text-xs border border-signal text-signal hover:bg-signal-soft disabled:opacity-50 disabled:cursor-not-allowed" disabled={isWiping} onClick={() => { setConfirmWipe(false); handleWipe(); }}>
+                  {isWiping ? 'Wiping…' : 'Yes, wipe everything'}
                 </Button>
                 <Button variant="ghost" className="min-h-[44px] text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmWipe(false)}>
                   Cancel
@@ -737,8 +773,8 @@ export default function ProfileView() {
               </div>
             </div>
           ) : (
-            <Button variant="ghost" className="mt-auto text-signal hover:bg-signal-soft border border-signal-soft" onClick={() => setConfirmWipe(true)}>
-              Wipe Logbook & Progress
+            <Button variant="ghost" className="mt-auto text-signal hover:bg-signal-soft border border-signal-soft disabled:opacity-50 disabled:cursor-not-allowed" disabled={isWiping} onClick={() => setConfirmWipe(true)}>
+              {isWiping ? 'Wiping…' : 'Wipe Logbook & Progress'}
             </Button>
           )}
         </div>
