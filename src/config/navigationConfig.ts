@@ -136,3 +136,46 @@ export function buildNavItems(opts: {
 
   return items;
 }
+
+/**
+ * Builds exactly 5 bottom-tab items for the mobile bottom nav bar.
+ * Always: Today | Question bank | [track/career slot] | [secondary slot] | Progress
+ * Single source of truth — no hardcoded routes in AppShell.
+ */
+export function buildBottomNavItems(opts: {
+  targetExam: string | null | undefined;
+  careerObjective: string | null | undefined;
+  enabledFlags: Record<string, boolean>;
+}): NavItem[] {
+  const { targetExam, careerObjective, enabledFlags } = opts;
+  const trackFamily = getPrimaryTrackFamily(targetExam);
+
+  // Slot 3: track/career-specific (most relevant to who the user is)
+  let slot3: NavItem | null = null;
+  if (careerObjective && CAREER_NAV[careerObjective]) {
+    slot3 = CAREER_NAV[careerObjective]; // Interview Prep for airline-recruitment
+  } else if (trackFamily === "type_rating" && enabledFlags["a320Systems"]) {
+    slot3 = TRACK_NAV["type_rating"][0]; // A320 systems for type rating users
+  }
+
+  // Slot 4: Mock Exams (if flag) → fallback VIVA (always valid)
+  const slot4: NavItem = enabledFlags["mockExams"]
+    ? { label: "Mock exams", to: "/mock-exams", icon: LayoutGrid }
+    : { label: "VIVA",       to: "/quiz/viva",  icon: Mic };
+
+  const items: NavItem[] = [
+    CORE_NAV[0],                                             // Today
+    CORE_NAV[1],                                             // Question bank
+    ...(slot3 ? [slot3] : [{ label: "VIVA", to: "/quiz/viva", icon: Mic }]),
+    slot4,
+    { label: "Progress", to: "/analytics", icon: BarChart3 }, // Stats
+  ];
+
+  // Dedup by `to` in case slot3 and slot4 collide (e.g. both resolve to VIVA)
+  const seen = new Set<string>();
+  return items.filter(item => {
+    if (seen.has(item.to)) return false;
+    seen.add(item.to);
+    return true;
+  }).slice(0, 5);
+}

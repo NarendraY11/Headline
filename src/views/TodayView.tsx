@@ -1034,11 +1034,11 @@ export default function TodayView() {
             {/* CTA row */}
             <div className="flex items-center gap-2 px-5 py-3">
               <Link
-                to="/today"
+                to="/schedule"
                 className="flex-1 h-[44px] rounded-xl bg-navy text-paper font-sans text-[12px] font-semibold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
               >
                 <Play size={12} aria-hidden="true" />
-                Start Today
+                View Schedule
               </Link>
               <Link
                 to="/schedule"

@@ -130,15 +130,30 @@ export default function ProfileView() {
     );
   }
 
+  // Maps canonical targetExam tokens (from trainingPaths.ts) to display labels.
+  // Phase 5.1: updated to match current token format (dgca-cpl, type-a320, etc.)
   const TARGET_EXAM_LABELS: Record<string, string> = {
-    "dgca-cpl-mock": "DGCA CPL",
+    // DGCA tracks
+    "dgca-cpl":  "DGCA CPL",
     "dgca-atpl": "DGCA ATPL",
+    "dgca-rtr":  "DGCA RTR",
+    "dgca-ppl":  "DGCA PPL",
+    // Type Rating tracks
+    "type-a320": "Airbus A320",
+    "type-a330": "Airbus A330",
+    "type-b737": "Boeing B737",
+    "type-b777": "Boeing B777",
+    "type-atr72": "ATR 72",
+    // FAA tracks
+    "faa-ppl":   "FAA PPL",
+    "faa-cpl":   "FAA CPL",
+    "faa-atpl":  "FAA ATPL",
+    // EASA
     "easa-atpl": "EASA ATPL",
-    "faa-ppl": "FAA PPL",
-    "faa-cpl": "FAA CPL",
-    "faa-atpl": "FAA ATPL",
-    "a320-type-rating": "A320 Type Rating",
-    "atr72-type-rating": "ATR 72 Type Rating",
+    // Legacy tokens — kept for backward compat with old profiles
+    "dgca-cpl-mock":    "DGCA CPL",
+    "a320-type-rating": "Airbus A320",
+    "atr72-type-rating": "ATR 72",
   };
   const rawTargetExam: string = (userData as any)?.targetExam ?? (userData as any)?.target_exam ?? "";
   const targetExam = TARGET_EXAM_LABELS[rawTargetExam] || rawTargetExam || "DGCA CPL";
@@ -523,6 +538,11 @@ export default function ProfileView() {
           <div className="p-6">
             <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Target Clearance</div>
             <div className="font-serif text-3xl text-ink">{targetExam}</div>
+            {userData?.careerObjective && (
+              <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-navy/10 font-mono text-[9px] text-navy uppercase tracking-widest font-bold">
+                ✦ Airline Recruitment
+              </div>
+            )}
           </div>
           <div className="p-6">
             <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Consecutive Days</div>

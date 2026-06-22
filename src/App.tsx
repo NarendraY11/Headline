@@ -32,8 +32,12 @@ const BlogPostView = lazy(() => import("./views/BlogPostView"));
 const QotdView = lazy(() => import("./views/QotdView"));
 const ReferralView = lazy(() => import("./views/ReferralView"));
 const A320SystemsView = lazy(() => import("./views/A320SystemsView"));
-const StudySchedulerView = lazy(() => import("./views/StudySchedulerView"));
+// StudySchedulerView removed — /study-plan now redirects to /schedule
 const StudyCalendarView = lazy(() => import("./views/schedule/StudyCalendarView"));
+const InterviewPrepView = lazy(() => import("./views/InterviewPrepView"));
+const InterviewPrepSection = lazy(() =>
+  import("./views/InterviewPrepView").then(m => ({ default: m.InterviewPrepSection }))
+);
 
 import { AdminGuard } from "./components/AdminGuard";
 import { AuthGuard } from "./components/AuthGuard";
@@ -206,9 +210,13 @@ export default function App() {
             <Route path="/bookmarks" element={<BookmarksView />} />
             <Route path="/profile" element={<ProfileView />} />
             <Route path="/referral" element={<ReferralView />} />
-            <Route path="/study-plan" element={<StudySchedulerView />} />
+            {/* /study-plan is a dead route — redirect to /schedule (the live scheduler) */}
+            <Route path="/study-plan" element={<Navigate to="/schedule" replace />} />
             <Route path="/schedule" element={<StudyCalendarView />} />
             <Route path="/exam-centre" element={<ExamCentreView />} />
+            {/* Phase 5.1: Interview Prep routes — hub + child sections */}
+            <Route path="/interview-prep" element={<InterviewPrepView />} />
+            <Route path="/interview-prep/:section" element={<InterviewPrepSection />} />
           </Route>
 
           {/* FULLSCREEN QUIZ (authed, NO App Shell — each quiz layout is its

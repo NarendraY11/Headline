@@ -1318,7 +1318,9 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
 
     localStorage.setItem("heading_onboarding_completed", "true");
     onClose();
-    navigate("/today");
+    // Navigate to question bank so "Begin First Mission" CTA lands on the actual
+    // mission launcher, not the dashboard. Modules = where a session starts.
+    navigate("/modules");
   };
 
   const handleBack = () => {

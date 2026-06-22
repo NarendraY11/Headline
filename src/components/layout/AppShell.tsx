@@ -1,16 +1,11 @@
 import {
     ArrowUpRight,
-    BarChart3,
     Bookmark,
-    Compass,
     Flame,
-    Layers,
-    LayoutGrid,
     Menu,
     Moon,
     Pin,
     PinOff,
-    Plane,
     Search,
     Settings,
     Sun,
@@ -18,7 +13,7 @@ import {
 } from "lucide-react";
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation, useOutlet } from "react-router-dom";
-import { buildNavItems } from "../../config/navigationConfig";
+import { buildNavItems, buildBottomNavItems } from "../../config/navigationConfig";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFeatureFlags } from "../../hooks/useFeatureFlags";
 import { useIsAdmin } from "../../hooks/useIsAdmin";
@@ -285,6 +280,16 @@ export function AppShell() {
       isAdmin,
     }),
     [userData?.targetExam, userData?.careerObjective, flags, isAdmin]
+  );
+
+  // Bottom nav (mobile): max 5 items, track/career-adaptive, same config source
+  const bottomNavItems = useMemo(
+    () => buildBottomNavItems({
+      targetExam: userData?.targetExam ?? null,
+      careerObjective: userData?.careerObjective ?? null,
+      enabledFlags: flags as Record<string, boolean>,
+    }),
+    [userData?.targetExam, userData?.careerObjective, flags]
   );
 
   return (
@@ -647,43 +652,25 @@ export function AppShell() {
               </div>
             </main>
 
-            {/* MOBILE BOTTOM TAB BAR */}
+            {/* MOBILE BOTTOM TAB BAR — adaptive via buildBottomNavItems(), same source as sidebar */}
             <nav aria-label="Bottom navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg border-t border-rule pb-[var(--sab)] flex items-stretch justify-around px-2">
-              <NavLink to="/today" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
-                {({isActive}) => (<>
-                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
-                  <Compass size={22} />
-                  <span className="font-sans text-[10px] font-medium tracking-wide">Today</span>
-                </>)}
-              </NavLink>
-              <NavLink to="/modules" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
-                {({isActive}) => (<>
-                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
-                  <Layers size={22} />
-                  <span className="font-sans text-[10px] font-medium tracking-wide">Bank</span>
-                </>)}
-              </NavLink>
-              <NavLink to="/mock-exams" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
-                {({isActive}) => (<>
-                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
-                  <LayoutGrid size={22} />
-                  <span className="font-sans text-[10px] font-medium tracking-wide">Mock</span>
-                </>)}
-              </NavLink>
-              <NavLink to="/topic/a320-systems" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink [&>svg]:fill-ink' : 'text-muted hover:text-ink'}`}>
-                {({isActive}) => (<>
-                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
-                  <Plane size={22} />
-                  <span className="font-sans text-[10px] font-medium tracking-wide">A320</span>
-                </>)}
-              </NavLink>
-              <NavLink to="/analytics" className={({isActive}) => `relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${isActive ? 'text-ink' : 'text-muted hover:text-ink'}`}>
-                {({isActive}) => (<>
-                  {isActive && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
-                  <BarChart3 size={22} className={isActive ? 'stroke-[2.5px]' : ''} />
-                  <span className="font-sans text-[10px] font-medium tracking-wide">Stats</span>
-                </>)}
-              </NavLink>
+              {bottomNavItems.map(item => {
+                const active = isItemActive(item.to);
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={`relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${active ? 'text-ink' : 'text-muted hover:text-ink'}`}
+                    aria-label={item.label}
+                  >
+                    {active && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
+                    <item.icon size={22} className={active ? 'stroke-[2.5px]' : ''} />
+                    <span className="font-sans text-[10px] font-medium tracking-wide truncate max-w-[56px] text-center">
+                      {item.label}
+                    </span>
+                  </NavLink>
+                );
+              })}
             </nav>
 
           </div>

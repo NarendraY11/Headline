@@ -305,7 +305,7 @@ export function TodayMissions({ subjectMastery, activePlanId }: TodayMissionsPro
             No study plan yet. Generate one from your Analytics view.
           </p>
           <Link
-            to="/analytics"
+            to="/schedule"
             className="inline-flex items-center gap-1.5 h-8 px-4 rounded-lg bg-navy text-paper font-sans text-[12px] font-medium hover:opacity-90 transition-opacity"
           >
             <Play size={11} aria-hidden="true" />
