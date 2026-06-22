@@ -788,20 +788,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       tables.map(t => supabase.from(t).delete().eq('user_id', uid))
     );
 
-    // Log any individual table failures (non-fatal; continue with rest of wipe)
+    // Collect any table-level failures and surface them to the caller.
+    // Previously these were console.error only — caller always saw success.
+    const failures: string[] = [];
     deletes.forEach((r, i) => {
-      if (r.status === 'rejected') console.error(`resetAccount: failed to delete from ${tables[i]}`, r.reason);
-      else if ((r.value as any).error) console.error(`resetAccount: RLS/error on ${tables[i]}`, (r.value as any).error.message);
+      if (r.status === 'rejected') {
+        console.error(`resetAccount: network failure on ${tables[i]}`, r.reason);
+        failures.push(tables[i]);
+      } else if ((r.value as any).error) {
+        console.error(`resetAccount: RLS/DB error on ${tables[i]}`, (r.value as any).error.message);
+        failures.push(tables[i]);
+      }
     });
+    if (failures.length > 0) {
+      throw new Error(`Wipe incomplete — ${failures.length} table(s) failed: ${failures.join(', ')}. Check permissions or network and retry.`);
+    }
 
-    // Reset profile-level stats
-    await supabase.from('profiles').update({
+    // Reset profile-level stats — check result and throw on failure
+    const { error: profileResetError } = await supabase.from('profiles').update({
       streak_count: 0,
       questions_answered_today: 0,
       last_activity_date: null,
       total_questions_answered: 0,
       total_sessions_count: 0,
     }).eq('id', uid);
+    if (profileResetError) {
+      throw new Error(`Profile stats reset failed: ${profileResetError.message}`);
+    }
 
     // Clear all relevant localStorage keys
     const keysToRemove: string[] = [
