@@ -619,15 +619,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("heading_onboarding_completed");
       localStorage.removeItem("heading_question_progress");
 
-      // Clear any cached attempts or state keys
+      // Wipe ALL Supabase + app keys from localStorage in one pass.
+      // Critical: if signOut timed out above, Supabase's own sb-* keys are
+      // still present. On the next page load the auth library finds them and
+      // auto-restores the session → instant re-login. Must clear them here.
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && (key.startsWith("heading_quiz_state_") || key.startsWith("heading_cache_"))) {
+        if (!key) continue;
+        if (
+          key.startsWith("sb-") ||           // Supabase auth tokens (sb-<ref>-auth-token)
+          key.startsWith("supabase.auth") ||  // Older Supabase SDK key pattern
+          key.startsWith("heading_quiz_state_") ||
+          key.startsWith("heading_cache_")
+        ) {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach((key) => localStorage.removeItem(key));
+
+      // Also clear sessionStorage Supabase keys (PKCE code verifier lives here)
+      const ssKeysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && (key.startsWith("sb-") || key.startsWith("supabase"))) {
+          ssKeysToRemove.push(key);
+        }
+      }
+      ssKeysToRemove.forEach((key) => sessionStorage.removeItem(key));
 
       // Navigate immediately and refresh UI to fully reset
       window.location.href = "/";
