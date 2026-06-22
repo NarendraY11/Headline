@@ -7,8 +7,10 @@ import { posthogIdentify, posthogReset } from '../lib/posthog';
 
 export interface UserData {
   attempts: any;
-  bookmarks: string[]; 
+  bookmarks: string[];
   targetExam: string;
+  /** Phase 5A: optional career objective layered on top of primaryTrack */
+  careerObjective?: string | null;
   nextExam?: string;
   photoURL?: string;
   totalQuestionsAnswered?: number;
@@ -47,6 +49,7 @@ export interface UserData {
     onboardingCompletedAt?: string;
     onboardingPath?: string;
     onboardingGoal?: string;
+    onboardingCareerObjective?: string | null;
   };
   referralCode?: string;
   referredBy?: string;
@@ -207,7 +210,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 1. Fetch profile
       let { data: profile, error: profileErr } = await supabase
         .from('profiles')
-        .select('id, email, display_name, target_exam, next_exam, settings, plan, plan_status, plan_started_at, plan_expires_at, trial_started_at, trial_ends_at, trial_used, daily_goal, streak_count, last_activity_date, questions_answered_today, referral_code, referred_by, newsletter_opt_in, onboarding_completed')
+        .select('id, email, display_name, target_exam, next_exam, career_objective, settings, plan, plan_status, plan_started_at, plan_expires_at, trial_started_at, trial_ends_at, trial_used, daily_goal, streak_count, last_activity_date, questions_answered_today, referral_code, referred_by, newsletter_opt_in, onboarding_completed')
         .eq('id', uid)
         .maybeSingle();
 
@@ -291,6 +294,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const uData: UserData = {
         targetExam: profile?.target_exam || "DGCA CPL",
+        careerObjective: profile?.career_objective ?? null,
         nextExam: profile?.next_exam || "",
         settings: profile?.settings || { negativeMarking: false, reduceMotion: false, defaultMode: "practice" },
         bookmarks: [],
@@ -672,6 +676,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const updatePayload: any = { updated_at: new Date().toISOString() };
         if (data.targetExam !== undefined) updatePayload.target_exam = data.targetExam;
         if (data.nextExam !== undefined) updatePayload.next_exam = data.nextExam;
+        if (data.careerObjective !== undefined) updatePayload.career_objective = data.careerObjective ?? null;
         if (data.newsletterOptIn !== undefined) updatePayload.newsletter_opt_in = data.newsletterOptIn;
         if (data.onboardingCompleted !== undefined) updatePayload.onboarding_completed = data.onboardingCompleted;
 

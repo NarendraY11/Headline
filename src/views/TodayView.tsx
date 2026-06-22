@@ -24,6 +24,7 @@ import { getDueQuestionIds } from "../lib/spacedRepetition";
 
 import { AnimatedCounter } from "./today/AnimatedCounter";
 import { TodayLoader } from "./today/DashboardLoaders";
+import { CareerObjectiveMissions } from "./today/CareerObjectiveMissions";
 import { TodayMissions } from "./today/TodayMissions";
 import { TodayStops } from "./today/TodayStops";
 import { getPacingData } from "./today/utils";
@@ -754,6 +755,21 @@ export default function TodayView() {
           </Link>
         </div>
 
+        {/* § MISSION — Primary action first, before analytics */}
+        <div className="space-y-3 mb-8">
+          {aiStudySchedulerEnabled && (
+            <TodayMissions subjectMastery={progressStats.subjectMastery} />
+          )}
+          <TodayStops
+            subjectsList={subjectsList}
+            subjectMastery={progressStats.subjectMastery}
+            dueCount={dueCount}
+            hasAttempts={hasAttempts}
+          />
+          {/* Career objective secondary missions — shown only when careerObjective set */}
+          <CareerObjectiveMissions careerObjective={userData?.careerObjective} />
+        </div>
+
         {/* TILES */}
         <div className="mb-10 w-full relative">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 w-full">
@@ -907,12 +923,6 @@ export default function TodayView() {
           />
         )}
 
-        {aiStudySchedulerEnabled && (
-          <TodayMissions
-            subjectMastery={progressStats.subjectMastery}
-          />
-        )}
-
         {/* M8B: Exam Readiness Dashboard — flag-gated */}
         {examReadinessDashboardEnabled && (
           <div className="space-y-3 mb-8">
@@ -1007,14 +1017,6 @@ export default function TodayView() {
             />
           </div>
         )}
-
-        {/* TodayStops: primary when flag OFF, supplemental when flag ON */}
-        <TodayStops
-          subjectsList={subjectsList}
-          subjectMastery={progressStats.subjectMastery}
-          dueCount={dueCount}
-          hasAttempts={hasAttempts}
-        />
 
         {/* AI Study Scheduler entry card — shown only when flag ON */}
         {aiStudySchedulerEnabled && (

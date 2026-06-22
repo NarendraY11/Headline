@@ -2,14 +2,11 @@ import {
     ArrowUpRight,
     BarChart3,
     Bookmark,
-    CalendarDays,
     Compass,
     Flame,
-    Gift,
-    GraduationCap,
-    Layers, LayoutGrid,
+    Layers,
+    LayoutGrid,
     Menu,
-    Mic,
     Moon,
     Pin,
     PinOff,
@@ -18,12 +15,12 @@ import {
     Settings,
     Sun,
     X,
-    Zap
 } from "lucide-react";
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation, useOutlet } from "react-router-dom";
+import { buildNavItems } from "../../config/navigationConfig";
 import { useAuth } from "../../contexts/AuthContext";
-import { useFeature } from "../../hooks/useFeatureFlags";
+import { useFeatureFlags } from "../../hooks/useFeatureFlags";
 import { useIsAdmin } from "../../hooks/useIsAdmin";
 import { useLogbook } from "../../hooks/useLogbook";
 import { Button, Wordmark } from "../Atoms";
@@ -277,24 +274,18 @@ export function AppShell() {
     return path.startsWith(to);
   };
 
-  const mockExamsEnabled = useFeature("mockExams");
-  const a320SystemsEnabled = useFeature("a320Systems");
-  const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
-  const advancedTestingEnabled = useFeature("advancedTesting");
+  const { flags } = useFeatureFlags();
 
-  const navItems = [
-    { label: "Today", to: "/today", icon: Compass },
-    { label: "Question bank", to: "/modules", icon: Layers },
-    ...(advancedTestingEnabled ? [{ label: "Exam Centre", to: "/exam-centre", icon: GraduationCap }] : []),
-    ...(mockExamsEnabled ? [{ label: "Mock exams", to: "/mock-exams", icon: LayoutGrid }] : []),
-    ...(a320SystemsEnabled ? [{ label: "A320 systems", to: "/topic/a320-systems", icon: Plane }] : []),
-    { label: "VIVA practice", to: "/quiz/viva", icon: Mic },
-    { label: "Flashcards", to: "/bookmarks", icon: Zap },
-    { label: "Progress", to: "/analytics", icon: BarChart3 },
-    ...(aiStudySchedulerEnabled ? [{ label: "Flight Schedule", to: "/schedule", icon: CalendarDays }] : []),
-    { label: "Refer & earn", to: "/referral", icon: Gift },
-    ...(isAdmin ? [{ label: "Administrative Deck", to: "/admin", icon: Settings }] : []),
-  ];
+  // ponytail: navItems derived from config — no component-level logic
+  const navItems = useMemo(
+    () => buildNavItems({
+      targetExam: userData?.targetExam ?? null,
+      careerObjective: userData?.careerObjective ?? null,
+      enabledFlags: flags as Record<string, boolean>,
+      isAdmin,
+    }),
+    [userData?.targetExam, userData?.careerObjective, flags, isAdmin]
+  );
 
   return (
         <div
@@ -391,7 +382,7 @@ export function AppShell() {
                     >
                       {item.label}
                     </span>
-                    {item.label === "Flashcards" && (
+                    {item.badgeKey === "bookmarks" && (
                       <span 
                         className={`font-mono text-[10px] ml-auto py-0.5 px-1.5 bg-bg-2 border border-rule rounded text-muted-2 transition-opacity duration-200 ${isSidebarExpanded ? 'opacity-100 flex-shrink-0' : 'opacity-0 w-0 hidden'}`}
                       >
@@ -597,7 +588,7 @@ export function AppShell() {
                         >
                           <item.icon size={14} className={`flex-shrink-0 ${active ? "text-ink" : "text-muted-2"}`} />
                           <span className="truncate">{item.label}</span>
-                          {item.label === "Flashcards" && (
+                          {item.badgeKey === "bookmarks" && (
                             <span className="font-mono text-[9px] bg-bg-2 border border-rule px-1 rounded text-muted-2 ml-auto">
                               {bookmarkCount}
                             </span>

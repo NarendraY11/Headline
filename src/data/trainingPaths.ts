@@ -1,6 +1,10 @@
 // Config-driven training-path catalog for onboarding Step 1.
 // Adding a path or goal = data edit here; the UI renders generically off `status`.
 // ponytail: pure static config, no DB. Step 1 doesn't need live exam fetch.
+//
+// Phase 5A: Airline Recruitment is NO LONGER a primary training path.
+// It is a careerObjective layered on top of a primary track.
+// See CAREER_OBJECTIVES below.
 
 export type PathStatus = "active" | "coming_soon" | "beta" | "deprecated";
 
@@ -21,6 +25,30 @@ export interface TrainingPath {
   goals: Goal[];
 }
 
+// Career objectives are layered on top of a primary track.
+// They unlock additional content sections without replacing exam readiness.
+export interface CareerObjective {
+  id: string; // "airline-recruitment"
+  label: string; // "Airline Recruitment"
+  description: string; // shown in onboarding Level 3
+  unlocks: string[]; // human-readable list of what it unlocks
+  status: PathStatus;
+}
+
+export const CAREER_OBJECTIVES: CareerObjective[] = [
+  {
+    id: "airline-recruitment",
+    label: "Airline Recruitment",
+    description: "Targeting an airline job after licensing? Unlock interview prep, aptitude drills, and hiring-readiness tools layered on top of your exam training.",
+    unlocks: ["Technical interview practice", "Aptitude drills", "HR scenario review", "Hiring readiness tracker"],
+    status: "active",
+  },
+  // Future objectives — add here when content is ready
+  // { id: "flight-instructor", label: "Flight Instructor", status: "coming_soon", ... }
+  // { id: "charter", label: "Charter Operations", status: "coming_soon", ... }
+  // { id: "corporate-aviation", label: "Corporate Aviation", status: "coming_soon", ... }
+];
+
 const DGCA_CORE = [
   "Air Navigation",
   "Meteorology",
@@ -29,6 +57,8 @@ const DGCA_CORE = [
   "Technical Specific",
 ];
 
+// Primary training tracks — have syllabi, exam dates, mastery models.
+// Airline Recruitment removed: it has no licensure exam or mastery model.
 export const TRAINING_PATHS: TrainingPath[] = [
   {
     id: "dgca",
@@ -41,19 +71,6 @@ export const TRAINING_PATHS: TrainingPath[] = [
       { id: "atpl", label: "ATPL", targetExam: "dgca-atpl", includes: DGCA_CORE },
       { id: "rtr", label: "RTR", targetExam: "dgca-rtr" },
       { id: "ppl", label: "PPL", targetExam: "dgca-ppl" },
-    ],
-  },
-  {
-    id: "airline",
-    label: "Airline Recruitment",
-    description: "Airline Selection, Technical Screening & Interview Preparation",
-    status: "active",
-    goalPrompt: "What are you preparing for?",
-    goals: [
-      { id: "technical", label: "Technical Interview", targetExam: "airline-technical" },
-      { id: "aptitude", label: "Aptitude Assessment", targetExam: "airline-aptitude" },
-      { id: "hr", label: "HR Interview", targetExam: "airline-hr" },
-      { id: "screening", label: "Airline Screening Preparation", targetExam: "airline-screening" },
     ],
   },
   {
@@ -107,4 +124,25 @@ export function resolveTargetExam(pathwayId: string, goalId: string): string | n
     return null;
   }
   return goal.targetExam;
+}
+
+/**
+ * Returns the CareerObjective config for a given id, or null if not found.
+ */
+export function resolveCareerObjective(id: string | null | undefined): CareerObjective | null {
+  if (!id) return null;
+  return CAREER_OBJECTIVES.find(o => o.id === id) ?? null;
+}
+
+/**
+ * Derives the primary track family from a targetExam string.
+ * "dgca-cpl" → "dgca", "type-a320" → "type_rating", "airline-technical" → null (legacy)
+ */
+export function getPrimaryTrackFamily(targetExam: string | null | undefined): "dgca" | "type_rating" | "faa" | "easa" | null {
+  if (!targetExam) return null;
+  if (targetExam.startsWith("dgca-")) return "dgca";
+  if (targetExam.startsWith("type-")) return "type_rating";
+  if (targetExam.startsWith("faa-")) return "faa";
+  if (targetExam.startsWith("easa-")) return "easa";
+  return null;
 }

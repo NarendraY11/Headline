@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wordmark } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
-import { TRAINING_PATHS, resolveTargetExam } from "../data/trainingPaths";
+import { CAREER_OBJECTIVES, TRAINING_PATHS, resolveTargetExam } from "../data/trainingPaths";
 import { trackEvent } from "../lib/track";
 
 const stepsData = [
@@ -119,19 +119,123 @@ function Step1Exam({
   setPathway,
   goal,
   setGoal,
+  careerObjective,
+  setCareerObjective,
 }: {
   pathway: string;
   setPathway: (v: string) => void;
   goal: string;
   setGoal: (v: string) => void;
+  careerObjective: string | null;
+  setCareerObjective: (v: string | null) => void;
 }) {
+  // local highlight state for "Exam Success Only" card (careerObjective=null covers two cases)
+  const [examOnlySelected, setExamOnlySelected] = useState(false);
+
   const activePaths = TRAINING_PATHS.filter(p => p.status === "active");
   const comingSoon = TRAINING_PATHS.filter(p => p.status === "coming_soon");
   const selectedPath = TRAINING_PATHS.find(p => p.id === pathway);
+  const selectedGoal = selectedPath?.goals.find(g => g.id === goal);
 
-  // ---- LEVEL 2: a pathway is chosen → pick a primary goal ----
+  // ---- LEVEL 3: path + goal chosen → optional career objective ----
+  if (selectedPath && selectedGoal) {
+    const activeObjectives = CAREER_OBJECTIVES.filter(o => o.status === "active");
+    const isAirlineSelected = careerObjective === "airline-recruitment";
+
+    return (
+      <motion.div
+        key="level3"
+        initial={{ opacity: 0, x: 12 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.22 }}
+        className="space-y-5"
+      >
+        <button
+          type="button"
+          onClick={() => { setGoal(""); setCareerObjective(null); setExamOnlySelected(false); }}
+          className="inline-flex items-center gap-1.5 font-mono text-[10px] font-bold uppercase tracking-widest text-muted hover:text-ink transition-colors"
+        >
+          <MoveLeft size={13} /> {selectedGoal.label}
+        </button>
+
+        <div>
+          <span className="block font-sans text-[11px] text-muted-2 font-bold uppercase tracking-wider">
+            WHAT IS YOUR GOAL AFTER THIS TRAINING?
+          </span>
+          <span className="block font-sans text-[12px] text-muted mt-1">
+            Optional — skip to continue with exam prep only.
+          </span>
+        </div>
+
+        <div role="radiogroup" aria-label="Career objective" className="space-y-3">
+          {activeObjectives.map(obj => {
+            const isSel = careerObjective === obj.id;
+            return (
+              <button
+                key={obj.id}
+                type="button"
+                role="radio"
+                aria-checked={isSel}
+                onClick={() => {
+                  setCareerObjective(obj.id);
+                  setExamOnlySelected(false);
+                }}
+                className={`w-full text-left p-4 sm:p-5 border rounded-[16px] transition-all ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
+              >
+                <div className="flex items-start gap-3">
+                  <span className={`w-[20px] h-[20px] rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${isSel ? 'border-ink bg-ink text-bg' : 'border-rule'}`}>
+                    {isSel && <Check size={12} />}
+                  </span>
+                  <div className="flex-1">
+                    <div className="font-serif text-[17px] text-ink mb-1">{obj.label}</div>
+                    <div className="font-sans text-[12px] text-muted-2 leading-relaxed mb-2">{obj.description}</div>
+                    {isSel && obj.unlocks.length > 0 && (
+                      <motion.ul
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-1.5 mt-2 pt-2 border-t border-rule"
+                      >
+                        {obj.unlocks.map(u => (
+                          <li key={u} className="flex items-center gap-2 font-sans text-[12px] text-ink-2">
+                            <Check size={11} className="text-mint shrink-0" /> {u}
+                          </li>
+                        ))}
+                      </motion.ul>
+                    )}
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+
+          {/* Exam Success Only — explicit skip card */}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={examOnlySelected && !isAirlineSelected}
+            onClick={() => {
+              setCareerObjective(null);
+              setExamOnlySelected(true);
+            }}
+            className={`w-full text-left p-4 sm:p-5 border rounded-[16px] transition-all ${examOnlySelected && !isAirlineSelected ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
+          >
+            <div className="flex items-center gap-3">
+              <span className={`w-[20px] h-[20px] rounded-full border flex items-center justify-center shrink-0 transition-colors ${examOnlySelected && !isAirlineSelected ? 'border-ink bg-ink text-bg' : 'border-rule'}`}>
+                {examOnlySelected && !isAirlineSelected && <Check size={12} />}
+              </span>
+              <div>
+                <div className="font-serif text-[17px] text-ink">Exam Success Only</div>
+                <div className="font-sans text-[12px] text-muted-2 mt-0.5">Focus on passing your exam. Career tools can be added later from settings.</div>
+              </div>
+            </div>
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ---- LEVEL 2: path chosen → pick a primary goal ----
   if (selectedPath) {
-    const selectedGoal = selectedPath.goals.find(g => g.id === goal);
     return (
       <motion.div
         key="level2"
@@ -174,31 +278,31 @@ function Step1Exam({
         </div>
 
         {/* Informational context panel — non-interactive */}
-        {selectedGoal?.includes && selectedGoal.includes.length > 0 && (
+        {selectedPath.goals.find(g => g.id === goal)?.includes?.length ? (
           <motion.div
             initial={{ opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             role="note"
-            aria-label={`${selectedGoal.label} includes`}
+            aria-label={`${selectedPath.goals.find(g => g.id === goal)?.label} includes`}
             className="border border-rule rounded-[16px] p-4 bg-muted-soft/60"
           >
             <span className="block font-mono text-[9px] uppercase tracking-widest text-muted-2 font-bold mb-3">
-              {selectedGoal.label} · Includes
+              {selectedPath.goals.find(g => g.id === goal)?.label} · Includes
             </span>
             <ul className="space-y-2">
-              {selectedGoal.includes.map(subj => (
+              {selectedPath.goals.find(g => g.id === goal)?.includes?.map(subj => (
                 <li key={subj} className="flex items-center gap-2.5 font-sans text-[13px] text-ink-2">
                   <Check size={13} className="text-mint shrink-0" /> {subj}
                 </li>
               ))}
             </ul>
           </motion.div>
-        )}
+        ) : null}
       </motion.div>
     );
   }
 
-  // ---- LEVEL 1: choose a training path ----
+  // ---- LEVEL 1: choose a training track ----
   return (
     <motion.div
       key="level1"
@@ -208,8 +312,8 @@ function Step1Exam({
       className="space-y-6"
     >
       <div>
-        <span className="block font-sans text-[11px] text-muted-2 font-bold uppercase tracking-wider mb-3">AVAILABLE NOW</span>
-        <div role="radiogroup" aria-label="Training path" className="space-y-3">
+        <span className="block font-sans text-[11px] text-muted-2 font-bold uppercase tracking-wider mb-3">TRAINING TRACK</span>
+        <div role="radiogroup" aria-label="Training track" className="space-y-3">
           {activePaths.map(p => {
             const isSel = pathway === p.id;
             return (
@@ -1147,6 +1251,7 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState(1);
   const [pathway, setPathway] = useState("");
   const [goal, setGoal] = useState("");
+  const [careerObjective, setCareerObjective] = useState<string | null>(null);
   const [resolveError, setResolveError] = useState(false);
   const [dailyGoal, setDailyGoal] = useState("25");
   const [targetDatePreset, setTargetDatePreset] = useState("3-months");
@@ -1190,14 +1295,15 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    // Funnel analytics: capture the two-level selection + derived target.
+    // Funnel analytics: capture two-level selection + career objective + derived target.
     trackEvent("onboarding_completed", {
-      metadata: { pathway, goal, targetExam, diagnosticScore: diagScore }
+      metadata: { pathway, goal, targetExam, careerObjective, diagnosticScore: diagScore }
     });
 
     // Save onboarding data in profile & localStorage
     updateUserData({
       targetExam,
+      careerObjective: careerObjective ?? null,
       nextExam: customDate,
       dailyGoal: parseInt(dailyGoal),
       onboardingCompleted: true,
@@ -1205,7 +1311,8 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
         lastDiagnosticScore: diagScore,
         onboardingCompletedAt: new Date().toISOString(),
         onboardingPath: pathway,
-        onboardingGoal: goal
+        onboardingGoal: goal,
+        onboardingCareerObjective: careerObjective ?? null,
       }
     }).catch(() => {});
 
@@ -1326,7 +1433,11 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
                 className={`w-full ${step === 3 ? 'max-w-2xl' : 'max-w-lg'}`}
               >
                 {step === 1 && (
-                  <Step1Exam pathway={pathway} setPathway={setPathway} goal={goal} setGoal={setGoal} />
+                  <Step1Exam
+                    pathway={pathway} setPathway={setPathway}
+                    goal={goal} setGoal={setGoal}
+                    careerObjective={careerObjective} setCareerObjective={setCareerObjective}
+                  />
                 )}
                 {step === 2 && (
                   <Step2Pacing 
