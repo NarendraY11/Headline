@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { isPaidActive, planLabel } from "../../lib/plan";
 import { Button } from "../Atoms";
+import { useToast } from "../ui/Toast";
 
 import { CustomDropdown } from './CustomDropdown';
 import { CustomToggle } from './CustomToggle';
@@ -45,6 +46,21 @@ function ControlRow({ title, desc, children }: { title: string; desc: string; ch
 
 export function SettingsOverlay({ onClose }: { onClose: () => void }) {
   const { userData, updateUserData, resetAccount } = useAuth();
+  const { showToast } = useToast();
+  const [isWiping, setIsWiping] = useState(false);
+
+  const handleWipe = async () => {
+    setIsWiping(true);
+    try {
+      await resetAccount();
+      showToast({ type: 'success', title: 'Logbook Wiped', message: 'All progress and attempts cleared.' });
+      onClose();
+    } catch (e: any) {
+      showToast({ type: 'error', title: 'Wipe Failed', message: e?.message || 'Could not clear progress. Please try again.' });
+    } finally {
+      setIsWiping(false);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState<SettingsTab>("quiz");
 
@@ -337,8 +353,8 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
                       <button onClick={() => setShowWipeConfirm(false)} className="px-3 py-1.5 font-sans text-xs font-medium text-ink bg-bg hover:bg-bg-2 rounded-md transition-colors">
                         Cancel
                       </button>
-                      <button onClick={async () => { await resetAccount(); onClose(); }} className="px-3 py-1.5 font-sans text-xs font-bold text-bg bg-signal hover:bg-signal/80 rounded-md transition-colors">
-                        Wipe Data
+                      <button onClick={handleWipe} disabled={isWiping} className="px-3 py-1.5 font-sans text-xs font-bold text-bg bg-signal hover:bg-signal/80 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        {isWiping ? 'Wiping…' : 'Wipe Data'}
                       </button>
                     </div>
                   </div>
