@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Flame, Lock, MoveLeft, MoveRight, Radar, ShieldAlert, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Flame, Lock, MoveLeft, MoveRight, Radar, ShieldAlert, Sparkles, Target, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -805,92 +805,339 @@ function OnboardingTelemetryPanel({
   );
 }
 
+// ─── Readiness Report model ────────────────────────────────────────────────────
+//
+// buildReadinessReport() is a pure deterministic function — no AI, no
+// randomness. All fields derive from the four user-supplied onboarding inputs.
+//
+// Readiness-estimate formula (documented):
+//
+//   baseDays — pathway-specific ground-school depth estimate:
+//     dgca        → 90 days   (full DGCA licensing ground school, 5 core subjects)
+//     type_rating → 60 days   (aircraft systems depth, narrower scope)
+//     airline     → 45 days   (interview + aptitude prep, non-regulatory)
+//     other       → 75 days   (safe default)
+//
+//   scoreMultiplier — scales for current knowledge gap:
+//     formula: 0.5 + (1 − readinessScore/100) × 1.0
+//     range:   0.5 (perfect score) → 1.5 (zero score)
+//
+//   intensityMultiplier — scales for daily study volume:
+//     Warmup Journey (10/day)   → 1.4  (slower pace → more days)
+//     Active Aircrew (25/day)   → 1.0  (baseline)
+//     Full Throttle  (50/day)   → 0.65 (faster pace → fewer days)
+//
+//   estimateDays = round(baseDays × scoreMultiplier × intensityMultiplier)
+//   clamped to [7, 365]
+//
+// Mission recommendation:
+//   1. If diagnostic skipped → pathway's default opening subject
+//   2. If weaknesses exist → first weak subject (lowest question index)
+//   3. Perfect score → most advanced subject (last in DIAG_QUESTIONS)
+
+interface ReadinessReport {
+  readinessScore: number;        // 0-100 (diagScore/5*100)
+  estimateDays: number;          // deterministic formula above
+  strengths: string[];           // subjects answered correctly
+  weaknesses: string[];          // subjects answered incorrectly
+  diagnosticSkipped: boolean;    // true if no questions answered
+  firstMission: {
+    subject: string;
+    duration: string;
+    questionCount: number;
+  };
+  dailyTarget: number;           // raw daily goal number
+  intensityLabel: string;
+}
+
+// Static estimated mission metadata per diagnostic subject.
+// These are conservative estimates — actual question banks may differ.
+const MISSION_META: Record<string, { duration: string; questionCount: number }> = {
+  "Principles of Flight": { duration: "35 min", questionCount: 20 },
+  "Airbus A320 Systems":  { duration: "45 min", questionCount: 25 },
+  "Air Navigation":       { duration: "40 min", questionCount: 22 },
+  "Meteorology":          { duration: "35 min", questionCount: 20 },
+  "Air Law":              { duration: "30 min", questionCount: 18 },
+};
+
+const PATHWAY_BASE_DAYS: Record<string, number> = {
+  dgca: 90, type_rating: 60, airline: 45,
+};
+
+const INTENSITY_MULT: Record<string, number> = {
+  "10": 1.4, "25": 1.0, "50": 0.65,
+};
+
+// Pathway default opening subject when diagnostic was skipped
+const PATHWAY_DEFAULT_SUBJECT: Record<string, string> = {
+  dgca:        "Principles of Flight",
+  type_rating: "Airbus A320 Systems",
+  airline:     "Air Navigation",
+};
+
+function buildReadinessReport(
+  pathway: string,
+  goal: string,
+  dailyGoal: string,
+  diagScore: number,
+  diagAnswers: Record<number, string>
+): ReadinessReport {
+  const readinessScore = Math.round((diagScore / 5) * 100);
+  const diagnosticSkipped = Object.keys(diagAnswers).length === 0;
+
+  // Strengths / weaknesses from per-question correctness
+  const strengths: string[] = [];
+  const weaknesses: string[] = [];
+  if (!diagnosticSkipped) {
+    DIAG_QUESTIONS.forEach((q, i) => {
+      if (diagAnswers[i] === q.correct) {
+        strengths.push(q.subject);
+      } else {
+        weaknesses.push(q.subject);
+      }
+    });
+  }
+
+  // Estimate days
+  const base = PATHWAY_BASE_DAYS[pathway] ?? 75;
+  const scoreMult = 0.5 + (1 - readinessScore / 100) * 1.0;
+  const intMult = INTENSITY_MULT[dailyGoal] ?? 1.0;
+  const rawDays = Math.round(base * scoreMult * intMult);
+  const estimateDays = Math.min(365, Math.max(7, rawDays));
+
+  // First mission subject
+  let missionSubject: string;
+  if (diagnosticSkipped) {
+    missionSubject = PATHWAY_DEFAULT_SUBJECT[pathway] ?? "Principles of Flight";
+  } else if (weaknesses.length > 0) {
+    missionSubject = weaknesses[0]; // first (lowest-index) weak subject
+  } else {
+    // Perfect score — recommend final/most advanced subject
+    missionSubject = DIAG_QUESTIONS[DIAG_QUESTIONS.length - 1].subject;
+  }
+
+  const missionMeta = MISSION_META[missionSubject] ?? { duration: "35 min", questionCount: 20 };
+  const intensityLabel = intensityPresets.find(p => p.id === dailyGoal)?.label ?? "Active Aircrew";
+
+  return {
+    readinessScore,
+    estimateDays,
+    strengths,
+    weaknesses,
+    diagnosticSkipped,
+    firstMission: { subject: missionSubject, ...missionMeta },
+    dailyTarget: parseInt(dailyGoal),
+    intensityLabel,
+  };
+}
+
 function FinalDebrief({
   exam,
   dailyGoal,
   customDate,
-  score
+  score,
+  pathway,
+  goal,
+  diagAnswers,
 }: {
   exam: string;
   dailyGoal: string;
   customDate: string;
   score: number;
+  pathway: string;
+  goal: string;
+  diagAnswers: Record<number, string>;
 }) {
-  const examTitle = exam.replace(/-/g, " ").toUpperCase();
-  const intensityLabel = intensityPresets.find(i => i.id === dailyGoal)?.label || "Active Aircrew";
-  
-  let feedbackText = "";
-  let feedbackTitle = "";
-  
-  if (score === 5) {
-    feedbackTitle = "Outstanding Flight Readiness Baseline";
-    feedbackText = "Exceptional baseline standard. You demonstrate highly polished systems awareness, barometric tracking, and aerodynamic logic. Keep the throttle active.";
-  } else if (score >= 3) {
-    feedbackTitle = "Stable Flight Foundation";
-    feedbackText = "Solid core performance. You understand flight level principles and navigation, but systems autocompensation, dry adiabatics, and wind drift angles need touch-ups. Focus Meteorology & Airbus details next.";
-  } else {
-    feedbackTitle = "Continuous Training Advisory";
-    feedbackText = "Advisory: Critical subject coordinates are currently operating outside standard tolerance. Let's build your fundamentals securely. Recommended starting blocks: Principles of Flight & Air Law.";
-  }
+  const report = buildReadinessReport(pathway, goal, dailyGoal, score, diagAnswers);
+  const goalLabel = TRAINING_PATHS.find(p => p.id === pathway)?.goals.find(g => g.id === goal)?.label ?? exam.replace(/-/g, " ").toUpperCase();
+  const pathLabel = TRAINING_PATHS.find(p => p.id === pathway)?.label ?? pathway.toUpperCase();
+
+  // Analytics: fire once on mount
+  useEffect(() => {
+    trackEvent("readiness_report_viewed", {
+      metadata: {
+        pathway,
+        goal,
+        readinessScore: report.readinessScore,
+        readinessEstimateDays: report.estimateDays,
+        firstMission: report.firstMission.subject,
+      },
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const readinessBand = report.readinessScore >= 80 ? "strong" : report.readinessScore >= 40 ? "moderate" : "developing";
 
   return (
-    <div className="space-y-6">
-      <div className="bg-[#101214] text-bg rounded-[22px] p-6 shadow-2xl border border-white/5 relative overflow-hidden">
-        <div className="absolute -bottom-12 -right-12 opacity-5 pointer-events-none">
-          <Flame size={240} className="text-white" />
+    <div className="space-y-5">
+      {/* Header */}
+      <div>
+        <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-signal font-bold mb-3 flex items-center gap-2">
+          <Sparkles size={10} className="text-signal" />
+          Flight Readiness Report
         </div>
-
-        <div className="flex justify-between items-start mb-6 border-b border-white/10 pb-4">
-          <span className="font-mono text-[9px] uppercase tracking-widest text-white/75 font-semibold">
-            TELEMETRY ANALYSIS · DIAGNOSED
-          </span>
-          <span className="font-mono text-[9px] uppercase tracking-widest font-bold text-mint bg-mint/10 border border-mint/20 px-2 py-0.5 rounded-full">
-            SYSTEM CALIBRATED
-          </span>
-        </div>
-
-        <div className="flex items-center gap-6 mb-6">
-          <div className="relative flex items-center justify-center w-20 h-20 bg-white/5 rounded-full border border-white/10 shrink-0">
-            <span className="font-serif text-3xl font-bold text-white">{score}</span>
-            <span className="font-serif text-sm text-white/75 absolute bottom-1 right-2 w-max">/5</span>
-          </div>
-          <div>
-            <h3 className="font-serif text-lg font-semibold text-white leading-tight mb-1">
-              {feedbackTitle}
-            </h3>
-            <p className="font-mono text-[10px] text-white/75 uppercase tracking-widest">
-              DIAGNOSTIC SCORE: {Math.round((score / 5) * 100)}% ACCURACY
-            </p>
-          </div>
-        </div>
-
-        <p className="font-sans text-[13px] text-white/85 leading-relaxed bg-white/[0.03] p-4 rounded-[14px] mb-4">
-          {feedbackText}
+        <p className="font-sans text-[13px] text-muted-2 leading-relaxed">
+          Your personalized training route is prepared.
         </p>
       </div>
 
-      <div className="bg-bg border border-rule rounded-[18px] p-5 space-y-4 shadow-sm text-sm">
-        <div className="flex justify-between items-center border-b border-rule/50 pb-3">
-          <span className="font-sans text-muted">Primary Objective</span>
-          <span className="font-mono text-xs font-semibold text-ink">{examTitle}</span>
+      {/* Section 1: Readiness Overview */}
+      <div className="bg-[#101214] text-bg rounded-[20px] p-5 border border-white/5 relative overflow-hidden">
+        <div className="absolute -bottom-10 -right-10 opacity-[0.04] pointer-events-none" aria-hidden="true">
+          <Flame size={200} className="text-white" />
         </div>
-        <div className="flex justify-between items-center border-b border-rule/50 pb-3">
-          <span className="font-sans text-muted">Daily Goal Speed</span>
-          <span className="font-sans font-medium text-ink">{intensityLabel} ({dailyGoal} cards/day)</span>
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
+          <span className="font-mono text-[9px] uppercase tracking-widest text-white/60">
+            Readiness Overview
+          </span>
+          <span className={`font-mono text-[9px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-full border ${
+            readinessBand === "strong"
+              ? "text-mint bg-mint/10 border-mint/20"
+              : readinessBand === "moderate"
+              ? "text-sky/80 bg-sky/10 border-sky/20"
+              : "text-signal bg-signal/10 border-signal/20"
+          }`}>
+            {readinessBand === "strong" ? "Mission Ready" : readinessBand === "moderate" ? "In Training" : "Building Foundation"}
+          </span>
         </div>
-        <div className="flex justify-between items-center">
-          <span className="font-sans text-muted">Target Clearance Date</span>
-          <span className="font-sans font-medium text-ink">{customDate ? new Date(customDate).toLocaleDateString(undefined, { dateStyle: "medium" }) : "Flexible"}</span>
+
+        <div className="flex items-center gap-5">
+          {/* Circular score indicator */}
+          <div
+            className="relative shrink-0 w-[72px] h-[72px]"
+            role="img"
+            aria-label={`Readiness score: ${report.readinessScore}%`}
+          >
+            <svg viewBox="0 0 72 72" className="w-full h-full -rotate-90" aria-hidden="true">
+              <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="5" />
+              <circle
+                cx="36" cy="36" r="30" fill="none"
+                stroke={readinessBand === "strong" ? "#6fcf97" : readinessBand === "moderate" ? "#56CCF2" : "#eb5757"}
+                strokeWidth="5"
+                strokeLinecap="round"
+                strokeDasharray={`${(report.readinessScore / 100) * 188.5} 188.5`}
+                className="transition-all duration-700"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="font-serif text-xl font-bold text-white leading-none">{report.readinessScore}%</span>
+            </div>
+          </div>
+
+          <div className="flex-1">
+            <div className="font-serif text-[15px] text-white font-medium mb-1 leading-snug">
+              {pathLabel} · {goalLabel}
+            </div>
+            <div className="font-mono text-[10px] text-white/60 uppercase tracking-widest mb-2">
+              Diagnostic Accuracy: {report.readinessScore}%
+            </div>
+            <div className="font-mono text-[10px] text-white/50 uppercase tracking-widest">
+              Est. {report.estimateDays} days to readiness
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="bg-mint-soft border border-mint/[0.3] p-4 rounded-[14px] flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-mint/10 border border-mint/20 flex items-center justify-center text-mint shrink-0">
-          <Sparkles size={14} />
+      {/* Section 2: Knowledge Breakdown */}
+      {!report.diagnosticSkipped && (
+        <div className="border border-rule rounded-[16px] p-4 space-y-3">
+          <span className="block font-mono text-[9px] uppercase tracking-widest text-muted-2 font-bold mb-1">Knowledge Breakdown</span>
+
+          {report.strengths.length > 0 && (
+            <div>
+              <div className="font-mono text-[8px] uppercase tracking-widest text-mint font-bold mb-2 flex items-center gap-1.5">
+                <Check size={10} className="text-mint" /> Strong Areas
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                {report.strengths.map(s => (
+                  <div key={s} className="flex items-center gap-1.5 font-sans text-[12px] text-ink-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-mint shrink-0" aria-hidden="true" />
+                    {s}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {report.weaknesses.length > 0 && (
+            <div className={report.strengths.length > 0 ? "pt-2.5 border-t border-rule/50" : ""}>
+              <div className="font-mono text-[8px] uppercase tracking-widest text-signal font-bold mb-2 flex items-center gap-1.5">
+                <TriangleAlert size={10} className="text-signal" /> Needs Attention
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-1">
+                {report.weaknesses.map(w => (
+                  <div key={w} className="flex items-center gap-1.5 font-sans text-[12px] text-ink-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-signal shrink-0" aria-hidden="true" />
+                    {w}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <p className="font-sans text-[12.5px] leading-relaxed text-ink-2">
-          <strong>Up next:</strong> We have logged this telemetry profile and generated your live review decks. Enter the cockpit to start your custom flight sequence.
-        </p>
+      )}
+
+      {/* Sections 3+4+5 in a compact grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Estimated Readiness */}
+        <div className="border border-rule rounded-[14px] p-3.5 space-y-1">
+          <span className="block font-mono text-[8px] uppercase tracking-widest text-muted-2">Estimated Readiness</span>
+          <span className="font-serif text-[22px] text-ink font-medium leading-none">{report.estimateDays}</span>
+          <span className="block font-mono text-[9px] text-muted-2">days</span>
+        </div>
+
+        {/* Daily Target */}
+        <div className="border border-rule rounded-[14px] p-3.5 space-y-1">
+          <span className="block font-mono text-[8px] uppercase tracking-widest text-muted-2">Daily Target</span>
+          <span className="font-serif text-[22px] text-ink font-medium leading-none">{report.dailyTarget}</span>
+          <span className="block font-mono text-[9px] text-muted-2">questions / day</span>
+        </div>
+      </div>
+
+      {/* Section 4: Recommended First Mission */}
+      <div className="border border-rule rounded-[16px] p-4 bg-bg-2/40">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 rounded-[8px] bg-ink/5 border border-rule flex items-center justify-center shrink-0 mt-0.5">
+            <Target size={14} className="text-ink" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="block font-mono text-[8px] uppercase tracking-widest text-muted-2 mb-1">
+              Recommended First Mission
+            </span>
+            <div className="font-serif text-[15px] text-ink font-medium leading-snug mb-1.5 truncate">
+              {report.firstMission.subject}
+            </div>
+            <div className="flex items-center gap-3 font-mono text-[9px] text-muted-2 uppercase tracking-wide">
+              <span>{report.firstMission.questionCount} questions</span>
+              <span className="w-1 h-1 rounded-full bg-rule" aria-hidden="true" />
+              <span>{report.firstMission.duration}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 6: Mission Status checklist */}
+      <div className="border border-rule rounded-[16px] p-4 space-y-2.5">
+        <span className="block font-mono text-[8px] uppercase tracking-widest text-muted-2 mb-1">Mission Status</span>
+        {[
+          "Flight Plan Generated",
+          report.diagnosticSkipped ? "Diagnostic — Skipped" : "Diagnostic Complete",
+          "Training Route Prepared",
+        ].map((item, i) => (
+          <div key={item} className="flex items-center gap-2.5">
+            <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+              i === 1 && report.diagnosticSkipped
+                ? "border-rule bg-bg"
+                : "border-mint bg-mint/10"
+            }`} aria-hidden="true">
+              {!(i === 1 && report.diagnosticSkipped) && <Check size={9} className="text-mint" />}
+            </div>
+            <span className={`font-sans text-[12.5px] ${
+              i === 1 && report.diagnosticSkipped ? "text-muted" : "text-ink-2"
+            }`}>
+              {item}
+            </span>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -1031,16 +1278,22 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
             {currentStepData.subtitle}
           </p>
 
-          <OnboardingTelemetryPanel
-            step={step}
-            pathway={pathway}
-            goal={goal}
-            dailyGoal={dailyGoal}
-            customDate={customDate}
-            currentDiagIdx={currentDiagIdx}
-            diagSubmitted={diagSubmitted}
-            diagScore={diagScore}
-          />
+          {/* Hide on step 4: FinalDebrief (right pane) contains all telemetry data
+              in much greater detail. Rendering it here too is redundant and
+              on mobile pushes the report below the fold (the left column stacks
+              first in the flex-col layout). */}
+          {step < 4 && (
+            <OnboardingTelemetryPanel
+              step={step}
+              pathway={pathway}
+              goal={goal}
+              dailyGoal={dailyGoal}
+              customDate={customDate}
+              currentDiagIdx={currentDiagIdx}
+              diagSubmitted={diagSubmitted}
+              diagScore={diagScore}
+            />
+          )}
         </div>
 
         <div className="hidden md:block font-mono text-[9px] text-muted tracking-[0.2em] uppercase">
@@ -1101,6 +1354,9 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
                     dailyGoal={dailyGoal}
                     customDate={customDate}
                     score={diagScore}
+                    pathway={pathway}
+                    goal={goal}
+                    diagAnswers={diagAnswers}
                   />
                 )}
               </motion.div>
@@ -1133,10 +1389,22 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
               )}
               {!resolveError && (
                 <button
-                  onClick={finalizeOnboarding}
+                  onClick={() => {
+                    if (step === 4) {
+                      const report = buildReadinessReport(pathway, goal, dailyGoal, diagScore, diagAnswers);
+                      trackEvent("first_mission_started", {
+                        metadata: {
+                          pathway, goal,
+                          firstMission: report.firstMission.subject,
+                          readinessScore: report.readinessScore,
+                        },
+                      });
+                    }
+                    finalizeOnboarding();
+                  }}
                   className={`h-11 px-6 font-sans font-semibold text-sm bg-ink text-bg rounded-full hover:bg-ink-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm flex items-center ${step === 4 ? '' : 'hidden'}`}
                 >
-                  Enter Study Path <ArrowRight size={14} className="ml-1.5" />
+                  Begin First Mission <ArrowRight size={14} className="ml-1.5" />
                 </button>
               )}
 
