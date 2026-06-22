@@ -753,25 +753,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, userData, fetchUserData]);
 
   const resetAccount = useCallback(async () => {
-      if (!user) return;
-      try {
-        await supabase.from('attempts').delete().eq('user_id', user.uid);
-        await supabase.from('bookmarks').delete().eq('user_id', user.uid);
+    if (!user) return;
+    const uid = user.uid;
 
-        localStorage.removeItem("heading_bookmarks");
-        localStorage.removeItem("heading_logbook");
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.startsWith('heading_quiz_state_')) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach(k => localStorage.removeItem(k));
-        await fetchUserData(user.uid, user);
-      } catch (e) {
-         console.error("Error resetting Supabase user credentials:", e);
+    // Wipe all progress tables (errors propagate to caller for toast feedback)
+    const deletes = await Promise.allSettled([
+      supabase.from('attempts').delete().eq('user_id', uid),
+      supabase.from('bookmarks').delete().eq('user_id', uid),
+      supabase.from('question_progress').delete().eq('user_id', uid),
+      supabase.from('user_question_attempts').delete().eq('user_id', uid),
+      supabase.from('study_missions').delete().eq('user_id', uid),
+      supabase.from('study_plans').delete().eq('user_id', uid),
+      supabase.from('mastery_snapshots').delete().eq('user_id', uid),
+    ]);
+
+    // Log any individual table failures (non-fatal; continue with rest of wipe)
+    deletes.forEach((r, i) => {
+      const tables = ['attempts','bookmarks','question_progress','user_question_attempts','study_missions','study_plans','mastery_snapshots'];
+      if (r.status === 'rejected') console.error(`resetAccount: failed to delete from ${tables[i]}`, r.reason);
+      else if (r.value.error) console.error(`resetAccount: RLS/error on ${tables[i]}`, r.value.error.message);
+    });
+
+    // Reset profile-level stats
+    await supabase.from('profiles').update({
+      streak_count: 0,
+      questions_answered_today: 0,
+      last_activity_date: null,
+      total_questions_answered: 0,
+      total_sessions_count: 0,
+    }).eq('id', uid);
+
+    // Clear all relevant localStorage keys
+    const keysToRemove: string[] = [
+      "heading_bookmarks",
+      "heading_logbook",
+      "heading_streak_count",
+      "heading_last_activity_date",
+      "heading_questions_answered_today",
+    ];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('heading_quiz_state_') || key.startsWith('heading_cache_'))) {
+        keysToRemove.push(key);
       }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+
+    await fetchUserData(uid, user);
   }, [user, fetchUserData]);
 
   const value = useMemo<AuthContextType>(() => ({
