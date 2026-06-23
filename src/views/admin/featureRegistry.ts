@@ -658,6 +658,7 @@ export const featureRegistry = {
 export const featureControlSections: FeatureCategory[] = [
   "AI Features (cost-bearing)",
   "Learning Features",
+  "Study Scheduler",
   "UI/UX & System",
   "Monetization & Growth",
 ];
