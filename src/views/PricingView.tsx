@@ -119,11 +119,14 @@ export default function PricingView() {
     setPaymentLoading(true);
     try {
       trackEvent("upgrade_pro_attempt", { metadata: { interval: billingInterval } });
+      console.log("[pay] loading Razorpay script…");
       const loaded = await loadRazorpayScript();
+      console.log("[pay] script loaded:", loaded);
       if (!loaded) {
         throw new Error("Unable to load Razorpay payment client. Please verify your connection.");
       }
 
+      console.log("[pay] calling create-order…");
       const response = await apiFetchRaw("/api/payment/create-order", {
         method: "POST",
         headers: {
@@ -132,6 +135,7 @@ export default function PricingView() {
         body: JSON.stringify({ interval: billingInterval }),
       });
 
+      console.log("[pay] create-order response:", response?.status, response?.ok);
       if (!response) {
         throw new Error("Unable to communicate with the payment server. Ensure you have network access.");
       }
@@ -140,6 +144,7 @@ export default function PricingView() {
       }
 
       const orderData = await response.json();
+      console.log("[pay] order created:", { id: orderData.id, amount: orderData.amount, key_id: orderData.key_id ? "set" : "MISSING" });
       if (orderData.error) {
         throw new Error(orderData.error);
       }
@@ -233,6 +238,7 @@ export default function PricingView() {
         },
       };
 
+      console.log("[pay] opening Razorpay modal with key:", keyId.slice(0, 12) + "…");
       const rzPay = new (window as any).Razorpay(options);
       // payment.failed fires when the bank/card declines or the gateway errors
       // (distinct from the user dismissing the modal). No charge is made.
