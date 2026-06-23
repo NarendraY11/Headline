@@ -552,7 +552,7 @@ export async function fetchMergedSubjects(forceRefresh = false): Promise<Subject
        exam_authority: rs.exam_authority,
        license: rs.license,
        sort_order: rs.sort_order,
-       is_free: rs.is_free ?? (rs.id === "air-navigation") ?? false,
+       is_free: rs.is_free ?? (rs.id === "air-navigation"),
      };
    });
 
