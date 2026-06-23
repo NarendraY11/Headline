@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wordmark } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
+import { useFeature } from "../hooks/useFeatureFlags";
+import { useActiveMission } from "../hooks/useActiveMission";
 import { CAREER_OBJECTIVES, TRAINING_PATHS, resolveTargetExam } from "../data/trainingPaths";
 import { trackEvent } from "../lib/track";
 
@@ -1266,6 +1268,8 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const { updateUserData } = useAuth();
+  const missionEngineEnabled = useFeature("missionEngine");
+  const { generate, resume } = useActiveMission();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -1293,7 +1297,7 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const finalizeOnboarding = () => {
+  const finalizeOnboarding = async () => {
     const targetExam = resolveTargetExam(pathway, goal);
 
     // Guard: resolveTargetExam returns null on unknown combinations.
@@ -1327,6 +1331,27 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
 
     localStorage.setItem("heading_onboarding_completed", "true");
     onClose();
+
+    // Phase 6: when the Mission Engine is ON, "Begin First Mission" actually
+    // generates + launches the first deterministic mission (no manual browsing).
+    // New user → empty mastery, so the generator picks the first subject for the
+    // track; diagnostic score is the readiness baseline.
+    if (missionEngineEnabled) {
+      const inputs = {
+        targetExam,
+        mastery: {} as Record<string, number>,
+        dailyGoal: parseInt(dailyGoal),
+        readinessScore: diagScore,
+        careerObjective: careerObjective ?? null,
+      };
+      const row = await generate(inputs);
+      if (row) {
+        await resume(row, navigate, inputs);
+        return;
+      }
+      // Generation failed → fall through to modules so the user isn't stranded.
+    }
+
     // Navigate to question bank so "Begin First Mission" CTA lands on the actual
     // mission launcher, not the dashboard. Modules = where a session starts.
     navigate("/modules");

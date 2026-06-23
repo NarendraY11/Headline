@@ -48,9 +48,10 @@ async function resolveAndNavigate(
   spec: LaunchSpec,
   missionId: string | undefined,
   navigate: NavigateFunction,
-  userId?: string | null
+  userId?: string | null,
+  extraState?: Record<string, unknown>
 ): Promise<void> {
-  const stateBase = missionId ? { missionId } : {};
+  const stateBase = { ...(missionId ? { missionId } : {}), ...(extraState ?? {}) };
 
   // ── review: spaced-repetition due queue ──────────────────────────────────
   if (spec.route === "review" || spec.type === "review") {
@@ -115,7 +116,8 @@ async function resolveAndNavigate(
 export async function launchMission(
   mission: StudyMissionRow,
   navigate: NavigateFunction,
-  userId?: string | null
+  userId?: string | null,
+  extraState?: Record<string, unknown>
 ): Promise<void> {
   // FIX #8: Previously fire-and-forget (.catch(()=>{})). Failures were invisible
   // and the mission status machine was silently broken — mission stayed "pending"
@@ -143,7 +145,8 @@ export async function launchMission(
     },
     mission.id,
     navigate,
-    userId
+    userId,
+    extraState
   );
 }
 

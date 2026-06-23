@@ -34,6 +34,8 @@ const ReferralView = lazy(() => import("./views/ReferralView"));
 const A320SystemsView = lazy(() => import("./views/A320SystemsView"));
 // StudySchedulerView removed — /study-plan now redirects to /schedule
 const StudyCalendarView = lazy(() => import("./views/schedule/StudyCalendarView"));
+const MissionCompleteView = lazy(() => import("./views/MissionCompleteView"));
+const MissionHistoryView = lazy(() => import("./views/MissionHistoryView"));
 const InterviewPrepView = lazy(() => import("./views/InterviewPrepView"));
 const InterviewPrepSection = lazy(() =>
   import("./views/InterviewPrepView").then(m => ({ default: m.InterviewPrepSection }))
@@ -213,6 +215,9 @@ export default function App() {
             {/* /study-plan is a dead route — redirect to /schedule (the live scheduler) */}
             <Route path="/study-plan" element={<Navigate to="/schedule" replace />} />
             <Route path="/schedule" element={<StudyCalendarView />} />
+            {/* Phase 6 — Mission Activation Engine */}
+            <Route path="/mission/complete" element={<MissionCompleteView />} />
+            <Route path="/missions/history" element={<MissionHistoryView />} />
             <Route path="/exam-centre" element={<ExamCentreView />} />
             {/* Phase 5.1: Interview Prep routes — hub + child sections */}
             <Route path="/interview-prep" element={<InterviewPrepView />} />

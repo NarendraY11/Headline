@@ -25,6 +25,7 @@ import { getDueQuestionIds } from "../lib/spacedRepetition";
 import { AnimatedCounter } from "./today/AnimatedCounter";
 import { TodayLoader } from "./today/DashboardLoaders";
 import { CareerObjectiveMissions } from "./today/CareerObjectiveMissions";
+import { ActiveMissionCard } from "./today/ActiveMissionCard";
 import { TodayMissions } from "./today/TodayMissions";
 import { TodayStops } from "./today/TodayStops";
 import { getPacingData } from "./today/utils";
@@ -64,6 +65,7 @@ export default function TodayView() {
   const { addNotification } = useNotifications();
   const weatherBriefingEnabled = useFeature("weatherBriefing");
   const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
+  const missionEngineEnabled = useFeature("missionEngine");
   const examReadinessDashboardEnabled = useFeature("examReadinessDashboard");
   const adaptiveRegenEnabled = useFeature("adaptiveRegen");
   const masteryAnalyticsEnabled = useFeature("masteryAnalytics");
@@ -655,6 +657,21 @@ export default function TodayView() {
 
         <PwaInstallBanner />
 
+        {/* Phase 6 — Mission Engine: mission is the core unit, shown FIRST.
+            Order per spec: 1 Active Mission → 2 Career → 3 Readiness → … */}
+        {missionEngineEnabled && (
+          <div className="space-y-3 mb-8">
+            <ActiveMissionCard
+              targetExam={userData?.targetExam}
+              mastery={progressStats.subjectMastery}
+              dailyGoal={userData?.dailyGoal}
+              readinessScore={progressStats.examReadiness}
+              careerObjective={userData?.careerObjective}
+            />
+            <CareerObjectiveMissions careerObjective={userData?.careerObjective} />
+          </div>
+        )}
+
         {/* Readiness Card */}
         <div className="bg-ink rounded-[20px] p-5 md:p-8 w-full mb-8 relative overflow-hidden text-bg shadow-lg">
           <div className="absolute -right-6 -bottom-6 opacity-10 pointer-events-none">
@@ -766,8 +783,11 @@ export default function TodayView() {
             dueCount={dueCount}
             hasAttempts={hasAttempts}
           />
-          {/* Career objective secondary missions — shown only when careerObjective set */}
-          <CareerObjectiveMissions careerObjective={userData?.careerObjective} />
+          {/* Career objective secondary missions — shown only when careerObjective set.
+              When missionEngine is ON it renders up top (with the Active Mission); skip here. */}
+          {!missionEngineEnabled && (
+            <CareerObjectiveMissions careerObjective={userData?.careerObjective} />
+          )}
         </div>
 
         {/* TILES */}

@@ -46,6 +46,9 @@ export default function QuizView() {
   const overrideNegMark = location.state?.overrideNegMark as number | undefined;
   const examTitle = location.state?.examTitle as string | undefined;
   const missionId = location.state?.missionId as string | undefined;
+  // Phase 6: when an engine mission launched this quiz, route to the mission
+  // completion screen on finish instead of the default results view.
+  const engineMission = location.state?.engineMission as boolean | undefined;
 
   // FIX #4: guard against double-execution of finishQuiz (timer effect + handleNext
   // can both fire when time hits zero). Without this guard, two attempt rows get
@@ -906,6 +909,13 @@ export default function QuizView() {
         `You scored ${Math.round(currentAccuracy)}% on ${topicName}. Keep the momentum going!`,
         "milestone"
       );
+    }
+
+    // Phase 6: engine mission → go to the completion screen (readiness impact,
+    // Generate Next Mission). completeMission already ran inside saveAttempt().
+    if (engineMission && missionId) {
+      navigate("/mission/complete", { state: { missionId } });
+      return;
     }
 
     setStatus("results");

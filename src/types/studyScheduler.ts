@@ -131,6 +131,20 @@ export interface MissionPayload {
   difficulty?: TaskDifficulty | null;
   mode: LaunchMode;
   route: LaunchRoute;
+
+  // ── Phase 6 Mission Engine fields (source='system' missions only) ──────────
+  /** "training" | "career" — distinguishes engine mission kind. */
+  category?: "training" | "career";
+  /** Human title, e.g. "Air Navigation Foundations". */
+  title?: string;
+  /** One-line description shown on the Active Mission card. */
+  description?: string;
+  /** ISO timestamp stamped when the mission is first started. */
+  startedAt?: string;
+  /** Readiness score (0-100) captured at creation — baseline for impact. */
+  readinessAtStart?: number;
+  /** Readiness delta (current − baseline) computed on completion. */
+  readinessImpact?: number;
 }
 
 export interface StudyMissionRow {

@@ -641,6 +641,18 @@ export const featureRegistry = {
     requiresAuth: true,
     requiresAdmin: false,
   },
+  missionEngine: {
+    key: "missionEngine",
+    title: "Mission Activation Engine",
+    description: "Phase 6: deterministic single-mission loop (generate → start → complete → readiness → next) shown atop Today.",
+    category: "Study Scheduler",
+    adminVisible: true,
+    previewType: "route",
+    routes: ["/today", "/mission/complete", "/missions/history"],
+    sideEffects: ["auth", "supabase-read", "supabase-write"],
+    requiresAuth: true,
+    requiresAdmin: false,
+  },
 } satisfies { [K in FlagKeys]: FeatureDefinition & { key: K } };
 
 export const featureControlSections: FeatureCategory[] = [
