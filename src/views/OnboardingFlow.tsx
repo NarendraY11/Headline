@@ -180,15 +180,15 @@ function Step1Exam({
                   setCareerObjective(obj.id);
                   setExamOnlySelected(false);
                 }}
-                className={`w-full text-left p-4 sm:p-5 border rounded-[16px] transition-all ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
+                className={`w-full text-left p-3 md:p-5 border rounded-[16px] transition-all ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
               >
                 <div className="flex items-start gap-3">
                   <span className={`w-[20px] h-[20px] rounded-full border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${isSel ? 'border-ink bg-ink text-bg' : 'border-rule'}`}>
                     {isSel && <Check size={12} />}
                   </span>
                   <div className="flex-1">
-                    <div className="font-serif text-[17px] text-ink mb-1">{obj.label}</div>
-                    <div className="font-sans text-[12px] text-muted-2 leading-relaxed mb-2">{obj.description}</div>
+                    <div className="font-serif text-[15px] md:text-[17px] text-ink mb-1">{obj.label}</div>
+                    <div className="hidden md:block font-sans text-[12px] text-muted-2 leading-relaxed mb-2">{obj.description}</div>
                     {isSel && obj.unlocks.length > 0 && (
                       <motion.ul
                         initial={{ opacity: 0, y: 4 }}
@@ -217,7 +217,7 @@ function Step1Exam({
               setCareerObjective(null);
               setExamOnlySelected(true);
             }}
-            className={`w-full text-left p-4 sm:p-5 border rounded-[16px] transition-all ${examOnlySelected && !isAirlineSelected ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
+            className={`w-full text-left p-3 md:p-5 border rounded-[16px] transition-all ${examOnlySelected && !isAirlineSelected ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
           >
             <div className="flex items-center gap-3">
               <span className={`w-[20px] h-[20px] rounded-full border flex items-center justify-center shrink-0 transition-colors ${examOnlySelected && !isAirlineSelected ? 'border-ink bg-ink text-bg' : 'border-rule'}`}>
@@ -266,9 +266,9 @@ function Step1Exam({
                 role="radio"
                 aria-checked={isSel}
                 onClick={() => setGoal(g.id)}
-                className={`w-full text-left p-4 sm:p-5 border rounded-[16px] transition-all flex items-center ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
+                className={`w-full text-left p-3 md:p-5 border rounded-[16px] transition-all flex items-center ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
               >
-                <span className="flex-1 font-serif text-[18px] text-ink">{g.label}</span>
+                <span className="flex-1 font-serif text-[15px] md:text-[18px] text-ink">{g.label}</span>
                 <span className={`w-[20px] h-[20px] rounded-full border flex items-center justify-center shrink-0 ml-4 transition-colors ${isSel ? 'border-ink bg-ink text-bg' : 'border-rule'}`}>
                   {isSel && <Check size={12} />}
                 </span>
@@ -323,11 +323,11 @@ function Step1Exam({
                 role="radio"
                 aria-checked={isSel}
                 onClick={() => { setPathway(p.id); setGoal(""); }}
-                className={`w-full text-left p-5 border rounded-[16px] transition-all flex items-center ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
+                className={`w-full text-left p-3 md:p-5 border rounded-[16px] transition-all flex items-center ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2 shadow-sm' : 'border-rule bg-bg hover:border-ink/30'}`}
               >
                 <div className="flex-1">
-                  <div className="font-serif text-[18px] text-ink mb-1">{p.label}</div>
-                  <div className="font-sans text-[12px] text-muted-2 leading-relaxed">{p.description}</div>
+                  <div className="font-serif text-[15px] md:text-[18px] text-ink md:mb-1">{p.label}</div>
+                  <div className="hidden md:block font-sans text-[12px] text-muted-2 leading-relaxed">{p.description}</div>
                 </div>
                 <MoveRight size={16} className="text-muted-2 shrink-0 ml-4" />
               </button>
@@ -346,16 +346,16 @@ function Step1Exam({
                 aria-disabled="true"
                 aria-label={`${p.label} — coming soon`}
                 title={p.tooltip}
-                className="w-full text-left p-5 border border-rule rounded-[16px] flex items-center opacity-50 cursor-not-allowed select-none bg-bg"
+                className="w-full text-left p-3 md:p-5 border border-rule rounded-[16px] flex items-center opacity-50 cursor-not-allowed select-none bg-bg"
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-serif text-[18px] text-ink">{p.label}</span>
+                  <div className="flex items-center gap-2 md:mb-1">
+                    <span className="font-serif text-[15px] md:text-[18px] text-ink">{p.label}</span>
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rule text-muted-2 font-mono text-[8px] tracking-widest font-bold uppercase">
                       <Lock size={8} /> Coming Soon
                     </span>
                   </div>
-                  <div className="font-sans text-[12px] text-muted-2 leading-relaxed">{p.description}</div>
+                  <div className="hidden md:block font-sans text-[12px] text-muted-2 leading-relaxed">{p.description}</div>
                 </div>
               </div>
             ))}
@@ -1364,44 +1364,57 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-[200] bg-bg flex flex-col md:flex-row overflow-hidden animate-[fadeIn_0.3s_ease-out]">
       {/* Left Column Background Pane (~43%) */}
-      <div className="w-full h-auto md:h-full md:w-[43%] flex flex-col justify-between p-8 md:p-12 lg:p-16 relative bg-bg shrink-0 border-b md:border-b-0 border-rule">
-        <div className="flex items-center gap-3 mb-10 md:mb-0">
+      <div className="w-full h-auto md:h-full md:w-[43%] flex flex-col justify-between p-4 md:p-12 lg:p-16 relative bg-bg shrink-0 border-b md:border-b-0 border-rule">
+        <div className="flex items-center gap-3 mb-2 md:mb-0">
           <Wordmark compassSize={20} />
           <span className="font-mono text-[9px] text-muted-2 tracking-[0.2em] uppercase border border-rule px-1.5 py-0.5 rounded-[4px] mt-0.5 opacity-80">GROUND SCHOOL</span>
         </div>
         
-        <div className="my-auto max-w-lg mb-8 md:mb-auto">
-          <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase flex items-center gap-2 mb-6 font-semibold">
+        <div className="my-auto max-w-lg mb-1 md:mb-auto">
+          <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase flex items-center gap-2 mb-2 md:mb-6 font-semibold">
             <span className="w-1.5 h-1.5 rounded-sm bg-signal transform rotate-45" />
             PRE-FLIGHT BRIEF · STEP {step} OF 4
           </div>
 
-          <h1 className="font-serif text-[42px] md:text-[50px] lg:text-[60px] leading-[1.0] text-ink mb-6 tracking-tight">
+          <h1 className="font-serif text-[26px] md:text-[50px] lg:text-[60px] leading-[1.0] text-ink mb-2 md:mb-6 tracking-tight">
             {currentStepData.title.split(" ").map((w, i) =>
               w.toLowerCase() === currentStepData.accent.toLowerCase()
               ? <span key={i} className="italic text-navy">{w} </span>
               : <span key={i}>{w} </span>
             )}
           </h1>
-          <p className="font-sans text-[15px] md:text-[17px] text-ink-2 font-light leading-relaxed max-w-md">
+          <p className="hidden md:block font-sans text-[15px] md:text-[17px] text-ink-2 font-light leading-relaxed max-w-md">
             {currentStepData.subtitle}
           </p>
 
-          {/* Hide on step 4: FinalDebrief (right pane) contains all telemetry data
-              in much greater detail. Rendering it here too is redundant and
-              on mobile pushes the report below the fold (the left column stacks
-              first in the flex-col layout). */}
+          {/* Mobile: compact 1-line status to save ~140px vs full telemetry panel */}
           {step < 4 && (
-            <OnboardingTelemetryPanel
-              step={step}
-              pathway={pathway}
-              goal={goal}
-              dailyGoal={dailyGoal}
-              customDate={customDate}
-              currentDiagIdx={currentDiagIdx}
-              diagSubmitted={diagSubmitted}
-              diagScore={diagScore}
-            />
+            <div className="md:hidden mt-2">
+              <span className="font-mono text-[9px] text-muted tracking-widest uppercase">
+                {pathway
+                  ? <>
+                      Track: <span className="text-ink">{TRAINING_PATHS.find(p => p.id === pathway)?.label}</span>
+                      {goal && <> · Goal: <span className="text-ink">{TRAINING_PATHS.find(p => p.id === pathway)?.goals.find(g => g.id === goal)?.label}</span></>}
+                    </>
+                  : "Select track below"}
+              </span>
+            </div>
+          )}
+
+          {/* Desktop: full telemetry panel — hidden on mobile */}
+          {step < 4 && (
+            <div className="hidden md:block">
+              <OnboardingTelemetryPanel
+                step={step}
+                pathway={pathway}
+                goal={goal}
+                dailyGoal={dailyGoal}
+                customDate={customDate}
+                currentDiagIdx={currentDiagIdx}
+                diagSubmitted={diagSubmitted}
+                diagScore={diagScore}
+              />
+            </div>
           )}
         </div>
 
@@ -1412,9 +1425,9 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
 
       {/* Right Column Interactive Flow Pane (~57%) */}
       <div className="w-full md:w-[57%] h-full bg-paper md:border-l border-rule flex flex-col overflow-hidden relative">
-        <div className="px-6 md:px-12 lg:px-20 pt-10 md:pt-16 flex-1 flex flex-col overflow-y-auto no-scrollbar pb-32">
+        <div className="px-6 md:px-12 lg:px-20 pt-5 md:pt-16 flex-1 flex flex-col overflow-y-auto no-scrollbar pb-32">
           {/* Progress horizontal steps indicator */}
-          <div className="flex gap-2.5 mb-8">
+          <div className="flex gap-2.5 mb-4 md:mb-8">
             {[1, 2, 3, 4].map(i => (
               <div key={i} className={`w-2 h-2 rounded-full transition-colors ${i === step ? 'bg-ink' : i < step ? 'bg-mint' : 'bg-rule'}`} />
             ))}
@@ -1424,7 +1437,7 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
             0{step} / {currentStepData.stepName}
           </div>
           
-          <div className="flex-1 mt-5">
+          <div className="flex-1 mt-3 md:mt-5">
             <AnimatePresence mode="wait">
               <motion.div
                 key={step}
@@ -1479,7 +1492,7 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
 
         {/* Footer actions block (Hidden on step 3 since it has custom inside-card locks) */}
         {step !== 3 && (
-          <div className="px-6 md:px-12 lg:px-20 py-4 md:py-6 flex items-center justify-between border-t border-rule mt-auto shrink-0 sticky bottom-0 bg-paper/95 backdrop-blur-md z-10 w-full">
+          <div className="px-6 md:px-12 lg:px-20 py-2 md:py-6 flex items-center justify-between border-t border-rule mt-auto shrink-0 sticky bottom-0 bg-paper/95 backdrop-blur-md z-10 w-full">
             {step > 1 ? (
               <button onClick={handleBack} className="h-10 px-4 flex items-center justify-center font-sans font-medium text-xs text-ink border border-rule rounded-full hover:bg-bg transition-colors">
                 <MoveLeft size={14} className="mr-1.5" /> Back
