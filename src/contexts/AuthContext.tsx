@@ -814,8 +814,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       streak_count: 0,
       questions_answered_today: 0,
       last_activity_date: null,
-      total_questions_answered: 0,
-      total_sessions_count: 0,
     }).eq('id', uid);
     if (profileResetError) {
       throw new Error(`Profile stats reset failed: ${profileResetError.message}`);

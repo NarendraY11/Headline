@@ -124,7 +124,7 @@ export default function UsersAnalytics() {
   // Plan modal
   const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [modalUser, setModalUser] = useState<EnrichedUser | null>(null);
-  const [modalPlan, setModalPlan] = useState<"free" | "trial" | "pro" | "lifetime">("free");
+  const [modalPlan, setModalPlan] = useState<"free" | "trial" | "pro">("free");
   const [modalExpiresAt, setModalExpiresAt] = useState("");
   const [isModalSaving, setIsModalSaving] = useState(false);
   const [modalSuccessMsg, setModalSuccessMsg] = useState("");
@@ -324,7 +324,7 @@ export default function UsersAnalytics() {
 
   // ── Plan modal ──────────────────────────────────────────────────────────────
 
-  const handleModalPlanSelector = (plan: "free" | "trial" | "pro" | "lifetime") => {
+  const handleModalPlanSelector = (plan: "free" | "trial" | "pro") => {
     setModalPlan(plan);
     setModalSuccessMsg("");
     setModalErrorMsg("");
@@ -345,9 +345,14 @@ export default function UsersAnalytics() {
     setModalErrorMsg("");
     try {
       const expiresAt = modalExpiresAt ? new Date(modalExpiresAt).toISOString() : null;
-      const updateData: any = { plan: modalPlan, plan_expires_at: expiresAt, updated_at: new Date().toISOString() };
+      const updateData: any = {
+        plan: modalPlan,
+        plan_expires_at: expiresAt,
+        plan_status: modalPlan === "free" ? "none" : "active",
+        updated_at: new Date().toISOString(),
+      };
       if (modalPlan === "trial") { updateData.trial_started_at = new Date().toISOString(); updateData.trial_used = true; }
-      if (modalPlan === "free" || modalPlan === "lifetime") updateData.plan_expires_at = null;
+      if (modalPlan === "free") updateData.plan_expires_at = null;
 
       const { error } = await supabase.from("profiles").update(updateData).eq("id", modalUser.id);
       if (error) throw error;
@@ -358,7 +363,7 @@ export default function UsersAnalytics() {
       } catch { /* non-fatal audit */ }
 
       try {
-        const isUpgrade = modalPlan === "pro" || modalPlan === "lifetime" || modalPlan === "trial";
+        const isUpgrade = modalPlan === "pro" || modalPlan === "trial";
         await supabase.from("notifications").insert({ user_id: modalUser.id, title: isUpgrade ? "🎉 Your plan was upgraded" : "Your plan was updated", message: isUpgrade ? `An administrator activated the ${modalPlan.toUpperCase()} plan on your account.` : `Your plan was changed to ${modalPlan.toUpperCase()}.`, type: "system", read: false });
       } catch { /* non-fatal notify */ }
 
@@ -799,7 +804,7 @@ export default function UsersAnalytics() {
                 {/* Manage Plan */}
                 <button
                   type="button"
-                  onClick={() => { setModalUser(selectedUser); setModalPlan(selectedUser.plan ?? "free"); setModalExpiresAt(selectedUser.plan_expires_at?.split("T")[0] ?? ""); setIsPlanModalOpen(true); }}
+                  onClick={() => { setModalUser(selectedUser); setModalPlan((selectedUser.plan === "lifetime" ? "pro" : selectedUser.plan) ?? "free"); setModalExpiresAt(selectedUser.plan_expires_at?.split("T")[0] ?? ""); setIsPlanModalOpen(true); }}
                   className="w-full py-2 bg-navy text-bg hover:bg-navy-dark font-mono text-[10px] uppercase font-bold rounded-lg tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                 >
                   <Award size={13} /> Manage Plan
@@ -976,7 +981,6 @@ export default function UsersAnalytics() {
                   <option value="free">Free</option>
                   <option value="trial">Trial (7 Days)</option>
                   <option value="pro">Pro (Captain)</option>
-                  <option value="lifetime">Lifetime</option>
                 </select>
               </div>
               {(modalPlan === "pro" || modalPlan === "trial") && (
