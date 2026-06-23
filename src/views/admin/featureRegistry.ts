@@ -653,6 +653,18 @@ export const featureRegistry = {
     requiresAuth: true,
     requiresAdmin: false,
   },
+  xpSystem: {
+    key: "xpSystem",
+    title: "XP System",
+    description: "Phase 7.1: append-only XP ledger. Gates XP event writes + reads. History only accrues while ON.",
+    category: "Study Scheduler",
+    adminVisible: true,
+    previewType: "component",
+    routes: ["/today", "/quiz", "/mission/complete"],
+    sideEffects: ["auth", "supabase-read", "supabase-write"],
+    requiresAuth: true,
+    requiresAdmin: false,
+  },
 } satisfies { [K in FlagKeys]: FeatureDefinition & { key: K } };
 
 export const featureControlSections: FeatureCategory[] = [

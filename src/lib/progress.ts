@@ -5,18 +5,23 @@ import { useAuth } from "../contexts/AuthContext";
 export interface ProgressStats {
   subjectMastery: Record<string, number>; // subject_id -> mastery % (0-100)
   subcategoryMastery: Record<string, number>; // subcategory_id -> mastery % (0-100)
-  examReadiness: number; // % of subjects in exam with >= 80% mastery
+  /** % of subjects in exam with >= 80% mastery. NOT the composite readiness
+   *  score — that lives in useExamReadiness().score. Renamed (Phase 7.1 P0-2)
+   *  to end the "examReadiness" naming collision. */
+  masteredSubjectPct: number;
   totalQuestionsAnswered: number;
   averageScore: number;
+  /** Mirrors profiles.streak_count (the single source of truth, written by
+   *  trackAnswerForStreakAndGoal). NOT re-derived here (Phase 7.1 P0-1). */
   streakCount: number;
 }
 
 export function useUserProgress() {
-  const { user } = useAuth();
+  const { user, userData } = useAuth();
   const [stats, setStats] = useState<ProgressStats>({
     subjectMastery: {},
     subcategoryMastery: {},
-    examReadiness: 0,
+    masteredSubjectPct: 0,
     totalQuestionsAnswered: 0,
     averageScore: 0,
     streakCount: 0,
@@ -29,7 +34,7 @@ export function useUserProgress() {
     async function fetchProgress() {
       if (!user) {
         setStats({
-           subjectMastery: {}, subcategoryMastery: {}, examReadiness: 0,
+           subjectMastery: {}, subcategoryMastery: {}, masteredSubjectPct: 0,
            totalQuestionsAnswered: 0, averageScore: 0, streakCount: 0
         });
         setLoading(false);
@@ -47,8 +52,9 @@ export function useUserProgress() {
         
         if (!data || data.length === 0) {
           setStats({
-            subjectMastery: {}, subcategoryMastery: {}, examReadiness: 0,
-            totalQuestionsAnswered: 0, averageScore: 0, streakCount: 0
+            subjectMastery: {}, subcategoryMastery: {}, masteredSubjectPct: 0,
+            totalQuestionsAnswered: 0, averageScore: 0,
+            streakCount: userData?.streakCount ?? 0,
           });
           setLoading(false);
           return;
@@ -58,14 +64,11 @@ export function useUserProgress() {
         const subcatStats: Record<string, { correct: number, total: number }> = {};
         let totalCorrect = 0;
         const totalAnswered = data.length;
-        
-        // streak calc
-        const uniqueDays = new Set<string>();
-        
+
         data.forEach(row => {
           const isCorrect = row.is_correct ? 1 : 0;
           totalCorrect += isCorrect;
-          
+
           if (row.subject_id) {
             if (!subjectStats[row.subject_id]) subjectStats[row.subject_id] = { correct: 0, total: 0 };
             subjectStats[row.subject_id].correct += isCorrect;
@@ -75,10 +78,6 @@ export function useUserProgress() {
             if (!subcatStats[row.subcategory_id]) subcatStats[row.subcategory_id] = { correct: 0, total: 0 };
             subcatStats[row.subcategory_id].correct += isCorrect;
             subcatStats[row.subcategory_id].total += 1;
-          }
-          
-          if (row.answered_at) {
-             uniqueDays.add(new Date(row.answered_at).toISOString().split('T')[0]);
           }
         });
 
@@ -99,42 +98,22 @@ export function useUserProgress() {
           subcategoryMastery[subcat] = Math.round((counts.correct / counts.total) * 100);
         }
 
-        // exam readiness: bounded to 0-100, wait, readiness across ALL subjects they have? Or a fixed constant?
-        // Let's assume 13 subjects standard if examSubjectsTotal <= 13.
-        const examTotalFixed = Math.max(13, examSubjectsTotal); // ATPL has 14, CPL has varies, default 13
-        const examReadiness = Math.round((subjectsMasteredForExamCount / examTotalFixed) * 100);
+        // % of exam subjects at >= 80% mastery. Fixed denominator floor of 13
+        // (ATPL ~14, CPL varies) so a single mastered subject doesn't read 100%.
+        const examTotalFixed = Math.max(13, examSubjectsTotal);
+        const masteredSubjectPct = Math.round((subjectsMasteredForExamCount / examTotalFixed) * 100);
 
-        // calculate streak
-        // Just unique days count to be safe, real streak requires checking consecutive days backward from today.
-        const sortedDays = Array.from(uniqueDays).sort((a,b) => b.localeCompare(a));
-        let streak = 0;
-        const todayStr = new Date().toISOString().split('T')[0];
-        const yesterdayDate = new Date();
-        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
-        
-        if (sortedDays.length > 0) {
-           if (sortedDays[0] === todayStr || sortedDays[0] === yesterdayStr) {
-              streak = 1;
-              let currentCheckDate = new Date(sortedDays[0]);
-              for (let i = 1; i < sortedDays.length; i++) {
-                 currentCheckDate.setDate(currentCheckDate.getDate() - 1);
-                 if (sortedDays[i] === currentCheckDate.toISOString().split('T')[0]) {
-                    streak++;
-                 } else {
-                    break;
-                 }
-              }
-           }
-        }
-
+        // P0-1: streak is NOT re-derived here. profiles.streak_count (written by
+        // trackAnswerForStreakAndGoal, with freeze logic) is the single source of
+        // truth — we just mirror it so consumers reading progressStats.streakCount
+        // never disagree with the profile value.
         setStats({
           subjectMastery,
           subcategoryMastery,
-          examReadiness,
+          masteredSubjectPct,
           totalQuestionsAnswered: totalAnswered,
           averageScore: Math.round((totalCorrect / totalAnswered) * 100),
-          streakCount: streak
+          streakCount: userData?.streakCount ?? 0,
         });
         
       } catch (e) {
@@ -147,7 +126,10 @@ export function useUserProgress() {
     fetchProgress();
 
     return () => { active = false; };
-  }, [user]);
+    // streakCount dep keeps the mirrored streak fresh when the profile updates
+    // (changes ~once/day at the streak boundary, not per-answer).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, userData?.streakCount]);
 
   return { stats, loading };
 }

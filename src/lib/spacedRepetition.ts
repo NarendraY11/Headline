@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { awardXp, XP_VALUES } from "./xp";
 
 export interface QuestionProgress {
   question_id: string;
@@ -272,7 +273,8 @@ export async function trackAnswerForStreakAndGoal(
   user: any,
   userData: any,
   updateUserData: Function,
-  count: number = 1
+  count: number = 1,
+  xpEnabled: boolean = false
 ) {
   const getTodayString = () => {
     const d = new Date();
@@ -340,6 +342,13 @@ export async function trackAnswerForStreakAndGoal(
       lastActivityDate: today,
       settings: { ...baseSettings, streakFreezes: nextFreezes },
     });
+
+    // Phase 7.1: award a streak bonus when the streak actually grows.
+    // source_id `streak:<today>` makes it idempotent (one bonus per day).
+    if (xpEnabled && nextStreak > currentStreak) {
+      const uid = user.uid ?? user.id;
+      if (uid) void awardXp(uid, "streak_bonus", XP_VALUES.streakBonus, `streak:${today}`);
+    }
   } else {
     try {
       const lastActive = localStorage.getItem("heading_last_activity_date") || "";
