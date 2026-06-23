@@ -45,6 +45,33 @@ export function trackMissionCompleted(missionId: string, type?: string, attemptI
   });
 }
 
+// ── Phase 6 Mission Engine events ─────────────────────────────────────────────
+// Shared payload shape per spec: { primaryTrack, careerObjective, missionType,
+// subject, accuracy }. Not session-deduped per-id beyond what the caller needs;
+// created/abandoned are deduped by mission id, resumed is allowed to re-fire.
+
+export interface MissionEventContext {
+  primaryTrack?: string | null;
+  careerObjective?: string | null;
+  missionType?: string | null;
+  subject?: string | null;
+  accuracy?: number | null;
+}
+
+export function trackMissionCreated(missionId: string, ctx: MissionEventContext) {
+  if (!once(`mission_created_${missionId}`)) return;
+  posthogCapture("mission_created", { mission_id: missionId, ...ctx });
+}
+
+export function trackMissionResumed(missionId: string, ctx: MissionEventContext) {
+  posthogCapture("mission_resumed", { mission_id: missionId, ...ctx });
+}
+
+export function trackMissionAbandoned(missionId: string, ctx: MissionEventContext) {
+  if (!once(`mission_abandoned_${missionId}`)) return;
+  posthogCapture("mission_abandoned", { mission_id: missionId, ...ctx });
+}
+
 export function trackCalendarOpened() {
   if (!once("calendar_opened_session")) return;
   posthogCapture("calendar_opened");

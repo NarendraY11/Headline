@@ -1,7 +1,19 @@
 // Phase 5B: Deterministic mission generation from primaryTrack + readiness.
 // No AI, no hallucination. Inputs → mission shape.
+//
+// Phase 6 (Mission Activation Engine): deriveEngineMission() below produces a
+// *launchable* mission draft (real subjectId + difficulty + launch route) that
+// the engine persists as a study_missions row. Pure + deterministic: same
+// inputs → identical draft (no AI, no Date, no Math.random).
 
 import { getPrimaryTrackFamily } from "../data/trainingPaths";
+import type {
+  LaunchMode,
+  LaunchRoute,
+  MissionType,
+  TaskDifficulty,
+  TaskScope,
+} from "../types/studyScheduler";
 
 export interface MissionShape {
   title: string;
@@ -114,4 +126,129 @@ export function deriveMainMission(opts: {
 export function getCareerMission(careerObjective: string | null | undefined): CareerMission | null {
   if (!careerObjective) return null;
   return CAREER_OBJECTIVE_MISSIONS[careerObjective] ?? null;
+}
+
+// =====================================================================
+// Phase 6 — Mission Activation Engine: deterministic launchable mission
+// =====================================================================
+
+/**
+ * The ONLY subjects with a published question bank today. The engine can only
+ * generate missions a user can actually complete, so generation is restricted
+ * to this set. `label` is the canonical name; `short` is used in mission titles.
+ *
+ * ponytail: hard-coded — validated against src/data/topics.ts `status:"active"`
+ * subjects. When a new subject gets a question bank, add it here + to TRACK_SUBJECTS.
+ */
+export interface EngineSubject {
+  id: string;
+  label: string;
+  short: string;
+  questionCount: number;
+}
+
+export const ENGINE_SUBJECTS: Record<string, EngineSubject> = {
+  "air-navigation":      { id: "air-navigation",      label: "Air Navigation",      short: "Air Navigation",      questionCount: 450 },
+  "meteorology":         { id: "meteorology",         label: "Aviation Meteorology", short: "Meteorology",         questionCount: 100 },
+  "air-regulation":      { id: "air-regulation",      label: "Air Regulation",      short: "Air Regulations",     questionCount: 50  },
+  "principles-of-flight":{ id: "principles-of-flight",label: "Principles of Flight", short: "Principles of Flight", questionCount: 180 },
+  "a320-systems":        { id: "a320-systems",        label: "Airbus A320 Family",  short: "A320 Systems",        questionCount: 1478 },
+};
+
+/** Track family → eligible subject ids, in fixed priority order (tie-break). */
+const TRACK_SUBJECTS: Record<string, string[]> = {
+  dgca:        ["air-navigation", "meteorology", "air-regulation"],
+  type_rating: ["a320-systems"],
+  easa:        ["principles-of-flight"],
+  faa:         ["air-navigation", "meteorology", "air-regulation"], // no FAA bank yet → DGCA fallback
+};
+
+export type MissionCategory = "training" | "career";
+
+/**
+ * Launchable mission draft. Maps onto a study_missions row:
+ *   missionType → row.type, difficulty/scope/mode/route/subjectId/targetCount → row.payload,
+ *   estimatedMin → row.estimated_min. Extra display fields (title/description/category)
+ *   ride in row.payload so no schema change is needed.
+ */
+export interface EngineMissionDraft {
+  category: MissionCategory;
+  title: string;
+  description: string;
+  subjectId: string;
+  subjectLabel: string;
+  missionType: MissionType;
+  difficulty: TaskDifficulty;
+  scope: TaskScope;
+  mode: LaunchMode;
+  route: LaunchRoute;
+  questionCount: number;
+  estimatedMin: number;
+}
+
+function clamp(n: number, lo: number, hi: number): number {
+  return Math.min(hi, Math.max(lo, n));
+}
+
+/**
+ * Deterministically derive the next training mission from user context.
+ *
+ * Selection: weakest eligible subject (lowest mastery), tie-broken by the fixed
+ * TRACK_SUBJECTS order. Difficulty + title scale by mastery band. Every mission
+ * is a topic-scoped practice quiz (route "quiz") so it always launches into the
+ * subject's real question bank — no dependency on SR due-queues or mock papers
+ * that may be empty for a given user.
+ *
+ * Pure: no I/O, no Date, no randomness. Same inputs → identical draft.
+ */
+export function deriveEngineMission(opts: {
+  targetExam: string | null | undefined;
+  /** subjectId → mastery 0..100 */
+  mastery: Record<string, number>;
+  dailyGoal?: number;
+}): EngineMissionDraft {
+  const family = getPrimaryTrackFamily(opts.targetExam) ?? "dgca";
+  const eligible = TRACK_SUBJECTS[family] ?? TRACK_SUBJECTS.dgca;
+
+  // Weakest eligible subject; first-in-order wins ties (deterministic).
+  let chosenId = eligible[0];
+  let lowest = Infinity;
+  for (const id of eligible) {
+    const m = opts.mastery[id] ?? 0;
+    if (m < lowest) {
+      lowest = m;
+      chosenId = id;
+    }
+  }
+
+  const subj = ENGINE_SUBJECTS[chosenId];
+  const mastery = opts.mastery[chosenId] ?? 0;
+
+  // Band → difficulty + title suffix. Type stays "drill" (route "quiz") so the
+  // mission always has real questions to launch into.
+  let difficulty: TaskDifficulty;
+  let suffix: string;
+  if (mastery < 40)      { difficulty = "standard"; suffix = "Foundations"; }
+  else if (mastery < 65) { difficulty = "complex";  suffix = "Practice"; }
+  else if (mastery < 80) { difficulty = "mixed";    suffix = "Review"; }
+  else                   { difficulty = "extreme";  suffix = "Assessment"; }
+
+  const goal = clamp(opts.dailyGoal ?? 20, 5, 30);
+  const questionCount = Math.min(goal, subj.questionCount);
+  const estimatedMin = Math.max(5, Math.round(questionCount * 0.75)); // ~45s/q
+
+  return {
+    category: "training",
+    title: `${subj.short} ${suffix}`,
+    description: `${questionCount} ${difficulty} questions to build your ${subj.short} mastery.`,
+    subjectId: subj.id,
+    subjectLabel: subj.label,
+    missionType: "drill",
+    difficulty,
+    scope: "topic",
+    mode: "practice",
+    route: "quiz",
+    questionCount,
+    estimatedMin,
+  };
 }
