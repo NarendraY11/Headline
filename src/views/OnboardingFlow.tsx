@@ -1,6 +1,6 @@
 import { ArrowRight, Check, Flame, Lock, MoveLeft, MoveRight, Radar, ShieldAlert, Sparkles, Target, TriangleAlert } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wordmark } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
@@ -1263,6 +1263,8 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
   const [diagSubmitted, setDiagSubmitted] = useState<Record<number, boolean>>({});
   const [diagScore, setDiagScore] = useState(0);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   const { updateUserData } = useAuth();
   const navigate = useNavigate();
 
@@ -1272,6 +1274,13 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
     d.setDate(d.getDate() + 90);
     setCustomDate(d.toISOString().split("T")[0]);
   }, []);
+
+  // Scroll right pane to top on each new diagnostic question
+  useEffect(() => {
+    if (step === 3) {
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [currentDiagIdx, step]);
 
   const handleNext = () => {
     if (step < 3) {
@@ -1425,7 +1434,7 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
 
       {/* Right Column Interactive Flow Pane (~57%) */}
       <div className="w-full md:w-[57%] h-full bg-paper md:border-l border-rule flex flex-col overflow-hidden relative">
-        <div className="px-6 md:px-12 lg:px-20 pt-5 md:pt-16 flex-1 flex flex-col overflow-y-auto no-scrollbar pb-32">
+        <div ref={scrollContainerRef} className="px-6 md:px-12 lg:px-20 pt-5 md:pt-16 flex-1 flex flex-col overflow-y-auto no-scrollbar pb-32">
           {/* Progress horizontal steps indicator */}
           <div className="flex gap-2.5 mb-4 md:mb-8">
             {[1, 2, 3, 4].map(i => (
