@@ -518,6 +518,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let active = true;
     let lastUserId: string | null = null;
+    // True while fetchUserData is queued via setTimeout (escape from auth lock).
+    // Prevents getSession().then() from calling setLoading(false) prematurely.
+    let fetchPending = false;
 
     // Failsafe: never let the app hang on the auth skeleton. If getSession()
     // stalls (e.g. a deadlocked auth lock in a standalone PWA), force loading
@@ -538,7 +541,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           posthogIdentify(mappedUser.uid, { email: mappedUser.email, name: mappedUser.displayName });
           await fetchUserData(mappedUser.uid, mappedUser);
         }
-        if (active) setLoading(false);
+        // Only mark loading done if no deferred fetchUserData is still pending
+        // (onAuthStateChange may have already queued it via setTimeout below).
+        if (active && !fetchPending) setLoading(false);
       } else {
         setUser(null);
         setUserData(null);
@@ -551,17 +556,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const currentUser = session?.user || null;
       if (currentUser) {
         const mappedUser = mapSupabaseUser(currentUser, session);
-        
+
         if (lastUserId !== mappedUser.uid) {
           lastUserId = mappedUser.uid;
           setUser(mappedUser);
           posthogIdentify(mappedUser.uid, { email: mappedUser.email, name: mappedUser.displayName });
 
-          // Execute sync/merge transition
-          await syncWithServerAndMerge(mappedUser.uid);
-
-          // Retrieve profile details
-          await fetchUserData(mappedUser.uid, mappedUser);
+          // CRITICAL: supabase-js fires this callback INSIDE initializePromise
+          // (the auth lock). Any supabase.from() call here calls getSession()
+          // which awaits initializePromise → permanent deadlock. Escape via
+          // setTimeout so the lock is released before we make any DB calls.
+          const uid = mappedUser.uid;
+          const user = mappedUser;
+          fetchPending = true;
+          setTimeout(async () => {
+            if (!active) return;
+            try {
+              await syncWithServerAndMerge(uid);
+              await fetchUserData(uid, user);
+            } catch (e) {
+              console.error('Post-auth data sync failed:', e);
+            } finally {
+              fetchPending = false;
+            }
+          }, 0);
         } else {
           setUser(mappedUser);
         }
