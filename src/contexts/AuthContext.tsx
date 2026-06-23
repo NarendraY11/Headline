@@ -314,10 +314,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         referralCode: referralCode || profile?.referral_code,
         referredBy: profile?.referred_by,
         newsletterOptIn: profile?.newsletter_opt_in ?? false,
-        // Fall back to the settings timestamp: if a direct column write ever
-        // failed and only the settings JSON persisted, still treat onboarding
-        // as complete so the user is not stuck on the onboarding screen.
-        onboardingCompleted: (profile?.onboarding_completed ?? false) || !!profile?.settings?.onboardingCompletedAt,
+        // Fall back to the settings timestamp only when the column is null/undefined
+        // (migration path: old rows where the write failed mid-session).
+        // If the column is explicitly false (user triggered Reset Setup), honour it —
+        // the || fallback would otherwise override the reset with the old timestamp.
+        onboardingCompleted: profile?.onboarding_completed != null
+          ? profile.onboarding_completed
+          : !!profile?.settings?.onboardingCompletedAt,
       };
 
       // 2. Fetch bookmarks
