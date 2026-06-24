@@ -11,10 +11,11 @@
 // TodayView, which already computes them — no duplicate fetching here.
 // =====================================================================
 
-import { ArrowRight, Loader2, Play, Target, X } from "lucide-react";
+import { ArrowRight, Flame, Loader2, Play, Target, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFeature } from "../../hooks/useFeatureFlags";
 import { useActiveMission, type GenerateInputs } from "../../hooks/useActiveMission";
+import { useMissionStreak } from "../../hooks/useMissionStreak";
 
 interface ActiveMissionCardProps extends GenerateInputs {}
 
@@ -22,6 +23,7 @@ export function ActiveMissionCard(inputs: ActiveMissionCardProps) {
   const engineEnabled = useFeature("missionEngine");
   const navigate = useNavigate();
   const { mission, loading, error, busy, generate, resume, abandon } = useActiveMission();
+  const { streak: missionStreak } = useMissionStreak();
 
   if (!engineEnabled) return null;
 
@@ -30,7 +32,7 @@ export function ActiveMissionCard(inputs: ActiveMissionCardProps) {
       <div className="w-8 h-8 rounded-full bg-signal-soft flex items-center justify-center flex-shrink-0">
         <Target size={15} className="text-signal" />
       </div>
-      <div>
+      <div className="flex-1">
         <span className="font-mono text-[9px] tracking-[0.18em] uppercase text-signal block">
           § ACTIVE MISSION
         </span>
@@ -38,6 +40,15 @@ export function ActiveMissionCard(inputs: ActiveMissionCardProps) {
           Today's Mission
         </h2>
       </div>
+      {missionStreak >= 1 && (
+        <span
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-amber-soft border border-amber/20 text-[#855807] dark:text-amber flex-shrink-0"
+          title={`${missionStreak}-day mission streak`}
+        >
+          <Flame size={12} />
+          <span className="font-mono text-[10px] font-semibold tabular-nums">{missionStreak}d</span>
+        </span>
+      )}
     </div>
   );
 

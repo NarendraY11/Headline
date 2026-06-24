@@ -9,6 +9,7 @@ import {
     Play,
     TrendingUp,
     X,
+    Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { lazy, Suspense, useEffect, useState } from "react";
@@ -27,6 +28,9 @@ import { TodayLoader } from "./today/DashboardLoaders";
 import { CareerObjectiveMissions } from "./today/CareerObjectiveMissions";
 import { ActiveMissionCard } from "./today/ActiveMissionCard";
 import { TodayMissions } from "./today/TodayMissions";
+import { RecentXpActivity } from "./today/RecentXpActivity";
+import { TodayAchievements } from "./today/TodayAchievements";
+import { useXp } from "../hooks/useXp";
 import { TodayStops } from "./today/TodayStops";
 import { getPacingData } from "./today/utils";
 import { ExamReadinessGauge } from "./today/ExamReadinessGauge";
@@ -66,6 +70,10 @@ export default function TodayView() {
   const weatherBriefingEnabled = useFeature("weatherBriefing");
   const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
   const missionEngineEnabled = useFeature("missionEngine");
+  const xpSystemEnabled = useFeature("xpSystem");
+  // Phase 7.2: XP read substrate hoisted here (hooks rule — cannot live inside
+  // the renderTile switch). Internally gated on xpSystem + userId.
+  const { balance: xpBalance, events: xpEvents, loading: xpLoading } = useXp(50);
   const examReadinessDashboardEnabled = useFeature("examReadinessDashboard");
   const adaptiveRegenEnabled = useFeature("adaptiveRegen");
   const masteryAnalyticsEnabled = useFeature("masteryAnalytics");
@@ -417,6 +425,12 @@ export default function TodayView() {
   const tileBaseClasses =
     "bg-paper border border-rule dark:border-rule-strong dark:shadow-md rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between";
 
+  // Phase 7.2: XP earned in the last 7 days (from the hoisted ledger events).
+  const xpWeekCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const xpThisWeek = xpEvents
+    .filter((e) => new Date(e.created_at).getTime() >= xpWeekCutoff)
+    .reduce((sum, e) => sum + (e.amount ?? 0), 0);
+
   const renderTile = (tile: string) => {
     switch (tile) {
       case "streak":
@@ -562,6 +576,28 @@ export default function TodayView() {
             </div>
           </div>
         );
+      case "xp":
+        return (
+          <div key="xp" className={tileBaseClasses}>
+            <div>
+              <div className="flex items-center gap-1.5 mb-1 text-muted-2">
+                <Zap size={14} className="text-amber" />
+                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
+                  XP
+                </span>
+              </div>
+              <div className="font-serif text-[26px] text-ink leading-none mt-2">
+                {xpLoading ? 0 : <AnimatedCounter value={xpBalance} />}{" "}
+                <span className="font-sans text-xl text-muted font-normal lowercase tracking-normal">
+                  xp
+                </span>
+              </div>
+              <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
+                {xpThisWeek > 0 ? `+${xpThisWeek} this week` : "No XP this week yet"}
+              </div>
+            </div>
+          </div>
+        );
       default:
         return null;
     }
@@ -671,6 +707,13 @@ export default function TodayView() {
             <CareerObjectiveMissions careerObjective={userData?.careerObjective} />
           </div>
         )}
+
+        {/* Phase 7.2: retention surfaces near the mission loop. Each self-gates
+            (RecentXpActivity → xpSystem; TodayAchievements → has-unlocks). */}
+        <div className="space-y-3 mb-8">
+          <TodayAchievements />
+          <RecentXpActivity />
+        </div>
 
         {/* Readiness Card */}
         <div className="bg-ink rounded-[20px] p-5 md:p-8 w-full mb-8 relative overflow-hidden text-bg shadow-lg">
@@ -790,10 +833,16 @@ export default function TodayView() {
           )}
         </div>
 
-        {/* TILES */}
+        {/* TILES — Phase 7.2: append the XP tile when xpSystem is ON; strip it
+            (even from a saved tile order) when OFF, so OFF state is unchanged. */}
         <div className="mb-10 w-full relative">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 w-full">
-            {tileOrder.map((tile) => renderTile(tile))}
+            {[
+              ...tileOrder,
+              ...(xpSystemEnabled && !tileOrder.includes("xp") ? ["xp"] : []),
+            ]
+              .filter((tile) => tile !== "xp" || xpSystemEnabled)
+              .map((tile) => renderTile(tile))}
           </div>
         </div>
 

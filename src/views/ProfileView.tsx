@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../components/ui/Toast";
 import { Button, Card } from "../components/Atoms";
+import { AchievementGallery } from "./profile/AchievementGallery";
 import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2, Sparkles, ShieldCheck, CalendarClock, ArrowRight, AlertTriangle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { isPaidActive, daysLeft, planLabel } from "../lib/plan";
@@ -640,6 +641,9 @@ export default function ProfileView() {
           </div>
         </div>
       </Card>
+
+      {/* Phase 7.2: full achievement gallery (always-on, flag-independent). */}
+      <AchievementGallery />
 
       {/* Lower section uses two columns on desktop so the bottom half fills
           horizontal space instead of stacking full-width. */}
