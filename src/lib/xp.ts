@@ -12,23 +12,12 @@
 
 import { supabase } from "./supabase";
 import { posthogCapture } from "./posthog.js";
+import { XP_VALUES, computeQuizQuestionXp, type XpEventType } from "./xpValues";
 
-export type XpEventType =
-  | "question_answered"
-  | "quiz_completed"
-  | "mission_completed"
-  | "streak_bonus"
-  | "achievement_unlock";
-
-/** Tunable award scale (balanced). Single source for all XP amounts. */
-export const XP_VALUES = {
-  questionCorrect: 2,
-  questionWrong: 1,
-  quizCompleted: 10,
-  missionCompleted: 25,
-  streakBonus: 5,
-  achievementUnlock: 50,
-} as const;
+// Re-export so existing callers (QuizView, spacedRepetition) keep importing
+// these from "./xp" unchanged.
+export { XP_VALUES, computeQuizQuestionXp };
+export type { XpEventType };
 
 export interface XpEventRow {
   id: string;
@@ -38,16 +27,6 @@ export interface XpEventRow {
   source_id: string | null;
   meta: Record<string, unknown>;
   created_at: string;
-}
-
-/**
- * Pure: XP for a finished quiz's questions.
- * correct answers earn more than wrong ones, but every answer earns something.
- */
-export function computeQuizQuestionXp(correct: number, total: number): number {
-  const c = Math.max(0, Math.min(correct, total));
-  const wrong = Math.max(0, total - c);
-  return c * XP_VALUES.questionCorrect + wrong * XP_VALUES.questionWrong;
 }
 
 /**

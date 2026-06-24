@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeQuizQuestionXp, XP_VALUES } from "../../src/lib/xp";
+import { computeQuizQuestionXp, XP_VALUES } from "../../src/lib/xpValues";
 
 describe("computeQuizQuestionXp", () => {
   it("rewards correct more than wrong, but every answer earns", () => {
