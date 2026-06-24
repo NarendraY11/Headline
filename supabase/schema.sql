@@ -929,8 +929,8 @@ create table if not exists public.user_question_attempts (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   question_id text not null,
-  subcategory_id text not null,
-  subject_id text not null,
+  subcategory_id text,
+  subject_id text,
   exam_id text,
   is_correct boolean not null,
   answered_at timestamptz default now()
