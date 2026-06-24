@@ -4,7 +4,9 @@ import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../components/ui/Toast";
 import { Button, Card } from "../components/Atoms";
 import { AchievementGallery } from "./profile/AchievementGallery";
-import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2, Sparkles, ShieldCheck, CalendarClock, ArrowRight, AlertTriangle } from "lucide-react";
+import { useFeature } from "../hooks/useFeatureFlags";
+import { useXp } from "../hooks/useXp";
+import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2, Sparkles, ShieldCheck, CalendarClock, ArrowRight, AlertTriangle, Zap } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { isPaidActive, daysLeft, planLabel } from "../lib/plan";
 
@@ -159,6 +161,9 @@ export default function ProfileView() {
   const rawTargetExam: string = (userData as any)?.targetExam ?? (userData as any)?.target_exam ?? "";
   const targetExam = TARGET_EXAM_LABELS[rawTargetExam] || rawTargetExam || "DGCA CPL";
   const { streakCount = 0, photoURL: firestorePhotoURL } = userData || {};
+  // Phase 7.3: rank progression (gated on xpSystem; derived from XP balance).
+  const xpEnabled = useFeature("xpSystem");
+  const { balance: xpBalance, rank: xpRank } = useXp(1);
   const currentPhotoURL = firestorePhotoURL || user.photoURL;
 
   // Subscription / clearance details.
@@ -641,6 +646,45 @@ export default function ProfileView() {
           </div>
         </div>
       </Card>
+
+      {/* Phase 7.3: rank progression block (xpSystem-gated). */}
+      {xpEnabled && (
+        <Card className="bg-paper p-0 mb-8 overflow-hidden">
+          <div className="px-6 pt-5 pb-3 border-b border-rule flex items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-bold">Flight Progression</span>
+            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber tabular-nums">
+              <Zap size={12} /> {xpBalance} XP
+            </span>
+          </div>
+          <div className="px-6 py-5">
+            <div className="flex items-end justify-between gap-3 mb-3">
+              <div>
+                <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Current Rank</div>
+                <div className="font-serif text-3xl text-ink">{xpRank.rank.name}</div>
+              </div>
+              <div className="text-right">
+                <div className="font-mono text-[9px] uppercase text-muted-2 tracking-widest mb-1">
+                  {xpRank.isMax ? "Top Rank" : "Next"}
+                </div>
+                <div className="font-sans text-sm text-ink">
+                  {xpRank.isMax ? "—" : xpRank.next!.name}
+                </div>
+              </div>
+            </div>
+            <div className="h-2 rounded-full bg-bg-2 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-amber transition-all duration-500"
+                style={{ width: `${Math.round(xpRank.progress * 100)}%` }}
+              />
+            </div>
+            <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide tabular-nums text-right">
+              {xpRank.isMax
+                ? "All certificate stages cleared"
+                : `${xpRank.xpRemaining} XP to ${xpRank.next!.name}`}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Phase 7.2: full achievement gallery (always-on, flag-independent). */}
       <AchievementGallery />

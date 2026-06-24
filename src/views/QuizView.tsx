@@ -17,7 +17,8 @@ import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopi
 import { submitQuestionAttempt } from "../lib/progress";
 import { getDueQuestionIds, recordAnswerProgress, trackAnswerForStreakAndGoal } from "../lib/spacedRepetition";
 import { completeMission } from "../lib/studyScheduler";
-import { awardXp, computeQuizQuestionXp, XP_VALUES } from "../lib/xp";
+import { awardXp, computeQuizQuestionXp, getXpBalance, XP_VALUES } from "../lib/xp";
+import { didRankUp } from "../lib/xpValues";
 import { unlockAchievement } from "../lib/achievements";
 import { supabase } from "../lib/supabase";
 import { trackEvent } from "../lib/track";
@@ -693,6 +694,11 @@ export default function QuizView() {
     if (finishingRef.current) return;
     finishingRef.current = true;
 
+    // Phase 7.3: rank-up state, set inside the XP award block, consumed at the
+    // mission-complete navigation below.
+    let rankUpName: string | null = null;
+    let xpEarnedThisFinish = 0;
+
     trackQuestionTime();
 
     // M9B: compute session median response time for SM-2 quality derivation
@@ -832,11 +838,27 @@ export default function QuizView() {
       // a re-finish / back-nav never double-awards. question_answered is
       // aggregated per quiz (one row, amount = Σ per-question value).
       if (xpEnabled) {
+        // Capture balance BEFORE awarding so a threshold cross can be detected.
+        // awardXp is idempotent: a re-finish writes nothing, awarded stays 0,
+        // and didRankUp returns null — no phantom rank-up.
+        let xpBefore = 0;
+        try { xpBefore = await getXpBalance(user.uid); } catch { /* non-fatal */ }
+        let awarded = 0;
         const qXp = computeQuizQuestionXp(correctCount, totalQuestions);
-        await awardXp(user.uid, "question_answered", qXp, attemptUid);
-        await awardXp(user.uid, "quiz_completed", XP_VALUES.quizCompleted, attemptUid);
+        if (await awardXp(user.uid, "question_answered", qXp, attemptUid)) awarded += qXp;
+        if (await awardXp(user.uid, "quiz_completed", XP_VALUES.quizCompleted, attemptUid)) awarded += XP_VALUES.quizCompleted;
         if (missionId && missionCompletedRef.current) {
-          await awardXp(user.uid, "mission_completed", XP_VALUES.missionCompleted, missionId);
+          if (await awardXp(user.uid, "mission_completed", XP_VALUES.missionCompleted, missionId)) awarded += XP_VALUES.missionCompleted;
+        }
+        xpEarnedThisFinish = awarded;
+        const ru = awarded > 0 ? didRankUp(xpBefore, xpBefore + awarded) : null;
+        if (ru) {
+          rankUpName = ru.name;
+          addNotification(
+            "Rank Advanced",
+            `You reached ${ru.name}. Cleared for the next stage of training.`,
+            "milestone"
+          );
         }
       }
 
@@ -942,7 +964,9 @@ export default function QuizView() {
     // Phase 6: engine mission → go to the completion screen (readiness impact,
     // Generate Next Mission). completeMission already ran inside saveAttempt().
     if (engineMission && missionId) {
-      navigate("/mission/complete", { state: { missionId } });
+      navigate("/mission/complete", {
+        state: { missionId, xpEarned: xpEarnedThisFinish, rankUpName },
+      });
       return;
     }
 

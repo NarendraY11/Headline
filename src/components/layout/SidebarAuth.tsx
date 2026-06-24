@@ -5,12 +5,18 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { getUserPlanState } from "../../lib/subscription";
+import { useFeature } from "../../hooks/useFeatureFlags";
+import { useXp } from "../../hooks/useXp";
 
 
 export function SidebarAuth({ isExpanded }: { isExpanded: boolean }) {
   const { user, userData, loading, openAuthModal } = useAuth();
   const planState = getUserPlanState(userData);
   const [avatarError, setAvatarError] = useState(false);
+  // Phase 7.3: secondary rank label (expanded only). useXp is internally gated
+  // on xpSystem — no query fires when the flag is OFF.
+  const xpEnabled = useFeature("xpSystem");
+  const { rank: xpRank } = useXp(1);
   
   if (loading) return (
     <div className={`flex items-center gap-3 px-3 py-2.5 ${!isExpanded ? 'justify-center' : ''}`}>
@@ -34,8 +40,13 @@ export function SidebarAuth({ isExpanded }: { isExpanded: boolean }) {
             </div>
           )}
         </div>
-        <span className={`whitespace-nowrap truncate transition-opacity duration-200 ${isExpanded ? 'opacity-100 flex-grow text-left' : 'opacity-0 w-0 hidden'}`}>
-          {user.displayName || "Profile"}
+        <span className={`min-w-0 flex flex-col transition-opacity duration-200 ${isExpanded ? 'opacity-100 flex-grow text-left' : 'opacity-0 w-0 hidden'}`}>
+          <span className="whitespace-nowrap truncate">{user.displayName || "Profile"}</span>
+          {xpEnabled && (
+            <span className="whitespace-nowrap truncate font-mono text-[8px] uppercase tracking-widest text-muted-2 mt-0.5">
+              {xpRank.rank.name}
+            </span>
+          )}
         </span>
         {(planState.state === "active" || planState.state === "trial") && (
           isExpanded ? (

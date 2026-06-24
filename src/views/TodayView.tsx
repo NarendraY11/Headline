@@ -73,7 +73,7 @@ export default function TodayView() {
   const xpSystemEnabled = useFeature("xpSystem");
   // Phase 7.2: XP read substrate hoisted here (hooks rule — cannot live inside
   // the renderTile switch). Internally gated on xpSystem + userId.
-  const { balance: xpBalance, events: xpEvents, loading: xpLoading } = useXp(50);
+  const { balance: xpBalance, events: xpEvents, rank: xpRank, loading: xpLoading } = useXp(50);
   const examReadinessDashboardEnabled = useFeature("examReadinessDashboard");
   const adaptiveRegenEnabled = useFeature("adaptiveRegen");
   const masteryAnalyticsEnabled = useFeature("masteryAnalytics");
@@ -591,6 +591,23 @@ export default function TodayView() {
                 <span className="font-sans text-xl text-muted font-normal lowercase tracking-normal">
                   xp
                 </span>
+              </div>
+              {/* Phase 7.3: rank chip + progress-to-next rail */}
+              <div className="mt-2.5">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <span className="font-mono text-[9px] uppercase tracking-wide text-ink font-semibold truncate">
+                    {xpRank.rank.name}
+                  </span>
+                  <span className="font-mono text-[9px] text-muted-2 tracking-wide tabular-nums flex-shrink-0">
+                    {xpRank.isMax ? "MAX" : `${xpRank.xpRemaining} to ${xpRank.next!.name}`}
+                  </span>
+                </div>
+                <div className="h-1 rounded-full bg-bg-2 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-amber transition-all duration-500"
+                    style={{ width: `${Math.round(xpRank.progress * 100)}%` }}
+                  />
+                </div>
               </div>
               <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
                 {xpThisWeek > 0 ? `+${xpThisWeek} this week` : "No XP this week yet"}
