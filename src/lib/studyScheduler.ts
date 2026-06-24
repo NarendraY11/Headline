@@ -265,6 +265,33 @@ export async function getEngineMissionById(
   return (data as StudyMissionRow) ?? null;
 }
 
+/**
+ * Distinct local dates (YYYY-MM-DD) on which the user completed a Mission Engine
+ * mission. Phase 7.2 mission-streak input.
+ *
+ * STRICTLY engine-only: source='system' + status='completed'. Excludes scheduler
+ * plan completions (source='plan'), manual missions (source='manual'), and any
+ * non-completed rows — so the streak represents the Mission Engine loop alone.
+ */
+export async function getCompletedMissionDates(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("study_missions")
+    .select("completed_at")
+    .eq("user_id", userId)
+    .eq("source", "system")
+    .eq("status", "completed")
+    .not("completed_at", "is", null);
+  if (error) throw new Error(`getCompletedMissionDates: ${error.message}`);
+  const days = new Set<string>();
+  for (const r of data ?? []) {
+    const ts = (r as { completed_at: string | null }).completed_at;
+    if (!ts) continue;
+    const d = new Date(ts);
+    days.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`);
+  }
+  return [...days];
+}
+
 /** Engine mission history (completed + abandoned), newest first. */
 export async function getEngineMissionHistory(
   userId: string,
