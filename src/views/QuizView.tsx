@@ -17,6 +17,8 @@ import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopi
 import { submitQuestionAttempt } from "../lib/progress";
 import { getDueQuestionIds, recordAnswerProgress, trackAnswerForStreakAndGoal } from "../lib/spacedRepetition";
 import { completeMission } from "../lib/studyScheduler";
+import { awardXp, computeQuizQuestionXp, XP_VALUES } from "../lib/xp";
+import { unlockAchievement } from "../lib/achievements";
 import { supabase } from "../lib/supabase";
 import { trackEvent } from "../lib/track";
 import { trackStudyPlanGenerated } from "../lib/studyAnalytics";
@@ -76,6 +78,7 @@ export default function QuizView() {
   const flashcardsEnabled = useFeature("flashcards");
   const cockpitEnabled = useFeature("cockpitLayouts");
   const masterySnapshotsEnabled = useFeature("masterySnapshots");
+  const xpEnabled = useFeature("xpSystem");
   const sm2AlgorithmEnabled = useFeature("sm2Algorithm");
   const sm2QualityTimingEnabled = useFeature("sm2QualityTiming");
 
@@ -622,7 +625,7 @@ export default function QuizView() {
     }
 
     // Track daily goal & streak counters
-    trackAnswerForStreakAndGoal(user, userData, updateUserData, 1);
+    trackAnswerForStreakAndGoal(user, userData, updateUserData, 1, xpEnabled);
   };
 
   const handleRevealViva = (qId: string) => {
@@ -744,7 +747,7 @@ export default function QuizView() {
 
     if (answeredCount > 0) {
       // Track streaks and daily goal progress on submit
-      trackAnswerForStreakAndGoal(user, userData, updateUserData, answeredCount);
+      trackAnswerForStreakAndGoal(user, userData, updateUserData, answeredCount, xpEnabled);
     }
 
     const isNegativeMarking =
@@ -825,6 +828,18 @@ export default function QuizView() {
       };
       await saveAttempt();
 
+      // Phase 7.1: XP awards (gated on xpSystem). Idempotent per source_id, so
+      // a re-finish / back-nav never double-awards. question_answered is
+      // aggregated per quiz (one row, amount = Σ per-question value).
+      if (xpEnabled) {
+        const qXp = computeQuizQuestionXp(correctCount, totalQuestions);
+        await awardXp(user.uid, "question_answered", qXp, attemptUid);
+        await awardXp(user.uid, "quiz_completed", XP_VALUES.quizCompleted, attemptUid);
+        if (missionId && missionCompletedRef.current) {
+          await awardXp(user.uid, "mission_completed", XP_VALUES.missionCompleted, missionId);
+        }
+      }
+
       // M8A: refresh mastery_snapshots for subjects touched in this session.
       // Fire-and-forget — non-blocking, non-fatal.
       if (masterySnapshotsEnabled && user?.id) {
@@ -902,6 +917,19 @@ export default function QuizView() {
     if (unlocked) {
       setUnlockedMilestone(unlocked);
       addNotification(unlocked.title, unlocked.desc, "milestone");
+      // Phase 7.1: persist the unlock durably (idempotent). Award achievement XP
+      // only when NEWLY unlocked. Fire-and-forget — never blocks the results UI.
+      if (user) {
+        const uid = user.uid;
+        const achId = unlocked.id;
+        unlockAchievement(uid, achId)
+          .then((wasNew) => {
+            if (wasNew && xpEnabled) {
+              void awardXp(uid, "achievement_unlock", XP_VALUES.achievementUnlock, achId);
+            }
+          })
+          .catch(() => {});
+      }
     } else {
       const topicName = customTopic || questions[0]?.ata || "this module";
       addNotification(

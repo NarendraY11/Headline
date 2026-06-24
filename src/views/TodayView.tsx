@@ -335,7 +335,7 @@ export default function TodayView() {
 
   const passedCount = subjectMasteries.filter((m) => m >= 0.8).length;
   const isReadyForExam = subjectMasteries.length > 0 && passedCount === subjectMasteries.length;
-  const readinessPercentage = progressStats.examReadiness;
+  const readinessPercentage = progressStats.masteredSubjectPct;
 
   const pacingData = getPacingData(savedDate, logbook);
 
@@ -665,7 +665,7 @@ export default function TodayView() {
               targetExam={userData?.targetExam}
               mastery={progressStats.subjectMastery}
               dailyGoal={userData?.dailyGoal}
-              readinessScore={progressStats.examReadiness}
+              readinessScore={examReadiness.score}
               careerObjective={userData?.careerObjective}
             />
             <CareerObjectiveMissions careerObjective={userData?.careerObjective} />

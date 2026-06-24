@@ -12,8 +12,10 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, CheckCircle2, Clock, Loader2, Target, TrendingUp } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useUserProgress } from "../lib/progress";
+import { useExamReadiness } from "../hooks/useExamReadiness";
 import { useActiveMission } from "../hooks/useActiveMission";
 import { finalizeReadinessImpact, getEngineMissionById } from "../lib/studyScheduler";
+import { fetchMergedSubjects } from "../lib/content";
 import type { StudyMissionRow } from "../types/studyScheduler";
 
 function formatDuration(startISO?: string, endISO?: string | null): string {
@@ -32,12 +34,23 @@ export default function MissionCompleteView() {
   const missionId = (location.state as { missionId?: string } | null)?.missionId;
 
   const { userData } = useAuth();
-  const { stats: progressStats, loading: progressLoading } = useUserProgress();
+  const { stats: progressStats } = useUserProgress();
   const { generate, busy } = useActiveMission();
+
+  // Composite readiness score (0-100), same denominator source as TodayView so
+  // the impact baseline (captured at mission create) and "now" are comparable.
+  const [subjectsCount, setSubjectsCount] = useState(0);
+  const examReadiness = useExamReadiness(subjectsCount);
 
   const [mission, setMission] = useState<StudyMissionRow | null>(null);
   const [impact, setImpact] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetchMergedSubjects().then((m) => { if (active) setSubjectsCount(m.length); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   // No mission id (e.g. hard refresh) → back to Today.
   useEffect(() => {
@@ -45,31 +58,33 @@ export default function MissionCompleteView() {
   }, [missionId, navigate]);
 
   useEffect(() => {
-    if (!missionId || progressLoading) return;
+    // Wait for the composite readiness to resolve (real subject count) before
+    // computing impact, else the denominator is wrong.
+    if (!missionId || examReadiness.loading || subjectsCount === 0) return;
     let active = true;
     (async () => {
       try {
         const row = await getEngineMissionById(missionId);
         if (!active) return;
         setMission(row);
-        // Persist + read readiness impact using the current (post-quiz) score.
+        // Impact uses the composite readiness score (P1-2), not masteredSubjectPct.
         const delta =
           row?.payload?.readinessImpact ??
-          (await finalizeReadinessImpact(missionId, progressStats.examReadiness));
+          (await finalizeReadinessImpact(missionId, examReadiness.score));
         if (active) setImpact(delta);
       } finally {
         if (active) setLoading(false);
       }
     })();
     return () => { active = false; };
-  }, [missionId, progressLoading, progressStats.examReadiness]);
+  }, [missionId, examReadiness.loading, examReadiness.score, subjectsCount]);
 
   const handleGenerateNext = async () => {
     const row = await generate({
       targetExam: userData?.targetExam,
       mastery: progressStats.subjectMastery,
       dailyGoal: userData?.dailyGoal,
-      readinessScore: progressStats.examReadiness,
+      readinessScore: examReadiness.score,
       careerObjective: userData?.careerObjective,
     });
     navigate("/today", { replace: true });

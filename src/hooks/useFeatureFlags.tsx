@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-export type FlagKeys = "aiExplain" | "aiCoach" | "aiDiagnosis" | "aiPractice" | "weatherBriefing" | "mockExams" | "topicPractice" | "qotd" | "spacedRepetition" | "flashcards" | "cockpitLayouts" | "analytics" | "masteryCharts" | "blog" | "examSeoPages" | "a320Systems" | "adsense" | "pricingCheckout" | "freeTrial" | "proGating" | "maintenanceMode" | "cookieConsent" | "announcementBanner" | "announcementText" | "signupsOpen" | "themeToggle" | "vivaPractice" | "referralProgram" | "notifications" | "bookmarksEnabled" | "searchEnabled" | "leaderboard" | "offlineMode" | "pwaInstallPrompt" | "aiStudyScheduler" | "masterySnapshots" | "examReadinessDashboard" | "sm2Algorithm" | "adaptiveRegen" | "masteryAnalytics" | "missionScores" | "sm2QualityTiming" | "coachContextEnrichment" | "examReadinessEta" | "predictiveIntelligence" | "advancedTesting" | "pwaEnhanced" | "offlineMissions" | "pushNotifications" | "calendarSync" | "missionEngine";
+export type FlagKeys = "aiExplain" | "aiCoach" | "aiDiagnosis" | "aiPractice" | "weatherBriefing" | "mockExams" | "topicPractice" | "qotd" | "spacedRepetition" | "flashcards" | "cockpitLayouts" | "analytics" | "masteryCharts" | "blog" | "examSeoPages" | "a320Systems" | "adsense" | "pricingCheckout" | "freeTrial" | "proGating" | "maintenanceMode" | "cookieConsent" | "announcementBanner" | "announcementText" | "signupsOpen" | "themeToggle" | "vivaPractice" | "referralProgram" | "notifications" | "bookmarksEnabled" | "searchEnabled" | "leaderboard" | "offlineMode" | "pwaInstallPrompt" | "aiStudyScheduler" | "masterySnapshots" | "examReadinessDashboard" | "sm2Algorithm" | "adaptiveRegen" | "masteryAnalytics" | "missionScores" | "sm2QualityTiming" | "coachContextEnrichment" | "examReadinessEta" | "predictiveIntelligence" | "advancedTesting" | "pwaEnhanced" | "offlineMissions" | "pushNotifications" | "calendarSync" | "missionEngine" | "xpSystem";
 
 export type Flags = Record<FlagKeys, any>;
 
@@ -57,6 +57,7 @@ export const defaultFlags: Flags = {
   pushNotifications: false,      // M13: VAPID push subscription + reminders
   calendarSync: false,           // M13: ICS export + Google/Outlook/Apple calendar sync
   missionEngine: false,          // Phase 6: deterministic Mission Activation Engine (OFF until verified in prod)
+  xpSystem: false,               // Phase 7.1: XP ledger writes + reads (OFF; history accrues only once ON)
 };
 
 export const FeatureFlagsContext = createContext<{ flags: Flags; loading: boolean }>({ flags: defaultFlags, loading: true });
