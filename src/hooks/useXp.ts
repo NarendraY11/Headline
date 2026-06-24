@@ -8,14 +8,17 @@
 // the read substrate.
 // =====================================================================
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useFeature } from "./useFeatureFlags";
 import { getXpBalance, getXpEvents, type XpEventRow } from "../lib/xp";
+import { computeRank, type RankProgress } from "../lib/xpValues";
 
 export interface UseXpResult {
   balance: number;
   events: XpEventRow[];
+  /** Phase 7.3: rank + progress-to-next, derived from balance (not persisted). */
+  rank: RankProgress;
   loading: boolean;
   error: string | null;
   refetch: () => void;
@@ -58,5 +61,7 @@ export function useXp(eventLimit = 50): UseXpResult {
     return () => { cleanup?.then?.((fn) => fn?.()); };
   }, [load]);
 
-  return { balance, events, loading, error, refetch: load };
+  const rank = useMemo(() => computeRank(balance), [balance]);
+
+  return { balance, events, rank, loading, error, refetch: load };
 }

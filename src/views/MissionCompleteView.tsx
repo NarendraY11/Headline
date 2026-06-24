@@ -9,11 +9,13 @@
 
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Clock, Loader2, Target, TrendingUp } from "lucide-react";
+import { ArrowRight, CheckCircle2, Clock, Loader2, Target, TrendingUp, Zap } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { useUserProgress } from "../lib/progress";
 import { useExamReadiness } from "../hooks/useExamReadiness";
 import { useActiveMission } from "../hooks/useActiveMission";
+import { useFeature } from "../hooks/useFeatureFlags";
+import { useXp } from "../hooks/useXp";
 import { finalizeReadinessImpact, getEngineMissionById } from "../lib/studyScheduler";
 import { fetchMergedSubjects } from "../lib/content";
 import type { StudyMissionRow } from "../types/studyScheduler";
@@ -31,11 +33,20 @@ function formatDuration(startISO?: string, endISO?: string | null): string {
 export default function MissionCompleteView() {
   const location = useLocation();
   const navigate = useNavigate();
-  const missionId = (location.state as { missionId?: string } | null)?.missionId;
+  const navState = location.state as
+    | { missionId?: string; xpEarned?: number; rankUpName?: string | null }
+    | null;
+  const missionId = navState?.missionId;
+  const xpEarned = navState?.xpEarned ?? 0;
+  const rankUpName = navState?.rankUpName ?? null;
 
   const { userData } = useAuth();
   const { stats: progressStats } = useUserProgress();
   const { generate, busy } = useActiveMission();
+
+  // Phase 7.3: rank progression reinforcement (gated on xpSystem).
+  const xpEnabled = useFeature("xpSystem");
+  const { rank: xpRank } = useXp(1);
 
   // Composite readiness score (0-100), same denominator source as TodayView so
   // the impact baseline (captured at mission create) and "now" are comparable.
@@ -133,6 +144,41 @@ export default function MissionCompleteView() {
           </div>
           <div className="font-serif text-[40px] leading-none text-mint">{impactStr}</div>
         </div>
+
+        {/* Phase 7.3: XP earned + rank progression (or rank-up reveal) */}
+        {xpEnabled && (
+          rankUpName ? (
+            <div className="rounded-[16px] border border-amber/30 bg-amber-soft px-4 py-4 mb-5 text-center">
+              <div className="flex items-center justify-center gap-1.5 font-mono text-[10px] uppercase tracking-wide text-[#855807] dark:text-amber mb-1">
+                <Zap size={12} /> Rank Advanced
+              </div>
+              <div className="font-serif text-[28px] leading-tight text-ink">{rankUpName}</div>
+              {xpEarned > 0 && (
+                <div className="mt-1 font-mono text-[11px] text-muted-2 tabular-nums">+{xpEarned} XP this mission</div>
+              )}
+            </div>
+          ) : (
+            <div className="rounded-[16px] border border-rule bg-paper px-4 py-4 mb-5">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="font-mono text-[10px] uppercase tracking-wide text-ink font-semibold">
+                  {xpRank.rank.name}
+                </span>
+                {xpEarned > 0 && (
+                  <span className="font-mono text-[11px] text-mint font-semibold tabular-nums">+{xpEarned} XP</span>
+                )}
+              </div>
+              <div className="h-1.5 rounded-full bg-bg-2 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-amber transition-all duration-500"
+                  style={{ width: `${Math.round(xpRank.progress * 100)}%` }}
+                />
+              </div>
+              <div className="mt-1.5 font-mono text-[9px] text-muted-2 tracking-wide tabular-nums text-right">
+                {xpRank.isMax ? "Top rank reached" : `${xpRank.xpRemaining} XP to ${xpRank.next!.name}`}
+              </div>
+            </div>
+          )
+        )}
 
         <button
           type="button"
