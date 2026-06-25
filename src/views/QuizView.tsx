@@ -694,10 +694,11 @@ export default function QuizView() {
     if (finishingRef.current) return;
     finishingRef.current = true;
 
-    // Phase 7.3: rank-up state, set inside the XP award block, consumed at the
-    // mission-complete navigation below.
+    // Phase 7.3/7.4: rank-up state. xpBefore is hoisted so the single
+    // didRankUp call (after the achievement block) includes achievement XP.
     let rankUpName: string | null = null;
     let xpEarnedThisFinish = 0;
+    let xpBefore = 0;
 
     trackQuestionTime();
 
@@ -838,10 +839,10 @@ export default function QuizView() {
       // a re-finish / back-nav never double-awards. question_answered is
       // aggregated per quiz (one row, amount = Σ per-question value).
       if (xpEnabled) {
-        // Capture balance BEFORE awarding so a threshold cross can be detected.
-        // awardXp is idempotent: a re-finish writes nothing, awarded stays 0,
-        // and didRankUp returns null — no phantom rank-up.
-        let xpBefore = 0;
+        // Capture balance BEFORE awarding. xpBefore is hoisted to outer scope
+        // so the single didRankUp call (below the achievement block) can include
+        // achievement XP. awardXp is idempotent: a re-finish writes nothing,
+        // awarded stays 0, and didRankUp later returns null — no phantom rank-up.
         try { xpBefore = await getXpBalance(user.uid); } catch { /* non-fatal */ }
         let awarded = 0;
         const qXp = computeQuizQuestionXp(correctCount, totalQuestions);
@@ -851,15 +852,8 @@ export default function QuizView() {
           if (await awardXp(user.uid, "mission_completed", XP_VALUES.missionCompleted, missionId)) awarded += XP_VALUES.missionCompleted;
         }
         xpEarnedThisFinish = awarded;
-        const ru = awarded > 0 ? didRankUp(xpBefore, xpBefore + awarded) : null;
-        if (ru) {
-          rankUpName = ru.name;
-          addNotification(
-            "Rank Advanced",
-            `You reached ${ru.name}. Cleared for the next stage of training.`,
-            "milestone"
-          );
-        }
+        // Phase 7.4: rank-up NOT fired here — deferred to after achievement block
+        // so achievement_unlock XP can be included in the delta before didRankUp.
       }
 
       // M8A: refresh mastery_snapshots for subjects touched in this session.
@@ -939,18 +933,20 @@ export default function QuizView() {
     if (unlocked) {
       setUnlockedMilestone(unlocked);
       addNotification(unlocked.title, unlocked.desc, "milestone");
-      // Phase 7.1: persist the unlock durably (idempotent). Award achievement XP
-      // only when NEWLY unlocked. Fire-and-forget — never blocks the results UI.
+      // Phase 7.4: awaited (was fire-and-forget). Awaiting lets achievement XP
+      // be included in xpEarnedThisFinish before didRankUp fires. Still idempotent:
+      // unlockAchievement returns false on duplicate; awardXp swallows 23505.
       if (user) {
         const uid = user.uid;
         const achId = unlocked.id;
-        unlockAchievement(uid, achId)
-          .then((wasNew) => {
-            if (wasNew && xpEnabled) {
-              void awardXp(uid, "achievement_unlock", XP_VALUES.achievementUnlock, achId);
+        try {
+          const wasNew = await unlockAchievement(uid, achId);
+          if (wasNew && xpEnabled) {
+            if (await awardXp(uid, "achievement_unlock", XP_VALUES.achievementUnlock, achId)) {
+              xpEarnedThisFinish += XP_VALUES.achievementUnlock;
             }
-          })
-          .catch(() => {});
+          }
+        } catch { /* non-fatal — achievement miss never blocks completion */ }
       }
     } else {
       const topicName = customTopic || questions[0]?.ata || "this module";
@@ -959,6 +955,22 @@ export default function QuizView() {
         `You scored ${Math.round(currentAccuracy)}% on ${topicName}. Keep the momentum going!`,
         "milestone"
       );
+    }
+
+    // Phase 7.4: single rank-up decision using FULL awarded XP for this finish
+    // (question + quiz + mission + achievement). xpBefore was captured before any
+    // award; xpEarnedThisFinish now includes achievement XP if it wrote.
+    // Guard: user + xpEnabled + something actually written (no phantom on retry).
+    if (xpEnabled && user && xpEarnedThisFinish > 0) {
+      const ru = didRankUp(xpBefore, xpBefore + xpEarnedThisFinish);
+      if (ru) {
+        rankUpName = ru.name;
+        addNotification(
+          "Rank Advanced",
+          `You reached ${ru.name}. Cleared for the next stage of training.`,
+          "milestone"
+        );
+      }
     }
 
     // Phase 6: engine mission → go to the completion screen (readiness impact,
