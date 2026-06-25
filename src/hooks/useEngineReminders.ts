@@ -106,10 +106,16 @@ export function useEngineReminders({
   xpSystemEnabled,
   dueCount,
   nextExam,
-}: UseEngineRemindersInput): { reminder: EngineReminder | null; dismiss: () => void } {
-  const { mission, completedToday } = useActiveMission();
-  const { streak: missionStreak } = useMissionStreak();
+}: UseEngineRemindersInput): { reminder: EngineReminder | null; loading: boolean; dismiss: () => void } {
+  const { mission, completedToday, loading: missionLoading } = useActiveMission();
+  const { streak: missionStreak, loading: streakLoading } = useMissionStreak();
   const [dismissed, setDismissed] = useState(() => isDismissedToday());
+
+  // Phase 8.2A.1: evaluation is unstable while the async inputs that feed the
+  // two highest priorities (stale mission, streak risk) and the completedToday
+  // gate are still loading. Rendering a lower-priority alert before these
+  // resolve would flash the wrong reminder, so callers must hide until stable.
+  const loading = missionLoading || streakLoading;
 
   // Re-sync dismissed state when date rolls over in a long-running session
   useEffect(() => {
@@ -122,6 +128,9 @@ export function useEngineReminders({
   }, []);
 
   const reminder = useMemo((): EngineReminder | null => {
+    // Unstable while async inputs load — a higher-priority reminder could still
+    // win. Return null (caller hides the strip) until evaluation is stable.
+    if (loading) return null;
     // Hardest gate first: user already completed a mission today — no alert.
     if (completedToday !== null) return null;
     // User explicitly dismissed the alert today — respect it.
@@ -194,7 +203,7 @@ export function useEngineReminders({
     }
 
     return null;
-  }, [mission, completedToday, missionStreak, xpRank, xpSystemEnabled, dueCount, nextExam, dismissed]);
+  }, [loading, mission, completedToday, missionStreak, xpRank, xpSystemEnabled, dueCount, nextExam, dismissed]);
 
-  return { reminder, dismiss };
+  return { reminder, loading, dismiss };
 }
