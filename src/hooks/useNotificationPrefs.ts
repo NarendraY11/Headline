@@ -37,6 +37,9 @@ export function useNotificationPrefs(): UseNotificationPrefsResult {
     ?? null;
 
   const [push, setPush] = useState<PushPrefs>({});
+  // Full notification_prefs object kept so a write merges (preserving any sibling
+  // namespace like a future "email") rather than replacing the whole column.
+  const [rawPrefs, setRawPrefs] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -52,8 +55,9 @@ export function useNotificationPrefs(): UseNotificationPrefsResult {
         .maybeSingle();
       if (error) throw error;
       if (active) {
-        const prefs = (data?.notification_prefs as { push?: PushPrefs } | null) ?? {};
-        setPush(prefs.push ?? {});
+        const prefs = (data?.notification_prefs as Record<string, unknown> | null) ?? {};
+        setRawPrefs(prefs);
+        setPush((prefs.push as PushPrefs | undefined) ?? {});
       }
     } catch {
       // Non-fatal — fall back to all-enabled defaults.
@@ -76,12 +80,16 @@ export function useNotificationPrefs(): UseNotificationPrefsResult {
       setPush(next);
       setSaving(true);
       try {
-        // Merge so we never clobber a future channel namespace (e.g. email).
+        // Top-level merge: replace only the "push" sub-key, preserving every
+        // other namespace already stored (e.g. a future "email"). The whole
+        // notification_prefs column is never blindly overwritten.
+        const merged = { ...rawPrefs, push: next };
         const { error } = await supabase
           .from("profiles")
-          .update({ notification_prefs: { push: next } })
+          .update({ notification_prefs: merged })
           .eq("id", userId);
         if (error) throw error;
+        setRawPrefs(merged);
       } catch {
         // Roll back on failure.
         setPush(push);
@@ -89,7 +97,7 @@ export function useNotificationPrefs(): UseNotificationPrefsResult {
         setSaving(false);
       }
     },
-    [userId, push]
+    [userId, push, rawPrefs]
   );
 
   const isEnabled = useCallback(
