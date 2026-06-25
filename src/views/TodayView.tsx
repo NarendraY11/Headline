@@ -626,9 +626,11 @@ export default function TodayView() {
       <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
 
       <div className="relative z-10 px-4 pt-16 pb-8 max-w-[820px] mx-auto">
-        <div className="relative mb-8 overflow-hidden">
+        {/* Phase 8.1: mb reduced on mobile (mb-4 md:mb-8) so mission CTA sits
+            higher. Greeting font also compressed on mobile for the same reason. */}
+        <div className="relative mb-4 md:mb-8 overflow-hidden">
           {/* Mobile header */}
-          <div className="flex md:hidden items-center gap-2 mb-4">
+          <div className="flex md:hidden items-center gap-2 mb-2">
             <span className="w-1.5 h-1.5 rounded-sm bg-signal transform rotate-45" />
             <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2">
               BRIEFING · {currentDateString}
@@ -643,7 +645,7 @@ export default function TodayView() {
           <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-signal hidden md:block mb-4">
             § BRIEFING · LIVE
           </span>
-          <h1 className="text-[42px] leading-[1.05] md:h-display text-ink font-serif tracking-tight md:leading-tight mb-2">
+          <h1 className="text-[28px] md:text-[42px] leading-[1.1] md:leading-[1.05] md:h-display text-ink font-serif tracking-tight mb-2">
             {isLate ? (
               <>
                 Still flying,
@@ -684,7 +686,9 @@ export default function TodayView() {
           </motion.div>
         )}
 
-        {showNotifBanner && (
+        {/* Phase 8.1: suppress notif opt-in when missionEngine ON — it's a
+            non-critical banner that pushes the primary mission CTA below fold. */}
+        {showNotifBanner && !missionEngineEnabled && (
           <div role="status" aria-live="polite" className="bg-bg-2 border border-rule rounded-xl px-3.5 py-2.5 mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
               <Bell size={14} className="text-navy shrink-0" />
@@ -711,7 +715,8 @@ export default function TodayView() {
         <PwaInstallBanner />
 
         {/* Phase 6 — Mission Engine: mission is the core unit, shown FIRST.
-            Order per spec: 1 Active Mission → 2 Career → 3 Readiness → … */}
+            Phase 8.1 — Pass XP rank context so ActiveMissionCard can show
+            XP preview + rank proximity without a duplicate useXp call. */}
         {missionEngineEnabled && (
           <div className="space-y-3 mb-8">
             <ActiveMissionCard
@@ -720,6 +725,8 @@ export default function TodayView() {
               dailyGoal={userData?.dailyGoal}
               readinessScore={examReadiness.score}
               careerObjective={userData?.careerObjective}
+              xpSystemEnabled={xpSystemEnabled}
+              xpRankProgress={xpRank}
             />
             <CareerObjectiveMissions careerObjective={userData?.careerObjective} />
           </div>
@@ -832,9 +839,12 @@ export default function TodayView() {
           </Link>
         </div>
 
-        {/* § MISSION — Primary action first, before analytics */}
+        {/* § MISSION — Secondary actions (stops, scheduler).
+            Phase 8.1 Fork 4: aiStudyScheduler block suppressed when missionEngine
+            is ON — they answer the same "what to study" question; missionEngine wins.
+            This also removes the broken "Materialization failed" error from Today. */}
         <div className="space-y-3 mb-8">
-          {aiStudySchedulerEnabled && (
+          {aiStudySchedulerEnabled && !missionEngineEnabled && (
             <TodayMissions subjectMastery={progressStats.subjectMastery} />
           )}
           <TodayStops

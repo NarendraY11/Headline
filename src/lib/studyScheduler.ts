@@ -292,6 +292,27 @@ export async function getCompletedMissionDates(userId: string): Promise<string[]
   return [...days];
 }
 
+/**
+ * Phase 8.1: the most recent completed system mission from today (UTC), or null.
+ * Used by useActiveMission to surface the completed-today state so Today never
+ * immediately falls back to "Generate Today's Mission" after same-day completion.
+ */
+export async function getLatestCompletedMissionToday(userId: string): Promise<StudyMissionRow | null> {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD UTC
+  const { data, error } = await supabase
+    .from("study_missions")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("source", "system")
+    .eq("status", "completed")
+    .gte("completed_at", `${today}T00:00:00.000Z`)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`getLatestCompletedMissionToday: ${error.message}`);
+  return (data as StudyMissionRow) ?? null;
+}
+
 /** Engine mission history (completed + abandoned), newest first. */
 export async function getEngineMissionHistory(
   userId: string,

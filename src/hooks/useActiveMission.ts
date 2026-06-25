@@ -19,6 +19,7 @@ import {
   abandonEngineMission,
   createEngineMission,
   getActiveEngineMission,
+  getLatestCompletedMissionToday,
   startEngineMission,
 } from "../lib/studyScheduler";
 import { launchMission } from "../lib/launchMission";
@@ -43,6 +44,9 @@ export interface GenerateInputs {
 
 export interface UseActiveMissionResult {
   mission: StudyMissionRow | null;
+  /** Phase 8.1: most recent system mission completed today (UTC), or null.
+   *  Prevents Today from immediately falling back to "Generate" after same-day completion. */
+  completedToday: StudyMissionRow | null;
   loading: boolean;
   error: string | null;
   busy: boolean;
@@ -68,6 +72,7 @@ export function useActiveMission(): UseActiveMissionResult {
   const userId = user?.id ?? null;
 
   const [mission, setMission] = useState<StudyMissionRow | null>(null);
+  const [completedToday, setCompletedToday] = useState<StudyMissionRow | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -78,8 +83,14 @@ export function useActiveMission(): UseActiveMissionResult {
     setLoading(true);
     setError(null);
     try {
-      const row = await getActiveEngineMission(userId);
-      if (active) setMission(row);
+      const [row, todayRow] = await Promise.all([
+        getActiveEngineMission(userId),
+        getLatestCompletedMissionToday(userId),
+      ]);
+      if (active) {
+        setMission(row);
+        setCompletedToday(todayRow);
+      }
     } catch {
       if (active) setError("Failed to load your mission.");
     } finally {
@@ -155,5 +166,5 @@ export function useActiveMission(): UseActiveMissionResult {
     [busy]
   );
 
-  return { mission, loading, error, busy, generate, resume, abandon, refetch: load };
+  return { mission, completedToday, loading, error, busy, generate, resume, abandon, refetch: load };
 }
