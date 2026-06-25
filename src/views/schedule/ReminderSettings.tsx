@@ -1,28 +1,27 @@
 // M13: ReminderSettings — push notifications + reminder preferences
+// Phase 8.2B.1: per-type toggles repointed from the dead in-app reminder
+// taxonomy (useStudyReminders, now a no-op) to the real engine reminder types,
+// backed by account-level DB prefs (useNotificationPrefs). These govern which
+// PUSH reminders a user receives once delivery ships in 8.2B.2.
 
 import { Bell } from "lucide-react";
 import { useState } from "react";
 import { usePushNotifications } from "../../hooks/usePushNotifications";
+import { useNotificationPrefs } from "../../hooks/useNotificationPrefs";
+import type { EngineReminderType } from "../../lib/reminderSelector";
 
-const REMINDER_TYPES = [
-  { key: "mission",   label: "Study session due",  description: "When you have pending missions today" },
-  { key: "review",    label: "Review due",          description: "When spaced-review cards are due" },
-  { key: "streak",    label: "Streak reminder",     description: "Evening nudge when streak at risk" },
-  { key: "exam",      label: "Exam countdown",      description: "30-day and 7-day exam approach alerts" },
-] as const;
-
-const STORAGE_KEY = "heading_reminder_prefs";
-
-function getPrefs(): Record<string, boolean> {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
-}
-function savePrefs(prefs: Record<string, boolean>) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs)); } catch { /* ignore */ }
-}
+// Maps 1:1 to the shared reminderSelector reminder types (priority order).
+const REMINDER_TYPES: { key: EngineReminderType; label: string; description: string }[] = [
+  { key: "stale_mission",   label: "Paused mission",   description: "When a started mission sits unfinished for days" },
+  { key: "streak_risk",     label: "Streak at risk",   description: "When today's mission would break your streak" },
+  { key: "rank_proximity",  label: "Rank within reach", description: "When you're close to the next rank" },
+  { key: "review_overload", label: "Reviews piling up", description: "When spaced-review questions stack up" },
+  { key: "exam_countdown",  label: "Exam countdown",   description: "In the final week before your exam" },
+];
 
 export function ReminderSettings() {
   const push = usePushNotifications();
-  const [prefs, setPrefs] = useState<Record<string, boolean>>(getPrefs);
+  const prefs = useNotificationPrefs();
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   async function runDiagnostic() {
@@ -42,12 +41,6 @@ export function ReminderSettings() {
     const vapidPresent = !!(import.meta.env.VITE_VAPID_PUBLIC_KEY);
     lines.push(`VITE_VAPID_PUBLIC_KEY: ${vapidPresent ? "present (len " + (import.meta.env.VITE_VAPID_PUBLIC_KEY as string).length + ")" : "MISSING"}`);
     setDebugInfo(lines.join("\n"));
-  }
-
-  function toggle(key: string) {
-    const next = { ...prefs, [key]: !prefs[key] };
-    setPrefs(next);
-    savePrefs(next);
   }
 
   const isPushUnsupported = push.permission === "unsupported";
@@ -108,11 +101,11 @@ export function ReminderSettings() {
         </div>
       </div>
 
-      {/* Per-type toggles */}
-      <p className="font-mono text-[8px] uppercase tracking-widest text-muted-2 mb-2">In-app reminders</p>
+      {/* Per-type push reminder toggles (DB-backed, account-level) */}
+      <p className="font-mono text-[8px] uppercase tracking-widest text-muted-2 mb-2">Push reminder types</p>
       <div className="space-y-2">
         {REMINDER_TYPES.map(rt => {
-          const on = prefs[rt.key] !== false; // default ON
+          const on = prefs.isEnabled(rt.key); // default ON (opt-out model)
           return (
             <div
               key={rt.key}
@@ -123,12 +116,14 @@ export function ReminderSettings() {
                 <p className="font-mono text-[8px] text-muted-2">{rt.description}</p>
               </div>
               <button
-                onClick={() => toggle(rt.key)}
-                className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 relative ${
+                onClick={() => void prefs.setEnabled(rt.key, !on)}
+                disabled={prefs.loading || prefs.saving}
+                className={`w-9 h-5 rounded-full transition-colors flex-shrink-0 relative disabled:opacity-50 ${
                   on ? "bg-mint" : "bg-bg-2 border border-rule"
                 }`}
                 aria-checked={on}
                 role="switch"
+                aria-label={`Toggle ${rt.label} push reminder`}
               >
                 <span
                   className={`absolute top-0.5 w-4 h-4 rounded-full bg-paper shadow transition-transform ${
@@ -142,7 +137,8 @@ export function ReminderSettings() {
       </div>
 
       <p className="font-mono text-[7px] text-muted-2 mt-3 leading-snug">
-        In-app reminders fire when the app is open. Push notifications work in the background on supported devices.
+        Reminder preferences are saved to your account and apply across devices.
+        Push delivery requires push notifications enabled above.
       </p>
 
       {/* Diagnostic tool */}
