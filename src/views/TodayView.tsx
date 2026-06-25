@@ -55,7 +55,7 @@ const ChartFallback = () => <div className="w-full h-full min-h-[260px] bg-bg-2 
 import { WeatherWidget } from "./today/WeatherWidget";
 import { ResumeCard } from "./today/ResumeCard";
 import { ReferralWidget } from "./today/ReferralWidget";
-import { useNotifications } from "../contexts/NotificationContext";
+import { FlightAlerts } from "./today/FlightAlerts";
 import { usePredictiveIntelligence } from "../hooks/usePredictiveIntelligence";
 import { useForecastEngine } from "../hooks/useForecastEngine";
 import { PassProbabilityCard } from "./today/PassProbabilityCard";
@@ -66,7 +66,6 @@ import { ForecastDashboard } from "./today/ForecastDashboard";
 
 export default function TodayView() {
   const { userData, user, loading } = useAuth();
-  const { addNotification } = useNotifications();
   const weatherBriefingEnabled = useFeature("weatherBriefing");
   const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
   const missionEngineEnabled = useFeature("missionEngine");
@@ -104,21 +103,9 @@ export default function TodayView() {
   // M11B: forecast engine — extended projections
   const forecastEngine = useForecastEngine(subjectsCount, subjectTitleMapForPredictive);
 
-  // Daily study reminder notification (once per day, gentle)
-  useEffect(() => {
-    if (!user) return;
-    const today = new Date().toISOString().slice(0, 10);
-    const lastActive = userData?.lastActivityDate || "";
-    const lastReminder = localStorage.getItem("heading_last_reminder_date") || "";
-    if (lastActive !== today && lastReminder !== today) {
-      addNotification(
-        "Keep your streak alive ✈️",
-        "You haven't logged any training today. A few questions keeps your streak and sharpness up.",
-        "reminder"
-      );
-      localStorage.setItem("heading_last_reminder_date", today);
-    }
-  }, [user, userData?.lastActivityDate]);
+  // Phase 8.2A: daily reminder replaced by useEngineReminders via FlightAlerts.
+  // The old logic used stale lastActivityDate and fired a generic toast.
+  // FlightAlerts uses engine-mission signals only and shows an inline strip.
 
   useEffect(() => {
     async function fetchDueCount() {
@@ -713,6 +700,19 @@ export default function TodayView() {
         )}
 
         <PwaInstallBanner />
+
+        {/* Phase 8.2A — Flight Alerts: single highest-priority engine reminder.
+            Renders above the mission card so urgency signals are seen first.
+            State-driven: appears whenever condition is true, not time-gated.
+            Returns null when no alert is active or user trained today. */}
+        {missionEngineEnabled && (
+          <FlightAlerts
+            xpRank={xpRank}
+            xpSystemEnabled={xpSystemEnabled}
+            dueCount={dueCount}
+            nextExam={userData?.nextExam}
+          />
+        )}
 
         {/* Phase 6 — Mission Engine: mission is the core unit, shown FIRST.
             Phase 8.1 — Pass XP rank context so ActiveMissionCard can show
