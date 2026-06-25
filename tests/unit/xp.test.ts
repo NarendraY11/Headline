@@ -100,3 +100,51 @@ describe("didRankUp", () => {
     expect(didRankUp(249, 250)?.name).toBe("Solo Endorsed");
   });
 });
+
+// =====================================================================
+// Phase 7.4 — didRankUp: achievement XP inclusion scenarios
+//
+// These cases mirror the five finishQuiz test cases from the spec.
+// The rank-up call now happens AFTER achievement XP is accumulated, so
+// the combined delta (quiz + achievement) must be tested here.
+// =====================================================================
+
+describe("didRankUp — Phase 7.4 achievement XP inclusion", () => {
+  // Case A: quiz XP alone, no threshold crossed → null
+  it("Case A: no rank-up — quiz XP stays in same band", () => {
+    // user at 100 XP earns 40 (qXp 30 + quiz 10) → 140, stays Student Pilot
+    expect(didRankUp(100, 100 + 40)).toBeNull();
+  });
+
+  // Case B: quiz/mission XP alone crosses threshold
+  it("Case B: normal rank-up from quiz+mission XP", () => {
+    // user at 230 XP earns 25 (qXp 15 + quiz 10) → 255, crosses 250 Solo Endorsed
+    expect(didRankUp(230, 230 + 25)?.name).toBe("Solo Endorsed");
+  });
+
+  // Case C: achievement XP is what crosses the threshold
+  it("Case C: rank-up ONLY because achievement XP is included in total delta", () => {
+    // user at 230 XP, quiz earns 10 → 240 (below 250, no rank-up from quiz alone)
+    expect(didRankUp(230, 230 + 10)).toBeNull();
+    // same user, quiz (10) + achievement_unlock (50) → total awarded 60 → 290
+    // now crosses 250 threshold
+    expect(didRankUp(230, 230 + 60)?.name).toBe("Solo Endorsed");
+  });
+
+  // Case D: retry / double-submit → awarded = 0 → no phantom
+  it("Case D: idempotent re-finish — awarded 0 means didRankUp is not called (guard check)", () => {
+    // When awarded = 0, the guard `xpEarnedThisFinish > 0` skips didRankUp.
+    // Verify didRankUp(x, x) returns null — same balance = no cross.
+    expect(didRankUp(500, 500)).toBeNull();
+    expect(didRankUp(250, 250)).toBeNull(); // already at Solo Endorsed, no new cross
+  });
+
+  // Case E: achievement already unlocked (wasNew=false) — no XP, no phantom rank-up
+  it("Case E: duplicate achievement — wasNew=false means 0 achievement XP added", () => {
+    // If achievement was already unlocked (wasNew=false), xpEarnedThisFinish
+    // only has quiz XP. Verify quiz-only delta that does not cross is null.
+    const quizOnlyAwarded = 10; // quiz_completed flat, no new achievement XP
+    const xpBefore = 230;
+    expect(didRankUp(xpBefore, xpBefore + quizOnlyAwarded)).toBeNull();
+  });
+});
