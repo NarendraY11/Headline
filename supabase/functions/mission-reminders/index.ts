@@ -54,8 +54,12 @@ interface CandidateRow {
   already_reminded_today: boolean;
 }
 
-function todayUTCISO(): string {
-  return new Date().toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+// Deliberate IST day boundary — matches get_reminder_candidates() so streak math
+// agrees with completed_today/cooldown. en-CA renders YYYY-MM-DD. Swap this one
+// default when per-user timezones land.
+const REMINDER_TZ = "Asia/Kolkata";
+function todayISTISO(): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone: REMINDER_TZ });
 }
 
 Deno.serve(async (req) => {
@@ -89,7 +93,7 @@ Deno.serve(async (req) => {
   const candidates = (rows ?? []) as CandidateRow[];
 
   const nowMs = Date.now();
-  const today = todayUTCISO();
+  const today = todayISTISO();
   const plan: { user_id: string; type: string; title: string; body: string }[] = [];
   let skippedCooldown = 0, skippedNoReminder = 0;
 

@@ -6,8 +6,11 @@
 -- owns the decision (one brain). SECURITY DEFINER + service_role-only so it can
 -- read across users; never exposed to anon/authenticated.
 --
--- "today" is UTC (server-side push). Streak is returned as the distinct UTC
--- completion days array — the Edge Function runs the shared computeMissionStreak.
+-- DAY BOUNDARY: deliberately Asia/Kolkata (IST), not server UTC. The user base
+-- is IST; UTC midnight (= 5:30 AM IST) would misclassify early-morning-IST
+-- activity. completed_today / completed_days / already_reminded_today all use
+-- IST calendar dates. The Edge Function passes an IST "today" to computeMissionStreak
+-- so streak math agrees. When per-user timezones land, swap this single default.
 -- =====================================================================
 
 create or replace function public.get_reminder_candidates()
@@ -46,8 +49,8 @@ as $$
   completed as (
     select
       sm.user_id,
-      array_agg(distinct to_char(sm.completed_at at time zone 'UTC', 'YYYY-MM-DD')) as days,
-      bool_or((sm.completed_at at time zone 'UTC')::date = (now() at time zone 'UTC')::date) as done_today
+      array_agg(distinct to_char(sm.completed_at at time zone 'Asia/Kolkata', 'YYYY-MM-DD')) as days,
+      bool_or((sm.completed_at at time zone 'Asia/Kolkata')::date = (now() at time zone 'Asia/Kolkata')::date) as done_today
     from public.study_missions sm
     where sm.source = 'system'
       and sm.status = 'completed'
@@ -71,7 +74,7 @@ as $$
     from public.push_delivery_log dl
     where dl.success = true
       and dl.notification_type in ('reminder', 'streak', 'exam')
-      and (dl.sent_at at time zone 'UTC')::date = (now() at time zone 'UTC')::date
+      and (dl.sent_at at time zone 'Asia/Kolkata')::date = (now() at time zone 'Asia/Kolkata')::date
   )
   select
     s.user_id,
