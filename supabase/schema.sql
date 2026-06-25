@@ -166,6 +166,7 @@ create table if not exists public.profiles (
   plan_started_at timestamptz,
   plan_expires_at timestamptz,
   settings jsonb default '{}'::jsonb not null,
+  notification_prefs jsonb default '{}'::jsonb not null, -- 8.2B.1: push reminder opt-out
   daily_goal int default 20 not null,
   streak_count int default 0 not null,
   last_activity_date text default ''::text not null,
