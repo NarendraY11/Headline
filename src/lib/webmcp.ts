@@ -203,19 +203,37 @@ function buildTools(navigate: NavigateFunction): ModelContextTool[] {
   ];
 }
 
+// Verification marker. Exposes ONLY the registered tool NAMES (3 strings) so a
+// human can confirm registration in the console. Deliberately never includes
+// descriptions, inputSchemas, or execute fns — and tool names are already
+// discoverable by any agent that lists the surface, so this is safe to ship in
+// prod (needed there: the preview URL is a production build). Cleared on
+// unregister so the marker tracks the live route scope.
+function setMarker(names: string[] | null) {
+  try {
+    if (names) (window as any).__webmcpTools = names;
+    else delete (window as any).__webmcpTools;
+  } catch {
+    /* ignore */
+  }
+}
+
 function applyTools(tools: ModelContextTool[]): () => void {
   const mc = navigator.modelContext;
   if (!mc) return () => {};
+  const names = tools.map((t) => t.name);
 
   // Primary: the imperative provideContext({ tools }) shape (Phase 4 target).
   if (typeof mc.provideContext === "function") {
     mc.provideContext({ tools });
+    setMarker(names);
     return () => {
       try {
         mc.provideContext!({ tools: [] });
       } catch {
         /* ignore */
       }
+      setMarker(null);
     };
   }
 
@@ -229,7 +247,11 @@ function applyTools(tools: ModelContextTool[]): () => void {
         /* ignore duplicate/invalid */
       }
     }
-    return () => ctrl.abort();
+    setMarker(names);
+    return () => {
+      ctrl.abort();
+      setMarker(null);
+    };
   }
 
   return () => {};
