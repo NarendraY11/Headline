@@ -47,6 +47,7 @@ export function CookieConsent() {
     <>
       {visible && (
         <div
+          data-md-skip="true"
           className="anim-pop fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:max-w-md z-9999 origin-bottom-right"
         >
           <div className="bg-paper border border-rule-strong shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-5 md:p-6 rounded-sm space-y-4 font-sans">
