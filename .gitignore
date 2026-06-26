@@ -45,6 +45,9 @@ dashboard.png
 # Build-generated (scripts/generate-sitemap.ts)
 public/sitemap.xml
 
+# Local docs draft (partial, generated out-of-band)
+docs/handbook/
+
 # Local scripts not part of build
 scripts/graphify-scoped-update.py
 
