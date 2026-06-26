@@ -105,13 +105,13 @@ There is no unauthenticated public API, no API-key-issued endpoint, no endpoint 
 | Item | Decision | Reason |
 |------|----------|--------|
 | **Link headers** | **BUILD** | One vercel.json header block; advertise `llms.txt` + future well-known docs. Zero cost, immediate discoverability gain. |
-| **DNS-AID** | **BUILD-IF** | Requires manual DNS (not scriptable). Worth doing once we publish a public MCP card or claim an agent identity. Trigger: Phase 3+ if MCP card goes live. |
+| **DNS-AID** | **BUILD-IF** | Requires manual DNS (not scriptable). Worth doing once we publish a public MCP card or claim an agent identity. Trigger: Phase 3+ if MCP card goes live. **Phase 6 (2026-06-26): nothing to advertise yet.** DNS-AID points at a callable agent endpoint (MCP/A2A server). Heading has none — the remote MCP server is deferred (Phase 5) and WebMCP is browser-session-only (`navigator.modelContext`, no URL). Ready-to-paste record template + DNSSEC notes captured in [`docs/dns-aid-records.md`](./dns-aid-records.md); publish nothing until a real endpoint exists. |
 | **Markdown for Agents** | **BUILD** | `llms.txt` exists but is sparse. Expand with full exam syllabus summaries, blog post index, exam-type descriptions. High value for LLM crawlers; all public content. |
 | **Content Signals** | **BUILD** | JSON-LD on landing, `/exams/:examId` (Course schema), `/blog/:slug` (Article schema), `/pricing` (Product schema). Dual win: SEO + agent structured understanding. |
 | **API Catalog** | **SKIP** | All endpoints require user/admin auth. No third-party API consumers exist. Publishing an OpenAPI spec of internal endpoints has no benefit and mild security exposure. |
-| **OAuth/OIDC discovery** | **SKIP** | We are an OAuth *consumer* (Supabase handles auth). We do not issue tokens to third parties. `.well-known/openid-configuration` is not applicable. |
-| **OAuth Protected Resource** | **SKIP** | Same reasoning as above. No OAuth-protected resources exposed to external agents. |
-| **Auth.md** | **SKIP** | No public API to authenticate to. Would only document internal endpoints. Revisit if/when a public API ships. |
+| **OAuth/OIDC discovery** | **SKIP** | We are an OAuth *consumer* (Supabase handles auth). We do not issue tokens to third parties. `.well-known/openid-configuration` is not applicable. **Phase 6 (2026-06-26): re-confirmed.** See §6. |
+| **OAuth Protected Resource** | **SKIP** | Same reasoning as above. No OAuth-protected resources exposed to external agents. **Phase 6 (2026-06-26): re-confirmed.** See §6. |
+| **Auth.md** | **SKIP** | No public API to authenticate to. Would only document internal endpoints. Revisit if/when a public API ships. **Phase 6 (2026-06-26): re-confirmed.** See §6. |
 | **MCP Server Card** | **DEFERRED** | `.well-known/mcp.json` makes sense only after defining what MCP *tools* the server would expose (read exam Q&A, lookup syllabus, check QOTD). Design the tool surface first; card is a 10-line JSON once that exists. **Phase 5 (2026-06-26): Deferred.** A real remote MCP server needs the full OAuth-for-MCP stack to be useful; without it the only safe surface is public metadata that duplicates `llms.txt`. The card is trivial — the server is the work, and it isn't worth it yet. Revisit only if real external agent demand emerges. |
 | **Agent Skills index** | **SKIP** | Premature without a defined MCP server or agent-callable API. No skills to index. **Phase 5 (2026-06-26): SKIP confirmed post-Phase 4.** WebMCP tools are session-local (`navigator.modelContext`, registered only in a live browser tab), not statically indexable by a cold crawler. Nothing else to index without duplicating `llms.txt`. |
 | **WebMCP** | **BUILD-IF** | An HTTP/SSE MCP server exposing read-only exam content (question lookup, syllabus, QOTD) to AI tutors is a legitimate future direction. Needs product decision + tool surface design before implementation. Flag for Phase 4+. |
@@ -125,3 +125,38 @@ There is no unauthenticated public API, no API-key-issued endpoint, no endpoint 
 **Build-if (needs prerequisite):** DNS-AID (after MCP card), MCP Server Card (after tool surface design), WebMCP (after product decision)
 
 **Skip (no public API):** API Catalog, OAuth/OIDC discovery, OAuth Protected Resource, Auth.md, Agent Skills index
+
+---
+
+## 6. Phase 6 — OAuth / Auth.md final confirmation (2026-06-26)
+
+Re-checked the three OAuth-family SKIP decisions against everything shipped since
+Phase 1: Content Signals (robots `Content-Signal` + JSON-LD), Markdown for Agents
+(build-time `.md` + edge-middleware rewrite), Link headers (advertise `llms.txt`),
+and WebMCP (Phase 4).
+
+**None of these introduced a new public or third-party-callable API:**
+
+- **Content Signals** — a robots.txt directive plus JSON-LD embedded in pages. Static
+  metadata. No endpoint.
+- **Markdown for Agents** — pre-generated `.md` files served via a middleware rewrite.
+  Static content. No endpoint.
+- **Link headers** — an HTTP response header pointing at `llms.txt`. No endpoint.
+- **WebMCP** — `navigator.modelContext` tools registered inside the user's own
+  browser tab, running against their already-authenticated session. There is no
+  server-side token issuance and no URL a third party can call. Not an OAuth
+  protected resource.
+
+The premise of §3 still holds: every `/api/*` route requires a Supabase user JWT,
+an admin JWT, an `X-Internal-Secret`, or a Razorpay webhook signature. There is no
+unauthenticated, API-key-issued, or third-party-callable endpoint.
+
+| Item | Decision | Why skipped | What would change it |
+|------|----------|-------------|----------------------|
+| **OAuth/OIDC discovery** ([RFC 8414](https://www.rfc-editor.org/rfc/rfc8414)) | **SKIP — confirmed** | RFC 8414 publishes an authorization *server's* metadata; Heading runs no authorization server (Supabase is the IdP and the consumer relationship is inbound). | Heading itself issues OAuth tokens to third-party clients. |
+| **OAuth Protected Resource** ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)) | **SKIP — confirmed** | RFC 9728 lets a protected *resource server* point clients at its authorization servers; Heading exposes no OAuth-protected resource to external agents (all `/api/*` is first-party/internal auth). | A real external-facing API gated by OAuth bearer tokens ships. |
+| **Auth.md** ([workos.com/auth-md](https://workos.com/auth-md)) | **SKIP — confirmed** | Auth.md documents, in agent-readable form, how to authenticate to a *public* API; Heading has no public API, so the file would only describe internal endpoints. | A documented public/third-party API exists for agents to call. |
+
+**Single trigger for all three:** a genuine external-facing API (public or
+third-party-callable, not first-party browser auth). Until that exists, building
+OAuth discovery metadata, Protected Resource metadata, or `auth.md` is premature.
