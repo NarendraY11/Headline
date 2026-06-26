@@ -1,6 +1,10 @@
 // Vercel Edge Middleware: serve pre-built .md files when Accept: text/markdown
 // is requested exactly. Every other Accept value falls through unchanged.
-export default async function middleware(request: Request): Promise<Response | void> {
+//
+// Uses x-middleware-rewrite (an internal Vercel operation) instead of a
+// same-origin fetch so the rewrite works regardless of SSO deployment
+// protection on preview deployments — no outbound HTTP request is made.
+export default function middleware(request: Request): Response | void {
   const { pathname, origin } = new URL(request.url);
 
   // Skip API routes, Vercel internals, and paths that already have a file extension.
@@ -21,17 +25,11 @@ export default async function middleware(request: Request): Promise<Response | v
 
   // Prerender writes dist/<route>/index.md (dist/index.md for root).
   const pathBase = pathname === '/' ? '' : pathname.replace(/\/$/, '');
-  try {
-    const res = await fetch(`${origin}${pathBase}/index.md`);
-    // If the .md file doesn't exist the SPA fallback serves index.html — skip it.
-    if (!res.ok || (res.headers.get('content-type') ?? '').includes('text/html')) return;
-    return new Response(await res.text(), {
-      headers: {
-        'content-type': 'text/markdown; charset=utf-8',
-        vary: 'Accept',
-      },
-    });
-  } catch {
-    return;
-  }
+  return new Response(null, {
+    headers: {
+      'x-middleware-rewrite': new URL(`${pathBase}/index.md`, origin).href,
+      'content-type': 'text/markdown; charset=utf-8',
+      vary: 'Accept',
+    },
+  });
 }
