@@ -104,6 +104,14 @@ export default defineConfig(({ command }) => {
       // Disable file watching when DISABLE_HMR is true to save CPU during agent edits.
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
     },
+    // `vite preview` ignores vercel.json, so mirror the prod Link header here to
+    // keep the agent-readiness verify script reproducible locally. vercel.json is
+    // the source of truth for prod; keep these two values in sync.
+    preview: {
+      headers: {
+        Link: '</llms.txt>; rel="describedby"; type="text/plain"',
+      },
+    },
     plugins: [
       react(),
       tailwindcss(),

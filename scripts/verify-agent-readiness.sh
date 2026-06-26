@@ -65,5 +65,15 @@ echo "$ct_star" | grep -qi "text/markdown" \
   || ok "Accept: */* correctly falls through (got: $ct_star)"
 
 echo ""
+echo "=== Fix C — Link header pointing to llms.txt ==="
+link=$(curl -sf -I "$BASE/" 2>/dev/null | grep -i "^link:" | tr -d '\r')
+echo "$link" | grep -qi "/llms.txt" \
+  && ok "Link header points to /llms.txt" \
+  || fail "Link header MISSING /llms.txt (got: $link)"
+echo "$link" | grep -qi 'rel="describedby"' \
+  && ok "Link header uses rel=\"describedby\"" \
+  || fail "Link header missing rel=\"describedby\" (got: $link)"
+
+echo ""
 echo "Results: ${PASS} passed, ${FAIL} failed"
 [ "$FAIL" -eq 0 ] && exit 0 || exit 1
