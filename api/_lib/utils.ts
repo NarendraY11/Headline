@@ -10,6 +10,14 @@ const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABA
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Neutralize user-influenced values before they go into console log lines:
+// strip CR/LF (log-forging, CWE-117) and truncate to bound length. Pass the
+// result as a separate console arg (not interpolated) so it also can't act as
+// a format-string directive (CWE-134).
+export function sanitizeForLog(value: unknown, max = 200): string {
+  return String(value).replace(/[\r\n\t]/g, " ").slice(0, max);
+}
+
 export const ai = new GoogleGenAI({ 
 //... (keep existing init)
 
@@ -384,7 +392,7 @@ export async function logAbuse(
   reason: string,
   req?: VercelRequest
 ): Promise<void> {
-  console.warn(`[abuse] form=${formId} identity=${identity} reason=${reason}`);
+  console.warn("[abuse] form=%s identity=%s reason=%s", sanitizeForLog(formId), sanitizeForLog(identity), sanitizeForLog(reason));
 
   // Durable security-log entry (append-only, admin-only read). Captures IP/UA
   // when the request is available. This is the authoritative abuse record.

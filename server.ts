@@ -4,7 +4,7 @@ import crypto from "crypto";
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { getRazorpay, getSupabaseAdmin, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity } from "./api/_lib/utils.js";
+import { getRazorpay, getSupabaseAdmin, verifyWebhookSignature, validateInstructorPayload, validateBroadcastPayload, validatePaymentInterval, validateVerifyPayload, screenSubmission, getClientIdentity, sanitizeForLog } from "./api/_lib/utils.js";
 import { processVerifiedPayment } from "./api/_lib/processVerifiedPayment.js";
 import { validateStudyPlan, expandPlanToMissions } from "./api/_lib/studyPlan.js";
 import { handleCoach } from "./api/_lib/coach.js";
@@ -72,7 +72,7 @@ async function startServer() {
 
       const payload = JSON.parse(rawBody);
       const event = payload.event;
-      console.log(`Razorpay Webhook Event Received: ${event}`);
+      console.log("Razorpay Webhook Event Received: %s", sanitizeForLog(event));
 
       if (event === "order.paid" || event === "payment.captured") {
         const orderEntity = payload.payload?.order?.entity || {};
@@ -125,10 +125,10 @@ async function startServer() {
             .eq("id", userId);
 
           if (error) {
-            console.error(`Failed to update profile for user ${userId}:`, error);
+            console.error("Failed to update profile for user %s:", sanitizeForLog(userId), error);
             return res.status(500).json({ error: "Database update failed" });
           }
-          console.log(`Successfully updated user ${userId} to Pro plan (${interval})`);
+          console.log("Successfully updated user %s to Pro plan (%s)", sanitizeForLog(userId), sanitizeForLog(interval));
         }
       }
 

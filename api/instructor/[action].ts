@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { ai, getAuthenticatedUser, getSupabaseAdmin, checkRateLimit, isProUser, isFeatureEnabled, validateInstructorPayload, screenSubmission } from "../_lib/utils.js";
+import { ai, getAuthenticatedUser, getSupabaseAdmin, checkRateLimit, isProUser, isFeatureEnabled, validateInstructorPayload, screenSubmission, sanitizeForLog } from "../_lib/utils.js";
 import { logSecurityEvent } from "../_lib/securityLog.js";
 import { handleCoach } from "../_lib/coach.js";
 
@@ -191,7 +191,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await fn(req, res);
   } catch (error) {
-    console.error(`Error in instructor/${action} handler:`, error);
+    console.error("Error in instructor/%s handler:", sanitizeForLog(action), error);
     if (!res.headersSent) {
       res.status(500).json({ error: "Failed to generate response. Please try again." });
     } else {
