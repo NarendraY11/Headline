@@ -12,6 +12,22 @@ function currentUA(): string {
   return typeof navigator !== "undefined" ? navigator.userAgent : "Unknown";
 }
 
+// CSPRNG session id. Prefer crypto.randomUUID; fall back to crypto.getRandomValues
+// (still cryptographically secure) for older secure contexts. No Math.random —
+// a predictable id would weaken the single-device hijack-detection slot.
+function generateSessionId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  // No CSPRNG available: refuse rather than emit a guessable id.
+  throw new Error("No cryptographically secure RNG available for session id.");
+}
+
 // Device identity is the user-agent fingerprint. The installed PWA and the
 // browser on one physical device keep separate session ids in separate storage
 // partitions, so an id mismatch alone must NOT evict — only a different device
@@ -27,9 +43,7 @@ export function isSameDevice(deviceInfo?: string | null): boolean {
 export async function registerActiveSession(userId: string) {
   let sessionId = localStorage.getItem(SESSION_ID_KEY);
   if (!sessionId) {
-    sessionId = typeof crypto !== "undefined" && crypto.randomUUID
-      ? crypto.randomUUID()
-      : Math.random().toString(36).substring(2);
+    sessionId = generateSessionId();
     localStorage.setItem(SESSION_ID_KEY, sessionId);
   }
 

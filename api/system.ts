@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getSupabaseAdmin, checkFormRateLimit, getClientIdentity, getAuthenticatedUser, isFeatureEnabled, screenSubmission } from "./_lib/utils.js";
+import { getSupabaseAdmin, checkFormRateLimit, getClientIdentity, getAuthenticatedUser, isFeatureEnabled, screenSubmission, sanitizeForLog } from "./_lib/utils.js";
 import { logSecurityEvent, type Severity } from "./_lib/securityLog.js";
 import { validateStudyPlan, expandPlanToMissions } from "./_lib/studyPlan.js";
 import { getInngestHandler } from "./_lib/inngest.js";
@@ -714,7 +714,7 @@ async function _handler(req: VercelRequest, res: VercelResponse) {
       return res.status(pushRes.ok ? 200 : 502).json({ ok: pushRes.ok, result });
     }
 
-    console.warn("QStash: unknown job type:", type);
+    console.warn("QStash: unknown job type: %s", sanitizeForLog(type));
     return res.status(400).json({ error: `Unknown job type: ${type}` });
   }
 

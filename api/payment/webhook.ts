@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getSupabaseAdmin, verifyWebhookSignature } from "../_lib/utils.js";
+import { getSupabaseAdmin, verifyWebhookSignature, sanitizeForLog } from "../_lib/utils.js";
 import { logSecurityEvent } from "../_lib/securityLog.js";
 import { notifySlack, formatRupees } from "../_lib/slack.js";
 
@@ -60,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     const payload = JSON.parse(rawBody);
     const event = payload.event;
-    console.log(`Razorpay Serverless Webhook Event Received: ${event}`);
+    console.log("Razorpay Serverless Webhook Event Received: %s", sanitizeForLog(event));
 
     const admin = getSupabaseAdmin();
 
@@ -127,7 +127,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .eq("id", userId);
 
         if (error) {
-          console.error(`Failed to update profile for user ${userId} on webhook event ${event}:`, error);
+          console.error("Failed to update profile for user %s on webhook event %s:", sanitizeForLog(userId), sanitizeForLog(event), error);
           return res.status(500).json({ error: "Database update failed" });
         }
         try {
@@ -156,7 +156,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             "revenue",
           );
         }
-        console.log(`Successfully updated user ${userId} to Pro plan via Webhook (${interval})`);
+        console.log("Successfully updated user %s to Pro plan via Webhook (%s)", sanitizeForLog(userId), sanitizeForLog(interval));
       }
     }
 
@@ -183,7 +183,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           .eq("id", userId);
 
         if (error) {
-          console.error(`Failed to revoke Pro plan for user ${userId} on webhook event ${event}:`, error);
+          console.error("Failed to revoke Pro plan for user %s on webhook event %s:", sanitizeForLog(userId), sanitizeForLog(event), error);
           return res.status(500).json({ error: "Database update failed" });
         }
         try {
@@ -207,7 +207,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           `:arrow_down: *Subscription ended (${event})* — user ${userId} downgraded to Free.`,
           "revenue",
         );
-        console.log(`Successfully downgraded canceled user ${userId} to Free plan via Webhook`);
+        console.log("Successfully downgraded canceled user %s to Free plan via Webhook", sanitizeForLog(userId));
       }
     }
 
