@@ -10,8 +10,8 @@ import {
     Timer,
     TrendingUp
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button, Card } from "../components/Atoms";
 import { ProGate } from "../components/ProGate";
 import { useToast } from "../components/ui/Toast";
@@ -30,6 +30,8 @@ import { supabase } from "../lib/supabase";
 
 export default function MockExamsView() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const webmcpHandledRef = useRef(false);
   const { showToast } = useToast();
   
   const { user } = useAuth();
@@ -255,8 +257,38 @@ export default function MockExamsView() {
     });
   };
 
+  // WebMCP deep-link: when the agent start_mock_test tool navigates here with an
+  // exam type in router state, match it to a real published exam and run the
+  // SAME flow as the "Launch Auto Simulator" button. Runs once, after data
+  // loads; clears the state so back/refresh doesn't re-fire it.
+  useEffect(() => {
+    const target = (location.state as any)?.webmcpStartExam as
+      | { authority?: string; license?: string; label?: string }
+      | undefined;
+    if (!target || webmcpHandledRef.current || loading) return;
+
+    const match =
+      exams.find((e) => e.authority === target.authority && e.license === target.license) ||
+      exams.find((e) => e.authority === target.authority);
+
+    webmcpHandledRef.current = true;
+    navigate(".", { replace: true, state: {} });
+
+    if (match) {
+      handleStartAutomaticExamMock(match);
+    } else {
+      showToast({
+        type: "error",
+        title: "Mock Unavailable",
+        message: `No published mock exam is configured for ${target.label || "this exam type"} yet.`,
+        duration: 5000,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state, loading, exams]);
+
   // Filters mapping
-  const filteredExams = selectedCompliance === "all" 
+  const filteredExams = selectedCompliance === "all"
     ? exams 
     : exams.filter(e => e.authority === selectedCompliance);
 
