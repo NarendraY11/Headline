@@ -4,6 +4,7 @@ import { Navigate, Route, BrowserRouter as Router, Routes } from "react-router-d
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useAuth } from "./contexts/AuthContext";
 import { useFeature } from "./hooks/useFeatureFlags";
+import { useWebMcp } from "./hooks/useWebMcp";
 import { PreviewModeProvider } from "./preview/PreviewModeProvider";
 import { defaultFlags } from "./hooks/useFeatureFlags";
 
@@ -107,6 +108,13 @@ const PricingView = lazy(() => import("./views/PricingView"));
 // Handles the /login deep link. Logged-out users see the home page with the
 // sign-in modal opened; logged-in users are routed into the app so the URL
 // never lands on the catch-all 404.
+// Registers the WebMCP agent tool surface on in-scope routes only. Rendered
+// inside <Router> so the hook can read the location and use the app's navigate.
+function WebMcpBridge() {
+  useWebMcp();
+  return null;
+}
+
 function LoginRoute() {
   const { user, openAuthModal } = useAuth();
   useEffect(() => {
@@ -136,6 +144,7 @@ export default function App() {
 
   return (
     <Router>
+      <WebMcpBridge />
       <FeatureGatingBlocks />
       <RouteMetaHelper />
       <AuthModalTrigger />
