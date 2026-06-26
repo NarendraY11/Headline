@@ -6,6 +6,33 @@ import fs from "fs";
 import { blogPosts } from "../src/data/blog";
 
 const PORT = 5555;
+
+function htmlToMarkdown(html: string): string {
+  const bodyMatch = html.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+  let body = bodyMatch ? bodyMatch[1] : html;
+  body = body
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+    .replace(/<nav\b[\s\S]*?<\/nav>/gi, '')
+    .replace(/<header\b[\s\S]*?<\/header>/gi, '')
+    .replace(/<footer\b[\s\S]*?<\/footer>/gi, '')
+    // Strip any element (and its subtree) marked data-md-skip="true".
+    // Handles divs and other block elements; tolerates nested HTML by matching
+    // balanced open/close of the same tag name.
+    .replace(/<(\w+)[^>]*\bdata-md-skip="true"[\s\S]*?<\/\1>/gi, '');
+  return body
+    .replace(/<h([1-6])[^>]*>([\s\S]*?)<\/h\1>/gi, (_: string, n: string, t: string) =>
+      '\n' + '#'.repeat(+n) + ' ' + t.replace(/<[^>]+>/g, '').trim() + '\n')
+    .replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, (_: string, t: string) =>
+      '\n' + t.replace(/<[^>]+>/g, '').trim() + '\n')
+    .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, (_: string, t: string) =>
+      '- ' + t.replace(/<[^>]+>/g, '').trim() + '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&nbsp;/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
 const DIST_DIR = path.resolve(process.cwd(), "dist");
 
 // Resolve a local Chrome/Chromium executable. The serverless @sparticuz binary
@@ -149,6 +176,19 @@ async function prerender() {
 
         fs.writeFileSync(filePath, html, "utf-8");
         console.log(`Saved ${filePath}`);
+
+        // Write markdown version for Accept: text/markdown content negotiation
+        const blogSlug = route.startsWith('/blog/') ? route.substring(6) : null;
+        const blogPost = blogSlug ? blogPosts.find(p => p.slug === blogSlug) : undefined;
+        const md = blogPost
+          ? `---\ntitle: ${blogPost.title}\ndescription: ${blogPost.description}\ndate: ${blogPost.date}\nauthor: ${blogPost.author}\n---\n\n${blogPost.content}`
+          : htmlToMarkdown(html);
+        const mdPath = route === '/'
+          ? path.join(DIST_DIR, 'index.md')
+          : path.join(routeDir, 'index.md');
+        fs.writeFileSync(mdPath, md, 'utf-8');
+        console.log(`Saved ${mdPath}`);
+
         await page.close();
       }
 
