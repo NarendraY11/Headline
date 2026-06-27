@@ -1,3 +1,5 @@
+import { familyOf } from "../lib/contentRegistry";
+
 // Config-driven training-path catalog for onboarding Step 1.
 // Adding a path or goal = data edit here; the UI renders generically off `status`.
 // ponytail: pure static config, no DB. Step 1 doesn't need live exam fetch.
@@ -136,13 +138,16 @@ export function resolveCareerObjective(id: string | null | undefined): CareerObj
 
 /**
  * Derives the primary track family from a targetExam string.
- * "dgca-cpl" → "dgca", "type-a320" → "type_rating", "airline-technical" → null (legacy)
+ *
+ * Delegates to the canonical resolver (src/lib/contentRegistry.ts) so it
+ * accepts BOTH historical forms — tokens ("dgca-cpl") AND human labels
+ * ("DGCA CPL"). Previously only tokens matched, so the signup default
+ * label "DGCA CPL" resolved to null. Now normalized first → bug fixed.
+ *
+ * Return contract is unchanged: "airline" recruitment is carried on the
+ * careerObjective field, never target_exam, so it maps to null here.
  */
 export function getPrimaryTrackFamily(targetExam: string | null | undefined): "dgca" | "type_rating" | "faa" | "easa" | null {
-  if (!targetExam) return null;
-  if (targetExam.startsWith("dgca-")) return "dgca";
-  if (targetExam.startsWith("type-")) return "type_rating";
-  if (targetExam.startsWith("faa-")) return "faa";
-  if (targetExam.startsWith("easa-")) return "easa";
-  return null;
+  const family = familyOf(targetExam);
+  return family === "airline" ? null : family;
 }

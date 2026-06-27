@@ -20,6 +20,7 @@ const QuizView = lazy(() => import("./views/QuizView"));
 const TopicView = lazy(() => import("./views/TopicView"));
 const BookmarksView = lazy(() => import("./views/BookmarksView"));
 const ProfileView = lazy(() => import("./views/ProfileView"));
+const LearningContextView = lazy(() => import("./views/LearningContextView"));
 const NotFoundView = lazy(() => import("./views/NotFoundView"));
 const TodayView = lazy(() => import("./views/TodayView"));
 const ResetPasswordView = lazy(() => import("./views/ResetPasswordView"));
@@ -68,6 +69,9 @@ const SiteContentManager = lazy(() => import("./views/admin/SiteContentManager")
 const AiSettingsManager = lazy(() => import("./views/admin/AiSettingsManager"));
 const FunnelAnalytics = lazy(() => import("./views/admin/FunnelAnalytics"));
 const BillingManager = lazy(() => import("./views/admin/BillingManager"));
+const RegistryManager = lazy(() => import("./views/admin/RegistryManager"));
+const EnrollmentsAdmin = lazy(() => import("./views/admin/EnrollmentsAdmin"));
+const ContentCmsView = lazy(() => import("./views/admin/ContentCmsView"));
 const FeaturePreviewRoute = lazy(() => import("./views/admin/FeaturePreviewRoute"));
 const ExamCentreView = lazy(() => import("./views/ExamCentreView"));
 
@@ -209,6 +213,13 @@ export default function App() {
             <Route path="/admin/ai-settings" element={<AiSettingsManager />} />
             <Route path="/admin/funnel" element={<FunnelAnalytics />} />
             <Route path="/admin/billing" element={<BillingManager />} />
+            {/* Phase 1: hidden content registry CRUD (gated inside by contentRegistry flag; no nav link) */}
+            <Route path="/admin/registry" element={<RegistryManager />} />
+            {/* Phase 2: enrollments admin (static path wins over :entity) */}
+            <Route path="/admin/registry/enrollments" element={<EnrollmentsAdmin />} />
+            <Route path="/admin/registry/:entity" element={<RegistryManager />} />
+            {/* Phase 3: hidden Content CMS (gated inside by contentCms flag; no nav link) */}
+            <Route path="/admin/cms" element={<ContentCmsView />} />
           </Route>
 
           {/* AUTHENTICATED APP ROUTES (With App Shell) */}
@@ -220,6 +231,8 @@ export default function App() {
             <Route path="/analytics" element={<AnalyticsView />} />
             <Route path="/bookmarks" element={<BookmarksView />} />
             <Route path="/profile" element={<ProfileView />} />
+            {/* Phase 2: hidden Learning Context page (gated inside by learningContext flag; no nav link) */}
+            <Route path="/learning-context" element={<LearningContextView />} />
             <Route path="/referral" element={<ReferralView />} />
             {/* /study-plan is a dead route — redirect to /schedule (the live scheduler) */}
             <Route path="/study-plan" element={<Navigate to="/schedule" replace />} />
