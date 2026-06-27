@@ -229,11 +229,19 @@ export async function commitSession(
     if (error) throw new Error(`Failed to fetch rows: ${error.message}`);
     if (!rows || rows.length === 0) break;
 
-    const questions = (rows as { id: string; normalized: Record<string, unknown> }[]).map((r, idx) => {
+    // Build question IDs deterministically upfront so we can write them back
+    // to import_rows.question_id in a single batch call (no N+1).
+    const typed = rows as { id: string; normalized: Record<string, unknown> }[];
+    const questionMap = typed.map((r, idx) => ({
+      stagingId: r.id,
+      questionId: ((r.normalized as Record<string, unknown>).slug as string)
+        ?? `imp-${sessionId.slice(0, 8)}-${committed + skipped + idx}`,
+    }));
+
+    const questions = typed.map((r, idx) => {
       const n = r.normalized as Record<string, unknown>;
-      const id = (n.slug as string) ?? `imp-${sessionId.slice(0, 8)}-${committed + skipped + idx}`;
       return {
-        id,
+        id: questionMap[idx].questionId,
         prompt: n.prompt,
         choices: n.choices,
         correct: n.correct,
@@ -241,7 +249,7 @@ export async function commitSession(
         difficulty: n.difficulty ?? "standard",
         subject_id: n.subjectId ?? null,
         subcategory_id: n.moduleId ?? null,
-        topic_id: n.topicId ?? null,
+        // topic_id is not a column on questions; relationship is via topic_questions
         ata: n.ata ?? null,
         authority: n.authority ?? null,
         regulation: n.regulation ?? null,
@@ -253,13 +261,24 @@ export async function commitSession(
       };
     });
 
-    const { error: insertErr } = await supabase.from("questions").upsert(questions, { onConflict: "id" });
+    const { error: insertErr } = await supabase
+      .from("questions")
+      .upsert(questions, { onConflict: "id" });
+
     if (insertErr) {
       // Mark as skipped; don't abort entire import.
       skipped += rows.length;
     } else {
-      const ids = (rows as { id: string }[]).map((r) => r.id);
-      await supabase.from("import_rows").update({ status: "imported" }).in("id", ids);
+      const stagingIds = questionMap.map((m) => m.stagingId);
+      // Batch UPDATE status in one call (.update().in() never tries INSERT,
+      // so avoids the NOT NULL constraint that upsert triggers).
+      await supabase.from("import_rows").update({ status: "imported" }).in("id", stagingIds);
+      // Write question_id per row (N calls per chunk; 150 rows/chunk max).
+      await Promise.all(
+        questionMap.map(({ stagingId, questionId }) =>
+          supabase.from("import_rows").update({ question_id: questionId }).eq("id", stagingId)
+        )
+      );
       committed += rows.length;
     }
 
@@ -288,11 +307,12 @@ export async function failSession(sessionId: string, msg: string): Promise<void>
   await patch(sessionId, { status: "failed", error: msg });
 }
 
-/** Fetch past import sessions (admin-only; RLS enforces). */
+/** Fetch past import sessions for the history list. Excludes heavy jsonb
+ *  columns (preview, validation_results) not needed in the history table. */
 export async function listSessions(limit = 30): Promise<ImportSession[]> {
   const { data, error } = await supabase
     .from("import_sessions")
-    .select("*")
+    .select("id, user_id, import_type, file_name, status, statistics, error, started_at, completed_at, created_at")
     .order("started_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(error.message);
