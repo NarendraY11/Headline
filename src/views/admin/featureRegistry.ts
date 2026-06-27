@@ -701,6 +701,18 @@ export const featureRegistry = {
     requiresAuth: true,
     requiresAdmin: true,
   },
+  contentImport: {
+    key: "contentImport",
+    title: "Content Import Engine (Phase 4)",
+    description: "Staged bulk import pipeline: CSV/JSON → staging tables → normalize/validate/dedupe → preview → commit as draft questions. Admin-only. OFF = hidden. No production content is touched until admin confirms.",
+    category: "UI/UX & System",
+    adminVisible: true,
+    previewType: "route",
+    routes: ["/admin/content-import"],
+    sideEffects: ["auth", "supabase-read", "supabase-write"],
+    requiresAuth: true,
+    requiresAdmin: true,
+  },
 } satisfies { [K in FlagKeys]: FeatureDefinition & { key: K } };
 
 export const featureControlSections: FeatureCategory[] = [
