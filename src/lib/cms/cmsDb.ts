@@ -110,20 +110,25 @@ export async function searchContentServer(query: string, perTypeLimit = 20): Pro
   if (!term) return [];
   const like = `%${term}%`;
 
-  const registry: Array<[EntityType, string, string]> = [
-    ["program", "programs", "id,slug,title,status"],
-    ["certification", "certifications", "id,slug,title,status"],
-    ["aircraft", "aircraft", "id,slug,title,status"],
-    ["subject", "subjects", "id,title,status"],
-    ["module", "subcategories", "id,title,status"],
-    ["topic", "topics", "id,slug,title,status"],
-    ["question_group", "question_groups", "id,slug,title,status"],
+  // `idText` marks tables whose `id` is a text PK (ilike-safe). Registry
+  // tables (programs/certifications/aircraft/topics/question_groups) have a
+  // uuid id — ilike on uuid throws `operator does not exist: uuid ~~*`, so we
+  // search their `slug` instead. subjects/subcategories have text ids.
+  const registry: Array<{ type: EntityType; table: string; cols: string; hasSlug: boolean; idText: boolean }> = [
+    { type: "program", table: "programs", cols: "id,slug,title,status", hasSlug: true, idText: false },
+    { type: "certification", table: "certifications", cols: "id,slug,title,status", hasSlug: true, idText: false },
+    { type: "aircraft", table: "aircraft", cols: "id,slug,title,status", hasSlug: true, idText: false },
+    { type: "subject", table: "subjects", cols: "id,title,status", hasSlug: false, idText: true },
+    { type: "module", table: "subcategories", cols: "id,title,status", hasSlug: false, idText: true },
+    { type: "topic", table: "topics", cols: "id,slug,title,status", hasSlug: true, idText: false },
+    { type: "question_group", table: "question_groups", cols: "id,slug,title,status", hasSlug: true, idText: false },
   ];
 
-  const registryQueries = registry.map(async ([type, table, cols]) => {
-    const hasSlug = cols.includes("slug");
-    const filter = hasSlug ? `title.ilike.${like},slug.ilike.${like},id.ilike.${like}` : `title.ilike.${like},id.ilike.${like}`;
-    const { data, error } = await supabase.from(table).select(cols).or(filter).limit(perTypeLimit);
+  const registryQueries = registry.map(async ({ type, table, cols, hasSlug, idText }) => {
+    const clauses = [`title.ilike.${like}`];
+    if (hasSlug) clauses.push(`slug.ilike.${like}`);
+    if (idText) clauses.push(`id.ilike.${like}`);
+    const { data, error } = await supabase.from(table).select(cols).or(clauses.join(",")).limit(perTypeLimit);
     if (error) throw error;
     return (data ?? []).map((r: any) => ({ id: r.id, type, title: r.title, slug: r.slug ?? r.id, status: r.status })) as SearchResult[];
   });
