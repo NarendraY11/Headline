@@ -8,6 +8,7 @@ import { useFeature } from "../hooks/useFeatureFlags";
 import { useActiveMission } from "../hooks/useActiveMission";
 import { CAREER_OBJECTIVES, TRAINING_PATHS, resolveTargetExam } from "../data/trainingPaths";
 import { trackEvent } from "../lib/track";
+import { syncLearningModel } from "../lib/learningContextDb";
 
 const stepsData = [
   {
@@ -1267,8 +1268,9 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const { updateUserData } = useAuth();
+  const { updateUserData, user } = useAuth();
   const missionEngineEnabled = useFeature("missionEngine");
+  const learningContextEnabled = useFeature("learningContext");
   const { generate, resume } = useActiveMission();
   const navigate = useNavigate();
 
@@ -1328,6 +1330,17 @@ export function OnboardingFlow({ onClose }: { onClose: () => void }) {
         onboardingCareerObjective: careerObjective ?? null,
       }
     }).catch(() => {});
+
+    // Phase 2: when learningContext is ON, persist the new model (learning
+    // profile + active enrollment) ALONGSIDE target_exam. Best-effort and
+    // non-blocking — target_exam (above) remains the compatibility mirror, so
+    // onboarding never breaks if this write fails or the tables are absent.
+    if (learningContextEnabled && user) {
+      syncLearningModel(user.uid, {
+        targetExam,
+        careerObjective: careerObjective ?? null,
+      }).catch(() => {});
+    }
 
     localStorage.setItem("heading_onboarding_completed", "true");
     onClose();
