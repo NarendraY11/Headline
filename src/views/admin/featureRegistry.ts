@@ -737,6 +737,18 @@ export const featureRegistry = {
     requiresAuth: true,
     requiresAdmin: false,
   },
+  adaptiveLearning: {
+    key: "adaptiveLearning",
+    title: "Adaptive Learning Engine (Phase 9)",
+    description: "Intelligent study recommendations: priority model, readiness score (0–100), study health (Green/Yellow/Red), exam readiness (Ready/Needs Review/At Risk). Replaces static Continue Learning with adaptive recommendation in Today. Adds readiness panel to Course view. OFF = all existing behavior unchanged.",
+    category: "Learning Features",
+    adminVisible: true,
+    previewType: "component",
+    routes: ["/today", "/course"],
+    sideEffects: ["auth", "supabase-read"],
+    requiresAuth: true,
+    requiresAdmin: true,
+  },
 } satisfies { [K in FlagKeys]: FeatureDefinition & { key: K } };
 
 export const featureControlSections: FeatureCategory[] = [

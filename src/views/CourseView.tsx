@@ -14,17 +14,34 @@ import { useLearningProgress } from "../hooks/useLearningProgress";
 import { fetchMergedSubjects } from "../lib/content";
 import { useUserProgress } from "../lib/progress";
 import { useLogbook } from "../hooks/useLogbook";
+import { useAdaptiveLearning } from "../hooks/useAdaptiveLearning";
+import { useResolvedExamDate } from "../hooks/useResolvedExamDate";
+import { ReadinessPanel } from "./course/ReadinessPanel";
 
 export default function CourseView() {
   const navigate = useNavigate();
   const { userData } = useAuth();
   const contentDeliveryEngine = useFeature("contentDeliveryEngine");
+  const adaptiveLearningEnabled = useFeature("adaptiveLearning");
   const { scope, enrichedScope } = useContentScope(!!contentDeliveryEngine);
   const { progress: learningProgress } = useLearningProgress();
   const moduleProgress = learningProgress.modules;
   const topicProgress = learningProgress.topics;
   const { stats: progressStats } = useUserProgress();
   const { logbook } = useLogbook();
+
+  // Phase 9.1 T3: exam date via learning context, not raw userData.nextExam
+  const resolvedExamDate = useResolvedExamDate();
+
+  // Phase 9: adaptive engine — unconditionally called; used only when flag ON
+  const adaptive = useAdaptiveLearning({
+    mission: null,
+    reviewDueCount: 0,
+    currentXp: 0,
+    currentRank: "",
+    currentStreak: progressStats.streakCount,
+    examDate: resolvedExamDate,
+  });
 
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -139,6 +156,11 @@ export default function CourseView() {
             {displayedSubjects.length} subjects · {allModules.length} modules · {totalQuestions.toLocaleString()} questions
           </p>
         </div>
+
+        {/* Phase 9: Readiness panel — shown only when adaptiveLearning flag ON */}
+        {adaptiveLearningEnabled && (
+          <ReadinessPanel output={adaptive} loading={adaptive.loading} />
+        )}
 
         {/* Progress ring + stats strip */}
         <div className="bg-ink rounded-2xl p-5 md:p-8 mb-10 flex flex-col sm:flex-row items-center gap-6 text-bg shadow-lg">

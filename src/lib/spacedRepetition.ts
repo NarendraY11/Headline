@@ -404,3 +404,39 @@ export async function getDueQuestionIds(userId: string | null): Promise<string[]
 
   return dueIds;
 }
+
+/**
+ * Scoped variant of getDueQuestionIds.
+ * Only returns due question IDs whose subject_id is in eligibleSubjectIds.
+ *
+ * Falls back to global getDueQuestionIds when:
+ *   - eligibleSubjectIds is empty (guest / no enrollment / legacy)
+ *   - userId is null (local progress path — scope filtering not possible)
+ */
+export async function getScopedDueQuestionIds(
+  userId: string | null,
+  eligibleSubjectIds: ReadonlySet<string>
+): Promise<string[]> {
+  const allDue = await getDueQuestionIds(userId);
+
+  // No scope or no user — return unfiltered (legacy / guest fallback)
+  if (!userId || eligibleSubjectIds.size === 0 || allDue.length === 0) {
+    return allDue;
+  }
+
+  // Filter against questions.subject_id in scope — single lightweight query
+  const { data, error } = await supabase
+    .from("questions")
+    .select("id")
+    .in("id", allDue)
+    .in("subject_id", [...eligibleSubjectIds]);
+
+  if (error || !data) {
+    // Supabase error — degrade to unfiltered to avoid breaking the count
+    console.warn("getScopedDueQuestionIds: scope filter failed, using unfiltered", error);
+    return allDue;
+  }
+
+  const scopedIds = new Set(data.map((q: { id: string }) => q.id));
+  return allDue.filter(id => scopedIds.has(id));
+}

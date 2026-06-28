@@ -23,12 +23,16 @@ import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
 import { fetchMergedSubjects } from "../lib/content";
 import { useUserProgress } from "../lib/progress";
-import { getDueQuestionIds } from "../lib/spacedRepetition";
+import { getScopedDueQuestionIds } from "../lib/spacedRepetition";
+import { resolveContentScope } from "../lib/contentDeliveryEngine";
+import { resolveActiveLearningContext } from "../lib/learningContextDb";
 
 import { AnimatedCounter } from "./today/AnimatedCounter";
 import { TodayLoader } from "./today/DashboardLoaders";
 import { CareerObjectiveMissions } from "./today/CareerObjectiveMissions";
 import { ActiveMissionCard } from "./today/ActiveMissionCard";
+import { useActiveMission } from "../hooks/useActiveMission";
+import { useResolvedExamDate } from "../hooks/useResolvedExamDate";
 import { TodayMissions } from "./today/TodayMissions";
 import { RecentXpActivity } from "./today/RecentXpActivity";
 import { TodayAchievements } from "./today/TodayAchievements";
@@ -66,6 +70,8 @@ import { AtRiskSubjectsCard } from "./today/AtRiskSubjectsCard";
 import { SuccessForecastCard } from "./today/SuccessForecastCard";
 import { RecommendedActionsCard } from "./today/RecommendedActionsCard";
 import { ForecastDashboard } from "./today/ForecastDashboard";
+import { AdaptiveLearningCard } from "./today/AdaptiveLearningCard";
+import { useAdaptiveLearning } from "../hooks/useAdaptiveLearning";
 
 export default function TodayView() {
   const { userData, user, loading } = useAuth();
@@ -74,6 +80,7 @@ export default function TodayView() {
   const missionEngineEnabled = useFeature("missionEngine");
   const learningHierarchyEnabled = useFeature("learningHierarchy");
   const xpSystemEnabled = useFeature("xpSystem");
+  const adaptiveLearningEnabled = useFeature("adaptiveLearning");
   // Phase 7.2: XP read substrate hoisted here (hooks rule — cannot live inside
   // the renderTile switch). Internally gated on xpSystem + userId.
   const { balance: xpBalance, events: xpEvents, rank: xpRank, loading: xpLoading } = useXp(50);
@@ -107,6 +114,26 @@ export default function TodayView() {
   // M11B: forecast engine — extended projections
   const forecastEngine = useForecastEngine(subjectsCount, subjectTitleMapForPredictive);
 
+  // Phase 9.1 T1: hoist useActiveMission so adaptive engine gets real mission signal.
+  // ActiveMissionCard also calls this internally (for generate/resume/abandon actions).
+  // Two reads of the same row — acceptable; the hook guards on missionEngine flag + userId.
+  const { mission: hoistedMission } = useActiveMission();
+
+  // Phase 9.1 T3: exam date from learning context, not raw userData.nextExam.
+  const resolvedExamDate = useResolvedExamDate();
+
+  // Phase 9: adaptive learning engine — unconditionally called (hooks rule); results
+  // consumed only when adaptiveLearningEnabled is ON.
+  const adaptive = useAdaptiveLearning({
+    mission: hoistedMission,
+    reviewDueCount: dueCount,
+    currentXp: xpBalance,
+    currentRank: xpRank?.rank?.name ?? "",
+    currentStreak: progressStats.streakCount,
+    examDate: resolvedExamDate,
+    todayMinutesAvailable: userData?.dailyGoal ?? 30,
+  });
+
   // Phase 8.2A: daily reminder replaced by useEngineReminders via FlightAlerts.
   // The old logic used stale lastActivityDate and fired a generic toast.
   // FlightAlerts uses engine-mission signals only and shows an inline strip.
@@ -114,14 +141,22 @@ export default function TodayView() {
   useEffect(() => {
     async function fetchDueCount() {
       try {
-        const ids = await getDueQuestionIds(user?.id || null);
+        // Phase 9.1 T2: scoped review — only count questions inside active enrollment scope.
+        // Falls back to global count for guest / legacy / no-enrollment users.
+        const uid = user?.id ?? null;
+        const ctx = await resolveActiveLearningContext(uid, {
+          targetExam: userData?.targetExam ?? null,
+          careerObjective: userData?.careerObjective ?? null,
+        });
+        const scope = resolveContentScope(ctx);
+        const ids = await getScopedDueQuestionIds(uid, scope.eligibleSubjectIds);
         setDueCount(ids.length);
       } catch (err) {
         console.error("Failed loading due count in TodayView:", err);
       }
     }
     fetchDueCount();
-  }, [user?.id]);
+  }, [user?.id, userData?.targetExam]);
 
   useEffect(() => {
     async function loadSubjects() {
@@ -947,16 +982,20 @@ export default function TodayView() {
         {/* Only show ResumeCard when no session is already in the hero CTA */}
         {!activeSession && <ResumeCard />}
 
-        {/* Phase 8.1: Continue Learning — hierarchy-aware resume. Show only when flag ON
-            and no active session (ResumeCard already handles in-progress sessions). */}
-        {learningHierarchyEnabled && !activeSession && (
+        {/* Phase 9: Adaptive Learning — replaces static Continue Learning when flag ON.
+            Phase 8.1: Continue Learning — shown when learningHierarchy ON and adaptive OFF. */}
+        {adaptiveLearningEnabled && !activeSession ? (
+          <div className="mb-4">
+            <AdaptiveLearningCard output={adaptive} loading={adaptive.loading} />
+          </div>
+        ) : learningHierarchyEnabled && !activeSession ? (
           <div className="mb-4">
             <ContinueLearningCard
               subjects={subjectsList}
               masteryMap={progressStats.subjectMastery}
             />
           </div>
-        )}
+        ) : null}
         <ReferralWidget />
 
         <div className="flex items-baseline justify-between gap-4 mb-4 mt-2">
