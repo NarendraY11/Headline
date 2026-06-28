@@ -16,13 +16,17 @@ export interface LearningProgress {
 
 const EMPTY: LearningProgress = { modules: {}, topics: {} };
 
-export function useLearningProgress(): { progress: LearningProgress; loading: boolean } {
+/**
+ * Phase 9.3: skip=true prevents the RPC fetch when a parent provides
+ * the data (e.g. TodayView hoists this and passes it to useAdaptiveLearning).
+ */
+export function useLearningProgress(skip = false): { progress: LearningProgress; loading: boolean } {
   const { user } = useAuth();
   const [progress, setProgress] = useState<LearningProgress>(EMPTY);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!skip);
 
   useEffect(() => {
-    if (!user?.id) { setLoading(false); return; }
+    if (skip || !user?.id) { setLoading(false); return; }
 
     supabase
       .rpc("get_learning_progress")
@@ -33,7 +37,7 @@ export function useLearningProgress(): { progress: LearningProgress; loading: bo
         }
         setLoading(false);
       });
-  }, [user?.id]);
+  }, [skip, user?.id]);
 
   return { progress, loading };
 }

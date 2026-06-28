@@ -9,7 +9,7 @@
 import { useMemo } from "react";
 import { useFeature } from "./useFeatureFlags";
 import { useContentScope } from "./useContentScope";
-import { useLearningProgress } from "./useLearningProgress";
+import { useLearningProgress, type LearningProgress } from "./useLearningProgress";
 import { useMasterySnapshots } from "./useMasterySnapshots";
 import {
   computeAdaptiveOutput,
@@ -78,6 +78,11 @@ export interface UseAdaptiveLearningParams {
    * useMasterySnapshots call. When provided, skips internal DB fetch.
    */
   snapshots?: MasterySnapshot[];
+  /**
+   * Phase 9.3: pre-fetched learning progress from TodayView's single
+   * useLearningProgress call. When provided, skips internal RPC fetch.
+   */
+  learningProgress?: LearningProgress;
 }
 
 export interface UseAdaptiveLearningResult extends AdaptiveOutput {
@@ -93,19 +98,22 @@ export function useAdaptiveLearning(params: UseAdaptiveLearningParams): UseAdapt
   const flagEnabled = useFeature("adaptiveLearning");
   const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
 
-  // Phase 9.2: skip internal fetches when caller provides pre-resolved data.
+  // Phase 9.2/9.3: skip internal fetches when caller provides pre-resolved data.
   const { scope: internalScope, loading: scopeLoading } = useContentScope(
     !params.scope && !!contentDeliveryEnabled
   );
-  const { progress: learningProgress, loading: progressLoading } = useLearningProgress();
+  const { progress: internalProgress, loading: progressLoading } = useLearningProgress(
+    !!params.learningProgress
+  );
   const { snapshots: internalSnapshots, loading: snapshotsLoading } = useMasterySnapshots(
     !!params.snapshots
   );
 
   const scope = params.scope ?? internalScope;
+  const learningProgress = params.learningProgress ?? internalProgress;
   const snapshots = params.snapshots ?? internalSnapshots;
   const loading = (params.scope ? false : scopeLoading) ||
-    progressLoading ||
+    (params.learningProgress ? false : progressLoading) ||
     (params.snapshots ? false : snapshotsLoading);
 
   // Build masteryMap from snapshots (subject_id → mastery %)

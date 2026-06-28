@@ -25,6 +25,7 @@ import { fetchMergedSubjects } from "../lib/content";
 import { useUserProgress } from "../lib/progress";
 import { getScopedDueQuestionIds } from "../lib/spacedRepetition";
 import { useContentScope } from "../hooks/useContentScope";
+import { useLearningProgress } from "../hooks/useLearningProgress";
 
 import { AnimatedCounter } from "./today/AnimatedCounter";
 import { TodayLoader } from "./today/DashboardLoaders";
@@ -89,10 +90,11 @@ export default function TodayView() {
   const examReadinessEtaEnabled = useFeature("examReadinessEta");
   const predictiveIntelligenceEnabled = useFeature("predictiveIntelligence");
   const { stats: progressStats } = useUserProgress();
-  // Phase 9.2: single source of truth for learning context + mastery snapshots.
-  // All downstream hooks receive these values instead of fetching independently.
-  const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
-  const { scope: hoistedScope } = useContentScope(!!contentDeliveryEnabled);
+  // Phase 9.2/9.3: single source of truth for learning context + mastery snapshots.
+  // scope always resolved (enabled=true) so hoistedScope carries subjects from
+  // enrollment/profile even when contentDeliveryEngine flag is OFF.
+  // CDE flag controls content display filtering, not context resolution.
+  const { scope: hoistedScope } = useContentScope(true);
   const { snapshots: masterySnapshots } = useMasterySnapshots();
   const [subjectsCount, setSubjectsCount] = useState(0);
   // Pass hoisted snapshots — skips internal useMasterySnapshots fetch.
@@ -118,13 +120,25 @@ export default function TodayView() {
   // M11B: forecast engine — extended projections
   const forecastEngine = useForecastEngine(subjectsCount, subjectTitleMapForPredictive);
 
-  // Phase 9.1 T1: hoist useActiveMission — pass hoisted scope to skip internal fetch.
-  const { mission: hoistedMission } = useActiveMission(hoistedScope);
+  // Phase 9.3 T1: full mission result hoisted — ActiveMissionCard receives it as props.
+  const {
+    mission: hoistedMission,
+    completedToday: hoistedCompletedToday,
+    loading: missionLoading,
+    error: missionError,
+    busy: missionBusy,
+    generate: missionGenerate,
+    resume: missionResume,
+    abandon: missionAbandon,
+  } = useActiveMission(hoistedScope);
+
+  // Phase 9.3 T2: hoist learning progress — pass to useAdaptiveLearning to skip internal RPC.
+  const { progress: hoistedLearningProgress } = useLearningProgress();
 
   // Phase 9.1 T3: exam date via learning context — pass hoisted scope.
   const resolvedExamDate = useResolvedExamDate(hoistedScope);
 
-  // Phase 9: adaptive learning engine — pass hoisted scope + snapshots.
+  // Phase 9: adaptive learning engine — pass hoisted scope + snapshots + progress.
   const adaptive = useAdaptiveLearning({
     mission: hoistedMission,
     reviewDueCount: dueCount,
@@ -135,6 +149,7 @@ export default function TodayView() {
     todayMinutesAvailable: userData?.dailyGoal ?? 30,
     scope: hoistedScope,
     snapshots: masterySnapshots,
+    learningProgress: hoistedLearningProgress,
   });
 
   // Phase 8.2A: daily reminder replaced by useEngineReminders via FlightAlerts.
@@ -832,6 +847,14 @@ export default function TodayView() {
               careerObjective={userData?.careerObjective}
               xpSystemEnabled={xpSystemEnabled}
               xpRankProgress={xpRank}
+              mission={hoistedMission}
+              completedToday={hoistedCompletedToday}
+              missionLoading={missionLoading}
+              missionError={missionError}
+              missionBusy={missionBusy}
+              onGenerate={missionGenerate}
+              onResume={missionResume}
+              onAbandon={missionAbandon}
             />
             <CareerObjectiveMissions careerObjective={userData?.careerObjective} />
           </div>

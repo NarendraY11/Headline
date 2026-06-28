@@ -18,15 +18,26 @@
 import { ArrowRight, CheckCircle2, Clock, Flame, Loader2, Play, RotateCcw, Target, X, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useFeature } from "../../hooks/useFeatureFlags";
-import { useActiveMission, type GenerateInputs } from "../../hooks/useActiveMission";
+import { type GenerateInputs } from "../../hooks/useActiveMission";
 import { useMissionStreak } from "../../hooks/useMissionStreak";
 import { XP_VALUES } from "../../lib/xp";
 import type { RankProgress } from "../../lib/xpValues";
+import type { StudyMissionRow } from "../../types/studyScheduler";
+import type { NavigateFunction } from "react-router-dom";
 
 interface ActiveMissionCardProps extends GenerateInputs {
   /** Phase 8.1: passed from TodayView so no duplicate useXp call. */
   xpSystemEnabled?: boolean;
   xpRankProgress?: RankProgress | null;
+  // Phase 9.3: mission state + actions lifted to TodayView (single useActiveMission call).
+  mission: StudyMissionRow | null;
+  completedToday: StudyMissionRow | null;
+  missionLoading: boolean;
+  missionError: string | null;
+  missionBusy: boolean;
+  onGenerate: (inputs: GenerateInputs) => Promise<StudyMissionRow | null>;
+  onResume: (m: StudyMissionRow, navigate: NavigateFunction, inputs: GenerateInputs) => Promise<void>;
+  onAbandon: (m: StudyMissionRow, inputs: GenerateInputs) => Promise<void>;
 }
 
 // ── Staleness helpers ─────────────────────────────────────────────────────────
@@ -67,11 +78,18 @@ function comebackSubtext(startedAt: string | undefined): string | null {
 export function ActiveMissionCard({
   xpSystemEnabled = false,
   xpRankProgress = null,
+  mission,
+  completedToday,
+  missionLoading: loading,
+  missionError: error,
+  missionBusy: busy,
+  onGenerate: generate,
+  onResume: resume,
+  onAbandon: abandon,
   ...inputs
 }: ActiveMissionCardProps) {
   const engineEnabled = useFeature("missionEngine");
   const navigate = useNavigate();
-  const { mission, completedToday, loading, error, busy, generate, resume, abandon } = useActiveMission();
   const { streak: missionStreak } = useMissionStreak();
 
   if (!engineEnabled) return null;
