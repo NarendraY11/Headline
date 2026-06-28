@@ -12,10 +12,10 @@
 // =====================================================================
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useActiveMission } from "./useActiveMission";
 import { useMissionStreak } from "./useMissionStreak";
 import { selectReminder, type EngineReminder } from "../lib/reminderSelector";
 import type { RankProgress } from "../lib/xpValues";
+import type { StudyMissionRow } from "../types/studyScheduler";
 
 // Re-export so existing consumers (FlightAlerts) keep importing from here.
 export type { EngineReminder, EngineReminderType } from "../lib/reminderSelector";
@@ -28,6 +28,13 @@ export interface UseEngineRemindersInput {
   dueCount: number;
   /** userData.nextExam — login-time but exam date is stable intraday. */
   nextExam?: string | null;
+  /**
+   * Phase 9.3: pre-resolved mission state from TodayView's single
+   * useActiveMission() call. FlightAlerts should be a pure consumer.
+   */
+  mission?: StudyMissionRow | null;
+  completedToday?: StudyMissionRow | null;
+  missionLoading?: boolean;
 }
 
 // ── Suppression model (UI-only: dismissed-today) ──────────────────────────────
@@ -69,8 +76,10 @@ export function useEngineReminders({
   xpSystemEnabled,
   dueCount,
   nextExam,
+  mission,
+  completedToday,
+  missionLoading = false,
 }: UseEngineRemindersInput): { reminder: EngineReminder | null; loading: boolean; dismiss: () => void } {
-  const { mission, completedToday, loading: missionLoading } = useActiveMission();
   const { streak: missionStreak, loading: streakLoading } = useMissionStreak();
   const [dismissed, setDismissed] = useState(() => isDismissedToday());
 

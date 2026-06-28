@@ -2,14 +2,17 @@ import { BookOpen, ChevronRight, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SubjectItem } from "../../data/topics";
 import { useContinueLearning } from "../../hooks/useContinueLearning";
+import type { LearningProgress } from "../../hooks/useLearningProgress";
 
 interface Props {
   subjects: SubjectItem[];
   masteryMap: Record<string, number>;
+  /** Phase 9.3: pre-fetched progress from TodayView — skips internal RPC. */
+  progress?: LearningProgress;
 }
 
-export function ContinueLearningCard({ subjects, masteryMap }: Props) {
-  const cl = useContinueLearning(subjects, masteryMap);
+export function ContinueLearningCard({ subjects, masteryMap, progress }: Props) {
+  const cl = useContinueLearning(subjects, masteryMap, progress);
 
   if (!cl.moduleId) return null;
 

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { SubjectItem } from "../data/topics";
-import { useLearningProgress } from "./useLearningProgress";
+import { useLearningProgress, type LearningProgress } from "./useLearningProgress";
 
 export interface ContinueLearningState {
   subjectTitle: string | null;
@@ -14,12 +14,18 @@ export interface ContinueLearningState {
  * Finds the deepest incomplete learning position:
  * weakest subject → first module with unanswered questions.
  * Pure derived — no new DB calls (uses useLearningProgress).
+ *
+ * Phase 9.3: accepts optional pre-fetched progress to skip internal RPC.
+ * When provided, useLearningProgress is called with skip=true.
+ * Backward-compatible: omit progress to preserve standalone behavior.
  */
 export function useContinueLearning(
   subjects: SubjectItem[],
-  masteryMap: Record<string, number>
+  masteryMap: Record<string, number>,
+  injectedProgress?: LearningProgress
 ): ContinueLearningState {
-  const { progress } = useLearningProgress();
+  const { progress: ownProgress } = useLearningProgress(!!injectedProgress);
+  const progress = injectedProgress ?? ownProgress;
 
   return useMemo(() => {
     const active = subjects.filter(s => s.status === "active");
