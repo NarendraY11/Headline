@@ -117,8 +117,8 @@ export default function TodayView() {
   }
   // M11: predictive intelligence — pass hoisted snapshots to skip internal fetch.
   const predictive = usePredictiveIntelligence(subjectsCount, subjectTitleMapForPredictive, masterySnapshots);
-  // M11B: forecast engine — extended projections
-  const forecastEngine = useForecastEngine(subjectsCount, subjectTitleMapForPredictive);
+  // M11B: forecast engine — pass hoisted snapshots to skip internal fetch.
+  const forecastEngine = useForecastEngine(subjectsCount, subjectTitleMapForPredictive, masterySnapshots);
 
   // Phase 9.3 T1: full mission result hoisted — ActiveMissionCard receives it as props.
   const {
@@ -831,6 +831,9 @@ export default function TodayView() {
             xpSystemEnabled={xpSystemEnabled}
             dueCount={dueCount}
             nextExam={userData?.nextExam}
+            mission={hoistedMission}
+            completedToday={hoistedCompletedToday}
+            missionLoading={missionLoading}
           />
         )}
 
@@ -1016,6 +1019,7 @@ export default function TodayView() {
             <ContinueLearningCard
               subjects={subjectsList}
               masteryMap={progressStats.subjectMastery}
+              progress={hoistedLearningProgress}
             />
           </div>
         ) : null}

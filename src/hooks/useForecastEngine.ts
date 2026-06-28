@@ -10,6 +10,7 @@ import {
   computeForecastEngine,
   type ForecastEngineResult,
 } from "../lib/forecastEngine";
+import type { MasterySnapshot } from "../lib/masterySnapshot";
 
 export interface UseForecastEngineState {
   result: ForecastEngineResult | null;
@@ -17,17 +18,25 @@ export interface UseForecastEngineState {
   enabled: boolean;
 }
 
+/**
+ * Phase 9.3: accepts optional pre-fetched snapshots from TodayView to skip
+ * internal useMasterySnapshots fetch. Threads snapshots through to
+ * useExamReadiness and usePredictiveIntelligence (both already support skip).
+ * Backward-compatible: omit snapshots to preserve standalone behavior.
+ */
 export function useForecastEngine(
   subjectsCount: number,
-  subjectTitleMap: Record<string, string>
+  subjectTitleMap: Record<string, string>,
+  injectedSnapshots?: MasterySnapshot[]
 ): UseForecastEngineState {
   const enabled = useFeature("predictiveIntelligence");
-  const { snapshots, loading: snapshotsLoading } = useMasterySnapshots();
-  const examReadiness = useExamReadiness(subjectsCount);
+  const { snapshots: ownSnapshots, loading: snapshotsLoading } = useMasterySnapshots(!!injectedSnapshots);
+  const snapshots = injectedSnapshots ?? ownSnapshots;
+  const examReadiness = useExamReadiness(subjectsCount, injectedSnapshots);
   const masteryHistory = useMasteryHistory(8);
-  const predictive = usePredictiveIntelligence(subjectsCount, subjectTitleMap);
+  const predictive = usePredictiveIntelligence(subjectsCount, subjectTitleMap, injectedSnapshots);
 
-  const loading = snapshotsLoading || examReadiness.loading || masteryHistory.loading;
+  const loading = (injectedSnapshots ? false : snapshotsLoading) || examReadiness.loading || masteryHistory.loading;
 
   const result = useMemo((): ForecastEngineResult | null => {
     if (!enabled) return null;
