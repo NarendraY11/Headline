@@ -249,7 +249,8 @@ export async function commitSession(
         difficulty: n.difficulty ?? "standard",
         subject_id: n.subjectId ?? null,
         subcategory_id: n.moduleId ?? null,
-        // topic_id is not a column on questions; relationship is via topic_questions
+        topic_id: n.topicId ?? null,
+        question_source: "csv",
         ata: n.ata ?? null,
         authority: n.authority ?? null,
         regulation: n.regulation ?? null,
@@ -323,7 +324,7 @@ export async function listSessions(limit = 30): Promise<ImportSession[]> {
 export async function loadSession(id: string): Promise<ImportSession> {
   const { data, error } = await supabase
     .from("import_sessions")
-    .select("*")
+    .select("id, user_id, import_type, file_name, status, statistics, validation_results, preview, error, started_at, completed_at, created_at")
     .eq("id", id)
     .single();
   if (error || !data) throw new Error(error?.message ?? "Session not found.");

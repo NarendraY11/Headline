@@ -175,38 +175,34 @@ export default function SubcategoriesManager() {
     }
   };
 
+  // Archive only — no hard delete. Questions under this subcategory are preserved.
+  // Restore via CMS bulk restore or direct DB update.
   const handleDelete = async (id: string, title: string) => {
     const qCount = qcounts.filter((q) => q.subcategory_id === id).length;
-
-    let warningPrompt = `Are you absolutely sure you want to delete the subcategory '${title}'?`;
-    if (qCount > 0) {
-      warningPrompt = `CRITICAL CASCADE WARNING:\nDeleting the subcategory '${title}' will permanently delete all its ${qCount} nested questions.\n\nThis action is irreversible! Type OK to continue.`;
-    }
-
-    if (!window.confirm(warningPrompt)) {
-      return;
-    }
+    const prompt = qCount > 0
+      ? `Archive module '${title}'? Its ${qCount} questions will be preserved and remain restorable.`
+      : `Archive module '${title}'? It can be restored from the CMS.`;
+    if (!window.confirm(prompt)) return;
 
     setLoading(true);
     setErrorStatus("");
     setSuccessStatus("");
     try {
-      const { error } = await supabase.from("subcategories").delete().eq("id", id);
+      const { error } = await supabase
+        .from("subcategories")
+        .update({ status: "archived" })
+        .eq("id", id);
       if (error) throw error;
 
-      trackEvent("admin_delete_subcategory", {
+      trackEvent("admin_update_subcategory", {
         subcategoryId: id,
-        metadata: {
-          title: title,
-          details: `Deleted subcategory: ${title} (${id}) along with ${qCount} nested questions.`,
-        },
+        metadata: { title, status: "archived", details: `Archived module: ${title} (${id})` },
       });
 
-      setSuccessStatus(`Subcategory '${title}' and its dependent questions were deleted.`);
+      setSuccessStatus(`Module '${title}' archived. Questions preserved. Restore via CMS.`);
       fetchData();
     } catch (err: any) {
-      console.error("Delete subcategory error:", err);
-      setErrorStatus(err.message || "Failed to execute deletion query.");
+      setErrorStatus(err.message || "Archive failed.");
       setLoading(false);
     }
   };

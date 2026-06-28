@@ -73,6 +73,7 @@ const RegistryManager = lazy(() => import("./views/admin/RegistryManager"));
 const EnrollmentsAdmin = lazy(() => import("./views/admin/EnrollmentsAdmin"));
 const ContentCmsView = lazy(() => import("./views/admin/ContentCmsView"));
 const ContentImportView = lazy(() => import("./views/admin/ContentImportView"));
+const ContentQualityView = lazy(() => import("./views/admin/ContentQualityView"));
 const FeaturePreviewRoute = lazy(() => import("./views/admin/FeaturePreviewRoute"));
 const ExamCentreView = lazy(() => import("./views/ExamCentreView"));
 
@@ -221,6 +222,7 @@ export default function App() {
             <Route path="/admin/registry/:entity" element={<RegistryManager />} />
             {/* Phase 3: hidden Content CMS (gated inside by contentCms flag; no nav link) */}
             <Route path="/admin/cms" element={<ContentCmsView />} />
+            <Route path="/admin/content-quality" element={<ContentQualityView />} />
             {/* Phase 4: hidden Content Import Engine (gated inside by contentImport flag; no nav link) */}
             <Route path="/admin/content-import" element={<ContentImportView />} />
           </Route>

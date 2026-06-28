@@ -9,11 +9,12 @@ import {
     Search, Sparkles,
     Trash2
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../../components/Atoms";
 import { FlightControlsDiagram } from "../../components/SystemDiagram";
 import { supabase } from "../../lib/supabase";
 import { trackEvent } from "../../lib/track";
+import { fetchQuestionsPaginated, type QuestionPage } from "../../lib/cms/cmsDb";
 
 interface Subject {
   id: string;
@@ -44,10 +45,11 @@ interface Question {
 }
 
 export default function QuestionsManager() {
-  const [questions, setQuestions] = useState<Question[]>([]);
+  // ── Server-side paginated question list ───────────────────────────────
+  const [qPage, setQPage] = useState<QuestionPage | null>(null);
+  const [qLoading, setQLoading] = useState(true);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isNew, setIsNew] = useState(false);
 
@@ -58,7 +60,11 @@ export default function QuestionsManager() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 50; // Paginate 50/page
+  const itemsPerPage = 50;
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // Derived: questions for current page come from server
+  const loading = qLoading;
 
   // Current edit state
   const [currentQuestion, setCurrentQuestion] = useState<Partial<Question>>({
@@ -90,55 +96,64 @@ export default function QuestionsManager() {
   const [previewSelectedOption, setPreviewSelectedOption] = useState<string | null>(null);
   const [previewSubmitted, setPreviewSubmitted] = useState(false);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = useCallback(async () => {
+    setQLoading(true);
     setErrorStatus("");
     try {
-      // 1. Fetch Subjects
-      const { data: subjData } = await supabase.from("subjects").select("id, title").order("title");
-      setSubjects(subjData || []);
+      // Registry data (small, loaded once)
+      const [subjRes, subRes] = await Promise.all([
+        supabase.from("subjects").select("id, title").order("title"),
+        supabase.from("subcategories").select("id, subject_id, title, code").order("title"),
+      ]);
+      setSubjects(subjRes.data || []);
+      setSubcategories(subRes.data || []);
 
-      // 2. Fetch Subcategories
-      const { data: subData } = await supabase.from("subcategories").select("id, subject_id, title, code").order("title");
-      setSubcategories(subData || []);
-
-      // 3. Fetch Questions
-      const { data: qData, error: qErr } = await supabase
-        .from("questions")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (qErr) throw qErr;
-      
-      // Parse database fields safely ensuring correct types
-      const parsedQuestions: Question[] = (qData || []).map((q: any) => ({
-        id: q.id,
-        subject_id: q.subject_id,
-        subcategory_id: q.subcategory_id,
-        ata: q.ata,
-        difficulty: q.difficulty || "standard",
-        prompt: q.prompt || "",
-        diagram_caption: q.diagram_caption,
-        choices: Array.isArray(q.choices) ? q.choices : [],
-        correct: q.correct || "a",
-        explanation: q.explanation || "",
-        references: Array.isArray(q.refs) ? q.refs : (Array.isArray(q.references) ? q.references : []),
-        topic_tags: Array.isArray(q.topic_tags) ? q.topic_tags : [],
-        status: q.status || "draft"
-      }));
-
-      setQuestions(parsedQuestions);
+      // Server-side paginated questions — never fetches all
+      const result = await fetchQuestionsPaginated({
+        page: currentPage,
+        pageSize: itemsPerPage,
+        query: searchQuery || undefined,
+        status: filterStatus !== "all" ? filterStatus : undefined,
+        difficulty: filterDifficulty !== "all" ? filterDifficulty : undefined,
+        subject: filterSubject !== "all" ? filterSubject : undefined,
+        module: filterSubcategory !== "all" ? filterSubcategory : undefined,
+      });
+      setQPage(result);
     } catch (err: any) {
-      console.error("Failed to load questions database metrics:", err);
-      setErrorStatus(err.message || "Failed to retrieve flight records database.");
+      setErrorStatus(err.message || "Failed to retrieve questions.");
     } finally {
-      setLoading(false);
+      setQLoading(false);
     }
-  };
+  }, [currentPage, filterStatus, filterDifficulty, filterSubject, filterSubcategory, searchQuery]);
 
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Debounce search
   useEffect(() => {
-    fetchData();
-  }, []);
+    clearTimeout(searchTimeout.current);
+    searchTimeout.current = setTimeout(() => { setCurrentPage(1); }, 300);
+  }, [searchQuery]);
+
+  // Derived list — data comes from server, no client filtering needed
+  const paginatedQuestions: Question[] = (qPage?.data ?? []).map((q: any) => ({
+    id: q.id,
+    subject_id: q.subject_id,
+    subcategory_id: q.subcategory_id,
+    ata: q.ata,
+    difficulty: q.difficulty || "standard",
+    prompt: q.prompt || "",
+    diagram_caption: q.diagram_caption,
+    choices: Array.isArray(q.choices) ? q.choices : [],
+    correct: q.correct || "a",
+    explanation: q.explanation || "",
+    references: Array.isArray(q.refs) ? q.refs : (Array.isArray(q.references) ? q.references : []),
+    topic_tags: Array.isArray(q.topic_tags) ? q.topic_tags : [],
+    status: q.status || "draft",
+  }));
+
+  const totalPages = qPage?.pages ?? 1;
+  const indexOfFirstItem = (currentPage - 1) * itemsPerPage;
+  const indexOfLastItem = Math.min(currentPage * itemsPerPage, qPage?.total ?? 0);
 
   const openNewQuiz = () => {
     setIsNew(true);
@@ -180,7 +195,7 @@ export default function QuestionsManager() {
 
     // Dynamic ID calculation
     if (initialSubId) {
-      const numInSub = questions.filter(quest => quest.subcategory_id === initialSubId).length;
+      const numInSub = (qPage?.total ?? 0);
       nextPrompt.id = `q-${initialSubId}-${String(numInSub + 1).padStart(3, "0")}`;
     }
   };
@@ -219,7 +234,7 @@ export default function QuestionsManager() {
     // Attempt auto-slug generation
     let autoId = currentQuestion.id || "";
     if (isNew && firstSubId) {
-      const numInSub = questions.filter(quest => quest.subcategory_id === firstSubId).length;
+      const numInSub = (qPage?.total ?? 0);
       autoId = `q-${firstSubId}-${String(numInSub + 1).padStart(3, "0")}`;
     }
 
@@ -234,7 +249,7 @@ export default function QuestionsManager() {
   const handleFormSubcategoryChange = (subId: string) => {
     let autoId = currentQuestion.id || "";
     if (isNew && subId) {
-      const numInSub = questions.filter(quest => quest.subcategory_id === subId).length;
+      const numInSub = (qPage?.total ?? 0);
       autoId = `q-${subId}-${String(numInSub + 1).padStart(3, "0")}`;
     }
 
@@ -330,28 +345,30 @@ export default function QuestionsManager() {
     }
   };
 
-  const handleDeleteQuestion = async (id: string) => {
-    if (!window.confirm(`Are you absolutely sure you want to delete question '${id}'? This process is permanent.`)) {
+  // Archive (not delete). Questions are never hard-deleted from the CMS path.
+  // Use /admin/cms for bulk restore. Hard delete requires out-of-band DB access.
+  const handleArchiveQuestion = async (id: string) => {
+    if (!window.confirm(`Archive question '${id}'? It will be hidden but recoverable from the CMS.`)) {
       return;
     }
     setErrorStatus("");
     setSuccessStatus("");
     try {
-      const { error } = await supabase.from("questions").delete().eq("id", id);
+      const { error } = await supabase
+        .from("questions")
+        .update({ status: "archived", updated_at: new Date().toISOString() })
+        .eq("id", id);
       if (error) throw error;
 
-      trackEvent("admin_delete_question", {
+      trackEvent("admin_update_question", {
         questionId: id,
-        metadata: {
-          details: `Deleted exam question: #${id}`,
-        },
+        metadata: { status: "archived", details: `Archived exam question: #${id}` },
       });
 
-      setSuccessStatus(`Deleted question '${id}' successfully.`);
+      setSuccessStatus(`Archived question '${id}'. Restore it anytime in the CMS.`);
       fetchData();
     } catch (err: any) {
-      console.error("Delete question database error:", err);
-      setErrorStatus(err.message || "Failed to remove selected database row.");
+      setErrorStatus(err.message || "Archive failed.");
     }
   };
 
@@ -383,32 +400,8 @@ export default function QuestionsManager() {
     }
   };
 
-  // Perform filtering cascade clientside for accurate matching
-  const filteredQuestions = questions.filter((q) => {
-    const matchesSubject = filterSubject === "all" || q.subject_id === filterSubject;
-    const matchesSubcategory = filterSubcategory === "all" || q.subcategory_id === filterSubcategory;
-    const matchesDifficulty = filterDifficulty === "all" || q.difficulty === filterDifficulty;
-    const matchesStatus = filterStatus === "all" || q.status === filterStatus;
-    const matchesQuery = !searchQuery.trim() || 
-      q.prompt.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      q.id.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      (q.explanation && q.explanation.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    return matchesSubject && matchesSubcategory && matchesDifficulty && matchesStatus && matchesQuery;
-  });
-
-  // Calculate pagination properties
-  const totalPages = Math.ceil(filteredQuestions.length / itemsPerPage) || 1;
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const paginatedQuestions = filteredQuestions.slice(indexOfFirstItem, indexOfLastItem);
-
   const prevPage = () => setCurrentPage((p) => Math.max(1, p - 1));
   const nextPage = () => setCurrentPage((p) => Math.min(totalPages, p + 1));
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterSubject, filterSubcategory, filterDifficulty, filterStatus, searchQuery]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2 font-sans text-ink">
@@ -632,9 +625,9 @@ export default function QuestionsManager() {
                                 <Edit2 size={12} />
                               </button>
                               <button
-                                onClick={() => handleDeleteQuestion(q.id)}
-                                className="p-1 px-2 border border-rose-200 hover:bg-rose-50 rounded text-rose-600 cursor-pointer transition-colors"
-                                title="Delete"
+                                onClick={() => handleArchiveQuestion(q.id)}
+                                className="p-1 px-2 border border-amber-200 hover:bg-amber-50 rounded text-amber-600 cursor-pointer transition-colors"
+                                title="Archive (recoverable)"
                               >
                                 <Trash2 size={12} />
                               </button>
@@ -650,7 +643,7 @@ export default function QuestionsManager() {
               {/* Pagination controls */}
               <div className="flex justify-between items-center bg-paper border border-rule rounded-xl px-4 py-3 shadow-sm font-sans">
                 <span className="font-mono text-[10px] text-muted-2 uppercase tracking-wider">
-                  Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredQuestions.length)} of {filteredQuestions.length} records · Page {currentPage}/{totalPages}
+                  Showing {(qPage?.total ?? 0) === 0 ? "0" : `${indexOfFirstItem + 1}–${indexOfLastItem}`} of {(qPage?.total ?? 0).toLocaleString()} records · Page {currentPage}/{totalPages}
                 </span>
 
                 <div className="flex items-center gap-1.5">

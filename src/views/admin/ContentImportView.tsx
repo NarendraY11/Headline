@@ -3,6 +3,7 @@
 // no student-facing effect. Reuses Phase 4 importService + parsers.
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   AlertCircle,
   AlertTriangle,
@@ -525,9 +526,17 @@ export default function ContentImportView() {
                   </p>
                 </div>
               </div>
-              <Button variant="ghost" onClick={() => { setState(INITIAL); setTab("history"); }} className="text-xs border border-rule hover:bg-bg-2 px-3 py-1.5 rounded-lg">
-                <History size={12} className="inline mr-1" />View in History
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="ghost" onClick={() => { setState(INITIAL); setTab("history"); }} className="text-xs border border-rule hover:bg-bg-2 px-3 py-1.5 rounded-lg">
+                  <History size={12} className="inline mr-1" />View in History
+                </Button>
+                <Link
+                  to="/admin/cms?status=draft"
+                  className="flex items-center gap-1.5 text-xs bg-ink text-bg px-3 py-1.5 rounded-lg font-semibold hover:opacity-90"
+                >
+                  Review Drafts in CMS →
+                </Link>
+              </div>
             </div>
           )}
 

@@ -250,3 +250,242 @@ export async function rollbackToVersion(type: EntityType, entityId: string, vers
   const { error: upErr } = await supabase.from(TABLE[type]).update(snap).eq("id", entityId);
   if (upErr) throw upErr;
 }
+
+// ── Phase 7: Production tooling ─────────────────────────────────────────
+
+/** Allowed bulk-editable fields on questions (mapped to DB column names). */
+const BULK_FIELD_MAP: Record<string, string> = {
+  subject: "subject_id",
+  module: "subcategory_id",
+  topic: "topic_id",
+  authority: "authority",
+  aircraft: "aircraft_id",
+  difficulty: "difficulty",
+  status: "status",
+  tags: "topic_tags",
+  question_source: "question_source",
+  review_status: "review_status",
+  exam_year: "exam_year",
+  certification: "certification_id",
+  program: "program_id",
+  question_type: "question_type",
+};
+
+/** Bulk-update a single field on N questions — versioned + chunked. */
+export async function bulkUpdateField(
+  ids: string[],
+  field: string,
+  value: unknown,
+  editor?: string,
+): Promise<void> {
+  if (ids.length === 0) return;
+  const col = BULK_FIELD_MAP[field];
+  if (!col) throw new Error(`Unknown field: ${field}. Allowed: ${Object.keys(BULK_FIELD_MAP).join(", ")}.`);
+
+  // Snapshot before write.
+  await snapshotEntities("question", ids, `bulk:${field}=${String(value)}`, editor);
+
+  for (const part of chunk(ids, BULK_CHUNK)) {
+    const { error } = await supabase.from("questions").update({ [col]: value }).in("id", part);
+    if (error) throw error;
+  }
+}
+
+// ── Filters for server-side search (Phase 7.1) ──────────────────────────
+
+export interface SearchFilters {
+  status?: string;
+  authority?: string;
+  subject?: string;
+  module?: string;
+  topic?: string;
+  difficulty?: string;
+  tags?: string[];
+  questionSource?: string;
+  reviewStatus?: string;
+  examYear?: number;
+  program?: string;
+  certification?: string;
+  aircraft?: string;
+}
+
+/** Server-side question search with optional filters. Backwards-compatible:
+ *  existing callers (no filters arg) behave identically to Phase 3.1. */
+export async function searchContentServerFiltered(
+  query: string,
+  perTypeLimit = 20,
+  filters: SearchFilters = {},
+): Promise<SearchResult[]> {
+  const term = safeTerm(query);
+  if (!term && Object.keys(filters).length === 0) return [];
+  const like = `%${term}%`;
+
+  // Registry search unchanged (filters apply to questions only).
+  const registry: Array<{ type: EntityType; table: string; cols: string; hasSlug: boolean; idText: boolean }> = [
+    { type: "program",         table: "programs",        cols: "id,slug,title,status", hasSlug: true,  idText: false },
+    { type: "certification",   table: "certifications",  cols: "id,slug,title,status", hasSlug: true,  idText: false },
+    { type: "aircraft",        table: "aircraft",        cols: "id,slug,title,status", hasSlug: true,  idText: false },
+    { type: "subject",         table: "subjects",        cols: "id,title,status",       hasSlug: false, idText: true  },
+    { type: "module",          table: "subcategories",   cols: "id,title,status",       hasSlug: false, idText: true  },
+    { type: "topic",           table: "topics",          cols: "id,slug,title,status", hasSlug: true,  idText: false },
+    { type: "question_group",  table: "question_groups", cols: "id,slug,title,status", hasSlug: true,  idText: false },
+  ];
+
+  const registryQueries = term ? registry.map(async ({ type, table, cols, hasSlug, idText }) => {
+    const clauses = [`title.ilike.${like}`];
+    if (hasSlug) clauses.push(`slug.ilike.${like}`);
+    if (idText)  clauses.push(`id.ilike.${like}`);
+    const { data, error } = await supabase.from(table).select(cols).or(clauses.join(",")).limit(perTypeLimit);
+    if (error) throw error;
+    return (data ?? []).map((r: any) => ({ id: r.id, type, title: r.title, slug: r.slug ?? r.id, status: r.status })) as SearchResult[];
+  }) : [];
+
+  const questionQuery = (async () => {
+    let q = supabase.from("questions").select("id,prompt,status");
+    if (term) q = q.or(`prompt.ilike.${like},explanation.ilike.${like},id.ilike.${like}`);
+    if (filters.status)       q = q.eq("status", filters.status);
+    if (filters.authority)    q = q.eq("authority", filters.authority);
+    if (filters.subject)      q = q.eq("subject_id", filters.subject);
+    if (filters.module)       q = q.eq("subcategory_id", filters.module);
+    if (filters.topic)        q = q.eq("topic_id", filters.topic);
+    if (filters.difficulty)   q = q.eq("difficulty", filters.difficulty);
+    if (filters.questionSource) q = q.eq("question_source", filters.questionSource);
+    if (filters.reviewStatus) q = q.eq("review_status", filters.reviewStatus);
+    if (filters.examYear)     q = q.eq("exam_year", filters.examYear);
+    if (filters.program)      q = q.eq("program_id", filters.program);
+    if (filters.certification) q = q.eq("certification_id", filters.certification);
+    if (filters.aircraft)     q = q.eq("aircraft_id", filters.aircraft);
+    const { data, error } = await q.limit(perTypeLimit * 2);
+    if (error) throw error;
+    return (data ?? []).map((r: any) => ({
+      id: r.id, type: "question" as EntityType,
+      title: (r.prompt ?? "").slice(0, 80), slug: r.id, status: r.status,
+    })) as SearchResult[];
+  })();
+
+  const lists = await Promise.all([...registryQueries, questionQuery]);
+  return mergeSearchResults(...lists);
+}
+
+// ── Paginated question fetch (Phase 7 Step 1.3) ─────────────────────────
+
+export interface QuestionPageOpts {
+  page?: number;
+  pageSize?: number;
+  query?: string;
+  status?: string;
+  difficulty?: string;
+  authority?: string;
+  subject?: string;
+  module?: string;
+  topic?: string;
+  tags?: string[];
+  questionSource?: string;
+  reviewStatus?: string;
+  examYear?: number;
+  program?: string;
+  certification?: string;
+  aircraft?: string;
+  updatedAfter?: string;
+  updatedBefore?: string;
+}
+
+export interface QuestionPage {
+  data: any[];
+  total: number;
+  page: number;
+  pages: number;
+}
+
+/** Fetch a single question's full row for editing (all columns). */
+export async function fetchQuestionById(id: string): Promise<any> {
+  const { data, error } = await supabase.from("questions").select("*").eq("id", id).single();
+  if (error) throw error;
+  return data;
+}
+
+/** Server-side paginated question list — never fetches all rows. */
+export async function fetchQuestionsPaginated(opts: QuestionPageOpts = {}): Promise<QuestionPage> {
+  const pageSize = opts.pageSize ?? 50;
+  const page = Math.max(1, opts.page ?? 1);
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let q = supabase
+    .from("questions")
+    .select(
+      "id,prompt,status,difficulty,authority,subject_id,subcategory_id,topic_id," +
+      "question_source,review_status,exam_year,program_id,certification_id,aircraft_id," +
+      "topic_tags,created_at,updated_at,version,created_by,reviewed_by",
+      { count: "exact" },
+    );
+
+  if (opts.query) {
+    const like = `%${safeTerm(opts.query)}%`;
+    q = q.or(`prompt.ilike.${like},id.ilike.${like},explanation.ilike.${like}`);
+  }
+  if (opts.status)         q = q.eq("status", opts.status);
+  if (opts.difficulty)     q = q.eq("difficulty", opts.difficulty);
+  if (opts.authority)      q = q.eq("authority", opts.authority);
+  if (opts.subject)        q = q.eq("subject_id", opts.subject);
+  if (opts.module)         q = q.eq("subcategory_id", opts.module);
+  if (opts.topic)          q = q.eq("topic_id", opts.topic);
+  if (opts.questionSource) q = q.eq("question_source", opts.questionSource);
+  if (opts.reviewStatus)   q = q.eq("review_status", opts.reviewStatus);
+  if (opts.examYear)       q = q.eq("exam_year", opts.examYear);
+  if (opts.program)        q = q.eq("program_id", opts.program);
+  if (opts.certification)  q = q.eq("certification_id", opts.certification);
+  if (opts.aircraft)       q = q.eq("aircraft_id", opts.aircraft);
+  if (opts.updatedAfter)   q = q.gte("updated_at", opts.updatedAfter);
+  if (opts.updatedBefore)  q = q.lte("updated_at", opts.updatedBefore);
+
+  const { data, error, count } = await q.order("updated_at", { ascending: false }).range(from, to);
+  if (error) throw error;
+
+  const total = count ?? 0;
+  return { data: data ?? [], total, page, pages: Math.max(1, Math.ceil(total / pageSize)) };
+}
+
+// ── Content Quality stats (Phase 7 Step 2) ──────────────────────────────
+
+export interface ContentQualityStats {
+  totalQuestions: number;
+  byStatus: Record<string, number>;
+  byDifficulty: Record<string, number>;
+  missingExplanation: number;
+  missingRefs: number;
+  missingTags: number;
+  missingAuthority: number;
+  missingSubject: number;
+  missingModule: number;
+  missingTopic: number;
+  bySubject: Array<{ subject_id: string; count: number }>;
+  recentlyModified: number;
+  pendingReview: number;
+  approvedCount: number;
+}
+
+/** Aggregate content quality stats via a single SQL RPC — never transfers
+ *  question rows to the browser. Replaces the old fetchAll+JS-aggregate. */
+export async function fetchContentQualityStats(): Promise<ContentQualityStats> {
+  const { data, error } = await supabase.rpc("cms_quality_stats");
+  if (error) throw error;
+
+  const r = (data ?? {}) as Record<string, unknown>;
+  return {
+    totalQuestions:     Number(r.totalQuestions ?? 0),
+    byStatus:           (r.byStatus as Record<string, number>) ?? {},
+    byDifficulty:       (r.byDifficulty as Record<string, number>) ?? {},
+    missingExplanation: Number(r.missingExplanation ?? 0),
+    missingRefs:        Number(r.missingRefs ?? 0),
+    missingTags:        Number(r.missingTags ?? 0),
+    missingAuthority:   Number(r.missingAuthority ?? 0),
+    missingSubject:     Number(r.missingSubject ?? 0),
+    missingModule:      Number(r.missingModule ?? 0),
+    missingTopic:       Number(r.missingTopic ?? 0),
+    bySubject:          (r.bySubject as Array<{ subject_id: string; count: number }>) ?? [],
+    recentlyModified:   Number(r.recentlyModified ?? 0),
+    pendingReview:      Number(r.pendingReview ?? 0),
+    approvedCount:      Number(r.approvedCount ?? 0),
+  };
+}

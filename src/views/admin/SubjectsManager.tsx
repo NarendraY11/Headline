@@ -171,39 +171,37 @@ export default function SubjectsManager() {
     }
   };
 
+  // Archive only — no cascade delete. Modules and questions are preserved.
+  // Restore via CMS bulk restore or direct DB update.
   const handleDelete = async (id: string, title: string) => {
     const subCount = subcounts.filter((s) => s.subject_id === id).length;
     const qCount = qcounts.filter((q) => q.subject_id === id).length;
-
-    let warningPrompt = `Are you absolutely sure you want to delete the subject '${title}'?`;
-    if (subCount > 0 || qCount > 0) {
-      warningPrompt = `CRITICAL CASCADE WARNING:\nDeleting the subject '${title}' will permanently delete:\n- ${subCount} nested subcategories\n- ${qCount} child questions\n\nThis delete operation is irreversible! Type OK to continue.`;
-    }
-
-    if (!window.confirm(warningPrompt)) {
-      return;
-    }
+    const detail = [subCount > 0 && `${subCount} modules`, qCount > 0 && `${qCount} questions`]
+      .filter(Boolean).join(", ");
+    const prompt = detail
+      ? `Archive subject '${title}'? Its ${detail} will be preserved and remain restorable.`
+      : `Archive subject '${title}'? It can be restored from the CMS.`;
+    if (!window.confirm(prompt)) return;
 
     setLoading(true);
     setErrorStatus("");
     setSuccessStatus("");
     try {
-      const { error } = await supabase.from("subjects").delete().eq("id", id);
+      const { error } = await supabase
+        .from("subjects")
+        .update({ status: "archived" })
+        .eq("id", id);
       if (error) throw error;
 
-      trackEvent("admin_delete_subject", {
+      trackEvent("admin_update_subject", {
         subjectId: id,
-        metadata: {
-          title: title,
-          details: `Deleted subject: ${title} (${id}) along with ${subCount} subcategories and ${qCount} questions.`,
-        },
+        metadata: { title, status: "archived", details: `Archived subject: ${title} (${id})` },
       });
 
-      setSuccessStatus(`Subject '${title}' and its associated hierarchical trees have been cascade deleted.`);
+      setSuccessStatus(`Subject '${title}' archived. Modules and questions preserved. Restore via CMS.`);
       fetchData();
     } catch (err: any) {
-      console.error("Subject cascade deletion error:", err);
-      setErrorStatus(err.message || "Failed to complete cascade deletion query.");
+      setErrorStatus(err.message || "Archive failed.");
       setLoading(false);
     }
   };
