@@ -17,6 +17,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useGlobalLoading } from "../contexts/LoadingContext";
 import { SubjectItem, rawSubjects } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
+import { useModuleProgress } from "../hooks/useModuleProgress";
 import { apiFetchRaw, readError } from "../lib/api";
 import { fetchMergedSubjects } from "../lib/content";
 import { useUserProgress } from "../lib/progress";
@@ -29,7 +30,9 @@ export default function TopicView() {
   const { showToast } = useToast();
   const { user } = useAuth();
   const { stats: progressStats } = useUserProgress();
+  const { moduleProgress } = useModuleProgress();
   const aiPracticeEnabled = useFeature("aiPractice");
+  const learningHierarchy = useFeature("learningHierarchy");
 
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -650,6 +653,16 @@ export default function TopicView() {
               );
               const isComingSoon = sub.questionCount === 0;
               const isUnlocked = subject.is_free || sub.free_chapter || idx === 0;
+              const mp = learningHierarchy ? moduleProgress[sub.id] : null;
+              const modMastery = mp?.mastery ?? 0;
+              const modAnswered = mp?.answeredCount ?? 0;
+              const modCompletion = sub.questionCount > 0
+                ? Math.min(100, Math.round((modAnswered / sub.questionCount) * 100))
+                : 0;
+              const lastStudied = mp?.lastStudied
+                ? new Date(mp.lastStudied).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                : null;
+              const estMinutes = Math.max(5, Math.round(sub.questionCount * 1.5));
 
               return (
                 <ProGate key={sub.id} type="chapter" isUnlocked={isUnlocked}>
@@ -672,11 +685,31 @@ export default function TopicView() {
                   <h4 className="font-serif text-2xl text-ink mb-2">
                     {sub.title}
                   </h4>
-                  <div className="font-mono text-xs text-muted mb-6">
+                  <div className="font-mono text-xs text-muted mb-3">
                     {isComingSoon
                       ? "Coming Soon"
                       : `${sub.questionCount} Questions In Segment`}
                   </div>
+                  {learningHierarchy && !isComingSoon && (
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center justify-between text-[9px] font-mono uppercase tracking-wide text-muted-2">
+                        <span>{modCompletion}% done · {modMastery}% mastery</span>
+                        <span>~{estMinutes}m</span>
+                      </div>
+                      <div className="h-1 w-full bg-rule rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{
+                            width: `${modCompletion}%`,
+                            backgroundColor: modMastery >= 80 ? "var(--mint)" : modMastery >= 40 ? "var(--sky)" : "var(--amber)"
+                          }}
+                        />
+                      </div>
+                      {lastStudied && (
+                        <span className="text-[9px] font-mono text-muted-2">Last: {lastStudied}</span>
+                      )}
+                    </div>
+                  )}
                   <div className="pt-4 border-t border-rule mt-auto flex justify-between items-center">
                     <span className="font-mono text-[10px] text-muted-2 uppercase tracking-widest">
                       {isComingSoon

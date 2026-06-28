@@ -42,6 +42,7 @@ const InterviewPrepView = lazy(() => import("./views/InterviewPrepView"));
 const InterviewPrepSection = lazy(() =>
   import("./views/InterviewPrepView").then(m => ({ default: m.InterviewPrepSection }))
 );
+const CourseView = lazy(() => import("./views/CourseView"));
 
 import { AdminGuard } from "./components/AdminGuard";
 import { AuthGuard } from "./components/AuthGuard";
@@ -231,6 +232,7 @@ export default function App() {
           <Route element={<AuthGuard><Suspense fallback={<LoadingFallback />}><AppShell /></Suspense></AuthGuard>}>
             <Route path="/today" element={<TodayView />} />
             <Route path="/modules" element={<ModulesView />} />
+            <Route path="/course" element={<CourseView />} />
             <Route path="/topic/:id" element={<TopicView />} />
             <Route path="/mock-exams" element={<MockExamsView />} />
             <Route path="/analytics" element={<AnalyticsView />} />

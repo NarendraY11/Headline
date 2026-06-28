@@ -3,9 +3,11 @@ import {
     Bell,
     BookOpen,
     CalendarRange,
+    CheckCircle,
     Clock,
     Compass,
     Flame,
+    GraduationCap,
     Play,
     TrendingUp,
     X,
@@ -54,6 +56,7 @@ const MasteryTrendGraph = lazy(() => import("./today/MasteryTrendGraph"));
 const ChartFallback = () => <div className="w-full h-full min-h-[260px] bg-bg-2 animate-pulse rounded-md" />;
 import { WeatherWidget } from "./today/WeatherWidget";
 import { ResumeCard } from "./today/ResumeCard";
+import { ContinueLearningCard } from "./today/ContinueLearningCard";
 import { ReferralWidget } from "./today/ReferralWidget";
 import { FlightAlerts } from "./today/FlightAlerts";
 import { usePredictiveIntelligence } from "../hooks/usePredictiveIntelligence";
@@ -69,6 +72,7 @@ export default function TodayView() {
   const weatherBriefingEnabled = useFeature("weatherBriefing");
   const aiStudySchedulerEnabled = useFeature("aiStudyScheduler");
   const missionEngineEnabled = useFeature("missionEngine");
+  const learningHierarchyEnabled = useFeature("learningHierarchy");
   const xpSystemEnabled = useFeature("xpSystem");
   // Phase 7.2: XP read substrate hoisted here (hooks rule — cannot live inside
   // the renderTile switch). Internally gated on xpSystem + userId.
@@ -602,6 +606,72 @@ export default function TodayView() {
             </div>
           </div>
         );
+      case "certification":
+        return (
+          <div key="certification" className={tileBaseClasses}>
+            <div>
+              <div className="flex items-center gap-1.5 mb-1 text-muted-2">
+                <GraduationCap size={14} className="text-navy" />
+                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
+                  CERT PROGRESS
+                </span>
+              </div>
+              <div className="font-serif text-[26px] text-ink leading-none mt-2">
+                <AnimatedCounter value={readinessPercentage} />
+                <span className="font-sans text-xl text-muted font-normal tracking-normal">%</span>
+              </div>
+              <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
+                {passedCount}/{subjectsList.length} subjects ≥80%
+              </div>
+              <div className="w-full bg-bg h-1.5 rounded-full mt-3 overflow-hidden border border-rule/50">
+                <div
+                  className="bg-navy h-full transition-all duration-500 ease-out"
+                  style={{ width: `${readinessPercentage}%` }}
+                />
+              </div>
+            </div>
+            <Link to="/course" className="font-mono text-[9px] uppercase tracking-wide text-navy hover:opacity-70 transition-opacity mt-2 inline-block">
+              View Course →
+            </Link>
+          </div>
+        );
+      case "continue-module":
+        const weakestSubjectId = Object.entries(progressStats.subjectMastery)
+          .sort(([, a], [, b]) => a - b)[0]?.[0];
+        const weakestSubject = subjectsList.find(s => s.id === weakestSubjectId);
+        const continueModule = weakestSubject?.subTopics?.[0];
+        return (
+          <div key="continue-module" className={tileBaseClasses}>
+            <div>
+              <div className="flex items-center gap-1.5 mb-1 text-muted-2">
+                <CheckCircle size={14} className="text-mint" />
+                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
+                  NEXT MODULE
+                </span>
+              </div>
+              {continueModule ? (
+                <>
+                  <div className="font-sans text-sm font-medium text-ink mt-2 line-clamp-2 leading-snug">
+                    {continueModule.title}
+                  </div>
+                  <div className="font-mono text-[9px] text-muted-2 mt-1">
+                    {weakestSubject?.title} · {continueModule.questionCount} q's
+                  </div>
+                </>
+              ) : (
+                <div className="font-mono text-[9px] text-muted-2 mt-2">No modules yet</div>
+              )}
+            </div>
+            {continueModule && (
+              <Link
+                to={`/quiz/${continueModule.id}`}
+                className="font-mono text-[9px] uppercase tracking-wide text-mint hover:opacity-70 transition-opacity mt-2 inline-block"
+              >
+                Start →
+              </Link>
+            )}
+          </div>
+        );
       default:
         return null;
     }
@@ -867,6 +937,7 @@ export default function TodayView() {
             {[
               ...tileOrder,
               ...(xpSystemEnabled && !tileOrder.includes("xp") ? ["xp"] : []),
+              ...(learningHierarchyEnabled ? ["certification", "continue-module"] : []),
             ]
               .filter((tile) => tile !== "xp" || xpSystemEnabled)
               .map((tile) => renderTile(tile))}
@@ -875,6 +946,17 @@ export default function TodayView() {
 
         {/* Only show ResumeCard when no session is already in the hero CTA */}
         {!activeSession && <ResumeCard />}
+
+        {/* Phase 8.1: Continue Learning — hierarchy-aware resume. Show only when flag ON
+            and no active session (ResumeCard already handles in-progress sessions). */}
+        {learningHierarchyEnabled && !activeSession && (
+          <div className="mb-4">
+            <ContinueLearningCard
+              subjects={subjectsList}
+              masteryMap={progressStats.subjectMastery}
+            />
+          </div>
+        )}
         <ReferralWidget />
 
         <div className="flex items-baseline justify-between gap-4 mb-4 mt-2">

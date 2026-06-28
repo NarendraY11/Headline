@@ -725,6 +725,18 @@ export const featureRegistry = {
     requiresAuth: true,
     requiresAdmin: true,
   },
+  learningHierarchy: {
+    key: "learningHierarchy",
+    title: "Learning Hierarchy (Phase 8)",
+    description: "Student learning platform: Cert→Subject→Module→Topic hierarchy in Modules view, per-module progress tracking, topic progress cards, hierarchy dashboard tiles, and /course overview page. Requires contentDeliveryEngine ON for full scope filtering. OFF = existing flat module grid unchanged.",
+    category: "Learning Features",
+    adminVisible: true,
+    previewType: "route",
+    routes: ["/modules", "/topic/:id", "/today", "/course"],
+    sideEffects: ["auth", "supabase-read"],
+    requiresAuth: true,
+    requiresAdmin: false,
+  },
 } satisfies { [K in FlagKeys]: FeatureDefinition & { key: K } };
 
 export const featureControlSections: FeatureCategory[] = [

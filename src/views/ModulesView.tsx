@@ -1,4 +1,4 @@
-import { ArrowUpRight, ChevronDown, Compass, Lock, Milestone, Plus, Search, Target } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ChevronRight, Compass, GraduationCap, Lock, Milestone, Plus, Search, Target } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,6 +10,7 @@ import { SubjectItem } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
 import { useContentScope } from "../hooks/useContentScope";
+import { useLearningProgress } from "../hooks/useLearningProgress";
 import { fetchMergedSubjects } from "../lib/content";
 import { getDailyReviewItems } from "../lib/logbook";
 import { useUserProgress } from "../lib/progress";
@@ -22,7 +23,11 @@ export default function ModulesView() {
   const prefersReducedMotion = useReducedMotion();
   const { stats: progressStats } = useUserProgress();
   const contentDeliveryEngine = useFeature("contentDeliveryEngine");
-  const { scope } = useContentScope(!!contentDeliveryEngine);
+  const learningHierarchy = useFeature("learningHierarchy");
+  const { scope, enrichedScope } = useContentScope(!!contentDeliveryEngine);
+  const { progress: learningProgress } = useLearningProgress();
+  const moduleProgress = learningProgress.modules;
+  const topicProgress = learningProgress.topics;
 
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,6 +36,8 @@ export default function ModulesView() {
   const [syllabus, setSyllabus] = useState<"All" | "EASA" | "DGCA" | "FAA" | "TYPE_RATING">("All");
   const [activeTab, setActiveTab] = useState("All");
   const [showMasteryOverlay, setShowMasteryOverlay] = useState(false);
+  const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
+  const [expandedModuleTopics, setExpandedModuleTopics] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function loadSubjects() {
@@ -381,8 +388,185 @@ export default function ModulesView() {
           )}
         </AnimatePresence>
 
-        {/* GRID */}
-        {displayedSubjects.length === 0 ? (
+        {/* HIERARCHY VIEW — Phase 8: Subject → Module → Topic */}
+        {learningHierarchy && displayedSubjects.length > 0 && (
+          <div className="space-y-3 mb-10">
+            <div className="flex items-center gap-2 mb-6">
+              <GraduationCap size={16} className="text-navy" />
+              <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-semibold">
+                CERTIFICATION TRACK · {scope.certificationId?.toUpperCase() ?? "ALL SUBJECTS"}
+              </span>
+              {scope.aircraftId && (
+                <span className="font-mono text-[9px] uppercase tracking-wide text-sky border border-sky/30 bg-sky-soft px-2 py-0.5 rounded-full">
+                  {scope.aircraftId.toUpperCase()}
+                </span>
+              )}
+            </div>
+
+            {displayedSubjects.map((sub) => {
+              const isExpanded = expandedSubjects.has(sub.id);
+              const subMastery = progressStats.subjectMastery[sub.id] ?? 0;
+              const modules = sub.subTopics ?? [];
+              const totalModuleQuestions = modules.reduce((s, m) => s + (m.questionCount ?? 0), 0);
+              const answeredInSub = modules.reduce((s, m) => s + (moduleProgress[m.id]?.answered ?? 0), 0);
+              const completionPct = totalModuleQuestions > 0
+                ? Math.min(100, Math.round((answeredInSub / totalModuleQuestions) * 100))
+                : 0;
+
+              return (
+                <div key={sub.id} className="border border-rule rounded-2xl overflow-hidden bg-paper shadow-sm">
+                  {/* Subject header */}
+                  <button
+                    className="w-full flex items-center justify-between px-5 py-4 hover:bg-bg-2/40 transition-colors text-left"
+                    onClick={() => setExpandedSubjects(prev => {
+                      const next = new Set(prev);
+                      next.has(sub.id) ? next.delete(sub.id) : next.add(sub.id);
+                      return next;
+                    })}
+                    aria-expanded={isExpanded}
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      <span className="font-mono text-[9px] text-muted-2 shrink-0">{sub.num}</span>
+                      <span className="font-serif text-[18px] text-ink leading-tight truncate">{sub.title}</span>
+                      {sub.exam_authority && (
+                        <span className="font-mono text-[8px] uppercase tracking-wide text-muted-2 border border-rule px-1.5 py-0.5 rounded shrink-0 hidden sm:inline">
+                          {sub.exam_authority}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0 ml-4">
+                      <div className="hidden sm:flex flex-col items-end gap-1">
+                        <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide">
+                          {completionPct}% done · {Math.round(subMastery)}% mastery
+                        </span>
+                        <div className="w-24 h-1 bg-rule rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-mint transition-all"
+                            style={{ width: `${completionPct}%` }}
+                          />
+                        </div>
+                      </div>
+                      {isExpanded
+                        ? <ChevronDown size={16} className="text-muted-2" />
+                        : <ChevronRight size={16} className="text-muted-2" />
+                      }
+                    </div>
+                  </button>
+
+                  {/* Module + Topic list */}
+                  {isExpanded && (
+                    <div className="border-t border-rule divide-y divide-rule/50">
+                      {modules.length === 0 ? (
+                        <div className="px-5 py-4 text-center">
+                          <span className="font-mono text-[10px] text-muted-2 uppercase tracking-wide">No modules yet</span>
+                        </div>
+                      ) : modules.map((mod) => {
+                        const mp = moduleProgress[mod.id];
+                        const modMastery = mp?.mastery ?? 0;
+                        const modAnswered = mp?.answered ?? 0;
+                        const modTotal = mod.questionCount ?? 0;
+                        const modCompletion = modTotal > 0 ? Math.min(100, Math.round((modAnswered / modTotal) * 100)) : 0;
+                        const lastStudied = mp?.lastStudied
+                          ? new Date(mp.lastStudied).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                          : null;
+
+                        // Module completion status
+                        const modStatus: "completed" | "in-progress" | "not-started" =
+                          modMastery >= 80 ? "completed" : modAnswered > 0 ? "in-progress" : "not-started";
+                        const statusLabel = { completed: "DONE", "in-progress": "IN PROGRESS", "not-started": "NEW" }[modStatus];
+                        const statusClass = { completed: "text-mint", "in-progress": "text-amber", "not-started": "text-muted-2" }[modStatus];
+                        const barColor = { completed: "var(--mint)", "in-progress": "var(--amber)", "not-started": "var(--rule)" }[modStatus];
+
+                        // Topics from enrichedScope (DB-backed)
+                        const modTopics = enrichedScope.topics.filter(t => t.moduleId === mod.id);
+                        const topicsExpanded = expandedModuleTopics.has(mod.id);
+
+                        return (
+                          <div key={mod.id} className="border-b border-rule/30 last:border-b-0">
+                            {/* Module row */}
+                            <div className="flex items-center gap-4 px-5 py-3.5 hover:bg-bg-2/30 transition-colors group">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1.5">
+                                  <span className="font-sans text-[13px] font-medium text-ink truncate">{mod.title}</span>
+                                  {mod.code && (
+                                    <span className="font-mono text-[8px] text-muted-2 shrink-0 hidden sm:inline">{mod.code}</span>
+                                  )}
+                                  <span className={`font-mono text-[8px] uppercase tracking-wide shrink-0 ${statusClass}`}>
+                                    {statusLabel}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <div className="w-20 h-1 bg-rule rounded-full overflow-hidden shrink-0">
+                                    <div className="h-full rounded-full transition-all" style={{ width: `${modCompletion}%`, backgroundColor: barColor }} />
+                                  </div>
+                                  <span className={`font-mono text-[9px] uppercase tracking-wide ${statusClass}`}>{modCompletion}%</span>
+                                  <span className="font-mono text-[9px] text-muted-2 hidden sm:inline">{modAnswered}/{modTotal} q's</span>
+                                  {lastStudied && (
+                                    <span className="font-mono text-[9px] text-muted-2 hidden md:inline">Last: {lastStudied}</span>
+                                  )}
+                                  {modTopics.length > 0 && (
+                                    <button
+                                      onClick={() => setExpandedModuleTopics(prev => {
+                                        const next = new Set(prev);
+                                        next.has(mod.id) ? next.delete(mod.id) : next.add(mod.id);
+                                        return next;
+                                      })}
+                                      className="font-mono text-[8px] uppercase tracking-wide text-muted-2 hover:text-ink transition-colors hidden sm:inline"
+                                    >
+                                      {topicsExpanded ? "▲" : "▼"} {modTopics.length} topics
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              <Link
+                                to={`/quiz/${mod.id}`}
+                                className="shrink-0 font-mono text-[10px] font-bold uppercase tracking-wide text-navy border border-navy/30 hover:bg-navy hover:text-paper transition-colors px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                aria-label={`Practice ${mod.title}`}
+                              >
+                                Practice →
+                              </Link>
+                            </div>
+
+                            {/* Topic rows — only when DB has module_topics data */}
+                            {topicsExpanded && modTopics.length > 0 && (
+                              <div className="bg-bg-2/40 border-t border-rule/30 divide-y divide-rule/20">
+                                {modTopics.map(topic => {
+                                  const tp = topicProgress[topic.id];
+                                  const topicAnswered = tp?.answered ?? 0;
+                                  const topicMastery = tp?.mastery ?? 0;
+                                  const topicStatus = tp ? (topicMastery >= 80 ? "text-mint" : "text-amber") : "text-muted-2";
+                                  const topicLastStudied = tp?.lastStudied
+                                    ? new Date(tp.lastStudied).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                                    : null;
+
+                                  return (
+                                    <div key={topic.id} className="flex items-center gap-3 pl-10 pr-5 py-2.5">
+                                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${tp ? (topicMastery >= 80 ? "bg-mint" : "bg-amber") : "bg-rule-strong"}`} />
+                                      <span className="font-sans text-[12px] text-ink-2 flex-1 truncate">{topic.label}</span>
+                                      <span className={`font-mono text-[9px] ${topicStatus}`}>
+                                        {topicAnswered > 0 ? `${topicAnswered} answered · ${topicMastery}%` : "Not started"}
+                                      </span>
+                                      {topicLastStudied && (
+                                        <span className="font-mono text-[9px] text-muted-2 hidden md:inline">Last: {topicLastStudied}</span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* GRID — hidden when learningHierarchy ON (hierarchy view above takes over) */}
+        {!learningHierarchy && (displayedSubjects.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[40vh] border border-dashed border-rule rounded-2xl bg-panel/30 text-center">
             <Search size={32} className="text-muted-2 mb-4 opacity-50" />
             <h3 className="font-serif text-2xl text-ink mb-2">No modules found</h3>
@@ -527,7 +711,7 @@ export default function ModulesView() {
             );
           })}
         </div>
-        )}
+        ))}
       </div>
     </div>
   );
