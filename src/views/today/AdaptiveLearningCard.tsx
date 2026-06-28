@@ -108,38 +108,52 @@ export function AdaptiveLearningCard({ output, loading }: Props) {
         </div>
       )}
 
-      {/* Analytics strip */}
-      {output.weakestSubjects.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-rule">
-          <div className="flex items-center gap-1.5 mb-2">
-            <TrendingUp size={10} className="text-muted-2" />
-            <span className="text-[9px] text-muted-2 uppercase tracking-wide font-mono">Weakest</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {output.weakestSubjects.slice(0, 3).map(s => (
-              <span key={s.subjectId} className="text-[9px] bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-full px-2 py-0.5 border border-red-200 dark:border-red-800">
-                {s.subjectId} {Math.round(s.masteryPct)}%
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Analytics strip — only when ≥2 distinct subjects have mastery data */}
+      {(() => {
+        const hasComparative = output.weakestSubjects.length >= 2 &&
+          output.strongestSubjects[0]?.subjectId !== output.weakestSubjects[0]?.subjectId;
 
-      {output.strongestSubjects.length > 0 && (
-        <div className="mt-2">
-          <div className="flex items-center gap-1.5 mb-2">
-            <CheckCircle size={10} className="text-emerald-500" />
-            <span className="text-[9px] text-muted-2 uppercase tracking-wide font-mono">Strongest</span>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {output.strongestSubjects.slice(0, 3).map(s => (
-              <span key={s.subjectId} className="text-[9px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 rounded-full px-2 py-0.5 border border-emerald-200 dark:border-emerald-800">
-                {s.subjectId} {Math.round(s.masteryPct)}%
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+        if (output.weakestSubjects.length === 0) return null;
+
+        if (!hasComparative) {
+          return (
+            <div className="mt-3 pt-3 border-t border-rule">
+              <span className="text-[9px] text-muted-2">Complete more modules to unlock comparative analytics.</span>
+            </div>
+          );
+        }
+
+        return (
+          <>
+            <div className="mt-3 pt-3 border-t border-rule">
+              <div className="flex items-center gap-1.5 mb-2">
+                <TrendingUp size={10} className="text-muted-2" />
+                <span className="text-[9px] text-muted-2 uppercase tracking-wide font-mono">Weakest</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {output.weakestSubjects.slice(0, 3).map(s => (
+                  <span key={s.subjectId} className="text-[9px] bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 rounded-full px-2 py-0.5 border border-red-200 dark:border-red-800">
+                    {s.subjectId} {Math.round(s.masteryPct)}%
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="mt-2">
+              <div className="flex items-center gap-1.5 mb-2">
+                <CheckCircle size={10} className="text-emerald-500" />
+                <span className="text-[9px] text-muted-2 uppercase tracking-wide font-mono">Strongest</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {output.strongestSubjects.slice(0, 3).map(s => (
+                  <span key={s.subjectId} className="text-[9px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 rounded-full px-2 py-0.5 border border-emerald-200 dark:border-emerald-800">
+                    {s.subjectId} {Math.round(s.masteryPct)}%
+                  </span>
+                ))}
+              </div>
+            </div>
+          </>
+        );
+      })()}
     </div>
   );
 }

@@ -13,20 +13,27 @@ import { useMemo } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useContentScope } from "./useContentScope";
 import { useFeature } from "./useFeatureFlags";
+import type { ContentScope } from "../lib/contentDeliveryEngine";
 
-export function useResolvedExamDate(): Date | null {
+/**
+ * Phase 9.2: accepts optional pre-resolved scope to skip internal
+ * useContentScope DB fetch when called from TodayView.
+ */
+export function useResolvedExamDate(scope?: ContentScope): Date | null {
   const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
   const { userData } = useAuth();
-  const { scope } = useContentScope(!!contentDeliveryEnabled);
+  // Skip internal fetch when scope is provided by caller.
+  const { scope: internalScope } = useContentScope(!scope && !!contentDeliveryEnabled);
+  const effectiveScope = scope ?? internalScope;
 
   return useMemo<Date | null>(() => {
     // No enrollment at all → no exam date signal
-    if (scope.source === "none") return null;
+    if (effectiveScope.source === "none") return null;
 
     // Enrollment or profile/legacy → use user-set next_exam date
     const raw = userData?.nextExam ?? "";
     if (!raw) return null;
     const d = new Date(raw);
     return isNaN(d.getTime()) ? null : d;
-  }, [scope.source, userData?.nextExam]);
+  }, [effectiveScope.source, userData?.nextExam]);
 }

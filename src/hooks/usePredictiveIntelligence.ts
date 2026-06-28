@@ -10,6 +10,7 @@ import {
   computePredictiveIntelligence,
   type PredictiveIntelligenceResult,
 } from "../lib/predictiveIntelligence";
+import type { MasterySnapshot } from "../lib/masterySnapshot";
 
 export interface UsePredictiveIntelligenceState {
   result: PredictiveIntelligenceResult | null;
@@ -17,16 +18,22 @@ export interface UsePredictiveIntelligenceState {
   enabled: boolean;
 }
 
+/**
+ * Phase 9.2: accepts optional pre-fetched snapshots to skip internal
+ * useMasterySnapshots fetch and pass through to useExamReadiness.
+ */
 export function usePredictiveIntelligence(
   subjectsCount: number,
-  subjectTitleMap: Record<string, string>
+  subjectTitleMap: Record<string, string>,
+  preSnapshots?: MasterySnapshot[]
 ): UsePredictiveIntelligenceState {
   const enabled = useFeature("predictiveIntelligence");
-  const { snapshots, loading: snapshotsLoading } = useMasterySnapshots();
-  const examReadiness = useExamReadiness(subjectsCount);
+  const { snapshots: internalSnapshots, loading: snapshotsLoading } = useMasterySnapshots(!!preSnapshots);
+  const snapshots = preSnapshots ?? internalSnapshots;
+  const examReadiness = useExamReadiness(subjectsCount, preSnapshots);
   const masteryHistory = useMasteryHistory(8);
 
-  const loading = snapshotsLoading || examReadiness.loading || masteryHistory.loading;
+  const loading = (preSnapshots ? false : snapshotsLoading) || examReadiness.loading || masteryHistory.loading;
 
   const result = useMemo((): PredictiveIntelligenceResult | null => {
     if (!enabled) return null;

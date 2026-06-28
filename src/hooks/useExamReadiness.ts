@@ -22,19 +22,25 @@ import {
   type ExamReadinessResult,
 } from "../lib/examReadiness";
 import { trackReadinessImproved } from "../lib/studyAnalytics";
+import type { MasterySnapshot } from "../lib/masterySnapshot";
 
 export interface UseExamReadinessResult extends ExamReadinessResult {
   loading: boolean;
 }
 
-export function useExamReadiness(totalExamSubjects: number): UseExamReadinessResult {
+/**
+ * Phase 9.2: accepts optional pre-fetched snapshots to skip internal
+ * useMasterySnapshots DB fetch when called from TodayView.
+ */
+export function useExamReadiness(totalExamSubjects: number, preSnapshots?: MasterySnapshot[]): UseExamReadinessResult {
   const { userData } = useAuth();
-  const { snapshots, loading: snapshotsLoading } = useMasterySnapshots();
+  const { snapshots: internalSnapshots, loading: snapshotsLoading } = useMasterySnapshots(!!preSnapshots);
   const { stats: progressStats, loading: progressLoading } = useUserProgress();
+  const snapshots = preSnapshots ?? internalSnapshots;
 
   const lastBandRef = useRef<string | null>(null);
 
-  const loading = snapshotsLoading || progressLoading;
+  const loading = (preSnapshots ? false : snapshotsLoading) || progressLoading;
 
   // Build lookup maps from snapshots (or fallback from progressStats)
   const subjectMasteries: Record<string, number> = {};

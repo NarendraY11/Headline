@@ -24,8 +24,7 @@ import { useLogbook } from "../hooks/useLogbook";
 import { fetchMergedSubjects } from "../lib/content";
 import { useUserProgress } from "../lib/progress";
 import { getScopedDueQuestionIds } from "../lib/spacedRepetition";
-import { resolveContentScope } from "../lib/contentDeliveryEngine";
-import { resolveActiveLearningContext } from "../lib/learningContextDb";
+import { useContentScope } from "../hooks/useContentScope";
 
 import { AnimatedCounter } from "./today/AnimatedCounter";
 import { TodayLoader } from "./today/DashboardLoaders";
@@ -90,9 +89,14 @@ export default function TodayView() {
   const examReadinessEtaEnabled = useFeature("examReadinessEta");
   const predictiveIntelligenceEnabled = useFeature("predictiveIntelligence");
   const { stats: progressStats } = useUserProgress();
+  // Phase 9.2: single source of truth for learning context + mastery snapshots.
+  // All downstream hooks receive these values instead of fetching independently.
+  const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
+  const { scope: hoistedScope } = useContentScope(!!contentDeliveryEnabled);
   const { snapshots: masterySnapshots } = useMasterySnapshots();
   const [subjectsCount, setSubjectsCount] = useState(0);
-  const examReadiness = useExamReadiness(subjectsCount);
+  // Pass hoisted snapshots — skips internal useMasterySnapshots fetch.
+  const examReadiness = useExamReadiness(subjectsCount, masterySnapshots);
   const adaptiveRegen = useAdaptiveRegen();
   // useMasteryHistory called unconditionally; internally gates on flag + userId
   const masteryHistory = useMasteryHistory(8);
@@ -109,21 +113,18 @@ export default function TodayView() {
   for (const sub of subjectsList) {
     subjectTitleMapForPredictive[sub.id] = sub.title;
   }
-  // M11: predictive intelligence — gates on flag; uses existing hook data
-  const predictive = usePredictiveIntelligence(subjectsCount, subjectTitleMapForPredictive);
+  // M11: predictive intelligence — pass hoisted snapshots to skip internal fetch.
+  const predictive = usePredictiveIntelligence(subjectsCount, subjectTitleMapForPredictive, masterySnapshots);
   // M11B: forecast engine — extended projections
   const forecastEngine = useForecastEngine(subjectsCount, subjectTitleMapForPredictive);
 
-  // Phase 9.1 T1: hoist useActiveMission so adaptive engine gets real mission signal.
-  // ActiveMissionCard also calls this internally (for generate/resume/abandon actions).
-  // Two reads of the same row — acceptable; the hook guards on missionEngine flag + userId.
-  const { mission: hoistedMission } = useActiveMission();
+  // Phase 9.1 T1: hoist useActiveMission — pass hoisted scope to skip internal fetch.
+  const { mission: hoistedMission } = useActiveMission(hoistedScope);
 
-  // Phase 9.1 T3: exam date from learning context, not raw userData.nextExam.
-  const resolvedExamDate = useResolvedExamDate();
+  // Phase 9.1 T3: exam date via learning context — pass hoisted scope.
+  const resolvedExamDate = useResolvedExamDate(hoistedScope);
 
-  // Phase 9: adaptive learning engine — unconditionally called (hooks rule); results
-  // consumed only when adaptiveLearningEnabled is ON.
+  // Phase 9: adaptive learning engine — pass hoisted scope + snapshots.
   const adaptive = useAdaptiveLearning({
     mission: hoistedMission,
     reviewDueCount: dueCount,
@@ -132,6 +133,8 @@ export default function TodayView() {
     currentStreak: progressStats.streakCount,
     examDate: resolvedExamDate,
     todayMinutesAvailable: userData?.dailyGoal ?? 30,
+    scope: hoistedScope,
+    snapshots: masterySnapshots,
   });
 
   // Phase 8.2A: daily reminder replaced by useEngineReminders via FlightAlerts.
@@ -141,22 +144,19 @@ export default function TodayView() {
   useEffect(() => {
     async function fetchDueCount() {
       try {
-        // Phase 9.1 T2: scoped review — only count questions inside active enrollment scope.
-        // Falls back to global count for guest / legacy / no-enrollment users.
+        // Phase 9.2: reuse hoistedScope (already resolved) instead of calling
+        // resolveActiveLearningContext again — eliminates 1 duplicate DB round-trip.
         const uid = user?.id ?? null;
-        const ctx = await resolveActiveLearningContext(uid, {
-          targetExam: userData?.targetExam ?? null,
-          careerObjective: userData?.careerObjective ?? null,
-        });
-        const scope = resolveContentScope(ctx);
-        const ids = await getScopedDueQuestionIds(uid, scope.eligibleSubjectIds);
+        const ids = await getScopedDueQuestionIds(uid, hoistedScope.eligibleSubjectIds);
         setDueCount(ids.length);
       } catch (err) {
         console.error("Failed loading due count in TodayView:", err);
       }
     }
     fetchDueCount();
-  }, [user?.id, userData?.targetExam]);
+  // hoistedScope.eligibleSubjectIds is a Set — stable identity after scope loads
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, hoistedScope.hasContent]);
 
   useEffect(() => {
     async function loadSubjects() {

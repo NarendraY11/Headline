@@ -109,9 +109,20 @@ export function ReadinessPanel({ output, loading }: Props) {
         </Link>
       )}
 
-      {/* Weak/strong analytics */}
+      {/* Weak/strong analytics — only when ≥2 distinct modules have data */}
+      {(() => {
+        const hasComparative = output.weakestModules.length >= 2 &&
+          output.strongestModules[0]?.moduleId !== output.weakestModules[0]?.moduleId;
+        if (output.weakestModules.length === 0) return null;
+        if (!hasComparative) {
+          return (
+            <p className="text-[9px] text-muted-2 mt-1">Complete more modules to unlock comparative analytics.</p>
+          );
+        }
+        return null;
+      })()}
       <div className="grid grid-cols-2 gap-3">
-        {output.weakestModules.length > 0 && (
+        {output.weakestModules.length >= 2 && output.strongestModules[0]?.moduleId !== output.weakestModules[0]?.moduleId && (
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <TrendingUp size={10} className="text-red-400" />
@@ -127,7 +138,7 @@ export function ReadinessPanel({ output, loading }: Props) {
             </div>
           </div>
         )}
-        {output.strongestModules.length > 0 && (
+        {output.strongestModules.length >= 2 && output.strongestModules[0]?.moduleId !== output.weakestModules[0]?.moduleId && (
           <div>
             <div className="flex items-center gap-1.5 mb-1.5">
               <CheckCircle size={10} className="text-emerald-500" />

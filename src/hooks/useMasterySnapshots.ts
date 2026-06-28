@@ -32,7 +32,12 @@ export interface UseMasterySnapshotsState {
   refetch: () => void;
 }
 
-export function useMasterySnapshots(): UseMasterySnapshotsState {
+/**
+ * Phase 9.2: pass skip=true when the caller already has snapshots from a
+ * parent (e.g. TodayView hoists useMasterySnapshots and passes the result
+ * down). This prevents duplicate mastery_snapshots DB fetches.
+ */
+export function useMasterySnapshots(skip = false): UseMasterySnapshotsState {
   const flagEnabled = useFeature("masterySnapshots");
   const { user } = useAuth();
   const userId = user?.id ?? null;
@@ -46,7 +51,7 @@ export function useMasterySnapshots(): UseMasterySnapshotsState {
   const { stats: progressStats, loading: progressLoading } = useUserProgress();
 
   const load = useCallback(async () => {
-    if (!userId) return;
+    if (skip || !userId) return;
 
     setLoading(true);
     setError(null);
@@ -85,11 +90,11 @@ export function useMasterySnapshots(): UseMasterySnapshotsState {
   }, [flagEnabled, userId, progressStats.subjectMastery]);
 
   useEffect(() => {
-    if (!progressLoading) {
+    if (!skip && !progressLoading) {
       void load();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [progressLoading, userId, flagEnabled]);
+  }, [skip, progressLoading, userId, flagEnabled]);
 
   return { snapshots, loading, error, fromCache, refetch: load };
 }

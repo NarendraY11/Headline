@@ -17,7 +17,8 @@ import {
   type AdaptiveOutput,
   type ActiveMissionState,
 } from "../lib/adaptiveLearningEngine";
-import { EMPTY_SCOPE } from "../lib/contentDeliveryEngine";
+import { EMPTY_SCOPE, type ContentScope } from "../lib/contentDeliveryEngine";
+import type { MasterySnapshot } from "../lib/masterySnapshot";
 import type { StudyMissionRow } from "../types/studyScheduler";
 
 // ─── Empty output (flag OFF or no content) ───────────────────────────
@@ -67,6 +68,16 @@ export interface UseAdaptiveLearningParams {
   examDate: Date | null;
   /** Minutes the student says they have today (default 30) */
   todayMinutesAvailable?: number;
+  /**
+   * Phase 9.2: pre-resolved scope from TodayView's single useContentScope call.
+   * When provided, the hook skips its internal useContentScope DB fetch.
+   */
+  scope?: ContentScope;
+  /**
+   * Phase 9.2: pre-fetched mastery snapshots from TodayView's single
+   * useMasterySnapshots call. When provided, skips internal DB fetch.
+   */
+  snapshots?: MasterySnapshot[];
 }
 
 export interface UseAdaptiveLearningResult extends AdaptiveOutput {
@@ -82,9 +93,20 @@ export function useAdaptiveLearning(params: UseAdaptiveLearningParams): UseAdapt
   const flagEnabled = useFeature("adaptiveLearning");
   const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
 
-  const { scope, loading: scopeLoading } = useContentScope(!!contentDeliveryEnabled);
+  // Phase 9.2: skip internal fetches when caller provides pre-resolved data.
+  const { scope: internalScope, loading: scopeLoading } = useContentScope(
+    !params.scope && !!contentDeliveryEnabled
+  );
   const { progress: learningProgress, loading: progressLoading } = useLearningProgress();
-  const { snapshots, loading: snapshotsLoading } = useMasterySnapshots();
+  const { snapshots: internalSnapshots, loading: snapshotsLoading } = useMasterySnapshots(
+    !!params.snapshots
+  );
+
+  const scope = params.scope ?? internalScope;
+  const snapshots = params.snapshots ?? internalSnapshots;
+  const loading = (params.scope ? false : scopeLoading) ||
+    progressLoading ||
+    (params.snapshots ? false : snapshotsLoading);
 
   // Build masteryMap from snapshots (subject_id → mastery %)
   const masteryMap = useMemo<Record<string, number>>(() => {
@@ -121,8 +143,6 @@ export function useAdaptiveLearning(params: UseAdaptiveLearningParams): UseAdapt
       questionsRemaining,
     };
   }, [params.mission]);
-
-  const loading = scopeLoading || progressLoading || snapshotsLoading;
 
   const output = useMemo<AdaptiveOutput>(() => {
     if (!flagEnabled || loading) return EMPTY_OUTPUT;

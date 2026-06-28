@@ -32,6 +32,7 @@ import {
   type MissionEventContext,
 } from "../lib/studyAnalytics";
 import type { StudyMissionRow } from "../types/studyScheduler";
+import type { ContentScope } from "../lib/contentDeliveryEngine";
 
 export interface GenerateInputs {
   targetExam: string | null | undefined;
@@ -67,10 +68,17 @@ function ctxOf(inputs: GenerateInputs, mission: StudyMissionRow | null): Mission
   };
 }
 
-export function useActiveMission(): UseActiveMissionResult {
+/**
+ * Phase 9.2: accepts optional pre-resolved scope from TodayView to skip the
+ * internal useContentScope DB fetch. ActiveMissionCard (which doesn't hoist)
+ * omits this param and keeps its own fetch.
+ */
+export function useActiveMission(preResolvedScope?: ContentScope): UseActiveMissionResult {
   const engineEnabled = useFeature("missionEngine");
   const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
-  const { scope } = useContentScope(!!contentDeliveryEnabled);
+  // Skip internal fetch when caller provides scope.
+  const { scope: internalScope } = useContentScope(!preResolvedScope && !!contentDeliveryEnabled);
+  const scope = preResolvedScope ?? internalScope;
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
