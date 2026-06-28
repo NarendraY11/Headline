@@ -6,6 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { Zap } from "lucide-react";
 import { useUserProgress } from "../../lib/progress";
 import { fetchPublishedQuestions } from "../../lib/content";
+import { getEligibleQuestions } from "../../lib/contentQueries";
+import { useContentScope } from "../../hooks/useContentScope";
+import { useFeature } from "../../hooks/useFeatureFlags";
 import { weightedQuestionSample } from "../../lib/mistakeAnalysis";
 import { useMasterySnapshots } from "../../hooks/useMasterySnapshots";
 
@@ -19,6 +22,8 @@ export function AdaptiveMockLauncher() {
   const navigate = useNavigate();
   const { stats } = useUserProgress();
   const { snapshots } = useMasterySnapshots();
+  const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
+  const { scope } = useContentScope(contentDeliveryEnabled);
   const [launching, setLaunching] = useState(false);
   const [preset, setPreset] = useState<0 | 1 | 2>(1);
 
@@ -27,7 +32,9 @@ export function AdaptiveMockLauncher() {
   async function launch() {
     setLaunching(true);
     try {
-      const all = await fetchPublishedQuestions();
+      const all = contentDeliveryEnabled
+        ? await getEligibleQuestions(scope)
+        : await fetchPublishedQuestions();
       // Build mastery map — prefer snapshot data over progress stats
       const masteries: Record<string, number> = { ...stats.subjectMastery };
       for (const s of snapshots) masteries[s.subject_id] = s.mastery;

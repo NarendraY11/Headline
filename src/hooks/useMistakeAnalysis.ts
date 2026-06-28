@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { fetchPublishedQuestions } from "../lib/content";
+import { useContentScope } from "./useContentScope";
+import { useFeature } from "./useFeatureFlags";
 import {
   computeMistakeAnalysis,
   type MistakeAnalysisResult,
@@ -18,6 +20,8 @@ export interface UseMistakeAnalysisState {
 
 export function useMistakeAnalysis(): UseMistakeAnalysisState {
   const { user } = useAuth();
+  const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
+  const { scope } = useContentScope(contentDeliveryEnabled);
   const [result, setResult] = useState<MistakeAnalysisResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,13 +63,18 @@ export function useMistakeAnalysis(): UseMistakeAnalysisState {
         answered_at: r.answered_at ?? "",
       }));
 
-      setResult(computeMistakeAnalysis(attempts, uqaRows, questions));
+      const scopedQuestions =
+        contentDeliveryEnabled && scope.hasContent
+          ? questions.filter((q) => scope.eligibleSubjectIds.has(q.subjectId ?? ""))
+          : questions;
+
+      setResult(computeMistakeAnalysis(attempts, uqaRows, scopedQuestions));
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to load mistake analysis.");
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, contentDeliveryEnabled, scope]);
 
   useEffect(() => { void load(); }, [load]);
 

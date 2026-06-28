@@ -5,10 +5,14 @@ import { Button, Card, Chip } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
 import { Question } from "../data/questions";
 import { fetchQuestionsByIds } from "../lib/content";
+import { useContentScope } from "../hooks/useContentScope";
+import { useFeature } from "../hooks/useFeatureFlags";
 
 export default function BookmarksView() {
   const { userData, updateUserData, loading } = useAuth();
   const navigate = useNavigate();
+  const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
+  const { scope } = useContentScope(contentDeliveryEnabled);
   const [bookmarkedQuestions, setBookmarkedQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<Set<string>>(new Set());
@@ -82,10 +86,19 @@ export default function BookmarksView() {
   }, [bookmarkedQuestions, selectedSubjectFilter]);
 
   const startPractice = () => {
+    // When contentDeliveryEngine is ON, filter out bookmarks that are outside the
+    // user's enrolled scope. Bookmarks are stored globally but quizzes must respect
+    // content scope. Out-of-scope bookmarks remain visible in the list but are not
+    // included in the practice session.
+    const questionsForSession =
+      contentDeliveryEnabled && scope.hasContent
+        ? filteredForPractice.filter((q) => scope.eligibleSubjectIds.has(q.subjectId ?? ""))
+        : filteredForPractice;
+
     navigate('/quiz/bookmarks-review', {
       state: {
         mode: "viva",
-        customQuestions: filteredForPractice,
+        customQuestions: questionsForSession,
         generatedTopic: selectedSubjectFilter.size > 0
           ? `Bookmarks — ${selectedSubjectFilter.size} subject${selectedSubjectFilter.size > 1 ? "s" : ""}`
           : "Bookmarked Interrogatories"

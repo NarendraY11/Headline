@@ -14,6 +14,8 @@ import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
 import { apiFetchRaw, readError } from "../lib/api";
 import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopic } from "../lib/content";
+import { getEligibleQuestions, getEligibleTopicQuestions, getEligibleQuestionsByIds } from "../lib/contentQueries";
+import { useContentScope } from "../hooks/useContentScope";
 import { submitQuestionAttempt } from "../lib/progress";
 import { getDueQuestionIds, recordAnswerProgress, trackAnswerForStreakAndGoal } from "../lib/spacedRepetition";
 import { completeMission } from "../lib/studyScheduler";
@@ -82,6 +84,8 @@ export default function QuizView() {
   const xpEnabled = useFeature("xpSystem");
   const sm2AlgorithmEnabled = useFeature("sm2Algorithm");
   const sm2QualityTimingEnabled = useFeature("sm2QualityTiming");
+  const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
+  const { scope, loading: scopeLoading } = useContentScope(contentDeliveryEnabled);
 
   // Load questions
   const customQuestions = location.state?.customQuestions as
@@ -93,6 +97,10 @@ export default function QuizView() {
   const [loadingContent, setLoadingContent] = useState(true);
 
   useEffect(() => {
+    // Wait for content scope to resolve before loading questions so we can
+    // apply subject filtering on the first fetch (no double-load flash).
+    if (contentDeliveryEnabled && scopeLoading) return;
+
     async function loadQuizQuestions() {
       try {
         if (customQuestions) {
@@ -128,6 +136,8 @@ export default function QuizView() {
               Array.isArray(st.questionIds) &&
               st.questionIds.length > 0
             ) {
+              // Resume always uses exact saved IDs — scope not re-applied on resume
+              // to avoid desyncing in-progress sessions started before scope change.
               const fetched = await fetchQuestionsByIds(st.questionIds);
               const byId = new Map(fetched.map((q) => [q.id, q]));
               const ordered = st.questionIds
@@ -148,14 +158,20 @@ export default function QuizView() {
         } else if (topicId === "review") {
           const ids = await getDueQuestionIds(user?.uid || null);
           if (ids.length > 0) {
-            quizQs = await fetchQuestionsByIds(ids);
+            quizQs = contentDeliveryEnabled
+              ? await getEligibleQuestionsByIds(scope, ids)
+              : await fetchQuestionsByIds(ids);
           } else {
             quizQs = [];
           }
         } else if (topicId && topicId !== "all") {
-          quizQs = await fetchQuizQuestionsForTopic(topicId, 50, true);
+          quizQs = contentDeliveryEnabled
+            ? await getEligibleTopicQuestions(scope, topicId, 50)
+            : await fetchQuizQuestionsForTopic(topicId, 50, true);
         } else {
-          quizQs = await fetchPublishedQuestions({ limit: 50 });
+          quizQs = contentDeliveryEnabled
+            ? await getEligibleQuestions(scope, { limit: 50 })
+            : await fetchPublishedQuestions({ limit: 50 });
         }
         setQuestions(quizQs);
       } catch (err) {
@@ -166,7 +182,7 @@ export default function QuizView() {
     }
 
     loadQuizQuestions();
-  }, [topicId, logbook, customQuestions, location.state?.sessionStorageKey]);
+  }, [topicId, logbook, customQuestions, location.state?.sessionStorageKey, contentDeliveryEnabled, scopeLoading, scope]);
 
   const totalQuestions = questions ? questions.length : 0;
 

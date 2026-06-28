@@ -232,6 +232,8 @@ export async function fetchQuizQuestionsForTopic(
 
 export async function fetchPublishedQuestions(options?: {
   subjectId?: string;
+  /** Filter to multiple subject IDs (takes precedence over subjectId) */
+  subjectIds?: string[];
   subcategoryId?: string;
   limit?: number;
   offset?: number;
@@ -244,7 +246,9 @@ export async function fetchPublishedQuestions(options?: {
         .select(Q_COLS)
         .eq("status", "published");
 
-      if (options.subjectId) {
+      if (options.subjectIds && options.subjectIds.length > 0) {
+        query = query.in("subject_id", options.subjectIds);
+      } else if (options.subjectId) {
         query = query.eq("subject_id", options.subjectId);
       }
       if (options.subcategoryId) {

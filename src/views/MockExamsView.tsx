@@ -26,6 +26,9 @@ import {
     fetchPublishedQuestions,
     MockPaperSpec
 } from "../lib/content";
+import { getEligibleExams, getEligibleQuestions } from "../lib/contentQueries";
+import { useContentScope } from "../hooks/useContentScope";
+import { useFeature } from "../hooks/useFeatureFlags";
 import { supabase } from "../lib/supabase";
 
 export default function MockExamsView() {
@@ -35,6 +38,8 @@ export default function MockExamsView() {
   const { showToast } = useToast();
   
   const { user } = useAuth();
+  const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
+  const { scope } = useContentScope(contentDeliveryEnabled);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [loadingAttempts, setLoadingAttempts] = useState(false);
 
@@ -81,9 +86,14 @@ export default function MockExamsView() {
         const [examList, subjectList, questionList] = await Promise.all([
           fetchExams(),
           fetchMergedSubjects(),
-          fetchPublishedQuestions()
+          contentDeliveryEnabled
+            ? getEligibleQuestions(scope)
+            : fetchPublishedQuestions(),
         ]);
-        setExams(examList.filter(e => e.status === "published"));
+        const published = examList.filter((e) => e.status === "published");
+        setExams(
+          contentDeliveryEnabled ? getEligibleExams(scope, published) : published
+        );
         setSubjects(subjectList);
         setQuestions(questionList);
       } catch (err) {
@@ -93,7 +103,7 @@ export default function MockExamsView() {
       }
     }
     initData();
-  }, []);
+  }, [contentDeliveryEnabled, scope]);
 
   const handleSelectExam = async (examId: string) => {
     setSelectedExamId(examId);

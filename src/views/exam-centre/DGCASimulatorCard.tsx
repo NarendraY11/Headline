@@ -5,6 +5,9 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlaneTakeoff, Clock, AlertCircle } from "lucide-react";
 import { fetchPublishedQuestions } from "../../lib/content";
+import { intersectWithScope } from "../../lib/contentQueries";
+import { useContentScope } from "../../hooks/useContentScope";
+import { useFeature } from "../../hooks/useFeatureFlags";
 
 const DGCA_SUBJECTS = [
   "air-navigation",
@@ -21,6 +24,8 @@ const PASS_MARK = 70;
 
 export function DGCASimulatorCard() {
   const navigate = useNavigate();
+  const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
+  const { scope } = useContentScope(contentDeliveryEnabled);
   const [launching, setLaunching] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,20 +33,26 @@ export function DGCASimulatorCard() {
     setLaunching(true);
     setError(null);
     try {
+      // When scope is active, intersect DGCA subjects with the user's eligible
+      // subjects — a type-rating-only student shouldn't get DGCA questions.
+      const eligibleSubjects = contentDeliveryEnabled
+        ? intersectWithScope(scope, DGCA_SUBJECTS)
+        : DGCA_SUBJECTS;
+
       const all = await fetchPublishedQuestions();
-      const dgca = all.filter(q => DGCA_SUBJECTS.includes((q as any).subject_id ?? ""));
+      const dgca = all.filter((q) => eligibleSubjects.includes(q.subjectId ?? ""));
 
       // Equal distribution across subjects, up to TOTAL_QUESTIONS
-      const perSubject = Math.floor(TOTAL_QUESTIONS / DGCA_SUBJECTS.length);
+      const perSubject = Math.floor(TOTAL_QUESTIONS / (eligibleSubjects.length || 1));
       const bySubject: Record<string, typeof all> = {};
-      for (const sid of DGCA_SUBJECTS) bySubject[sid] = [];
+      for (const sid of eligibleSubjects) bySubject[sid] = [];
       for (const q of dgca) {
-        const sid = (q as any).subject_id as string;
+        const sid = q.subjectId ?? "";
         if (bySubject[sid]) bySubject[sid].push(q);
       }
 
       const selected: typeof all = [];
-      for (const sid of DGCA_SUBJECTS) {
+      for (const sid of eligibleSubjects) {
         const pool = bySubject[sid].sort(() => Math.random() - 0.5);
         selected.push(...pool.slice(0, perSubject));
       }
