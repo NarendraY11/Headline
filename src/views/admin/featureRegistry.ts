@@ -713,6 +713,18 @@ export const featureRegistry = {
     requiresAuth: true,
     requiresAdmin: true,
   },
+  contentDeliveryEngine: {
+    key: "contentDeliveryEngine",
+    title: "Content Delivery Engine (Phase 5)",
+    description: "Unified content scope resolver — resolveContentScope() wired into Modules, Missions, Quiz, Analytics, Scheduler, and AI. All consumers derive subject/module/topic eligibility from one canonical resolver. OFF = legacy per-component filtering. ON = single engine drives everything.",
+    category: "Internal Rollout",
+    adminVisible: true,
+    previewType: "none",
+    routes: ["/modules", "/quiz/:topicId", "/today", "/analytics", "/admin/registry"],
+    sideEffects: ["auth", "supabase-read"],
+    requiresAuth: true,
+    requiresAdmin: true,
+  },
 } satisfies { [K in FlagKeys]: FeatureDefinition & { key: K } };
 
 export const featureControlSections: FeatureCategory[] = [
@@ -721,6 +733,7 @@ export const featureControlSections: FeatureCategory[] = [
   "Study Scheduler",
   "UI/UX & System",
   "Monetization & Growth",
+  "Internal Rollout",
 ];
 
 export const adminFeatureDefinitions = featureControlSections.map((category) => ({

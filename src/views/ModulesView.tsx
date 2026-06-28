@@ -7,7 +7,9 @@ import { ProGate } from "../components/ProGate";
 import ReadingProgress from "../components/ReadingProgress";
 import { useAuth } from "../contexts/AuthContext";
 import { SubjectItem } from "../data/topics";
+import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
+import { useContentScope } from "../hooks/useContentScope";
 import { fetchMergedSubjects } from "../lib/content";
 import { getDailyReviewItems } from "../lib/logbook";
 import { useUserProgress } from "../lib/progress";
@@ -19,6 +21,8 @@ export default function ModulesView() {
   const { userData, user } = useAuth();
   const prefersReducedMotion = useReducedMotion();
   const { stats: progressStats } = useUserProgress();
+  const contentDeliveryEngine = useFeature("contentDeliveryEngine");
+  const { scope } = useContentScope(!!contentDeliveryEngine);
 
   const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,13 +46,16 @@ export default function ModulesView() {
     loadSubjects();
   }, []);
 
-  // Sync syllabus state based on target onboarding exam automatically
+  // Sync syllabus/sort based on learning context.
+  // When contentDeliveryEngine is ON, scope drives filtering directly
+  // (eligibleSubjectIds), so syllabus state is only needed for the legacy path.
   useEffect(() => {
+    if (contentDeliveryEngine) return; // scope-based filtering; no syllabus sync needed
     if (userData?.targetExam) {
       const examStr = String(userData.targetExam).toLowerCase();
       if (examStr.includes("dgca")) {
         setSyllabus("DGCA");
-        setSortOrder("az"); // Order sequentially by sequence indexing
+        setSortOrder("az");
       } else if (examStr.includes("easa")) {
         setSyllabus("EASA");
         setSortOrder("az");
@@ -60,7 +67,7 @@ export default function ModulesView() {
         setSortOrder("az");
       }
     }
-  }, [userData]);
+  }, [userData, contentDeliveryEngine]);
 
   const totalSubjectsCount = subjectsList.length;
   const totalQuestions = subjectsList.reduce((sum, s) => sum + s.questionCount, 0);
@@ -119,8 +126,14 @@ export default function ModulesView() {
 
   let displayedSubjects = [...subjectsList];
 
-  // 1. Dynamic filtering by syllabus authority (exam authority)
-  if (syllabus !== "All") {
+  // 1. Content scope filtering (Phase 5) or legacy syllabus filter (Phase 1)
+  if (contentDeliveryEngine && scope.hasContent) {
+    // Phase 5: single resolver drives filtering — no string matching
+    displayedSubjects = displayedSubjects.filter((s) =>
+      scope.eligibleSubjectIds.has(s.id)
+    );
+  } else if (syllabus !== "All") {
+    // Legacy: filter by exam_authority field on the subject item
     displayedSubjects = displayedSubjects.filter(s => {
       const auth = String((s as any).exam_authority || s.exam_authority || "").toUpperCase().replace('-', '_');
       const targetAuth = String(syllabus).toUpperCase().replace('-', '_');
@@ -138,8 +151,11 @@ export default function ModulesView() {
     });
   }
 
-  // Calculate stats based on current syllabus filter for waypoint flow logic
+  // Calculate stats based on scope/syllabus filter for waypoint flow logic
   const trackSubjects = [...subjectsList].filter(s => {
+    if (contentDeliveryEngine && scope.hasContent) {
+      return scope.eligibleSubjectIds.has(s.id);
+    }
     if (syllabus === "All") return true;
     const auth = String((s as any).exam_authority || s.exam_authority || "").toUpperCase().replace('-', '_');
     const targetAuth = String(syllabus).toUpperCase().replace('-', '_');

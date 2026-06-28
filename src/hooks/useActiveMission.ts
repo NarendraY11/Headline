@@ -23,7 +23,8 @@ import {
   startEngineMission,
 } from "../lib/studyScheduler";
 import { launchMission } from "../lib/launchMission";
-import { deriveEngineMission } from "../config/missionConfig";
+import { deriveEngineMission, deriveEngineMissionFromScope } from "../config/missionConfig";
+import { useContentScope } from "./useContentScope";
 import {
   trackMissionAbandoned,
   trackMissionCreated,
@@ -68,6 +69,8 @@ function ctxOf(inputs: GenerateInputs, mission: StudyMissionRow | null): Mission
 
 export function useActiveMission(): UseActiveMissionResult {
   const engineEnabled = useFeature("missionEngine");
+  const contentDeliveryEnabled = useFeature("contentDeliveryEngine");
+  const { scope } = useContentScope(!!contentDeliveryEnabled);
   const { user } = useAuth();
   const userId = user?.id ?? null;
 
@@ -110,11 +113,9 @@ export function useActiveMission(): UseActiveMissionResult {
       setBusy(true);
       setError(null);
       try {
-        const draft = deriveEngineMission({
-          targetExam: inputs.targetExam,
-          mastery: inputs.mastery,
-          dailyGoal: inputs.dailyGoal,
-        });
+        const draft = contentDeliveryEnabled && scope.hasContent
+          ? deriveEngineMissionFromScope({ scope, mastery: inputs.mastery, dailyGoal: inputs.dailyGoal })
+          : deriveEngineMission({ targetExam: inputs.targetExam, mastery: inputs.mastery, dailyGoal: inputs.dailyGoal });
         const row = await createEngineMission(userId, draft, inputs.readinessScore);
         setMission(row);
         trackMissionCreated(row.id, ctxOf(inputs, row));
@@ -126,7 +127,7 @@ export function useActiveMission(): UseActiveMissionResult {
         setBusy(false);
       }
     },
-    [engineEnabled, userId, busy]
+    [engineEnabled, contentDeliveryEnabled, scope, userId, busy]
   );
 
   const resume = useCallback(
