@@ -45,7 +45,14 @@ export async function getEligibleTopicQuestions(
 ): Promise<Question[]> {
   const questions = await fetchQuizQuestionsForTopic(topicId, limit, true);
   if (!scope.hasContent) return questions;
-  return questions.filter((q) => scope.eligibleSubjectIds.has(q.subjectId ?? ""));
+  // Questions fetched for a specific topic are topic-scoped by the topicId param.
+  // If subject_id is set, verify it is in scope. If subject_id is null/empty,
+  // allow through — the question is indexed only at subcategory level and the
+  // caller already constrained the topic to scope before navigating here.
+  return questions.filter((q) => {
+    const sid = q.subjectId ?? "";
+    return sid === "" || scope.eligibleSubjectIds.has(sid);
+  });
 }
 
 /**

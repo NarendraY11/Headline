@@ -85,7 +85,7 @@ const DGCA_ATPL_ONLY: SubjectDef[] = [
   { id: "dgca-human-performance",    label: "Human Performance" },
 ];
 
-// EASA 13-subject ATPL syllabus
+// EASA 13-subject ATPL syllabus (IDs match subjects table in DB)
 const EASA_ATPL_SUBJECTS: SubjectDef[] = [
   { id: "easa-air-law",           label: "Air Law" },
   { id: "easa-agk-systems",       label: "AGK – Systems" },
@@ -96,10 +96,10 @@ const EASA_ATPL_SUBJECTS: SubjectDef[] = [
   { id: "easa-human-perf",        label: "Human Performance" },
   { id: "easa-met",               label: "Meteorology" },
   { id: "easa-gen-nav",           label: "General Navigation" },
-  { id: "easa-radio-nav",         label: "Radio Navigation & Instruments" },
-  { id: "easa-operational-procs", label: "Operational Procedures" },
+  { id: "easa-rad-nav",           label: "Radio Navigation & Instruments" },
+  { id: "easa-ops-proc",          label: "Operational Procedures" },
   { id: "principles-of-flight",   label: "Principles of Flight" },
-  { id: "easa-vfr-comm",          label: "VFR Communications" },
+  { id: "easa-communications",    label: "VFR Communications" },
 ];
 
 const FAA_SUBJECTS: SubjectDef[] = [
@@ -121,57 +121,35 @@ const RTR_SUBJECTS: SubjectDef[] = [
 ];
 
 // ─── Aircraft Subject Pools ──────────────────────────────────────────
-// These replace the hardcoded TYPE_RATING_SUBJECTS in missionConfig.ts.
-// Add new aircraft here; no code change needed elsewhere once done.
+// IDs MUST match subjects.id in the database. The DB uses "type-<aircraft>"
+// slugs for most aircraft; A320 uses "a320-systems" (legacy naming).
+// Sub-system breakdown (pneumatics, hydraulics, etc.) is aspirational —
+// those subjects don't exist in DB yet. Add them here when seeded.
 
 const AIRCRAFT_SUBJECT_POOLS: Record<string, SubjectDef[]> = {
   "a320": [
-    { id: "a320-systems",      label: "Airbus A320 Family" },
-    { id: "a320-pneumatics",   label: "A320 Pneumatics" },
-    { id: "a320-hydraulics",   label: "A320 Hydraulics" },
-    { id: "a320-electrical",   label: "A320 Electrical" },
-    { id: "a320-flight-controls", label: "A320 Flight Controls" },
-    { id: "a320-fuel",         label: "A320 Fuel System" },
+    { id: "a320-systems", label: "Airbus A320 Family" },
   ],
   "a330": [
-    { id: "a330-systems",      label: "A330 Systems" },
-    { id: "a330-hydraulics",   label: "A330 Hydraulics" },
-    { id: "a330-electrical",   label: "A330 Electrical" },
-    { id: "a330-flight-controls", label: "A330 Flight Controls" },
+    { id: "type-a330", label: "A330 Systems" },
   ],
   "a350": [
-    { id: "a350-systems",      label: "A350 Systems" },
-    { id: "a350-hydraulics",   label: "A350 Hydraulics" },
-    { id: "a350-electrical",   label: "A350 Electrical" },
+    { id: "type-a350", label: "A350 Systems" },
   ],
   "atr72": [
-    { id: "atr72-systems",     label: "ATR72 Systems" },
-    { id: "atr72-propulsion",  label: "ATR72 Propulsion" },
-    { id: "atr72-electrics",   label: "ATR72 Electrics" },
+    { id: "type-atr72", label: "ATR72 Systems" },
   ],
   "b737ng": [
-    { id: "b737-systems",      label: "B737 Systems" },
-    { id: "b737-hydraulics",   label: "B737 Hydraulics" },
-    { id: "b737-electrical",   label: "B737 Electrical" },
-    { id: "b737-flight-controls", label: "B737 Flight Controls" },
+    { id: "type-b737", label: "B737 Systems" },
   ],
   "b737max": [
-    { id: "b737-systems",      label: "B737 Systems" },
-    { id: "b737-hydraulics",   label: "B737 Hydraulics" },
-    { id: "b737-electrical",   label: "B737 Electrical" },
-    { id: "b737-flight-controls", label: "B737 Flight Controls" },
-    { id: "b737max-mcas",      label: "B737 MAX MCAS" },
+    { id: "type-b737", label: "B737 Systems" },
   ],
   "b777": [
-    { id: "b777-systems",      label: "B777 Systems" },
-    { id: "b777-hydraulics",   label: "B777 Hydraulics" },
-    { id: "b777-electrical",   label: "B777 Electrical" },
+    { id: "type-b777", label: "B777 Systems" },
   ],
   "b787": [
-    { id: "b787-systems",      label: "B787 Systems" },
-    { id: "b787-hydraulics",   label: "B787 Hydraulics" },
-    { id: "b787-electrical",   label: "B787 Electrical" },
-    { id: "b787-composites",   label: "B787 Composites" },
+    { id: "type-b787", label: "B787 Systems" },
   ],
 };
 

@@ -100,7 +100,8 @@ describe("resolveContentScope", () => {
     );
     expect(scope.hasContent).toBe(true);
     expect(scope.eligibleSubjectIds.has("a320-systems")).toBe(true);
-    expect(scope.eligibleSubjectIds.has("a320-hydraulics")).toBe(true);
+    // Sub-system IDs (a320-hydraulics etc.) removed — DB has only a320-systems
+    expect(scope.eligibleSubjectIds.has("a320-hydraulics")).toBe(false);
   });
 
   it("Type rating (B737) — b737ng aircraft subjects", () => {
@@ -111,8 +112,9 @@ describe("resolveContentScope", () => {
         family: "type_rating",
       })
     );
-    expect(scope.eligibleSubjectIds.has("b737-systems")).toBe(true);
-    expect(scope.eligibleSubjectIds.has("b737-hydraulics")).toBe(true);
+    // DB uses "type-b737" not "b737-systems"
+    expect(scope.eligibleSubjectIds.has("type-b737")).toBe(true);
+    expect(scope.eligibleSubjectIds.has("b737-systems")).toBe(false);
     // Should NOT include A320 subjects
     expect(scope.eligibleSubjectIds.has("a320-systems")).toBe(false);
   });
