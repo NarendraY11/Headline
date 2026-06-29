@@ -29,8 +29,12 @@ async function callSendPush(body: {
 
 // ── Cron: daily study reminder ───────────────────────────────────────────────
 // Runs 7am UTC. Finds users with pending missions today → sends push reminder.
+// Only registers on production — preview deployments skip cron to avoid duplicate execution.
 export const studyDailyReminder = inngest.createFunction(
-  { id: "study-daily-reminder", triggers: [{ cron: "0 7 * * *" }] },
+  {
+    id: "study-daily-reminder",
+    triggers: process.env.VERCEL_ENV === "production" ? [{ cron: "0 7 * * *" }] : [],
+  },
   async ({ step }: { step: any }) => {
     const today = new Date().toISOString().slice(0, 10);
 

@@ -9,5 +9,6 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const content = generateRobotsTxt(baseUrl);
 
   res.setHeader("Content-Type", "text/plain");
+  res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=86400");
   return res.status(200).send(content);
 }

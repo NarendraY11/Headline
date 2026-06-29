@@ -4,6 +4,15 @@
 // Uses x-middleware-rewrite (an internal Vercel operation) instead of a
 // same-origin fetch so the rewrite works regardless of SSO deployment
 // protection on preview deployments — no outbound HTTP request is made.
+
+// Matcher restricts middleware to HTML routes only — excludes API, Vercel internals,
+// and all static assets (fonts, images, JS, CSS) to reduce edge request consumption.
+export const config = {
+  matcher: [
+    '/((?!api|_vercel|assets|.*\\.[a-zA-Z0-9]+$).*)',
+  ],
+};
+
 export default function middleware(request: Request): Response | void {
   const { pathname, origin } = new URL(request.url);
 

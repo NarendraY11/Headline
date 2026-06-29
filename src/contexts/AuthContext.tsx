@@ -114,6 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Periodically check if session is still active: client-side checks
     // (another device / UA change) plus the server-side IP-binding endpoint
     // (browser can't read its own IP). Either failing forces a logout.
+    // Interval reduced from 30s to 2min: Realtime channel handles instant kicks,
+    // so polling is fallback-only (disconnected WebSocket / sleep).
     const interval = setInterval(async () => {
       const clientValid = await checkSessionValidity(user.uid);
 
@@ -145,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         await logout();
       }
-    }, 30000);
+    }, 120000);
 
     // Instant kick: when another device takes over this user's single active
     // session row, Postgres Realtime delivers the change here immediately, so
