@@ -153,7 +153,9 @@ export default function CourseView() {
             {certLabel}
           </h1>
           <p className="font-sans text-muted font-light text-sm">
-            {displayedSubjects.length} subjects · {allModules.length} modules · {totalQuestions.toLocaleString()} questions
+            {displayedSubjects.length > 0
+              ? `${displayedSubjects.length} subjects · ${allModules.length} modules · ${totalQuestions.toLocaleString()} questions`
+              : "Course content is being prepared"}
           </p>
         </div>
 
@@ -278,7 +280,21 @@ export default function CourseView() {
         </div>
 
         <div className="space-y-3">
-          {displayedSubjects.map(sub => {
+          {displayedSubjects.length === 0 ? (
+            <div className="border border-rule/50 border-dashed rounded-2xl p-10 text-center">
+              <BookOpen size={28} className="text-muted-2 mx-auto mb-4" />
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-2 mb-2">No Course Content Yet</p>
+              <p className="font-sans text-sm text-muted mb-5">
+                Course content is being uploaded and organized. Topics will appear here once published.
+              </p>
+              <Link
+                to="/modules"
+                className="text-xs font-mono underline text-muted hover:text-ink transition-colors"
+              >
+                Browse question bank instead →
+              </Link>
+            </div>
+          ) : displayedSubjects.map(sub => {
             const isExpanded = expandedSubjects.has(sub.id);
             const subMastery = progressStats.subjectMastery[sub.id] ?? 0;
             const modules = sub.subTopics ?? [];

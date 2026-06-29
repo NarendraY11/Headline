@@ -16,6 +16,7 @@ import {
   Mic,
   Plane,
   Settings,
+  User,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -84,6 +85,7 @@ const UNIVERSAL_NAV: NavItem[] = [
 // ── Bottom items ──────────────────────────────────────────────────────────────
 const BOTTOM_NAV: NavItem[] = [
   { label: "Refer & earn",        to: "/referral", icon: Gift     },
+  { label: "Profile",             to: "/profile",  icon: User     },
   { label: "Administrative Deck", to: "/admin",    icon: Settings, adminOnly: true },
 ];
 
