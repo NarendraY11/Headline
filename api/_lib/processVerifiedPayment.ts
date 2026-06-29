@@ -111,7 +111,10 @@ export async function processVerifiedPayment(params: VerifyPaymentParams): Promi
   if (verifiedInterval === "yearly" || verifiedInterval === "annual") {
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
   } else {
-    expiresAt.setMonth(expiresAt.getMonth() + 1);
+    // Fixed 30-day window. setMonth(+1) gives 28–31 days depending on the
+    // start month (Jan 31 → Feb 28 = 28 days); every paying user should get
+    // the same span (D14).
+    expiresAt.setDate(expiresAt.getDate() + 30);
   }
 
   const { data: prevProfile } = await admin

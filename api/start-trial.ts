@@ -64,7 +64,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       trialStartedAt: startedAt.toISOString(),
     };
 
-    const { error: updateErr } = await admin
+    // Atomic compare-and-set: gate the UPDATE on the same preconditions we
+    // just read (trial_used=false, plan=free). Two concurrent requests both
+    // pass the read check above, but only the first matches this WHERE and
+    // gets a row back — the loser updates 0 rows (S4: trial double-grant race).
+    const { data: updated, error: updateErr } = await admin
       .from("profiles")
       .update({
         plan: "trial",
@@ -76,11 +80,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         trial_ends_at: expiresAt.toISOString(),
         settings: mergedSettings,
       })
-      .eq("id", user.id);
+      .eq("id", user.id)
+      .eq("trial_used", false)
+      .eq("plan", "free")
+      .select("id");
 
     if (updateErr) {
       console.error(`Failed to grant trial for user ${user.id}:`, updateErr);
       return res.status(500).json({ error: "Failed to grant trial." });
+    }
+    if (!updated || updated.length === 0) {
+      // Lost the race (or state changed between read and write).
+      return res.status(409).json({ error: "Trial has already been used." });
     }
 
     try {

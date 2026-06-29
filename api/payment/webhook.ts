@@ -81,10 +81,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const interval = orderNotes.interval || paymentNotes.interval || subNotes.interval || "monthly";
 
       if (userId) {
-        // Durable payment ledger (best-effort). Unique razorpay_payment_id
-        // dedupes against the verify.ts insert when both fire for one payment.
+        // S3: Profile update first. If it fails, the payment insert never runs and
+        // Razorpay will retry the webhook (we return 500). This prevents recording
+        // a payment without granting the plan. The payment insert is already
+        // idempotent (unique razorpay_payment_id), so a retry after a successful
+        // profile update but failed payment insert will just skip the insert.
         const razorpayPaymentId = paymentEntity.id;
         const paidAmount = paymentEntity.amount ?? orderEntity.amount ?? 0;
+
+        const startedAt = new Date().toISOString();
+        const expiresAt = new Date();
+        if (interval === "yearly" || interval === "annual") {
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        } else {
+          // Fixed 30-day window. setMonth(+1) gives 28–31 days depending on the
+          // start month (Jan 31 → Feb 28 = 28 days); every paying user should
+          // get the same span (D14).
+          expiresAt.setDate(expiresAt.getDate() + 30);
+        }
+
+        const { error } = await admin
+          .from("profiles")
+          .update({
+            plan: "pro",
+            plan_status: "active",
+            plan_started_at: startedAt,
+            plan_expires_at: expiresAt.toISOString(),
+          })
+          .eq("id", userId);
+
+        if (error) {
+          console.error("Failed to update profile for user %s on webhook event %s:", sanitizeForLog(userId), sanitizeForLog(event), error);
+          return res.status(500).json({ error: "Database update failed" });
+        }
+
+        // Durable payment ledger (best-effort). Unique razorpay_payment_id
+        // dedupes against the verify.ts insert when both fire for one payment.
         // Only ping Slack when WE recorded the payment, so a webhook firing for
         // an id verify.ts already inserted (unique-violation) doesn't double-post.
         let newlyRecorded = false;
@@ -106,29 +138,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             // Unique-violation = already recorded by verify.ts; that's fine.
             console.warn("payments insert (webhook) skipped/failed:", payErr);
           }
-        }
-
-        const startedAt = new Date().toISOString();
-        const expiresAt = new Date();
-        if (interval === "yearly" || interval === "annual") {
-          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
-        } else {
-          expiresAt.setMonth(expiresAt.getMonth() + 1);
-        }
-
-        const { error } = await admin
-          .from("profiles")
-          .update({
-            plan: "pro",
-            plan_status: "active",
-            plan_started_at: startedAt,
-            plan_expires_at: expiresAt.toISOString(),
-          })
-          .eq("id", userId);
-
-        if (error) {
-          console.error("Failed to update profile for user %s on webhook event %s:", sanitizeForLog(userId), sanitizeForLog(event), error);
-          return res.status(500).json({ error: "Database update failed" });
         }
         try {
           await admin.from("plan_changes").insert({

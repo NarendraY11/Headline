@@ -8,6 +8,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { apiFetchRaw, readError } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useNotifications } from "../contexts/NotificationContext";
+import { supabase } from "../lib/supabase";
 
 import { isPaidActive } from "../lib/plan";
 import PaymentSuccessCelebration from "../components/PaymentSuccessCelebration";
@@ -66,27 +67,45 @@ export default function PricingView() {
     
     setIsTrialLoading(true);
     try {
+      // Server is authoritative: the trial is only real once /api/start-trial
+      // grants it. Never flip local plan state before the API confirms, or the
+      // UI shows "Trial Activated" on a request the server rejected (S1).
+      const token = await supabase.auth.getSession().then((s) => s.data.session?.access_token);
+      if (!token) throw new Error("No active session");
+
+      const response = await fetch("/api/start-trial", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(result?.error || "Failed to start trial");
+      }
+
       if (updateUserData) {
         await updateUserData({
           plan: "trial",
           planStartedAt: new Date().toISOString(),
-          planExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          planExpiresAt: result.plan_expires_at,
           trialStartedAt: new Date().toISOString(),
           trialUsed: true,
         });
-        showToast({
-          type: "success",
-          title: "Trial Activated!",
-          message: "You now have full Pro-level access for 7 days!",
-          duration: 5000
-        });
       }
-    } catch (err) {
+      showToast({
+        type: "success",
+        title: "Trial Activated!",
+        message: "You now have full Pro-level access for 7 days!",
+        duration: 5000
+      });
+    } catch (err: any) {
       console.error(err);
       showToast({
         type: "error",
         title: "Activation Failed",
-        message: "Unable to activate free trial. Please try again.",
+        message: err?.message || "Unable to activate free trial. Please try again.",
         duration: 5000
       });
     } finally {
