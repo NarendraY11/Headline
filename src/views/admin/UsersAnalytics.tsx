@@ -150,7 +150,7 @@ export default function UsersAnalytics() {
         { data: plansRows },
         { data: snapshotRows },
       ] = await Promise.all([
-        supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("id,email,display_name,target_exam,next_exam,plan,plan_started_at,plan_expires_at,trial_started_at,trial_used,streak_count,last_activity_date,is_disabled,created_at").order("created_at", { ascending: false }),
         supabase.from("attempts").select("user_id,score,total,percentage,mode,topic_id,created_at").order("created_at", { ascending: false }),
         supabase.from("admins").select("email"),
         supabase.from("study_plans").select("user_id"),

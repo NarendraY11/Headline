@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { useFeatureFlags } from "../../hooks/useFeatureFlags";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import {
   adminActivateEnrollment,
   adminCreateEnrollment,
@@ -72,10 +73,8 @@ export default function EnrollmentsAdmin() {
 
   return (
     <div style={{ padding: 24, maxWidth: 980 }}>
+      <AdminBreadcrumb crumbs={[{ label: "Registry", to: "/admin/registry" }, { label: "Enrollments" }]} />
       <h1 style={{ fontSize: 20, fontWeight: 700 }}>Enrollments</h1>
-      <nav style={{ margin: "12px 0 20px" }}>
-        <a href="/admin/registry" style={{ marginRight: 12 }}>← registry</a>
-      </nav>
       {error && <div style={{ color: "#b00", marginBottom: 12 }}>{error}</div>}
 
       <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>

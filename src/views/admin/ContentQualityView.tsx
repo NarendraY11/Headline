@@ -3,6 +3,7 @@
 // No new tables — all stats derived from existing questions + registry tables.
 
 import { useEffect, useState } from "react";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -112,6 +113,7 @@ export default function ContentQualityView() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2 font-sans text-ink">
+      <AdminBreadcrumb crumbs={[{ label: "Content Quality" }]} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-rule pb-6">
         <div>
