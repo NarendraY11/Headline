@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Card } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { supabase } from "../../lib/supabase";
 
 interface EventRecord {
@@ -475,6 +476,7 @@ export default function AdminActivity() {
 
   return (
     <div className="space-y-6 w-full max-w-7xl mx-auto py-2 font-sans text-ink">
+      <AdminBreadcrumb crumbs={[{ label: "Admin Activity" }]} />
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-rule pb-6">
         <div>

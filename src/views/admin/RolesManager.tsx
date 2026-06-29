@@ -1,6 +1,7 @@
 import { Plus, Shield, ShieldAlert, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { Spinner } from "../../components/Spinner";
 import { useToast } from "../../components/ui/Toast";
 import { supabase } from "../../lib/supabase";
@@ -101,6 +102,7 @@ export default function RolesManager() {
 
   return (
     <div className="max-w-3xl mx-auto p-6 space-y-8">
+      <AdminBreadcrumb crumbs={[{ label: "Admin Roles" }]} />
       <div>
         <h1 className="text-3xl font-serif text-ink tracking-tight mb-1">Admin Roles</h1>
         <p className="text-sm text-muted font-sans">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { ShieldCheck, UserPlus, Trash2, Mail, CheckCircle2, AlertCircle, RefreshCw, Megaphone, Send } from "lucide-react";
 import { trackEvent } from "../../lib/track";
 import { apiFetchRaw, readError } from "../../lib/api";
@@ -165,6 +166,7 @@ export default function AdminSettings() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto py-2 font-sans">
+      <AdminBreadcrumb crumbs={[{ label: "Settings" }]} />
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-rule pb-6">
         <div>

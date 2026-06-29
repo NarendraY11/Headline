@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { FlightControlsDiagram } from "../../components/SystemDiagram";
 import { supabase } from "../../lib/supabase";
 import { trackEvent } from "../../lib/track";
@@ -405,6 +406,7 @@ export default function QuestionsManager() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2 font-sans text-ink">
+      <AdminBreadcrumb crumbs={[{ label: "Questions" }]} />
       {!isEditing ? (
         // DASHBOARD REPOSITORY LIST
         <>

@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
+import { FeatureDisabled } from "../../components/FeatureDisabled";
 import {
   AlertCircle,
   AlertTriangle,
@@ -357,15 +358,7 @@ export default function ContentImportView() {
 
   // ── Render ──────────────────────────────────────────────────────────
 
-  if (!enabled) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 text-muted">
-        <AlertCircle size={28} className="mb-3" />
-        <p className="font-mono text-[10px] uppercase tracking-widest">Content Import Engine is not enabled.</p>
-        <p className="font-sans text-xs text-muted mt-1">Enable the <strong>contentImport</strong> flag in Admin → Features.</p>
-      </div>
-    );
-  }
+  if (!enabled) return <FeatureDisabled title="Content Import Engine" featureKey="contentImport" />;
 
   const preview = state.preview as Record<string, unknown> | null;
 

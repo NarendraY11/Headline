@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { Button, Card } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { supabase } from "../../lib/supabase";
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Save, 
-  X, 
-  AlertCircle, 
-  CheckCircle2, 
-  FileText, 
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Save,
+  X,
+  AlertCircle,
+  CheckCircle2,
+  FileText,
   BookOpen
 } from "lucide-react";
 
@@ -231,7 +232,8 @@ export default function BlogManager() {
 
   return (
     <div className="p-6 md:p-8 space-y-6 max-w-6xl mx-auto font-sans">
-      
+      <AdminBreadcrumb crumbs={[{ label: "Blog Publisher" }]} />
+
       {/* Back to top row / headers */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-rule pb-6">
         <div>

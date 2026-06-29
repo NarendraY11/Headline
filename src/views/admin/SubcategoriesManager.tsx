@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { Plus, Edit2, Trash2, Save, X, RefreshCw, AlertCircle, Eye, EyeOff, CheckCircle2, Server } from "lucide-react";
 import { trackEvent } from "../../lib/track";
 import { seedTaxonomy } from "../../lib/content";
@@ -240,6 +241,7 @@ export default function SubcategoriesManager() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2 font-sans text-ink">
+      <AdminBreadcrumb crumbs={[{ label: "Subcategories" }]} />
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-rule pb-6">
         <div>
