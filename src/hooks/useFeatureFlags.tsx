@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 
-export type FlagKeys = "aiExplain" | "aiCoach" | "aiDiagnosis" | "aiPractice" | "weatherBriefing" | "mockExams" | "topicPractice" | "qotd" | "spacedRepetition" | "flashcards" | "cockpitLayouts" | "analytics" | "masteryCharts" | "blog" | "examSeoPages" | "a320Systems" | "adsense" | "pricingCheckout" | "freeTrial" | "proGating" | "maintenanceMode" | "cookieConsent" | "announcementBanner" | "announcementText" | "signupsOpen" | "themeToggle" | "vivaPractice" | "referralProgram" | "notifications" | "bookmarksEnabled" | "searchEnabled" | "leaderboard" | "offlineMode" | "pwaInstallPrompt" | "aiStudyScheduler" | "masterySnapshots" | "examReadinessDashboard" | "sm2Algorithm" | "adaptiveRegen" | "masteryAnalytics" | "missionScores" | "sm2QualityTiming" | "coachContextEnrichment" | "examReadinessEta" | "predictiveIntelligence" | "advancedTesting" | "pwaEnhanced" | "offlineMissions" | "pushNotifications" | "calendarSync" | "missionEngine" | "xpSystem" | "contentRegistry" | "learningContext" | "contentCms" | "contentImport" | "contentDeliveryEngine" | "learningHierarchy" | "adaptiveLearning";
+export type FlagKeys = "aiExplain" | "aiCoach" | "aiDiagnosis" | "aiPractice" | "weatherBriefing" | "mockExams" | "qotd" | "spacedRepetition" | "flashcards" | "cockpitLayouts" | "analytics" | "masteryCharts" | "blog" | "examSeoPages" | "a320Systems" | "adsense" | "pricingCheckout" | "freeTrial" | "proGating" | "maintenanceMode" | "cookieConsent" | "announcementBanner" | "announcementText" | "signupsOpen" | "themeToggle" | "referralProgram" | "notifications" | "bookmarksEnabled" | "searchEnabled" | "leaderboard" | "pwaInstallPrompt" | "aiStudyScheduler" | "masterySnapshots" | "examReadinessDashboard" | "sm2Algorithm" | "adaptiveRegen" | "masteryAnalytics" | "missionScores" | "sm2QualityTiming" | "examReadinessEta" | "predictiveIntelligence" | "advancedTesting" | "pushNotifications" | "calendarSync" | "missionEngine" | "xpSystem" | "contentRegistry" | "learningContext" | "contentCms" | "contentImport" | "contentDeliveryEngine" | "learningHierarchy" | "adaptiveLearning";
 
 export type Flags = Record<FlagKeys, any>;
 
@@ -12,7 +12,6 @@ export const defaultFlags: Flags = {
   aiPractice: true,
   weatherBriefing: true,
   mockExams: true,
-  topicPractice: true,
   qotd: true,
   spacedRepetition: true,
   flashcards: true,
@@ -32,13 +31,11 @@ export const defaultFlags: Flags = {
   announcementText: "Welcome to our platform!",
   signupsOpen: true,
   themeToggle: true,
-  vivaPractice: true,
   referralProgram: true,
   notifications: true,
   bookmarksEnabled: true,
   searchEnabled: true,
   leaderboard: false,
-  offlineMode: true,
   pwaInstallPrompt: true,
   aiStudyScheduler: false,
   masterySnapshots: false,      // M8A: adaptive mastery engine (OFF until migration applied)
@@ -48,13 +45,10 @@ export const defaultFlags: Flags = {
   masteryAnalytics: false,       // M8E: mastery heatmap + trend graph (pro users only, OFF by default)
   missionScores: false,          // M9A: score chip on completed missions
   sm2QualityTiming: false,       // M9B: response time → quality 3/5 in SM-2
-  coachContextEnrichment: false, // M9C: mission rate + streak sent to coach on regen
   examReadinessEta: false,       // M9D: velocity + ETA projection in readiness gauge
   predictiveIntelligence: false, // M11: pass probability + subject risk + success forecast
   advancedTesting: false,        // M12: adaptive mocks, DGCA simulator, mistake analysis
-  pwaEnhanced: false,            // M13: enhanced PWA install + shortcuts
-  offlineMissions: false,        // M13: cache missions to localStorage for offline
-  pushNotifications: false,      // M13: VAPID push subscription + reminders
+  pushNotifications: false,      // M13: VAPID push subscription + reminders (infra pending)
   calendarSync: false,           // M13: ICS export + Google/Outlook/Apple calendar sync
   missionEngine: false,          // Phase 6: deterministic Mission Activation Engine (OFF until verified in prod)
   xpSystem: false,               // Phase 7.1: XP ledger writes + reads (OFF; history accrues only once ON)

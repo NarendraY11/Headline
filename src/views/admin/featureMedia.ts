@@ -24,7 +24,6 @@ const captions: Partial<Record<FlagKeys, string>> = {
   aiPractice: "AI generating fresh practice questions for an ATA chapter.",
   weatherBriefing: "Raw METAR parsed into a plain-language briefing.",
   mockExams: "The mock exams catalog users land on.",
-  topicPractice: "Free topic/module practice navigation.",
   qotd: "The Question-of-the-Day challenge card.",
   spacedRepetition: "Smart review queue surfacing due weak areas.",
   a320Systems: "Interactive A320 system schematic study view.",
