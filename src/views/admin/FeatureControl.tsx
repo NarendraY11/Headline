@@ -4,6 +4,7 @@ import { PreviewModeProvider } from "../../preview/PreviewModeProvider";
 import { usePreviewSelection } from "../../preview/usePreviewMode";
 import { usePreviewRenderDiagnostics } from "../../preview/previewDiagnostics";
 import { Button } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { Spinner } from "../../components/Spinner";
 import { useToast } from "../../components/ui/Toast";
 import { defaultFlags, FlagKeys, Flags } from "../../hooks/useFeatureFlags";
@@ -254,6 +255,7 @@ function FeatureControlContent({
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
+      <AdminBreadcrumb crumbs={[{ label: "Feature Control" }]} />
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-serif text-ink tracking-tight mb-2">Feature Control</h1>

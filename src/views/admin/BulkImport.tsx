@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { Button } from "../../components/Atoms";
-import { 
-  Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, RefreshCw, 
-  AlertCircle, Download, CheckCircle, XCircle 
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
+import {
+  Upload, FileSpreadsheet, CheckCircle2, AlertTriangle, RefreshCw,
+  AlertCircle, Download, CheckCircle, XCircle
 } from "lucide-react";
 import Papa from "papaparse";
 
@@ -298,6 +299,7 @@ export default function BulkImport() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2 font-sans text-ink">
+      <AdminBreadcrumb crumbs={[{ label: "Bulk Import" }]} />
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-rule pb-6">
         <div>

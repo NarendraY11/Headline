@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from "react";
 import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
+import { FeatureDisabled } from "../../components/FeatureDisabled";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -83,14 +84,7 @@ export default function ContentQualityView() {
 
   useEffect(() => { if (enabled) load(); else setLoading(false); }, [enabled]);
 
-  if (!enabled) {
-    return (
-      <div className="p-6 max-w-xl">
-        <h1 className="text-xl font-bold">Content Quality</h1>
-        <p className="mt-2 opacity-80 text-sm">Enable <code>contentCms</code> flag to access.</p>
-      </div>
-    );
-  }
+  if (!enabled) return <FeatureDisabled title="Content Quality" featureKey="contentCms" />;
 
   if (loading) {
     return (

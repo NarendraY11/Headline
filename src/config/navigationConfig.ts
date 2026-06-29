@@ -4,6 +4,7 @@
 
 import {
   BarChart3,
+  BookOpen,
   Briefcase,
   CalendarDays,
   Compass,
@@ -11,6 +12,7 @@ import {
   Gift,
   Layers,
   LayoutGrid,
+  Map,
   Mic,
   Plane,
   Settings,
@@ -46,8 +48,10 @@ const CORE_NAV: NavItem[] = [
 
 // ── Items gated by feature flag ───────────────────────────────────────────────
 const FEATURE_GATED_NAV: NavItem[] = [
-  { label: "Exam Centre",    to: "/exam-centre",       icon: GraduationCap, featureFlag: "advancedTesting" },
-  { label: "Mock exams",     to: "/mock-exams",        icon: LayoutGrid,    featureFlag: "mockExams"       },
+  { label: "Course",           to: "/course",           icon: BookOpen,      featureFlag: "learningHierarchy" },
+  { label: "Learning Context", to: "/learning-context", icon: Map,           featureFlag: "learningContext"   },
+  { label: "Exam Centre",      to: "/exam-centre",      icon: GraduationCap, featureFlag: "advancedTesting"   },
+  { label: "Mock exams",       to: "/mock-exams",       icon: LayoutGrid,    featureFlag: "mockExams"         },
 ];
 
 // ── Career objective items ────────────────────────────────────────────────────

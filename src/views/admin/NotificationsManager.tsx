@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 
@@ -327,6 +328,7 @@ export default function NotificationsManager() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2">
+      <AdminBreadcrumb crumbs={[{ label: "Notifications" }]} />
       {/* Header */}
       <div className="border-b border-rule pb-6">
         <div className="font-mono text-[9px] tracking-widest text-muted uppercase mb-1">Administrative deck</div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { Plus, Edit2, Trash2, Save, X, AlertCircle, Eye, EyeOff, CheckCircle2, Award, Sliders, Settings } from "lucide-react";
 import { trackEvent } from "../../lib/track";
 import { 
@@ -240,6 +241,7 @@ export default function ExamsManager() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2 font-sans text-ink">
+      <AdminBreadcrumb crumbs={[{ label: "Exams" }]} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-rule pb-6">
         <div>
           <div className="font-mono text-[9px] tracking-widest text-muted uppercase mb-1">Simulations Index</div>

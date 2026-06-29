@@ -1,6 +1,7 @@
 import { Eye, EyeOff, Save } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../../components/Atoms";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { Spinner } from "../../components/Spinner";
 import { useToast } from "../../components/ui/Toast";
 import { supabase } from "../../lib/supabase";
@@ -79,6 +80,7 @@ export default function SiteContentManager() {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
+      <AdminBreadcrumb crumbs={[{ label: "Site Content" }]} />
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-3xl font-serif text-ink tracking-tight mb-1">Site Content</h1>

@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
+import { FeatureDisabled } from "../../components/FeatureDisabled";
 import { useFeatureFlags } from "../../hooks/useFeatureFlags";
 import {
   flattenTree,
@@ -278,7 +279,7 @@ function BulkToolbar({
       <div className="h-4 w-px bg-amber-200" />
       <button onClick={onPublish} className="text-xs border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2 py-1 rounded-lg">Publish</button>
       <button onClick={onArchive} className="text-xs border border-rule bg-bg-2 text-muted hover:bg-bg-2/80 px-2 py-1 rounded-lg">Archive</button>
-      <button onClick={onRestore} className="text-xs border border-rule bg-bg-2 text-muted hover:bg-bg-2/80 px-2 py-1 rounded-lg">→ Draft</button>
+      <button onClick={onRestore} className="text-xs border border-rule bg-bg-2 text-muted hover:bg-bg-2/80 px-2 py-1 rounded-lg">Restore</button>
       {fields.map((f) => (
         <button
           key={f.key}
@@ -501,16 +502,7 @@ export default function ContentCmsView() {
 
   // ── Feature gate ─────────────────────────────────────────────────────
 
-  if (!enabled) {
-    return (
-      <div className="p-6 max-w-xl">
-        <h1 className="text-xl font-bold">Content CMS</h1>
-        <p className="mt-2 opacity-80 text-sm">
-          Enable <code>contentCms</code> in Feature Control to access.
-        </p>
-      </div>
-    );
-  }
+  if (!enabled) return <FeatureDisabled title="Content CMS" featureKey="contentCms" />;
 
   const allQSelected = page && page.data.length > 0 && page.data.every((q) => selectedQIds.has(q.id));
 
@@ -594,7 +586,7 @@ export default function ContentCmsView() {
                 <span className="text-amber-800 font-mono text-[10px]">{selected.size} {selType}</span>
                 <button className="px-1.5 py-0.5 border border-emerald-200 text-emerald-700 rounded text-[10px]" onClick={() => treeOp("publish")}>Publish</button>
                 <button className="px-1.5 py-0.5 border border-rule text-muted rounded text-[10px]" onClick={() => treeOp("archive")}>Archive</button>
-                <button className="px-1.5 py-0.5 border border-rule text-muted rounded text-[10px]" onClick={() => treeOp("restore")}>→Draft</button>
+                <button className="px-1.5 py-0.5 border border-rule text-muted rounded text-[10px]" onClick={() => treeOp("restore")}>Restore</button>
                 <button className="ml-auto" onClick={() => setSelected(new Set())}><X size={10} /></button>
               </div>
             )}

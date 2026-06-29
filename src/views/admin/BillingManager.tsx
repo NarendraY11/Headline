@@ -25,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { useToast } from "../../components/ui/Toast";
 import { supabase } from "../../lib/supabase";
 
@@ -457,6 +458,8 @@ export default function BillingManager() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2">
+
+      <AdminBreadcrumb crumbs={[{ label: "Billing" }]} />
 
       {/* Header */}
       <div className="border-b border-rule pb-6">
