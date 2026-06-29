@@ -1,25 +1,17 @@
 import { ArrowUpRight, CheckCircle2, Menu, MoveRight, User, X } from "lucide-react";
-import { type CSSProperties, useEffect, useState } from "react";
+import { type CSSProperties, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button, Card, Chip, CompassLogomark, Wordmark } from "../components/Atoms";
 import DailyStudyGoal from "../components/DailyStudyGoal";
 import LeadCapture from "../components/LeadCapture";
 import { FlightControlsDiagram } from "../components/SystemDiagram";
 import { useAuth } from "../contexts/AuthContext";
-import { Question } from "../data/questions";
-import { fetchMergedSubjects, fetchPublishedQuestions } from "../lib/content";
+import { useHomeStats } from "../hooks/useHomeStats";
 import { HOME_FAQ } from "../lib/jsonLd";
-import { supabase } from "../lib/supabase";
 import { FadeUp } from "./home/FadeUp";
 import { FAQItem } from "./home/FAQItem";
 import { InteractiveSampleQuestion } from "./home/InteractiveSampleQuestion";
 import { LazyChartWrapper } from "./home/LazyChartWrapper";
-
-// Trust-stat floors used until (or instead of) live counts resolve. Keeping
-// these in sync with the bank size advertised on /pricing avoids a "0
-// questions" headline when the Supabase count query is blocked.
-const QUESTION_COUNT_FALLBACK = 6940;
-const SUBJECT_COUNT_FALLBACK = 28;
 
 interface SiteContent {
   hero_subheadline?: string;
@@ -33,55 +25,13 @@ interface SiteContent {
 export default function HomeView() {
   const { user, openAuthModal } = useAuth();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  // Never render 0 for these trust stats: if the live count query is blocked
-  // (RLS) or returns null, fall back to a realistic floor rather than "0".
-  const [liveQuestionsCount, setLiveQuestionsCount] = useState<number>(QUESTION_COUNT_FALLBACK);
-  const [liveSubjectsCount, setLiveSubjectsCount] = useState<number>(SUBJECT_COUNT_FALLBACK);
-  const [platformAnsweredCount, setPlatformAnsweredCount] = useState<number>(42520);
-  const [activePilotsCount, setActivePilotsCount] = useState<number>(230);
-  const [siteContent, setSiteContent] = useState<SiteContent>({});
+  const { stats, previewQuestions: questions } = useHomeStats();
 
-  useEffect(() => {
-    // Defer all Supabase queries until after first paint so they don't compete
-    // with the critical render path. Trust-stat fallbacks already provide
-    // realistic floor values, so the hero and stats are immediately visible.
-    const timer = setTimeout(async () => {
-      try {
-        const [previewQuestions, mergedSubjects, countResponse, profilesResponse, attemptsResponse, settingsResponse] = await Promise.all([
-          fetchPublishedQuestions({ limit: 10 }),
-          fetchMergedSubjects(),
-          supabase.from("questions").select("id", { count: "exact", head: true }).eq("status", "published"),
-          supabase.from("profiles").select("id", { count: "exact", head: true }),
-          supabase.from("attempts").select("total"),
-          supabase.from("app_settings").select("site_content").eq("id", 1).single()
-        ]);
-
-        setQuestions(previewQuestions);
-        const resolvedQuestions = countResponse.count ?? previewQuestions.length;
-        if (resolvedQuestions > 0) setLiveQuestionsCount(resolvedQuestions);
-        if (mergedSubjects.length > 0) setLiveSubjectsCount(mergedSubjects.length);
-
-        if (profilesResponse?.count) {
-          setActivePilotsCount(profilesResponse.count);
-        }
-
-        if (attemptsResponse?.data && attemptsResponse.data.length > 0) {
-          const sum = attemptsResponse.data.reduce((acc, curr) => acc + (curr.total || 0), 0);
-          if (sum > 0) {
-            setPlatformAnsweredCount(sum);
-          }
-        }
-
-        if (settingsResponse?.data?.site_content) {
-          setSiteContent(settingsResponse.data.site_content as SiteContent);
-        }
-      } catch (e) {
-        console.warn("Error loading home stats and content:", e);
-      }
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const liveQuestionsCount = stats.questionsCount;
+  const liveSubjectsCount = stats.subjectsCount;
+  const platformAnsweredCount = stats.attemptsCount;
+  const activePilotsCount = stats.pilotsCount;
+  const siteContent = stats.siteContent as SiteContent;
 
   const orgJsonLd = {
     "@context": "https://schema.org",

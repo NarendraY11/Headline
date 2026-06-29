@@ -27,6 +27,8 @@ import {
     MockPaperSpec
 } from "../lib/content";
 import { getEligibleExams, getEligibleQuestions } from "../lib/contentQueries";
+import { quizStateKey } from "../lib/storageKeys";
+import { PageBackground } from "../components/PageBackground";
 import { useContentScope } from "../hooks/useContentScope";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { supabase } from "../lib/supabase";
@@ -312,8 +314,7 @@ export default function MockExamsView() {
   if (loading) {
     return (
       <div className="relative min-h-screen">
-        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
-        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <PageBackground />
         <div className="relative z-10 px-4 py-8 md:py-16 max-w-7xl mx-auto space-y-12 animate-pulse">
           <div className="max-w-xl space-y-4">
             <div className="h-4 bg-muted-2/25 w-40 rounded font-mono"></div>
@@ -341,8 +342,7 @@ export default function MockExamsView() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
-      <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+      <PageBackground />
 
       <div className="relative z-10 px-4 py-8 md:py-16 max-w-7xl mx-auto">
         
@@ -741,7 +741,7 @@ export default function MockExamsView() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {selectedExamSubjects.flatMap(sub => (sub.subTopics || []).map(topic => {
-                      const hasSavedState = !!localStorage.getItem(`heading_quiz_state_${topic.id}`);
+                      const hasSavedState = !!localStorage.getItem(quizStateKey(topic.id));
                       const isDry = topic.questionCount === 0;
 
                       return (

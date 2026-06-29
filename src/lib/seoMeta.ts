@@ -1,4 +1,4 @@
-import { blogPosts } from "../data/blog";
+import { blogMeta as blogPosts } from "../data/blogMeta";
 
 export interface RouteMeta {
   title: string;

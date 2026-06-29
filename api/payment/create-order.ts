@@ -1,14 +1,9 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { createClient } from "@supabase/supabase-js";
-import { getAuthenticatedUser, getRazorpay, isFeatureEnabled, validatePaymentInterval, screenSubmission } from "../_lib/utils.js";
+import { getAuthenticatedUser, getRazorpay, isFeatureEnabled, getSupabaseAdmin, validatePaymentInterval, screenSubmission } from "../_lib/utils.js";
 
 async function getPricingFromDb(): Promise<{ monthly: number; yearly: number }> {
   try {
-    const sb = createClient(
-      process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "",
-      process.env.SUPABASE_SERVICE_ROLE_KEY || ""
-    );
-    const { data } = await sb.from("app_settings").select("pricing").eq("id", 1).single();
+    const { data } = await getSupabaseAdmin().from("app_settings").select("pricing").eq("id", 1).single();
     if (data?.pricing) {
       const monthly = data.pricing.monthly?.amount ?? 499;
       const yearly = data.pricing.yearly?.amount ?? 2999;

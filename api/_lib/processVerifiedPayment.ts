@@ -123,50 +123,24 @@ export async function processVerifiedPayment(params: VerifyPaymentParams): Promi
     .eq("id", user.id)
     .maybeSingle();
 
-  const { error } = await admin
-    .from("profiles")
-    .update({
-      plan: "pro",
-      plan_status: "active",
-      plan_started_at: startedAt,
-      plan_expires_at: expiresAt.toISOString(),
-    })
-    .eq("id", user.id);
+  // Atomic: profile update + payment ledger + audit trail in one Postgres transaction.
+  const { error: rpcError } = await admin.rpc("grant_plan_from_payment", {
+    p_user_id:    user.id,
+    p_payment_id: razorpay_payment_id,
+    p_order_id:   razorpay_order_id,
+    p_amount:     paidAmount,
+    p_currency:   order.currency || "INR",
+    p_interval:   verifiedInterval,
+    p_status:     order.status,
+    p_source:     "verify",
+    p_notes:      order.notes ?? null,
+    p_old_plan:   prevProfile?.plan ?? null,
+    p_expires_at: expiresAt.toISOString(),
+    p_started_at: startedAt,
+  });
 
-  if (error) {
-    throw error;
-  }
-
-  // Durable payment ledger. Unique razorpay_payment_id is the idempotency key;
-  // a duplicate (race with the webhook) surfaces as a conflict and is swallowed
-  // — the grant above is already idempotent via the pre-check.
-  try {
-    await admin.from("payments").insert({
-      user_id: user.id,
-      razorpay_payment_id,
-      razorpay_order_id,
-      amount: paidAmount,
-      currency: order.currency || "INR",
-      status: order.status,
-      interval: verifiedInterval,
-      source: "verify",
-      notes: order.notes ?? null,
-    });
-  } catch (payErr) {
-    console.warn("payments insert failed:", payErr);
-  }
-
-  // Audit trail (best-effort).
-  try {
-    await admin.from("plan_changes").insert({
-      user_id: user.id,
-      old_plan: prevProfile?.plan ?? null,
-      new_plan: "pro",
-      expires_at: expiresAt.toISOString(),
-      note: `razorpay payment ${razorpay_payment_id} (${verifiedInterval})`,
-    });
-  } catch (auditErr) {
-    console.warn("plan_changes audit insert failed:", auditErr);
+  if (rpcError) {
+    throw rpcError;
   }
 
   await grantReferralRewards(admin, user.id, expiresAt);

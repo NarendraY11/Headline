@@ -258,11 +258,13 @@ export default function ShareableScorecard({
       {/* LEFT: CANVAS PREVIEW */}
       <div className="shrink-0 flex flex-col items-center">
         <div className="relative border border-rule shadow-inner bg-[#101214] rounded-xl overflow-hidden max-w-[280px] sm:max-w-[340px]">
-          <canvas 
+          <canvas
             id="shareableResultCardCanvas"
-            ref={canvasRef} 
+            ref={canvasRef}
             className="w-full h-auto aspect-square block cursor-pointer transition-all hover:brightness-[1.03]"
             title="Click to download full-res scorecard!"
+            role="img"
+            aria-label="Score card preview. Click to download full resolution image."
             onClick={handleDownload}
           />
         </div>

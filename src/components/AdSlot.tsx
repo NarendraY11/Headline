@@ -49,7 +49,7 @@ export const AdSlot: React.FC<AdSlotProps> = ({
   responsive = true
 }) => {
   const { user } = useAuth();
-  const { isEnabled } = useFeature("adsense");
+  const isEnabled = useFeature("adsense");
   const adsContainerRef = useRef<HTMLModElement>(null);
   
   // Conditionally render Ad

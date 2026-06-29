@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { ArrowLeft, ArrowRight, Bookmark, CheckCircle2, Clock, Flag, Sparkles, X, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button, Chip, Wordmark } from "../../components/Atoms";
 import ReportQuestionModal from "../../components/ReportQuestionModal";
 import { FlightControlsDiagram } from "../../components/SystemDiagram";
@@ -42,6 +42,14 @@ export default function EditorialLayout({
   aiExplainEnabled
 }: QuizLayoutProps) {
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [timeAnnouncement, setTimeAnnouncement] = useState("");
+
+  useEffect(() => {
+    if (timeLeft === 300) setTimeAnnouncement("5 minutes remaining");
+    else if (timeLeft === 60) setTimeAnnouncement("1 minute remaining");
+    else if (timeLeft === 0) setTimeAnnouncement("Time is up");
+  }, [timeLeft]);
+
   return (
     <div className="flex flex-col min-h-screen min-h-[100dvh] bg-bg">
       {/* SHARED TOP BAR */}
@@ -96,6 +104,7 @@ export default function EditorialLayout({
              <Clock size={13} strokeWidth={1.5} aria-hidden="true" />
              {mode === "timed" && timeLeft !== null ? formatTime(timeLeft) : formatTime(timeElapsed)}
           </div>
+          <span className="sr-only" aria-live="polite" aria-atomic="true">{timeAnnouncement}</span>
 
           <button 
             onClick={() => toggleBookmark(currentQ)}
@@ -205,7 +214,9 @@ export default function EditorialLayout({
             )}
 
             {/* Choices Area */}
-            <motion.div 
+            <motion.div
+              role="radiogroup"
+              aria-label="Answer choices"
               className="space-y-3 flex-1 mb-8"
               variants={{
                 show: { transition: { staggerChildren: 0.04 } }
@@ -287,8 +298,9 @@ export default function EditorialLayout({
                            handleSelectOption(choice.id);
                          }
                        }}
+                       role="radio"
+                       aria-checked={isSelected}
                        aria-label={`Choice ${charLabel}: ${choice.label}`}
-                       aria-pressed={isSelected}
                        className={`p-5 rounded-xl border flex items-center gap-5 outline-none focus-visible:ring-2 focus-visible:ring-ink/40 focus-visible:border-ink/30 transition-shadow ${containerClass}`}
                      >
                        <div className="w-8 h-8 rounded-full border border-current flex items-center justify-center shrink-0 bg-paper transition-colors">

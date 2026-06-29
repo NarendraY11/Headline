@@ -10,6 +10,7 @@ import {
     Zap
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import FocusTrap from "focus-trap-react";
 import { NotificationItem, useNotifications } from "../contexts/NotificationContext";
 
 export default function NotificationCenter() {
@@ -105,6 +106,7 @@ export default function NotificationCenter() {
 
       {/* Dropdown Pane */}
       {isOpen && (
+        <FocusTrap focusTrapOptions={{ clickOutsideDeactivates: true, escapeDeactivates: true, returnFocusOnDeactivate: true }}>
           <div
             className="anim-pop absolute right-0 mt-2.5 w-[calc(100vw-2rem)] sm:w-80 md:w-96 max-w-sm bg-paper border border-rule rounded-xl shadow-[0_16px_40px_rgba(0,0,0,0.1)] overflow-hidden z-50 origin-top-right text-left"
           >
@@ -211,6 +213,7 @@ export default function NotificationCenter() {
               <span className="font-mono text-[8px] text-muted uppercase tracking-widest">Aviation Standards Compliant</span>
             </div>
           </div>
+        </FocusTrap>
         )}
     </div>
   );

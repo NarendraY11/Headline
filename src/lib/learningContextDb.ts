@@ -37,8 +37,8 @@ export async function resolveActiveLearningContext(
   if (!userId) return buildActiveLearningContext({ legacy });
   try {
     const [{ data: enrollments }, { data: profile }] = await Promise.all([
-      supabase.from("enrollments").select("*").eq("user_id", userId),
-      supabase.from("learning_profiles").select("*").eq("user_id", userId).maybeSingle(),
+      supabase.from("enrollments").select("id, user_id, certification_id, aircraft_id, program_id, is_active, status, created_at").eq("user_id", userId),
+      supabase.from("learning_profiles").select("id, user_id, certification_id, aircraft_id, program_id, last_synced_at, created_at").eq("user_id", userId).maybeSingle(),
     ]);
     return buildActiveLearningContext({
       enrollment: pickActiveEnrollment(enrollments as EnrollmentRow[] | null),
@@ -82,22 +82,13 @@ export async function syncLearningModel(
       { onConflict: "user_id" }
     );
 
-    // 2) Deactivate any current active enrollment (one-active constraint).
-    await supabase.from("enrollments").update({ is_active: false })
-      .eq("user_id", userId).eq("is_active", true);
-
-    // 3) Upsert + activate the target enrollment.
-    await supabase.from("enrollments").upsert(
-      {
-        user_id: userId,
-        program_id: programId,
-        certification_id: certificationId,
-        aircraft_id: aircraftId,
-        status: "active",
-        is_active: true,
-      },
-      { onConflict: "user_id,certification_id" }
-    );
+    // 2+3) Atomic: deactivate-others + upsert-active in one Postgres transaction.
+    await supabase.rpc("activate_enrollment", {
+      p_user_id:     userId,
+      p_cert_id:     certificationId,
+      p_program_id:  programId ?? null,
+      p_aircraft_id: aircraftId ?? null,
+    });
     return true;
   } catch {
     return false;
@@ -106,7 +97,7 @@ export async function syncLearningModel(
 
 // ── Admin enrollment ops (used by hidden EnrollmentsAdmin) ────────────
 export async function adminListEnrollments(userId?: string): Promise<EnrollmentRow[]> {
-  let q = supabase.from("enrollments").select("*").order("created_at", { ascending: false });
+  let q = supabase.from("enrollments").select("id, user_id, certification_id, aircraft_id, program_id, is_active, status, created_at").order("created_at", { ascending: false }).limit(500);
   if (userId) q = q.eq("user_id", userId);
   const { data, error } = await q;
   if (error) throw error;
@@ -127,12 +118,14 @@ export async function adminCreateEnrollment(row: {
   if (error) throw error;
 }
 
-/** Activate one enrollment, deactivating the user's others first. */
+/** Activate one enrollment, deactivating the user's others first. Atomic via RPC. */
 export async function adminActivateEnrollment(enrollment: EnrollmentRow): Promise<void> {
-  await supabase.from("enrollments").update({ is_active: false })
-    .eq("user_id", enrollment.user_id).eq("is_active", true);
-  const { error } = await supabase.from("enrollments")
-    .update({ is_active: true, status: "active" }).eq("id", enrollment.id);
+  const { error } = await supabase.rpc("activate_enrollment", {
+    p_user_id:     enrollment.user_id,
+    p_cert_id:     enrollment.certification_id,
+    p_program_id:  enrollment.program_id ?? null,
+    p_aircraft_id: enrollment.aircraft_id ?? null,
+  });
   if (error) throw error;
 }
 

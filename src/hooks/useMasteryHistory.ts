@@ -182,8 +182,7 @@ export function useMasteryHistory(weeks = 8): UseMasteryHistoryResult {
 
   useEffect(() => {
     void load();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [flagEnabled, userId]);
+  }, [load]);
 
   return result;
 }

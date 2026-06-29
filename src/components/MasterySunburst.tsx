@@ -1,7 +1,7 @@
 import { select, scaleLinear, hierarchy, partition, arc, interpolate } from "d3";
 import type { HierarchyRectangularNode } from "d3";
 import { AlertTriangle, Archive, CheckCircle, Info, Star, Target } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SubjectItem } from "../data/topics";
 import { Button, Card } from "./Atoms";
 import { useChartTokens } from "../views/today/useChartTokens";
@@ -161,7 +161,7 @@ export function MasterySunburst({ subjectsList, logbook }: MasterySunburstProps)
     };
   };
 
-  const hierarchyData = buildHierarchyData();
+  const hierarchyData = useMemo(() => buildHierarchyData(), [subjectsList, logbook, progressMap, sizeMode]);
 
   useEffect(() => {
     if (!svgRef.current) return;

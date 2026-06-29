@@ -131,7 +131,7 @@ export function ProGate({ children, type, isUnlocked = false }: ProGateProps) {
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-rule group/gate">
       {/* Blurred Preview Content */}
-      <div className="select-none pointer-events-none filter blur-[5px] opacity-40 scale-[1.01] transition-all duration-300">
+      <div className="select-none pointer-events-none filter blur-[5px] opacity-40 scale-[1.01] transition-all duration-300" aria-hidden="true">
         {children}
       </div>
 

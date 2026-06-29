@@ -198,9 +198,9 @@ function finalizePlan(plan: any, meta: { horizonDays: number; examId: string | n
   return plan;
 }
 
-// Archive the prior active plan and insert the new one as active. Two
-// statements (supabase-js has no transaction); the partial-unique index is the
-// backstop. Returns the new row id, or null if persistence failed.
+// Archive the prior active plan and insert the new one as active in one
+// atomic Postgres transaction via the upsert_active_study_plan RPC.
+// Returns the new row id, or null if persistence failed.
 async function persistPlan(
   admin: Admin,
   uid: string,
@@ -209,34 +209,19 @@ async function persistPlan(
   meta: { examId: string | null; targetDate: string | null }
 ): Promise<string | null> {
   try {
-    // FIX #19 (known edge case, documented): archive + insert are two separate
-    // Supabase calls — not atomic. If a concurrent coach request fires between
-    // the archive and the insert, both requests archive the prior plan, then
-    // both attempt to insert a new active plan. The second insert hits the
-    // partial-unique index (uniq_study_plans_active_per_user) and fails.
-    // At current request volume this is acceptable: the failing request returns
-    // null and the coach falls back to markdown. A future fix would be to wrap
-    // both calls in a Postgres RPC (requires a new migration). Tracked in audit.
-    await admin.from("study_plans").update({ status: "archived" }).eq("user_id", uid).eq("status", "active");
-    const { data, error } = await admin
-      .from("study_plans")
-      .insert({
-        user_id: uid,
-        exam_id: meta.examId,
-        target_date: meta.targetDate,
-        status: "active",
-        source: "ai",
-        model: MODEL,
-        plan,
-        generated_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
+    const { data, error } = await admin.rpc("upsert_active_study_plan", {
+      p_user_id:      uid,
+      p_exam_id:      meta.examId,
+      p_target_date:  meta.targetDate,
+      p_model:        MODEL,
+      p_plan:         plan,
+      p_generated_at: new Date().toISOString(),
+    });
     if (error) {
-      console.error("persistPlan insert failed:", error.message);
+      console.error("persistPlan rpc failed:", error.message);
       return null;
     }
-    return (data?.id as string) ?? null;
+    return (data as string) ?? null;
   } catch (e) {
     console.error("persistPlan threw:", e);
     return null;

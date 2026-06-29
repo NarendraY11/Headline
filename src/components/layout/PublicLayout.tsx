@@ -60,6 +60,9 @@ export function PublicLayout() {
 
   return (
     <div className="min-h-screen flex flex-col items-stretch overflow-y-auto no-scrollbar font-sans" style={{ height: "100dvh" }}>
+      <a href="#public-main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-navy focus:text-bg focus:rounded-md focus:text-sm focus:font-sans focus:outline-none">
+        Skip to main content
+      </a>
       {location.pathname !== '/' && (
       <header className="h-[calc(64px+var(--sat))] pt-[var(--sat)] border-b border-rule flex items-center justify-between px-4 md:px-6 bg-bg/95 backdrop-blur-md sticky top-0 z-50 flex-shrink-0">
         <Link
@@ -236,7 +239,7 @@ export function PublicLayout() {
         </div>
       )}
 
-      <main className="flex-1 w-full bg-bg text-ink shrink-0 relative flex flex-col">
+      <main id="public-main-content" className="flex-1 w-full bg-bg text-ink shrink-0 relative flex flex-col">
         <Suspense fallback={<LoadingFallback />}>
           <PageTransition keyId={location.pathname}>
             <ErrorBoundary>

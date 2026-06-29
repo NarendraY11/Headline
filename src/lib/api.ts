@@ -179,6 +179,24 @@ export async function apiFetchRaw(
   }
 }
 
+export function aiStreamErrorToast(
+  showToast: (opts: { type: "success" | "error" | "info"; title: string; message: string; duration: number }) => void,
+  response: Response | null,
+  msg: string
+): void {
+  showToast({
+    type: "error",
+    title:
+      response?.status === 429
+        ? "Slow down"
+        : response?.status === 403
+        ? "Upgrade required"
+        : "Service Offline",
+    message: msg,
+    duration: 5000,
+  });
+}
+
 /** Best-effort extraction of an error message from a Response. */
 // Infrastructure error patterns that must never appear in UI.
 const INFRA_ERROR_RE = /FUNCTION_INVOCATION_FAILED|bom\d+::|iad\d+::|sin\d+::|sfo\d+::|A server error has occurred|Internal Server Error/i;

@@ -11,7 +11,9 @@ import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
 import { useContentScope } from "../hooks/useContentScope";
 import { useLearningProgress } from "../hooks/useLearningProgress";
-import { fetchMergedSubjects } from "../lib/content";
+import { quizStateKey } from "../lib/storageKeys";
+import { useSubjects } from "../hooks/useSubjects";
+import { PageBackground } from "../components/PageBackground";
 import { getDailyReviewItems } from "../lib/logbook";
 import { useUserProgress } from "../lib/progress";
 
@@ -29,8 +31,7 @@ export default function ModulesView() {
   const moduleProgress = learningProgress.modules;
   const topicProgress = learningProgress.topics;
 
-  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { subjects: subjectsList, loading } = useSubjects();
 
   const [sortOrder, setSortOrder] = useState<"weakest" | "strongest" | "az">("weakest");
   const [syllabus, setSyllabus] = useState<"All" | "EASA" | "DGCA" | "FAA" | "TYPE_RATING">("All");
@@ -38,20 +39,6 @@ export default function ModulesView() {
   const [showMasteryOverlay, setShowMasteryOverlay] = useState(false);
   const [expandedSubjects, setExpandedSubjects] = useState<Set<string>>(new Set());
   const [expandedModuleTopics, setExpandedModuleTopics] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    async function loadSubjects() {
-      try {
-        const merged = await fetchMergedSubjects();
-        setSubjectsList(merged);
-      } catch (err) {
-        console.error("Failed loading subjects in ModulesView:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadSubjects();
-  }, []);
 
   // Sync syllabus/sort based on learning context.
   // When contentDeliveryEngine is ON, scope drives filtering directly
@@ -99,8 +86,7 @@ export default function ModulesView() {
   if (loading) {
     return (
       <div className="relative min-h-screen">
-        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
-        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <PageBackground />
         <div className="relative z-10 px-4 py-8 md:py-16 max-w-7xl mx-auto space-y-12 animate-pulse">
           <div className="max-w-xl space-y-4">
             <span className="h-4 bg-muted-2/25 w-32 rounded font-mono inline-block"></span>
@@ -203,8 +189,7 @@ export default function ModulesView() {
   return (
     <div className="relative min-h-screen">
       <ReadingProgress />
-      <div className="absolute inset-0 blueprint pointer-events-none opacity-[0.03] z-0" />
-      <div className="absolute inset-0 paper-grain pointer-events-none z-1" />
+      <PageBackground blueprintOpacity={3} />
 
       <div className="relative z-10 px-6 py-12 md:py-16 max-w-7xl mx-auto">
         
@@ -578,8 +563,8 @@ export default function ModulesView() {
             const isComingSoon = sub.status === "coming-soon";
             const actualMastery = (progressStats.subjectMastery[sub.id] || 0) / 100;
             
-            const hasSavedState = !!localStorage.getItem(`heading_quiz_state_${sub.id}`) || 
-                                  (sub.subTopics?.some(t => !!localStorage.getItem(`heading_quiz_state_${t.id}`)) ?? false);
+            const hasSavedState = !!localStorage.getItem(quizStateKey(sub.id)) ||
+                                  (sub.subTopics?.some(t => !!localStorage.getItem(quizStateKey(t.id))) ?? false);
 
             let barColor = getHueColor(sub.hue);
             let statusPillLabel = "MASTERED";

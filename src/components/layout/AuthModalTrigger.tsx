@@ -1,11 +1,13 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useAuthModal } from "../../contexts/AuthModalContext";
 import AuthModal from "../AuthModal";
 
 
 export function AuthModalTrigger() {
-  const { user, authModalOpen, authModalTab, closeAuthModal } = useAuth();
+  const { user } = useAuth();
+  const { authModalOpen, authModalTab, closeAuthModal } = useAuthModal();
   const navigate = useNavigate();
   const location = useLocation();
   const prevUser = useRef<typeof user>(null);

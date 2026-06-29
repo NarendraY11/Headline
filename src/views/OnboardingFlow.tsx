@@ -388,12 +388,14 @@ function Step2Pacing({
     <div className="space-y-8">
       <div>
         <span className="block font-sans text-[11px] text-muted-2 font-bold uppercase tracking-wider mb-4">DAILY TRAINING DRILL INTENSITY</span>
-        <div className="space-y-3">
+        <div role="radiogroup" aria-label="Daily training intensity" className="space-y-3">
           {intensityPresets.map(preset => {
             const isSel = dailyGoal === preset.id;
             return (
               <button
                 key={preset.id}
+                role="radio"
+                aria-checked={isSel}
                 onClick={() => setDailyGoal(preset.id)}
                 className={`w-full text-left p-4 sm:p-5 border rounded-[16px] transition-all flex items-center ${isSel ? 'border-ink ring-1 ring-ink bg-bg-2' : 'border-rule bg-bg hover:border-ink/20'}`}
               >
@@ -415,12 +417,14 @@ function Step2Pacing({
 
       <div className="border-t border-rule pt-6">
         <span className="block font-sans text-[11px] text-muted-2 font-bold uppercase tracking-wider mb-4">TARGET EXAM TIMELINE</span>
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div role="radiogroup" aria-label="Target exam date" className="grid grid-cols-2 gap-3 mb-4">
           {datePresets.map(preset => {
             const isSel = targetDatePreset === preset.id;
             return (
               <button
                 key={preset.id}
+                role="radio"
+                aria-checked={isSel}
                 onClick={() => {
                   setTargetDatePreset(preset.id);
                   if (preset.id !== "custom") {

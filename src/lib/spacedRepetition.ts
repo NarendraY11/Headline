@@ -158,7 +158,7 @@ export async function fetchUserQuestionProgress(userId: string): Promise<Record<
   try {
     const { data, error } = await supabase
       .from("question_progress")
-      .select("*")
+      .select("question_id, correct, seen_count, last_seen_at, next_review_at, ease, interval, quality, review_count")
       .eq("user_id", userId);
 
     if (error) {
@@ -375,13 +375,29 @@ export async function trackAnswerForStreakAndGoal(
 }
 
 export async function getDueQuestionIds(userId: string | null): Promise<string[]> {
-  let progressMap: Record<string, QuestionProgress> = {};
   if (userId) {
-    progressMap = await fetchUserQuestionProgress(userId);
-  } else {
-    progressMap = await getLocalQuestionProgress();
+    // Server-side filter: only fetch rows where next_review_at <= now
+    const nowIso = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("question_progress")
+      .select("question_id")
+      .eq("user_id", userId)
+      .lte("next_review_at", nowIso);
+
+    if (error) {
+      console.warn("getDueQuestionIds: DB query failed, falling back to local", error);
+      const progressMap = await getLocalQuestionProgress();
+      const now = new Date();
+      return Object.values(progressMap)
+        .filter(p => new Date(p.next_review_at) <= now)
+        .map(p => p.question_id);
+    }
+
+    return (data ?? []).map(r => r.question_id);
   }
 
+  // Local storage path — filter client-side (no DB available)
+  const progressMap = await getLocalQuestionProgress();
   const now = new Date();
   const dueIds: string[] = [];
   const wrongOrWeakIds: string[] = [];

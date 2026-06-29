@@ -4,6 +4,9 @@ import { trackEvent } from '../lib/track';
 import { registerActiveSession, clearLocalSession, checkSessionValidity, isSameDevice } from '../lib/sessionTracker';
 import { apiFetch } from '../lib/api';
 import { posthogIdentify, posthogReset } from '../lib/posthog';
+import { clearRegistryCache } from '../lib/contentRegistryDb';
+import { useAuthModal } from './AuthModalContext';
+import { QUIZ_STATE_PREFIX } from '../lib/storageKeys';
 
 export interface UserData {
   attempts: any;
@@ -76,8 +79,6 @@ interface AuthContextType {
   logoutEverywhere: () => Promise<void>;
   updateUserData: (data: Partial<UserData>) => Promise<void>;
   resetAccount: () => Promise<void>;
-  authModalOpen: boolean;
-  authModalTab: 'signin' | 'signup' | 'forgot';
   openAuthModal: (defaultTab?: 'signin' | 'signup' | 'forgot') => void;
   closeAuthModal: () => void;
 }
@@ -102,8 +103,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState<'signin' | 'signup' | 'forgot'>('signin');
+  // Modal state lives in AuthModalContext (separate provider) so that opening/
+  // closing the auth modal does not re-render every useAuth() consumer.
+  const { openAuthModal, closeAuthModal } = useAuthModal();
 
   useEffect(() => {
     if (!user) return;
@@ -197,15 +199,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [user?.uid]);
-
-  const openAuthModal = useCallback((defaultTab: 'signin' | 'signup' | 'forgot' = 'signin') => {
-    setAuthModalTab(defaultTab);
-    setAuthModalOpen(true);
-  }, []);
-
-  const closeAuthModal = useCallback(() => {
-    setAuthModalOpen(false);
-  }, []);
 
   const fetchUserData = useCallback(async (uid: string, mappedUser: any) => {
     try {
@@ -343,7 +336,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (!attemptsErr && attemptsData) {
         attemptsData.forEach(item => {
-          uData.attempts[`heading_quiz_state_${item.topic_id}`] = item.data;
+          uData.attempts[`${QUIZ_STATE_PREFIX}${item.topic_id}`] = item.data;
         });
 
         // Compute auxiliary metrics on the fly
@@ -386,7 +379,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const localAttempts: Record<string, any> = {};
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key?.startsWith('heading_quiz_state_')) {
+        if (key?.startsWith(QUIZ_STATE_PREFIX)) {
             try {
                 localAttempts[key] = JSON.parse(localStorage.getItem(key) || '{}');
             } catch {}
@@ -474,7 +467,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // 5. Save local state attempts
       for (const [key, value] of Object.entries(localAttempts)) {
-        const topicId = key.replace('heading_quiz_state_', '');
+        const topicId = key.replace(QUIZ_STATE_PREFIX, '');
         const { data: existing } = await supabase
           .from('attempts')
           .select('id')
@@ -629,6 +622,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error signing out from Supabase:", error);
     } finally {
+      // Clear module-level caches
+      clearRegistryCache();
       // Clear session local ID
       clearLocalSession();
       // Clear all local auth contexts
@@ -657,7 +652,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (
           key.startsWith("sb-") ||           // Supabase auth tokens (sb-<ref>-auth-token)
           key.startsWith("supabase.auth") ||  // Older Supabase SDK key pattern
-          key.startsWith("heading_quiz_state_") ||
+          key.startsWith(QUIZ_STATE_PREFIX) ||
           key.startsWith("heading_cache_")
         ) {
           keysToRemove.push(key);
@@ -765,8 +760,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (data.attempts) {
            for (const [key, value] of Object.entries(data.attempts)) {
-              if (key.startsWith('heading_quiz_state_')) {
-                const topicId = key.replace('heading_quiz_state_', '');
+              if (key.startsWith(QUIZ_STATE_PREFIX)) {
+                const topicId = key.replace(QUIZ_STATE_PREFIX, '');
                 const attemptVal = value as any;
 
                 const { data: existing } = await supabase
@@ -852,7 +847,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     ];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.startsWith('heading_quiz_state_') || key.startsWith('heading_cache_'))) {
+      if (key && (key.startsWith(QUIZ_STATE_PREFIX) || key.startsWith('heading_cache_'))) {
         keysToRemove.push(key);
       }
     }
@@ -870,8 +865,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logoutEverywhere,
     updateUserData,
     resetAccount,
-    authModalOpen,
-    authModalTab,
     openAuthModal,
     closeAuthModal,
   }), [
@@ -883,8 +876,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logoutEverywhere,
     updateUserData,
     resetAccount,
-    authModalOpen,
-    authModalTab,
     openAuthModal,
     closeAuthModal,
   ]);

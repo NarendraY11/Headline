@@ -1,20 +1,15 @@
 import {
-    Award,
     Bell,
-    BookOpen,
     CalendarRange,
-    CheckCircle,
     Clock,
     Compass,
     Flame,
-    GraduationCap,
     Play,
     TrendingUp,
     X,
-    Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/Atoms";
 import { useAuth } from "../contexts/AuthContext";
@@ -22,17 +17,25 @@ import { SubjectItem } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
 import { fetchMergedSubjects } from "../lib/content";
+import { QUIZ_STATE_PREFIX } from "../lib/storageKeys";
+import { PageBackground } from "../components/PageBackground";
 import { useUserProgress } from "../lib/progress";
 import { getScopedDueQuestionIds } from "../lib/spacedRepetition";
 import { useContentScope } from "../hooks/useContentScope";
 import { useLearningProgress } from "../hooks/useLearningProgress";
 
-import { AnimatedCounter } from "./today/AnimatedCounter";
+import { StreakTile } from "./today/tiles/StreakTile";
+import { AnsweredTile } from "./today/tiles/AnsweredTile";
+import { ScoreTile } from "./today/tiles/ScoreTile";
+import { HoursTile } from "./today/tiles/HoursTile";
+import { XpTile } from "./today/tiles/XpTile";
+import { CertificationTile } from "./today/tiles/CertificationTile";
+import { ContinueModuleTile } from "./today/tiles/ContinueModuleTile";
 import { TodayLoader } from "./today/DashboardLoaders";
 import { CareerObjectiveMissions } from "./today/CareerObjectiveMissions";
 import { ActiveMissionCard } from "./today/ActiveMissionCard";
 import { useActiveMission } from "../hooks/useActiveMission";
-import { useResolvedExamDate } from "../hooks/useResolvedExamDate";
+import { useResolvedExamDate, daysUntilExam } from "../hooks/useResolvedExamDate";
 import { TodayMissions } from "./today/TodayMissions";
 import { RecentXpActivity } from "./today/RecentXpActivity";
 import { TodayAchievements } from "./today/TodayAchievements";
@@ -111,14 +114,15 @@ export default function TodayView() {
   const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [dueCount, setDueCount] = useState<number>(0);
   // M11: build title map from subjectsList state (empty on first render, fine)
-  const subjectTitleMapForPredictive: Record<string, string> = {};
-  for (const sub of subjectsList) {
-    subjectTitleMapForPredictive[sub.id] = sub.title;
-  }
+  const subjectTitleMap = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const sub of subjectsList) m[sub.id] = sub.title;
+    return m;
+  }, [subjectsList]);
   // M11: predictive intelligence — pass hoisted snapshots to skip internal fetch.
-  const predictive = usePredictiveIntelligence(subjectsCount, subjectTitleMapForPredictive, masterySnapshots);
+  const predictive = usePredictiveIntelligence(subjectsCount, subjectTitleMap, masterySnapshots);
   // M11B: forecast engine — pass hoisted snapshots to skip internal fetch.
-  const forecastEngine = useForecastEngine(subjectsCount, subjectTitleMapForPredictive, masterySnapshots);
+  const forecastEngine = useForecastEngine(subjectsCount, subjectTitleMap, masterySnapshots);
 
   // Phase 9.3 T1: full mission result hoisted — ActiveMissionCard receives it as props.
   const {
@@ -174,18 +178,22 @@ export default function TodayView() {
   }, [user?.id, hoistedScope.hasContent]);
 
   useEffect(() => {
+    let active = true;
     async function loadSubjects() {
       try {
         const merged = await fetchMergedSubjects();
-        setSubjectsList(merged);
-        setSubjectsCount(merged.length);
+        if (active) {
+          setSubjectsList(merged);
+          setSubjectsCount(merged.length);
+        }
       } catch (err) {
         console.error("Failed loading subjects in TodayView:", err);
       } finally {
-        setLoadingSubjects(false);
+        if (active) setLoadingSubjects(false);
       }
     }
     loadSubjects();
+    return () => { active = false; };
   }, []);
 
   // User configurable tiles
@@ -242,15 +250,7 @@ export default function TodayView() {
   const savedDate =
     userData?.nextExam ?? localStorage.getItem("heading_next_exam") ?? "";
 
-  let daysDiff: number | null = null;
-  if (savedDate) {
-    const d = new Date(savedDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    d.setHours(0, 0, 0, 0);
-    const diffTime = d.getTime() - today.getTime();
-    daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  }
+  const { daysDiff } = daysUntilExam(savedDate || null);
 
   const hour = new Date().getHours();
   let greeting = "Good morning";
@@ -292,12 +292,12 @@ export default function TodayView() {
       let found: typeof activeSession = null;
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith("heading_quiz_state_")) {
+        if (key && key.startsWith(QUIZ_STATE_PREFIX)) {
           const val = localStorage.getItem(key);
           if (val) {
             const data = JSON.parse(val);
             if (data && data.status !== "ended" && data.answers) {
-              const topicId = key.replace("heading_quiz_state_", "");
+              const topicId = key.replace(QUIZ_STATE_PREFIX, "");
               const answered = Object.keys(data.answers).length;
               found = {
                 topicId,
@@ -388,11 +388,7 @@ export default function TodayView() {
 
   const pacingData = getPacingData(savedDate, logbook);
 
-  // Subject id → display title for M8B components
-  const subjectTitleMap: Record<string, string> = {};
-  for (const sub of subjectsList) {
-    subjectTitleMap[sub.id] = sub.title;
-  }
+  // Subject id → display title for M8B components (same map built at top via useMemo)
 
   const isPro = isPaidActive(userData);
 
@@ -423,12 +419,6 @@ export default function TodayView() {
     const today = new Date().toISOString().split("T")[0];
     localStorage.setItem("heading_notif_banner_dismissed", today);
     setShowNotifBanner(false);
-  };
-
-  const getScoreColor = (score: number) => {
-    if (score >= 70) return "text-mint";
-    if (score >= 40) return "text-amber";
-    return "text-signal";
   };
 
   let scoreTrendSign = "";
@@ -463,9 +453,6 @@ export default function TodayView() {
     scoreTrendStr = "No data";
   }
 
-  const tileBaseClasses =
-    "bg-paper border border-rule dark:border-rule-strong dark:shadow-md rounded-xl p-3.5 sm:p-4 shadow-sm col-span-1 flex flex-col justify-between";
-
   // Phase 7.2: XP earned in the last 7 days (from the hoisted ledger events).
   const xpWeekCutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
   const xpThisWeek = xpEvents
@@ -473,264 +460,23 @@ export default function TodayView() {
     .reduce((sum, e) => sum + (e.amount ?? 0), 0);
 
   const renderTile = (tile: string) => {
+    const dailyGoal = userData?.dailyGoal ?? 15;
+    const answeredToday = userData?.questionsAnsweredToday ?? parseInt(localStorage.getItem("heading_questions_answered_today") || "0");
     switch (tile) {
-      case "streak":
-        const hasStreak = displayedStreak > 0;
-        return (
-          <div key="streak" className={tileBaseClasses}>
-            <div className="flex items-center gap-1.5 mb-1 text-muted-2">
-              <Flame size={14} className={hasStreak ? "text-signal" : "text-muted-2"} />
-              <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
-                STREAK
-              </span>
-            </div>
-            {hasStreak ? (
-              <>
-                <div className="font-serif text-[26px] text-ink leading-none mt-2">
-                  <AnimatedCounter value={displayedStreak} />
-                  <span className="font-sans text-xl font-normal lowercase text-muted tracking-normal">
-                    d
-                  </span>
-                </div>
-                <div className="flex justify-between items-center mt-4 pointer-events-none w-full">
-                  {streakWeek.map((d, i) => (
-                    <div
-                      key={i}
-                      className="flex flex-col items-center gap-1.5 text-[10px]"
-                    >
-                      <div
-                        className={`w-3.5 h-3.5 sm:w-5 sm:h-5 rounded-full border flex items-center justify-center
-                          ${d.isActive ? "bg-signal-soft border-signal/30 text-signal" : "bg-bg border-rule text-transparent"}
-                        `}
-                      >
-                        {d.isActive && (
-                          <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 bg-signal rounded-full"></span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col justify-center items-center py-2 text-center h-full min-h-[50px] animate-in fade-in duration-300">
-                <span className="font-mono text-[9px] text-muted-2 uppercase tracking-wide font-semibold">No Active Streak</span>
-                <span className="text-[10px] text-muted leading-tight mt-0.5">Start a session today!</span>
-              </div>
-            )}
-          </div>
-        );
-      case "answered":
-        const dailyGoal = userData?.dailyGoal ?? 15;
-        const answeredToday = userData?.questionsAnsweredToday ?? parseInt(localStorage.getItem("heading_questions_answered_today") || "0");
-        const remainingToGoal = Math.max(0, dailyGoal - answeredToday);
-
-        return (
-          <div key="answered" className={tileBaseClasses}>
-            <div>
-              <div className="flex items-center gap-1.5 mb-1 text-muted-2">
-                <BookOpen size={14} />
-                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
-                  Q'S ANSWERED
-                </span>
-                </div>
-              <div className="font-serif text-[26px] text-ink leading-none mt-2 flex items-baseline justify-between overflow-hidden">
-                <div>
-                  <AnimatedCounter value={answeredToday} />
-                  <span className="font-sans text-xs text-muted-2 ml-1">
-                    /{dailyGoal}
-                  </span>
-                </div>
-                {answeredToday >= dailyGoal ? (
-                  <span className="font-mono text-[9px] font-bold text-mint uppercase tracking-wide bg-mint/10 border border-mint/20 px-1.5 py-0.5 rounded">
-                    Goal Met
-                  </span>
-                ) : (
-                  <span className="font-mono text-[9px] text-amber uppercase tracking-wide">
-                    {remainingToGoal} to go
-                  </span>
-                )}
-              </div>
-              <div className="w-full bg-bg h-1.5 rounded-full mt-3 overflow-hidden border border-rule/50">
-                <div
-                  className="bg-mint h-full transition-all duration-500 ease-out"
-                  style={{ width: `${Math.min(100, (answeredToday / dailyGoal) * 100)}%` }}
-                />
-              </div>
-              <div className="mt-2 text-[9px] font-mono text-muted-2">
-                Lifetime: {totalQuestions}
-              </div>
-            </div>
-          </div>
-        );
-      case "score":
-        return (
-          <div key="score" className={tileBaseClasses}>
-            <div>
-              <div className="flex items-center gap-1.5 mb-1 text-muted-2">
-                <Award size={14} />
-                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
-                  AVG SCORE
-                </span>
-                </div>
-              <div
-                className={`font-serif text-[26px] leading-none mt-2 ${getScoreColor(avgScore)}`}
-              >
-                <AnimatedCounter value={avgScore} />
-                <span className="font-sans text-xl text-muted font-normal tracking-normal">
-                  %
-                </span>
-              </div>
-              <div className={`mt-2 font-mono text-[9px] tracking-wide ${
-                scoreTrendSign === "↑" ? "text-mint" :
-                scoreTrendSign === "↓" ? "text-signal" :
-                "text-muted-2"
-              }`}>
-                Trend: {scoreTrendStr}
-              </div>
-            </div>
-          </div>
-        );
-      case "hours":
-        return (
-          <div key="hours" className={tileBaseClasses}>
-            <div>
-              <div className="flex items-center gap-1.5 mb-1 text-muted-2">
-                <Clock size={14} />
-                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
-                  HOURS · 7D
-                </span>
-              </div>
-              <div className="font-serif text-[26px] text-ink leading-none mt-2">
-                {hasAttempts ? <AnimatedCounter value={hoursThisWeek} /> : 0}{" "}
-                <span className="font-sans text-xl text-muted font-normal lowercase tracking-normal">
-                  hrs
-                </span>
-              </div>
-              <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
-                Total: {hoursStudied}h
-              </div>
-              {hoursStudied === 0 && (
-                <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide leading-relaxed">
-                  Complete a session to track hours
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      case "xp":
-        return (
-          <div key="xp" className={tileBaseClasses}>
-            <div>
-              <div className="flex items-center gap-1.5 mb-1 text-muted-2">
-                <Zap size={14} className="text-amber" />
-                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
-                  XP
-                </span>
-              </div>
-              <div className="font-serif text-[26px] text-ink leading-none mt-2">
-                {xpLoading ? 0 : <AnimatedCounter value={xpBalance} />}{" "}
-                <span className="font-sans text-xl text-muted font-normal lowercase tracking-normal">
-                  xp
-                </span>
-              </div>
-              {/* Phase 7.3: rank chip + progress-to-next rail */}
-              <div className="mt-2.5">
-                <div className="flex items-center justify-between gap-2 mb-1.5">
-                  <span className="font-mono text-[9px] uppercase tracking-wide text-ink font-semibold truncate">
-                    {xpRank.rank.name}
-                  </span>
-                  <span className="font-mono text-[9px] text-muted-2 tracking-wide tabular-nums flex-shrink-0">
-                    {xpRank.isMax ? "MAX" : `${xpRank.xpRemaining} to ${xpRank.next!.name}`}
-                  </span>
-                </div>
-                <div className="h-1 rounded-full bg-bg-2 overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-amber transition-all duration-500"
-                    style={{ width: `${Math.round(xpRank.progress * 100)}%` }}
-                  />
-                </div>
-              </div>
-              <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
-                {xpThisWeek > 0 ? `+${xpThisWeek} this week` : "No XP this week yet"}
-              </div>
-            </div>
-          </div>
-        );
-      case "certification":
-        return (
-          <div key="certification" className={tileBaseClasses}>
-            <div>
-              <div className="flex items-center gap-1.5 mb-1 text-muted-2">
-                <GraduationCap size={14} className="text-navy" />
-                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
-                  CERT PROGRESS
-                </span>
-              </div>
-              <div className="font-serif text-[26px] text-ink leading-none mt-2">
-                <AnimatedCounter value={readinessPercentage} />
-                <span className="font-sans text-xl text-muted font-normal tracking-normal">%</span>
-              </div>
-              <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide">
-                {passedCount}/{subjectsList.length} subjects ≥80%
-              </div>
-              <div className="w-full bg-bg h-1.5 rounded-full mt-3 overflow-hidden border border-rule/50">
-                <div
-                  className="bg-navy h-full transition-all duration-500 ease-out"
-                  style={{ width: `${readinessPercentage}%` }}
-                />
-              </div>
-            </div>
-            <Link to="/course" className="font-mono text-[9px] uppercase tracking-wide text-navy hover:opacity-70 transition-opacity mt-2 inline-block">
-              View Course →
-            </Link>
-          </div>
-        );
-      case "continue-module":
-        const weakestSubjectId = Object.entries(progressStats.subjectMastery)
-          .sort(([, a], [, b]) => a - b)[0]?.[0];
-        const weakestSubject = subjectsList.find(s => s.id === weakestSubjectId);
-        const continueModule = weakestSubject?.subTopics?.[0];
-        return (
-          <div key="continue-module" className={tileBaseClasses}>
-            <div>
-              <div className="flex items-center gap-1.5 mb-1 text-muted-2">
-                <CheckCircle size={14} className="text-mint" />
-                <span className="font-mono text-[9px] uppercase tracking-wide text-muted-2">
-                  NEXT MODULE
-                </span>
-              </div>
-              {continueModule ? (
-                <>
-                  <div className="font-sans text-sm font-medium text-ink mt-2 line-clamp-2 leading-snug">
-                    {continueModule.title}
-                  </div>
-                  <div className="font-mono text-[9px] text-muted-2 mt-1">
-                    {weakestSubject?.title} · {continueModule.questionCount} q's
-                  </div>
-                </>
-              ) : (
-                <div className="font-mono text-[9px] text-muted-2 mt-2">No modules yet</div>
-              )}
-            </div>
-            {continueModule && (
-              <Link
-                to={`/quiz/${continueModule.id}`}
-                className="font-mono text-[9px] uppercase tracking-wide text-mint hover:opacity-70 transition-opacity mt-2 inline-block"
-              >
-                Start →
-              </Link>
-            )}
-          </div>
-        );
-      default:
-        return null;
+      case "streak": return <StreakTile streak={displayedStreak} streakWeek={streakWeek} />;
+      case "answered": return <AnsweredTile dailyGoal={dailyGoal} answeredToday={answeredToday} totalQuestions={totalQuestions} />;
+      case "score": return <ScoreTile avgScore={avgScore} scoreTrendStr={scoreTrendStr} scoreTrendSign={scoreTrendSign} />;
+      case "hours": return <HoursTile hasAttempts={hasAttempts} hoursThisWeek={hoursThisWeek} hoursStudied={hoursStudied} />;
+      case "xp": return <XpTile xpBalance={xpBalance} xpLoading={xpLoading} xpRank={xpRank} xpThisWeek={xpThisWeek} />;
+      case "certification": return <CertificationTile readinessPercentage={readinessPercentage} passedCount={passedCount} subjectCount={subjectsList.length} />;
+      case "continue-module": return <ContinueModuleTile subjectMastery={progressStats.subjectMastery} subjectsList={subjectsList} />;
+      default: return null;
     }
   };
 
   return (
     <div className="relative min-h-screen pb-20">
-      <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
-      <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+      <PageBackground />
 
       <div className="relative z-10 px-4 pt-16 pb-8 max-w-[820px] mx-auto">
         {/* Phase 8.1: mb reduced on mobile (mb-4 md:mb-8) so mission CTA sits

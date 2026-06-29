@@ -1,4 +1,4 @@
-import { blogPosts } from "../data/blog";
+import { blogMeta as blogPosts } from "../data/blogMeta";
 
 const PROD_ORIGIN = "https://www.heading380.in";
 

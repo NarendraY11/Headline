@@ -9,6 +9,7 @@ import { useXp } from "../hooks/useXp";
 import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2, Sparkles, ShieldCheck, CalendarClock, ArrowRight, AlertTriangle, Zap } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { isPaidActive, daysLeft, planLabel } from "../lib/plan";
+import { daysUntilExam } from "../hooks/useResolvedExamDate";
 
 export default function ProfileView() {
   const { user, userData, logout, logoutEverywhere, resetAccount, loading, openAuthModal, updateUserData } = useAuth();
@@ -173,21 +174,8 @@ export default function ProfileView() {
   const fmtSubDate = (d?: string) =>
     d ? new Date(d).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }) : "—";
 
-  let daysDiff: number | null = null;
-  let isPast = false;
-  
-  if (savedDate) {
-    const d = new Date(savedDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    d.setHours(0, 0, 0, 0);
-    const diffTime = d.getTime() - today.getTime();
-    daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    if (daysDiff < 0) {
-      isPast = true;
-      daysDiff = Math.abs(daysDiff);
-    }
-  }
+  const { daysDiff: rawDaysDiff, isPast } = daysUntilExam(savedDate || null);
+  const daysDiff = isPast && rawDaysDiff !== null ? Math.abs(rawDaysDiff) : rawDaysDiff;
 
   const startCamera = async () => {
     setUploadError("");

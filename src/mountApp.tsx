@@ -14,6 +14,7 @@ import { StrictMode, Suspense, lazy } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { AuthProvider } from './contexts/AuthContext.tsx';
+import { AuthModalProvider } from './contexts/AuthModalContext.tsx';
 import { LoadingProvider } from './contexts/LoadingContext.tsx';
 import { ToastProvider } from './components/ui/Toast.tsx';
 import { NotificationProvider } from './contexts/NotificationContext.tsx';
@@ -52,6 +53,7 @@ export function mountApp(rootEl: HTMLElement, shouldHydrate: boolean) {
   const appTree = (
     <StrictMode>
       <FeatureFlagsProvider>
+        <AuthModalProvider>
         <AuthProvider>
           <NotificationProvider>
             <ToastProvider>
@@ -67,6 +69,7 @@ export function mountApp(rootEl: HTMLElement, shouldHydrate: boolean) {
             </ToastProvider>
           </NotificationProvider>
         </AuthProvider>
+        </AuthModalProvider>
       </FeatureFlagsProvider>
     </StrictMode>
   );

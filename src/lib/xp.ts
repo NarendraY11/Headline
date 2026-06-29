@@ -58,14 +58,18 @@ export async function awardXp(
   return true;
 }
 
-/** Total XP balance = SUM(amount). ponytail: sum on read; cache only if slow. */
+/** Total XP balance = SUM(amount). Server-side aggregate — no client reduce. */
 export async function getXpBalance(userId: string): Promise<number> {
   const { data, error } = await supabase
     .from("xp_events")
-    .select("amount")
-    .eq("user_id", userId);
-  if (error) throw new Error(`getXpBalance: ${error.message}`);
-  return (data ?? []).reduce((sum, r) => sum + (r.amount ?? 0), 0);
+    .select("amount.sum()")
+    .eq("user_id", userId)
+    .single();
+  if (error) {
+    console.error("getXpBalance error:", error);
+    return 0;
+  }
+  return (data as any)?.sum ?? 0;
 }
 
 /** Recent XP events, newest first. */

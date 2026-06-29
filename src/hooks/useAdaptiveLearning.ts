@@ -173,7 +173,10 @@ export function useAdaptiveLearning(params: UseAdaptiveLearningParams): UseAdapt
     };
 
     return computeAdaptiveOutput(input);
-  }, [flagEnabled, loading, scope, learningProgress, masteryMap, moduleAnsweredMap, params, missionState]);
+  }, [flagEnabled, loading, scope, learningProgress, masteryMap, moduleAnsweredMap,
+      params.mission, params.reviewDueCount, params.currentXp, params.currentRank,
+      params.currentStreak, params.examDate, params.todayMinutesAvailable,
+      missionState]);
 
   return {
     ...output,

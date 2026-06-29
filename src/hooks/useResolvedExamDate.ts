@@ -15,6 +15,16 @@ import { useContentScope } from "./useContentScope";
 import { useFeature } from "./useFeatureFlags";
 import type { ContentScope } from "../lib/contentDeliveryEngine";
 
+export function daysUntilExam(savedDate: string | null): { daysDiff: number | null; isPast: boolean } {
+  if (!savedDate) return { daysDiff: null, isPast: false };
+  const d = new Date(savedDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  const daysDiff = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return { daysDiff, isPast: daysDiff < 0 };
+}
+
 /**
  * Phase 9.2: accepts optional pre-resolved scope to skip internal
  * useContentScope DB fetch when called from TodayView.

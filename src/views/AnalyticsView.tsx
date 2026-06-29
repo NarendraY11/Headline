@@ -1,5 +1,5 @@
 import { Sparkles, TrendingUp } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
     Bar,
@@ -18,11 +18,11 @@ import { ProGate } from "../components/ProGate";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { useGlobalLoading } from "../contexts/LoadingContext";
-import { SubjectItem } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
-import { apiFetchRaw, readError } from "../lib/api";
-import { fetchMergedSubjects } from "../lib/content";
+import { apiFetchRaw, readError, aiStreamErrorToast } from "../lib/api";
+import { useSubjects } from "../hooks/useSubjects";
+import { PageBackground } from "../components/PageBackground";
 import { useUserProgress } from "../lib/progress";
 import { trackEvent } from "../lib/track";
 
@@ -35,34 +35,18 @@ export default function AnalyticsView() {
 
   const { logbook, loading: logbookLoading } = useLogbook();
   const { stats: progressStats } = useUserProgress();
-  const [subjectsList, setSubjectsList] = useState<SubjectItem[]>([]);
-  const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const { subjects: subjectsList, loading: loadingSubjects } = useSubjects();
   // Must be called unconditionally before any early return below — relocating
   // this from mid-component fixes a Rules-of-Hooks violation that crashed the
   // page for users with attempts (the loading/empty early returns skipped it,
   // changing the hook call order between renders).
   const { setLoading: setGlobalLoading } = useGlobalLoading();
 
-  useEffect(() => {
-    async function loadSubjects() {
-      try {
-        const merged = await fetchMergedSubjects();
-        setSubjectsList(merged);
-      } catch (err) {
-        console.error("Failed loading subjects in AnalyticsView:", err);
-      } finally {
-        setLoadingSubjects(false);
-      }
-    }
-    loadSubjects();
-  }, []);
-
   // Loading state
   if (loading || logbookLoading || loadingSubjects) {
     return (
       <div className="relative min-h-screen">
-        <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
-        <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+        <PageBackground />
         <div className="relative z-10 px-4 py-8 md:py-16 max-w-[820px] mx-auto space-y-12 animate-pulse">
           {/* Header area */}
           <div className="space-y-3">
@@ -142,38 +126,6 @@ export default function AnalyticsView() {
       )
     : 0;
 
-  // Calculate Streak
-  const uniqueDates = [
-    ...new Set(
-      logbook.map((att) => att.dateISO?.split("T")[0]).filter(Boolean),
-    ),
-  ]
-    .sort()
-    .reverse();
-  let currentStreak = 0;
-  if (uniqueDates.length > 0) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    // Start streak count if today or yesterday has data
-    const todayStr = today.toISOString().split("T")[0];
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-    if (uniqueDates[0] === todayStr || uniqueDates[0] === yesterdayStr) {
-      let expectedDate = new Date(uniqueDates[0]);
-      for (const dStr of uniqueDates) {
-        if (dStr === expectedDate.toISOString().split("T")[0]) {
-          currentStreak++;
-          expectedDate.setDate(expectedDate.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-    }
-  }
-
   // Calculate Mastery
   const masteries = subjectsList
     .map((sub) => {
@@ -233,12 +185,7 @@ export default function AnalyticsView() {
         const msg = response
           ? await readError(response, "AI features are temporarily unavailable.")
           : "AI features are temporarily unavailable.";
-        showToast({
-          type: "error",
-          title: response?.status === 429 ? "Slow down" : response?.status === 403 ? "Upgrade required" : "Service Offline",
-          message: msg,
-          duration: 5000,
-        });
+        aiStreamErrorToast(showToast, response, msg);
         setInsight(msg);
         return;
       }
@@ -315,8 +262,7 @@ export default function AnalyticsView() {
   return (
     <ProGate type="analytics">
       <div className="relative min-h-screen pb-20">
-      <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
-      <div className="absolute inset-0 paper-grain pointer-events-none opacity-100 z-1" />
+      <PageBackground />
 
       <div className="relative z-10 px-4 pt-16 pb-8 max-w-[820px] mx-auto">
         <div className="mb-12">

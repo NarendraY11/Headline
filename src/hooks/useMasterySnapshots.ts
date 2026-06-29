@@ -11,7 +11,7 @@
 // recompute them.
 // =====================================================================
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useFeature } from "./useFeatureFlags";
 import { useUserProgress } from "../lib/progress";
@@ -50,6 +50,10 @@ export function useMasterySnapshots(skip = false): UseMasterySnapshotsState {
   // Fallback: derive snapshot-shaped rows from useUserProgress
   const { stats: progressStats, loading: progressLoading } = useUserProgress();
 
+  // Stable ref so subjectMastery object identity doesn't re-trigger useCallback
+  const subjectMasteryRef = useRef(progressStats.subjectMastery);
+  subjectMasteryRef.current = progressStats.subjectMastery;
+
   const load = useCallback(async () => {
     if (skip || !userId) return;
 
@@ -58,7 +62,7 @@ export function useMasterySnapshots(skip = false): UseMasterySnapshotsState {
 
     // ── Flag OFF or no userId → use progress fallback ──────────────────
     if (!flagEnabled) {
-      const fallback = buildFallbackSnapshots(userId, progressStats.subjectMastery);
+      const fallback = buildFallbackSnapshots(userId, subjectMasteryRef.current);
       setSnapshots(fallback);
       setFromCache(false);
       setLoading(false);
@@ -73,7 +77,7 @@ export function useMasterySnapshots(skip = false): UseMasterySnapshotsState {
         setFromCache(true);
       } else {
         // No snapshots yet (user has not completed a quiz since M8A deploy)
-        const fallback = buildFallbackSnapshots(userId, progressStats.subjectMastery);
+        const fallback = buildFallbackSnapshots(userId, subjectMasteryRef.current);
         setSnapshots(fallback);
         setFromCache(false);
       }
@@ -81,13 +85,13 @@ export function useMasterySnapshots(skip = false): UseMasterySnapshotsState {
       const msg = e instanceof Error ? e.message : "Failed to load mastery snapshots.";
       setError(msg);
       // Fall back to progress stats on error so UI is never blank
-      const fallback = buildFallbackSnapshots(userId, progressStats.subjectMastery);
+      const fallback = buildFallbackSnapshots(userId, subjectMasteryRef.current);
       setSnapshots(fallback);
       setFromCache(false);
     } finally {
       setLoading(false);
     }
-  }, [flagEnabled, userId, progressStats.subjectMastery]);
+  }, [flagEnabled, userId]);
 
   useEffect(() => {
     if (!skip && !progressLoading) {

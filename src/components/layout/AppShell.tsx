@@ -422,7 +422,7 @@ export function AppShell() {
             {/* Utility Nav (Settings, Dark Mode, Profile) */}
             <div className="px-3 pb-4 space-y-1 mt-auto">
               {/* Dark Mode toggle as a list item */}
-              <button 
+              <button
                 onClick={() => {
                   const elem = document.documentElement;
                   const isDark = elem.classList.contains("dark");
@@ -436,6 +436,7 @@ export function AppShell() {
                   if (isTablet && isSidebarTappedForTablet) setIsSidebarTappedForTablet(false);
                 }}
                 className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 bg-transparent text-muted hover:text-ink hover:bg-panel/40 border-transparent w-full`}
+                aria-label="Toggle night mode"
                 title={!isSidebarExpanded ? "Night Mode" : undefined}
               >
                 <Moon size={16} className="text-muted-2 flex-shrink-0 hidden dark:block" />
@@ -529,11 +530,12 @@ export function AppShell() {
                 <button
                   id="mobile-menu-toggle"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-3 -m-1.5 md:hidden text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors"
-                  aria-label="Toggle navigation menu"
-                  role="button"
+                  className="p-3 -m-1.5 md:hidden text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none"
+                  aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+                  aria-expanded={mobileMenuOpen}
+                  aria-controls="mobile-nav-drawer"
                 >
-                  {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
+                  {mobileMenuOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
                 </button>
               </div>
             </header>

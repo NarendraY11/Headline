@@ -1,6 +1,7 @@
 import { CheckCircle2, Flame, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import React, { lazy, Suspense, useEffect, useRef, useState } from "react";
+import FocusTrap from "focus-trap-react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button, CompassLogomark } from "../components/Atoms";
 import { ProGate } from "../components/ProGate";
@@ -12,20 +13,16 @@ import { Question } from "../data/questions";
 import { mockExams } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { useLogbook } from "../hooks/useLogbook";
-import { apiFetchRaw, readError } from "../lib/api";
+import { apiFetchRaw, readError, aiStreamErrorToast } from "../lib/api";
+import { quizStateKey } from "../lib/storageKeys";
 import { fetchPublishedQuestions, fetchQuestionsByIds, fetchQuizQuestionsForTopic } from "../lib/content";
 import { getEligibleQuestions, getEligibleTopicQuestions, getEligibleQuestionsByIds } from "../lib/contentQueries";
 import { useContentScope } from "../hooks/useContentScope";
 import { submitQuestionAttempt } from "../lib/progress";
 import { getDueQuestionIds, recordAnswerProgress, trackAnswerForStreakAndGoal } from "../lib/spacedRepetition";
-import { completeMission } from "../lib/studyScheduler";
-import { awardXp, computeQuizQuestionXp, getXpBalance, XP_VALUES } from "../lib/xp";
-import { didRankUp } from "../lib/xpValues";
-import { unlockAchievement } from "../lib/achievements";
-import { supabase } from "../lib/supabase";
 import { trackEvent } from "../lib/track";
 import { trackStudyPlanGenerated } from "../lib/studyAnalytics";
-import { snapshotMastery } from "../lib/masterySnapshot";
+import { submitQuizSession } from "../lib/quizSession";
 
 const EditorialLayout = lazy(() => import("./quiz-layouts/EditorialLayout"));
 const SplitLayout = lazy(() => import("./quiz-layouts/SplitLayout"));
@@ -128,7 +125,7 @@ export default function QuizView() {
         // same question set (and order) so currentIndex/answers stay aligned.
         // Without this the random re-fetch below would desync the resume.
         try {
-          const savedRaw = localStorage.getItem(`heading_quiz_state_${topicId || "default"}`);
+          const savedRaw = localStorage.getItem(quizStateKey(topicId || "default"));
           if (savedRaw) {
             const st = JSON.parse(savedRaw);
             if (
@@ -182,12 +179,12 @@ export default function QuizView() {
     }
 
     loadQuizQuestions();
-  }, [topicId, logbook, customQuestions, location.state?.sessionStorageKey, contentDeliveryEnabled, scopeLoading, scope]);
+  }, [topicId, customQuestions, location.state?.sessionStorageKey, contentDeliveryEnabled, scopeLoading, scope]);
 
   const totalQuestions = questions ? questions.length : 0;
 
   // --- STATE ---
-  const storageKey = `heading_quiz_state_${topicId || "default"}`;
+  const storageKey = quizStateKey(topicId || "default");
 
   const loadState = () => {
     try {
@@ -418,7 +415,7 @@ export default function QuizView() {
       }, 1000);
     }
     return () => clearInterval(timerId);
-  }, [status, mode, timeLeft]);
+  }, [status, mode]);
 
   // Handle initialization of timeLeft
   useEffect(() => {
@@ -445,7 +442,7 @@ export default function QuizView() {
     if (user) {
       updateUserData({ bookmarks });
     }
-  }, [bookmarks]);
+  }, [bookmarks, user, updateUserData]);
 
   // Persist state
   useEffect(() => {
@@ -710,294 +707,41 @@ export default function QuizView() {
     if (finishingRef.current) return;
     finishingRef.current = true;
 
-    // Phase 7.3/7.4: rank-up state. xpBefore is hoisted so the single
-    // didRankUp call (after the achievement block) includes achievement XP.
-    let rankUpName: string | null = null;
-    let xpEarnedThisFinish = 0;
-    let xpBefore = 0;
-
     trackQuestionTime();
 
-    // M9B: compute session median response time for SM-2 quality derivation
-    const sessionTimes = Object.values(timePerQuestion).filter((t) => t > 0);
-    const sortedTimes = [...sessionTimes].sort((a, b) => a - b);
-    const medianSessionTimeSec = sortedTimes.length > 0
-      ? (sortedTimes[Math.floor(sortedTimes.length / 2)] ?? 30)
-      : 30;
-
-    // Record real attempt
-    let correctCount = 0;
-    const ataBreakdown: Record<string, { correct: number; total: number }> = {};
-    const wrongQuestionIds: string[] = [];
-    let answeredCount = 0;
-
-    questions.forEach((q) => {
-      const userSelected = answers[q.id];
-      const isCorrect = userSelected === q.correct;
-      if (isCorrect) {
-        correctCount++;
-      } else {
-        wrongQuestionIds.push(q.id);
-      }
-
-      if (!ataBreakdown[q.ata]) {
-        ataBreakdown[q.ata] = { correct: 0, total: 0 };
-      }
-      ataBreakdown[q.ata].total++;
-      if (isCorrect) ataBreakdown[q.ata].correct++;
-
-      // Record per-question performance for spaced repetition if answered
-      if (userSelected) {
-        answeredCount++;
-        // M9B: pass response time for SM-2 quality derivation
-        const qTimeSec = timePerQuestion[q.id] ?? 0;
-        recordAnswerProgress(user?.uid || null, q.id, isCorrect, q.topicId,
-          sm2AlgorithmEnabled ? {
-            useSM2: true,
-            ...(sm2QualityTimingEnabled && qTimeSec > 0 ? {
-              timeSec: qTimeSec,
-              medianTimeSec: medianSessionTimeSec,
-              sm2QualityTiming: true,
-            } : {})
-          } : undefined
-        );
-        
-        if (user) {
-          submitQuestionAttempt(user.uid, q.id, isCorrect, q.subjectId, q.subcategoryId, q.examId);
-        }
-      }
+    const result = await submitQuizSession({
+      user,
+      userData,
+      updateUserData,
+      questions,
+      answers,
+      timeElapsed,
+      timePerQuestion,
+      mode: mode as string,
+      topicId: topicId ?? null,
+      customTopic,
+      missionId,
+      engineMission,
+      logbook: logbook ?? [],
+      storageKey,
+      xpEnabled: !!xpEnabled,
+      masterySnapshotsEnabled: !!masterySnapshotsEnabled,
+      sm2AlgorithmEnabled: !!sm2AlgorithmEnabled,
+      sm2QualityTimingEnabled: !!sm2QualityTimingEnabled,
+      negativeMarkingEnabled: !!(userData?.settings?.negativeMarking && mode === "timed"),
+      missionAlreadyCompleted: missionCompletedRef.current,
     });
 
-    if (answeredCount > 0) {
-      // Track streaks and daily goal progress on submit
-      trackAnswerForStreakAndGoal(user, userData, updateUserData, answeredCount, xpEnabled);
-    }
+    // FIX #11: latch the ref so back-navigation can't double-complete.
+    if (result.missionCompleted) missionCompletedRef.current = true;
+    if (result.userDataUpdate) updateUserData(result.userDataUpdate);
+    result.notificationsToAdd.forEach((n) => addNotification(n.title, n.body, n.type as any));
+    setUnlockedMilestone(result.unlockedMilestone);
 
-    const isNegativeMarking =
-      userData?.settings?.negativeMarking && mode === "timed";
-    const penalty = isNegativeMarking ? wrongQuestionIds.length * 0.25 : 0;
-    const finalScore = Math.max(0, correctCount - penalty);
-    const percentage = Math.round((finalScore / totalQuestions) * 100);
-
-    // Track quiz_complete telemetry
-    trackEvent("quiz_complete", {
-      subcategoryId: topicId || undefined,
-      metadata: {
-        score: finalScore,
-        total: totalQuestions,
-        percentage,
-        mode,
-      }
-    });
-
-    const attemptRecord = {
-      id: crypto.randomUUID(),
-      topicId: topicId || "default",
-      topicTitle: customTopic || questions[0]?.ata || "Quiz",
-      mode,
-      total: totalQuestions,
-      correct: correctCount, // Store raw correct for logbook stats
-      percentage,
-      durationSec: timeElapsed,
-      dateISO: new Date().toISOString(),
-      perTopic: ataBreakdown,
-      wrongQuestionIds,
-      penalty,
-    };
-
-    // Clear the active session state
-    localStorage.removeItem(storageKey);
-
-    if (user) {
-      const attemptUid = attemptRecord.id;
-      // FIX #2: saveAttempt was called fire-and-forget. If the user navigated
-      // away before the async work completed, the attempt insert and
-      // completeMission call were silently dropped — mission stuck in_progress.
-      // Now finishQuiz is async and we await saveAttempt() before setStatus.
-      const saveAttempt = async () => {
-        try {
-          const { error } = await supabase
-            .from("attempts")
-            .insert({
-              user_id: user.uid,
-              topic_id: attemptUid,
-              mode: attemptRecord.mode || "practice",
-              score: attemptRecord.correct || 0,
-              total: attemptRecord.total || 0,
-              percentage: attemptRecord.percentage || 0,
-              duration_sec: attemptRecord.durationSec || 0,
-              wrong_question_ids: attemptRecord.wrongQuestionIds || [],
-              data: attemptRecord,
-            });
-          if (error) {
-            console.error("Could not save attempt to Supabase:", error);
-          } else if (missionId && !missionCompletedRef.current) {
-            // FIX #3: completeMission error was silently swallowed via .catch(()=>{}).
-            // Now we await and log failures explicitly. Mission stays in_progress
-            // on failure — better than silently claiming success.
-            // FIX #11: missionCompletedRef ensures we only call completeMission once
-            // per quiz session even if finishQuiz somehow re-runs (e.g. back-nav).
-            missionCompletedRef.current = true;
-            try {
-              await completeMission(missionId, attemptUid);
-            } catch (missionErr) {
-              console.error("Could not complete mission:", missionErr);
-              // Non-fatal: attempt is saved; mission status update is best-effort.
-            }
-          }
-        } catch (err) {
-          console.error("Could not save attempt exceptionally:", err);
-        }
-      };
-      await saveAttempt();
-
-      // Phase 7.1: XP awards (gated on xpSystem). Idempotent per source_id, so
-      // a re-finish / back-nav never double-awards. question_answered is
-      // aggregated per quiz (one row, amount = Σ per-question value).
-      if (xpEnabled) {
-        // Capture balance BEFORE awarding. xpBefore is hoisted to outer scope
-        // so the single didRankUp call (below the achievement block) can include
-        // achievement XP. awardXp is idempotent: a re-finish writes nothing,
-        // awarded stays 0, and didRankUp later returns null — no phantom rank-up.
-        try { xpBefore = await getXpBalance(user.uid); } catch { /* non-fatal */ }
-        let awarded = 0;
-        const qXp = computeQuizQuestionXp(correctCount, totalQuestions);
-        if (await awardXp(user.uid, "question_answered", qXp, attemptUid)) awarded += qXp;
-        if (await awardXp(user.uid, "quiz_completed", XP_VALUES.quizCompleted, attemptUid)) awarded += XP_VALUES.quizCompleted;
-        if (missionId && missionCompletedRef.current) {
-          if (await awardXp(user.uid, "mission_completed", XP_VALUES.missionCompleted, missionId)) awarded += XP_VALUES.missionCompleted;
-        }
-        xpEarnedThisFinish = awarded;
-        // Phase 7.4: rank-up NOT fired here — deferred to after achievement block
-        // so achievement_unlock XP can be included in the delta before didRankUp.
-      }
-
-      // M8A: refresh mastery_snapshots for subjects touched in this session.
-      // Fire-and-forget — non-blocking, non-fatal.
-      if (masterySnapshotsEnabled && user?.id) {
-        const sessionSubjectIds = [
-          ...new Set(
-            questions
-              .map((q) => (q as { subjectId?: string }).subjectId)
-              .filter((id): id is string => !!id)
-          ),
-        ];
-        if (sessionSubjectIds.length > 0) {
-          snapshotMastery(user.id, sessionSubjectIds).catch((err) => {
-            console.warn("snapshotMastery: non-critical failure:", err);
-          });
-        }
-      }
-
-      updateUserData({
-        attempts: {
-          [`heading_quiz_state_${attemptUid}`]: attemptRecord,
-        },
-      });
-    } else {
-      let localLogbook: any[] = [];
-      try {
-        const saved = localStorage.getItem("heading_logbook");
-        if (saved) localLogbook = JSON.parse(saved);
-      } catch {}
-
-      const newLogbook = [...localLogbook, attemptRecord];
-      localStorage.setItem("heading_logbook", JSON.stringify(newLogbook));
-      localStorage.setItem("pwa_has_session", "true");
-    }
-
-    // Milestone logic:
-    let localLogList: any[] = [];
-    try {
-      const saved = localStorage.getItem("heading_logbook");
-      if (saved) localLogList = JSON.parse(saved);
-    } catch {}
-    
-    const isFirstTime = logbook ? logbook.length === 0 : localLogList.length === 0;
-    const currentAccuracy = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0;
-
-    let unlocked = null;
-    if (isFirstTime) {
-      unlocked = {
-        id: "first-flight",
-        title: "Operational Clearance Unlocked",
-        badge: "Opera Alpha",
-        desc: "Your first training block is logged. Solid startup sequence! Clear flight telemetry is now officially running."
-      };
-    } else {
-      const activeLogs = logbook || localLogList;
-      const totalAnswersCount = activeLogs.reduce((acc, x) => acc + (x.total || 0), 0) + totalQuestions;
-      const priorAnswersCount = activeLogs.reduce((acc, x) => acc + (x.total || 0), 0);
-      
-      if (totalAnswersCount >= 100 && priorAnswersCount < 100) {
-        unlocked = {
-          id: "centurion",
-          title: "Centurion Pilot Unlocked",
-          badge: "Centurion",
-          desc: "You have answered over 100 high-fidelity syllabus questions. Excellent pacing density."
-        };
-      } else if (currentAccuracy >= 90 && totalQuestions >= 5) {
-        unlocked = {
-          id: "precision",
-          title: "Supercritical Precision Unlocked",
-          badge: "Precision Pilot",
-          desc: "Completed this training block with over 90% accuracy. Optimal operational standards achieved."
-        };
-      }
-    }
-
-    if (unlocked) {
-      setUnlockedMilestone(unlocked);
-      addNotification(unlocked.title, unlocked.desc, "milestone");
-      // Phase 7.4: awaited (was fire-and-forget). Awaiting lets achievement XP
-      // be included in xpEarnedThisFinish before didRankUp fires. Still idempotent:
-      // unlockAchievement returns false on duplicate; awardXp swallows 23505.
-      if (user) {
-        const uid = user.uid;
-        const achId = unlocked.id;
-        try {
-          const wasNew = await unlockAchievement(uid, achId);
-          if (wasNew && xpEnabled) {
-            if (await awardXp(uid, "achievement_unlock", XP_VALUES.achievementUnlock, achId)) {
-              xpEarnedThisFinish += XP_VALUES.achievementUnlock;
-            }
-          }
-        } catch { /* non-fatal — achievement miss never blocks completion */ }
-      }
-    } else {
-      const topicName = customTopic || questions[0]?.ata || "this module";
-      addNotification(
-        "Module Complete",
-        `You scored ${Math.round(currentAccuracy)}% on ${topicName}. Keep the momentum going!`,
-        "milestone"
-      );
-    }
-
-    // Phase 7.4: single rank-up decision using FULL awarded XP for this finish
-    // (question + quiz + mission + achievement). xpBefore was captured before any
-    // award; xpEarnedThisFinish now includes achievement XP if it wrote.
-    // Guard: user + xpEnabled + something actually written (no phantom on retry).
-    if (xpEnabled && user && xpEarnedThisFinish > 0) {
-      const ru = didRankUp(xpBefore, xpBefore + xpEarnedThisFinish);
-      if (ru) {
-        rankUpName = ru.name;
-        addNotification(
-          "Rank Advanced",
-          `You reached ${ru.name}. Cleared for the next stage of training.`,
-          "milestone"
-        );
-      }
-    }
-
-    // Phase 6: engine mission → go to the completion screen (readiness impact,
-    // Generate Next Mission). completeMission already ran inside saveAttempt().
-    if (engineMission && missionId) {
-      navigate("/mission/complete", {
-        state: { missionId, xpEarned: xpEarnedThisFinish, rankUpName },
-      });
+    if (result.navigateTo === "mission-complete" && result.missionCompleteState) {
+      navigate("/mission/complete", { state: result.missionCompleteState });
       return;
     }
-
     setStatus("results");
   };
 
@@ -1058,12 +802,7 @@ export default function QuizView() {
         const msg = response
           ? await readError(response, "AI features are temporarily unavailable.")
           : "AI features are temporarily unavailable.";
-        showToast({
-          type: "error",
-          title: response?.status === 429 ? "Slow down" : response?.status === 403 ? "Upgrade required" : "Service Offline",
-          message: msg,
-          duration: 5000,
-        });
+        aiStreamErrorToast(showToast, response, msg);
         setAiExplanations((prev) => ({ ...prev, [currentQ.id]: msg }));
         return;
       }
@@ -1131,12 +870,7 @@ export default function QuizView() {
         const msg = response
           ? await readError(response, "AI features are temporarily unavailable.")
           : "AI features are temporarily unavailable.";
-        showToast({
-          type: "error",
-          title: response?.status === 429 ? "Slow down" : response?.status === 403 ? "Upgrade required" : "Service Offline",
-          message: msg,
-          duration: 5000,
-        });
+        aiStreamErrorToast(showToast, response, msg);
         setStudyPlan(msg);
         return;
       }
@@ -1384,7 +1118,7 @@ export default function QuizView() {
         <div className="flex flex-col min-h-screen items-center justify-center bg-bg relative">
            <div className="absolute inset-0 blueprint pointer-events-none opacity-40 z-0" />
            <div className="relative z-10 p-8 bg-paper border border-rule rounded-xl text-center shadow-sm">
-             <div className="w-8 h-8 rounded-full border-2 border-navy border-t-transparent animate-spin mx-auto mb-4"></div>
+             <div role="status" aria-label="Loading quiz content" className="w-8 h-8 rounded-full border-2 border-navy border-t-transparent animate-spin mx-auto mb-4" aria-hidden="false"></div>
              <p className="font-mono text-xs uppercase tracking-widest text-muted">Awaiting Flight Data...</p>
            </div>
         </div>
@@ -1466,42 +1200,44 @@ export default function QuizView() {
             className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-ink/70 backdrop-blur-sm"
             onClick={() => setShowAbortPrompt(false)}
           >
-            <motion.div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="abort-dialog-title"
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className="bg-paper p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-rule relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 id="abort-dialog-title" className="font-serif text-3xl text-ink mb-2">
-                Abort Session?
-              </h2>
-              <p className="font-mono text-[11px] text-muted uppercase tracking-widest leading-relaxed mb-8">
-                Your progress for this session will not be saved.
-              </p>
-              <div className="flex items-center gap-3 w-full">
-                <Button
-                  variant="ghost"
-                  className="flex-1 border border-rule hover:border-ink hover:text-ink text-muted transition-colors rounded-full"
-                  onClick={() => setShowAbortPrompt(false)}
-                >
-                  Continue Flying
-                </Button>
-                <Button
-                  variant="primary"
-                  className="flex-1 bg-signal hover:bg-signal/90 text-paper shadow-md rounded-full border-transparent"
-                  onClick={() => {
-                    setShowAbortPrompt(false);
-                    navigate(-1);
-                  }}
-                >
-                  Abort Session
-                </Button>
-              </div>
-            </motion.div>
+            <FocusTrap focusTrapOptions={{ initialFocus: false, escapeDeactivates: false, returnFocusOnDeactivate: true }}>
+              <motion.div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="abort-dialog-title"
+                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                className="bg-paper p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center border border-rule relative"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 id="abort-dialog-title" className="font-serif text-3xl text-ink mb-2">
+                  Abort Session?
+                </h2>
+                <p className="font-mono text-[11px] text-muted uppercase tracking-widest leading-relaxed mb-8">
+                  Your progress for this session will not be saved.
+                </p>
+                <div className="flex items-center gap-3 w-full">
+                  <Button
+                    variant="ghost"
+                    className="flex-1 border border-rule hover:border-ink hover:text-ink text-muted transition-colors rounded-full"
+                    onClick={() => setShowAbortPrompt(false)}
+                  >
+                    Continue Flying
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1 bg-signal hover:bg-signal/90 text-paper shadow-md rounded-full border-transparent"
+                    onClick={() => {
+                      setShowAbortPrompt(false);
+                      navigate(-1);
+                    }}
+                  >
+                    Abort Session
+                  </Button>
+                </div>
+              </motion.div>
+            </FocusTrap>
           </motion.div>
         )}
       </AnimatePresence>

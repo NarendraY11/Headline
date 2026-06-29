@@ -2,7 +2,7 @@
 
 export function LoadingFallback() {
   return (
-    <div className="w-full max-w-[1200px] mx-auto px-6 py-8 md:py-12 animate-pulse">
+    <div role="status" aria-label="Loading content" className="w-full max-w-[1200px] mx-auto px-6 py-8 md:py-12 animate-pulse">
       {/* Header Eyebrow Skeleton */}
       <div className="h-3 w-24 bg-rule/50 rounded-full mb-3" />
       

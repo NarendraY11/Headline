@@ -62,7 +62,7 @@
   <!-- Secondary Meta Information Grid -->
   <g transform="translate(80, 460)">
     <text x="0" y="0" font-family="'Inter', sans-serif" font-size="14" fill="#94a3b8" letter-spacing="0.05em">
-      PUBLISHED ON <tspan fill="#f59e0b" font-weight="bold">MAY 24, 2026</tspan>  &middot;  READTIME <tspan fill="#ffffff">5 MIN READ</tspan>
+      PUBLISHED ON <tspan fill="#f59e0b" font-weight="bold">MAY 24, 2026</tspan>  &#183;  READTIME <tspan fill="#ffffff">5 MIN READ</tspan>
     </text>
   </g>
 

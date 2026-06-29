@@ -269,7 +269,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       countdownAddedRef.current = true;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, notifications]);
+  }, [loading]);
 
   const markAsRead = useCallback(async (id: string) => {
     setNotifications(prev =>

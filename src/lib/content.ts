@@ -1,10 +1,12 @@
 import { supabase } from "./supabase";
 import { Question, Choice } from "../data/questions";
-import { rawSubjects, SubjectItem, SubTopic } from "../data/topics";
+import { SubjectItem, SubTopic } from "../data/topics";
 import { getCachedQuestions, getCachedQuestionsByIds, putQuestions } from "./offline/questionCache";
 import { normalizeSlug } from "./slug";
 
 const CACHE_TTL = 300000; // 5 minutes in milliseconds
+
+const Q_COLS = "id, subcategory_id, subject_id, exam_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
 
 // Raw `questions` row as returned by Supabase (snake_case, loosely typed —
 // choices/refs may arrive as arrays or JSON strings depending on column type).
@@ -130,7 +132,7 @@ export async function fetchQuestionsByIds(ids: string[]): Promise<Question[]> {
   try {
     const { data, error } = await supabase
       .from("questions")
-      .select("id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs")
+      .select(Q_COLS)
       .in("id", ids);
 
     if (error || !data) {
@@ -153,7 +155,6 @@ export async function fetchQuizQuestionsForTopic(
   randomize = true
 ): Promise<Question[]> {
   try {
-    const Q_COLS = "id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
     let { data, error } = await supabase
       .from("questions")
       .select(Q_COLS)
@@ -240,7 +241,6 @@ export async function fetchPublishedQuestions(options?: {
 }): Promise<Question[]> {
   if (options) {
     try {
-      const Q_COLS = "id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
       let query = supabase
         .from("questions")
         .select(Q_COLS)
@@ -308,7 +308,6 @@ export async function fetchPublishedQuestions(options?: {
   if (cachedQuestions) return cachedQuestions;
 
   try {
-    const Q_COLS = "id, subcategory_id, subject_id, ata, difficulty, prompt, diagram_caption, choices, correct, explanation, refs";
     const { data, error } = await supabase
       .from("questions")
       .select(Q_COLS)
@@ -357,6 +356,7 @@ export async function fetchPublishedSubjects(): Promise<any[]> {
 
     if (error) {
       console.warn("Error fetching subjects, using static fallback:", error);
+      const { rawSubjects } = await import("../data/topics");
       cachedSubjects = rawSubjects.map(s => ({
         id: s.id,
         title: s.title,
@@ -369,6 +369,7 @@ export async function fetchPublishedSubjects(): Promise<any[]> {
     } else if (data && data.length > 0) {
       cachedSubjects = data;
     } else {
+      const { rawSubjects } = await import("../data/topics");
       cachedSubjects = rawSubjects.map(s => ({
         id: s.id,
         title: s.title,
@@ -381,6 +382,7 @@ export async function fetchPublishedSubjects(): Promise<any[]> {
     }
   } catch (err) {
     console.warn("Exception fetching subjects, using static fallback:", err);
+    const { rawSubjects } = await import("../data/topics");
     cachedSubjects = rawSubjects.map(s => ({
       id: s.id,
       title: s.title,
@@ -414,7 +416,8 @@ export async function fetchPublishedSubcategories(): Promise<any[]> {
 
     if (error) {
       console.warn("Error fetching subcategories, using static fallback:", error);
-      cachedSubcategories = rawSubjects.flatMap(s => 
+      const { rawSubjects } = await import("../data/topics");
+      cachedSubcategories = rawSubjects.flatMap(s =>
         (s.subTopics || []).map((st, idx) => ({
           id: st.id,
           subject_id: s.id,
@@ -428,7 +431,8 @@ export async function fetchPublishedSubcategories(): Promise<any[]> {
     } else if (data && data.length > 0) {
       cachedSubcategories = data;
     } else {
-      cachedSubcategories = rawSubjects.flatMap(s => 
+      const { rawSubjects } = await import("../data/topics");
+      cachedSubcategories = rawSubjects.flatMap(s =>
         (s.subTopics || []).map((st, idx) => ({
           id: st.id,
           subject_id: s.id,
@@ -442,7 +446,8 @@ export async function fetchPublishedSubcategories(): Promise<any[]> {
     }
   } catch (err) {
     console.warn("Exception fetching subcategories, using static fallback:", err);
-    cachedSubcategories = rawSubjects.flatMap(s => 
+    const { rawSubjects } = await import("../data/topics");
+    cachedSubcategories = rawSubjects.flatMap(s =>
       (s.subTopics || []).map((st, idx) => ({
         id: st.id,
         subject_id: s.id,
@@ -475,13 +480,14 @@ export async function fetchMergedSubjects(forceRefresh = false): Promise<Subject
   const questionsList = await fetchPublishedQuestions();
   const dbSubjects = await fetchPublishedSubjects();
   const dbSubcats = await fetchPublishedSubcategories();
+  const { rawSubjects } = await import("../data/topics");
 
    const dbMerged = dbSubjects.map(dbSub => {
      const pMatch = rawSubjects.find(s => s.id === dbSub.id);
-     
+
      const subcatsOfThisSubject = dbSubcats.filter(sc => sc.subject_id === dbSub.id);
      const subTopics = subcatsOfThisSubject.map((dbSubcat, idx) => {
-       const stMatch = pMatch?.subTopics?.find(st => st.id === dbSubcat.id) || 
+       const stMatch = pMatch?.subTopics?.find(st => st.id === dbSubcat.id) ||
          rawSubjects.flatMap(s => s.subTopics || []).find(st => st.id === dbSubcat.id);
        
        return {
@@ -940,114 +946,87 @@ export async function seedTaxonomy(): Promise<{ subjectsCount: number; examsCoun
   let qCount = 0;
 
   try {
-    // 1. Seed rawSubjects
-    for (const sub of rawSubjects) {
-      const { data: exist } = await supabase
-        .from("subjects")
-        .select("id")
-        .eq("id", sub.id)
-        .maybeSingle();
+    const { rawSubjects } = await import("../data/topics");
 
-      if (!exist) {
-        const { error } = await supabase
-          .from("subjects")
-          .insert({
-            id: sub.id,
-            title: sub.title,
-            description: sub.blurb,
-            exam_authority: sub.exam_authority || "DGCA",
-            license: sub.license || "CPL",
-            sort_order: sub.sort_order || 99,
-            status: "published", // seed as published so they show up for study
-          });
-        if (!error) subCount++;
-      }
+    // 1. Batch upsert subjects (ignoreDuplicates = skip rows that already exist)
+    const subjectsPayload = rawSubjects.map(sub => ({
+      id: sub.id,
+      title: sub.title,
+      description: sub.blurb,
+      exam_authority: sub.exam_authority || "DGCA",
+      license: sub.license || "CPL",
+      sort_order: sub.sort_order || 99,
+      status: "published",
+    }));
+    const { error: subErr, data: subData } = await supabase
+      .from("subjects")
+      .upsert(subjectsPayload, { onConflict: "id", ignoreDuplicates: true })
+      .select("id");
+    if (subErr) console.warn("seedTaxonomy subjects upsert error:", subErr);
+    else subCount = (subData ?? []).length;
+
+    // 2. Batch upsert subcategories
+    const subcatsPayload = rawSubjects.flatMap(sub =>
+      (sub.subTopics || []).map((st, idx) => ({
+        id: st.id,
+        subject_id: sub.id,
+        title: st.title,
+        code: st.code || `ATA ${st.id.toUpperCase()}`,
+        description: st.description || "",
+        status: "published",
+        sort_order: idx + 1,
+      }))
+    );
+    if (subcatsPayload.length > 0) {
+      const { error: scErr } = await supabase
+        .from("subcategories")
+        .upsert(subcatsPayload, { onConflict: "id", ignoreDuplicates: true });
+      if (scErr) console.warn("seedTaxonomy subcategories upsert error:", scErr);
     }
 
-    // 2. Seed subcategories of seeded subjects
-    for (const sub of rawSubjects) {
-      if (sub.subTopics && sub.subTopics.length > 0) {
-        for (const st of sub.subTopics) {
-          const { data: existSubcat } = await supabase
-            .from("subcategories")
-            .select("id")
-            .eq("id", st.id)
-            .maybeSingle();
+    // 3. Batch upsert exams
+    const examsPayload = staticExams.map(exam => ({
+      id: exam.id,
+      authority: exam.authority,
+      license: exam.license,
+      title: exam.title,
+      pass_mark: exam.pass_mark,
+      question_count: exam.question_count,
+      duration_min: exam.duration_min,
+      negative_marking: exam.negative_marking,
+      subject_ids: exam.subject_ids,
+      status: "published",
+    }));
+    const { error: exErr, data: exData } = await supabase
+      .from("exams")
+      .upsert(examsPayload, { onConflict: "id", ignoreDuplicates: true })
+      .select("id");
+    if (exErr) console.warn("seedTaxonomy exams upsert error:", exErr);
+    else exCount = (exData ?? []).length;
 
-          if (!existSubcat) {
-            await supabase
-              .from("subcategories")
-              .insert({
-                id: st.id,
-                subject_id: sub.id,
-                title: st.title,
-                code: st.code || `ATA ${st.id.toUpperCase()}`,
-                description: st.description || "",
-                status: "published",
-                sort_order: 1
-              });
-          }
-        }
-      }
-    }
-
-    // 3. Seed static exams
-    for (const exam of staticExams) {
-      const { data: existExam } = await supabase
-        .from("exams")
-        .select("id")
-        .eq("id", exam.id)
-        .maybeSingle();
-
-      if (!existExam) {
-        const { error } = await supabase
-          .from("exams")
-          .insert({
-            id: exam.id,
-            authority: exam.authority,
-            license: exam.license,
-            title: exam.title,
-            pass_mark: exam.pass_mark,
-            question_count: exam.question_count,
-            duration_min: exam.duration_min,
-            negative_marking: exam.negative_marking,
-            subject_ids: exam.subject_ids,
-            status: "published",
-          });
-        if (!error) exCount++;
-      }
-    }
-
-    // 4. Seed questions
+    // 4. Batch upsert questions
     const { staticQuestionBank } = await import("../data/staticQuestions");
     if (staticQuestionBank && staticQuestionBank.length > 0) {
-       for (const q of staticQuestionBank) {
-         const { data: existQ } = await supabase
-           .from("questions")
-           .select("id")
-           .eq("id", q.id)
-           .maybeSingle();
-         
-         if (!existQ) {
-           const { error } = await supabase
-             .from("questions")
-             .insert({
-               id: q.id,
-               subcategory_id: q.topicId || q.subcategoryId || null,
-               subject_id: q.subjectId || null,
-               ata: q.ata || "Uncategorized",
-               difficulty: q.difficulty || "standard",
-               prompt: q.prompt,
-               diagram_caption: q.diagramCaption,
-               choices: q.choices,
-               correct: q.correct,
-               explanation: q.explanation || "",
-               refs: q.references || [],
-               status: "published",
-             });
-           if (!error) qCount++;
-         }
-       }
+      const questionsPayload = staticQuestionBank.map(q => ({
+        id: q.id,
+        subcategory_id: q.topicId || q.subcategoryId || null,
+        subject_id: q.subjectId || null,
+        ata: q.ata || "Uncategorized",
+        difficulty: q.difficulty || "standard",
+        prompt: q.prompt,
+        diagram_caption: q.diagramCaption,
+        choices: q.choices,
+        correct: q.correct,
+        explanation: q.explanation || "",
+        refs: q.references || [],
+        status: "published",
+      }));
+      const { error: qErr, data: qData } = await supabase
+        .from("questions")
+        .upsert(questionsPayload, { onConflict: "id", ignoreDuplicates: true })
+        .select("id");
+      if (qErr) console.warn("seedTaxonomy questions upsert error:", qErr);
+      else qCount = (qData ?? []).length;
     }
   } catch (err) {
     console.error("Exception seeding taxonomy:", err);

@@ -18,7 +18,8 @@ import { useGlobalLoading } from "../contexts/LoadingContext";
 import { SubjectItem, rawSubjects } from "../data/topics";
 import { useFeature } from "../hooks/useFeatureFlags";
 import { useModuleProgress } from "../hooks/useModuleProgress";
-import { apiFetchRaw, readError } from "../lib/api";
+import { apiFetchRaw, readError, aiStreamErrorToast } from "../lib/api";
+import { quizStateKey } from "../lib/storageKeys";
 import { fetchMergedSubjects } from "../lib/content";
 import { useUserProgress } from "../lib/progress";
 import { trackEvent } from "../lib/track";
@@ -187,12 +188,7 @@ export default function TopicView() {
         const msg = response
           ? await readError(response, "AI features are temporarily unavailable.")
           : "AI features are temporarily unavailable.";
-        showToast({
-          type: "error",
-          title: response?.status === 429 ? "Slow down" : response?.status === 403 ? "Upgrade required" : "Service Offline",
-          message: msg,
-          duration: 5000,
-        });
+        aiStreamErrorToast(showToast, response, msg);
         return;
       }
 
@@ -648,9 +644,7 @@ export default function TopicView() {
 
           <div className="p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
             {subject.subTopics?.map((sub, idx) => {
-              const hasSavedState = !!localStorage.getItem(
-                `heading_quiz_state_${sub.id}`,
-              );
+              const hasSavedState = !!localStorage.getItem(quizStateKey(sub.id));
               const isComingSoon = sub.questionCount === 0;
               const isUnlocked = subject.is_free || sub.free_chapter || idx === 0;
               const mp = learningHierarchy ? moduleProgress[sub.id] : null;

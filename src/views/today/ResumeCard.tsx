@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PlayCircle, X } from "lucide-react";
+import { QUIZ_STATE_PREFIX } from "../../lib/storageKeys";
 
 interface ResumeInfo {
   topicId: string;
@@ -20,12 +21,12 @@ export function ResumeCard() {
       let best: { info: ResumeInfo; ts: number } | null = null;
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (!key || !key.startsWith("heading_quiz_state_")) continue;
+        if (!key || !key.startsWith(QUIZ_STATE_PREFIX)) continue;
         const raw = localStorage.getItem(key);
         if (!raw) continue;
         const st = JSON.parse(raw);
         if (st?.status !== "active" || !(st.timeElapsed > 0)) continue;
-        const topicId = key.replace("heading_quiz_state_", "");
+        const topicId = key.replace(QUIZ_STATE_PREFIX, "");
         const total = Array.isArray(st.questionIds) ? st.questionIds.length : 0;
         const info: ResumeInfo = {
           topicId,

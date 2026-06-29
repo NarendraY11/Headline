@@ -758,6 +758,9 @@ export const featureControlSections: FeatureCategory[] = [
   "UI/UX & System",
   "Monetization & Growth",
   "Internal Rollout",
+  "Announcement Banner",
+  "Analytics Intelligence",
+  "Mobile & Offline",
 ];
 
 export const adminFeatureDefinitions = featureControlSections.map((category) => ({
