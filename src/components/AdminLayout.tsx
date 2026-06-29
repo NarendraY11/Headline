@@ -2,26 +2,42 @@ import React, { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Wordmark } from "./branding/Wordmark";
-import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity, ShieldCheck, FileText, SlidersHorizontal, ChevronDown, ChevronRight, Bell, IndianRupee, Globe, UserCog, Bot, Filter, CreditCard } from "lucide-react";
+import { LayoutDashboard, BookOpen, Layers, HelpCircle, UploadCloud, Users, Settings, LogOut, Menu, X, ArrowLeft, Activity, ShieldCheck, FileText, SlidersHorizontal, ChevronDown, ChevronRight, Bell, IndianRupee, Globe, UserCog, Bot, Filter, CreditCard, Database, Star, Plane, UserCheck, FileSearch, BarChart3, Import } from "lucide-react";
 
 export function AdminLayout() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [contentOpen, setContentOpen] = useState(false);
+  const [registryOpen, setRegistryOpen] = useState(false);
   const navigate = useNavigate();
 
   const mainNavItems = [
     { label: "Dashboard", path: "/admin", icon: LayoutDashboard },
-    { label: "Subjects Manager", path: "/admin/subjects", icon: BookOpen },
-    { label: "Exams Manager", path: "/admin/exams", icon: ShieldCheck },
-    { label: "Blog Publisher", path: "/admin/blog", icon: FileText },
+    { label: "Subjects", path: "/admin/subjects", icon: BookOpen },
+    { label: "Exams", path: "/admin/exams", icon: ShieldCheck },
     { label: "Subcategories", path: "/admin/subcategories", icon: Layers },
-    { label: "Questions Catalog", path: "/admin/questions", icon: HelpCircle },
-    { label: "Bulk Importer", path: "/admin/import", icon: UploadCloud },
-    { label: "Student cohorts", path: "/admin/users", icon: Users },
+    { label: "Questions", path: "/admin/questions", icon: HelpCircle },
+    { label: "Student Cohorts", path: "/admin/users", icon: Users },
     { label: "Funnel Analytics", path: "/admin/funnel", icon: Filter },
     { label: "Billing", path: "/admin/billing", icon: CreditCard },
     { label: "Notifications", path: "/admin/notifications", icon: Bell },
+    { label: "Blog Publisher", path: "/admin/blog", icon: FileText },
+  ];
+
+  const contentNavItems = [
+    { label: "CMS", path: "/admin/cms", icon: Database },
+    { label: "Content Import", path: "/admin/content-import", icon: Import },
+    { label: "Content Quality", path: "/admin/content-quality", icon: BarChart3 },
+    { label: "Bulk Import (Legacy)", path: "/admin/import", icon: UploadCloud },
+  ];
+
+  const registryNavItems = [
+    { label: "Registry Hub", path: "/admin/registry", icon: Database },
+    { label: "Programs", path: "/admin/registry/programs", icon: Star },
+    { label: "Certifications", path: "/admin/registry/certifications", icon: ShieldCheck },
+    { label: "Aircraft", path: "/admin/registry/aircraft", icon: Plane },
+    { label: "Enrollments", path: "/admin/registry/enrollments", icon: UserCheck },
   ];
 
   const secondaryNavItems = [
@@ -82,6 +98,42 @@ export function AdminLayout() {
             Administrative Deck
           </div>
           {renderNavLinks(mainNavItems)}
+
+          <div className="pt-2">
+            <button
+              onClick={() => setContentOpen(!contentOpen)}
+              className="flex items-center justify-between w-full px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider text-muted hover:text-ink hover:bg-bg-2 transition-colors select-none"
+            >
+              <div className="flex items-center gap-3">
+                <Database size={14} className="shrink-0" />
+                <span>Content Platform</span>
+              </div>
+              {contentOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+            {contentOpen && (
+              <div className="mt-1 space-y-1.5 pl-3 border-l-2 border-rule ml-4">
+                {renderNavLinks(contentNavItems)}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={() => setRegistryOpen(!registryOpen)}
+              className="flex items-center justify-between w-full px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider text-muted hover:text-ink hover:bg-bg-2 transition-colors select-none"
+            >
+              <div className="flex items-center gap-3">
+                <FileSearch size={14} className="shrink-0" />
+                <span>Registry</span>
+              </div>
+              {registryOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+            {registryOpen && (
+              <div className="mt-1 space-y-1.5 pl-3 border-l-2 border-rule ml-4">
+                {renderNavLinks(registryNavItems)}
+              </div>
+            )}
+          </div>
 
           <div className="pt-2">
             <button
@@ -151,6 +203,42 @@ export function AdminLayout() {
                 Administrative Deck
               </div>
               {renderNavLinks(mainNavItems)}
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setContentOpen(!contentOpen)}
+                  className="flex items-center justify-between w-full px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider text-muted hover:text-ink hover:bg-bg-2 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-3">
+                    <Database size={14} className="shrink-0" />
+                    <span>Content Platform</span>
+                  </div>
+                  {contentOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                {contentOpen && (
+                  <div className="mt-1 space-y-1.5 pl-3 border-l-2 border-rule ml-4">
+                    {renderNavLinks(contentNavItems)}
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setRegistryOpen(!registryOpen)}
+                  className="flex items-center justify-between w-full px-3 h-10 rounded-lg text-xs font-medium uppercase font-mono tracking-wider text-muted hover:text-ink hover:bg-bg-2 transition-colors select-none"
+                >
+                  <div className="flex items-center gap-3">
+                    <FileSearch size={14} className="shrink-0" />
+                    <span>Registry</span>
+                  </div>
+                  {registryOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                </button>
+                {registryOpen && (
+                  <div className="mt-1 space-y-1.5 pl-3 border-l-2 border-rule ml-4">
+                    {renderNavLinks(registryNavItems)}
+                  </div>
+                )}
+              </div>
 
               <div className="pt-2">
                 <button

@@ -4,6 +4,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import {
   AlertCircle,
   AlertTriangle,
@@ -370,6 +371,7 @@ export default function ContentImportView() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto py-2 font-sans text-ink">
+      <AdminBreadcrumb crumbs={[{ label: "Content Import" }]} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-rule pb-6">
         <div>

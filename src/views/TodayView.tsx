@@ -747,7 +747,7 @@ export default function TodayView() {
               ...(learningHierarchyEnabled ? ["certification", "continue-module"] : []),
             ]
               .filter((tile) => tile !== "xp" || xpSystemEnabled)
-              .map((tile) => renderTile(tile))}
+              .map((tile) => <div key={tile}>{renderTile(tile)}</div>)}
           </div>
         </div>
 

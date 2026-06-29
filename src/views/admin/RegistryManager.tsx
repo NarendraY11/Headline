@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { supabase } from "../../lib/supabase";
 import {
   clearRegistryCache,
@@ -115,6 +116,7 @@ export default function RegistryManager() {
 
   return (
     <div style={{ padding: 24, maxWidth: 980 }}>
+      <AdminBreadcrumb crumbs={[{ label: "Registry", to: "/admin/registry" }, { label: entity ? entity.charAt(0).toUpperCase() + entity.slice(1) : "Hub" }]} />
       <h1 style={{ fontSize: 20, fontWeight: 700 }}>Content Registry — {entity}</h1>
 
       <nav style={{ display: "flex", gap: 8, margin: "12px 0 20px" }}>

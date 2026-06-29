@@ -16,6 +16,7 @@ import {
   Tag,
   X,
 } from "lucide-react";
+import { AdminBreadcrumb } from "../../components/AdminBreadcrumb";
 import { useFeatureFlags } from "../../hooks/useFeatureFlags";
 import {
   flattenTree,
@@ -515,6 +516,7 @@ export default function ContentCmsView() {
 
   return (
     <div className="h-full flex flex-col gap-0 font-sans text-ink">
+      <AdminBreadcrumb crumbs={[{ label: "Content CMS" }]} />
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 border-b border-rule pb-4 mb-4 px-1">
         <div className="flex-1">
