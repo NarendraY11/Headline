@@ -38,6 +38,8 @@ export interface FeatureDefinition {
   sideEffects: FeatureSideEffect[];
   requiresAuth: boolean;
   requiresAdmin: boolean;
+  /** Flags that must be ON for this feature to work correctly. Warning shown in UI — does not block toggle. */
+  dependsOn?: FlagKeys[];
 }
 
 export const featureRegistry = {
@@ -700,6 +702,7 @@ export const featureRegistry = {
     sideEffects: ["auth", "supabase-read", "supabase-write"],
     requiresAuth: true,
     requiresAdmin: true,
+    dependsOn: ["contentRegistry"] as FlagKeys[],
   },
   contentImport: {
     key: "contentImport",
@@ -719,6 +722,7 @@ export const featureRegistry = {
     description: "Unified content scope resolver — resolveContentScope() wired into Modules, Missions, Quiz, Analytics, Scheduler, and AI. All consumers derive subject/module/topic eligibility from one canonical resolver. OFF = legacy per-component filtering. ON = single engine drives everything.",
     category: "Internal Rollout",
     adminVisible: true,
+    dependsOn: ["contentRegistry"] as FlagKeys[],
     previewType: "none",
     routes: ["/modules", "/quiz/:topicId", "/today", "/analytics", "/admin/registry"],
     sideEffects: ["auth", "supabase-read"],
@@ -736,6 +740,7 @@ export const featureRegistry = {
     sideEffects: ["auth", "supabase-read"],
     requiresAuth: true,
     requiresAdmin: false,
+    dependsOn: ["contentDeliveryEngine"] as FlagKeys[],
   },
   adaptiveLearning: {
     key: "adaptiveLearning",
@@ -743,6 +748,7 @@ export const featureRegistry = {
     description: "Intelligent study recommendations: priority model, readiness score (0–100), study health (Green/Yellow/Red), exam readiness (Ready/Needs Review/At Risk). Replaces static Continue Learning with adaptive recommendation in Today. Adds readiness panel to Course view. OFF = all existing behavior unchanged.",
     category: "Learning Features",
     adminVisible: true,
+    dependsOn: ["learningHierarchy", "contentDeliveryEngine"] as FlagKeys[],
     previewType: "component",
     routes: ["/today", "/course"],
     sideEffects: ["auth", "supabase-read"],

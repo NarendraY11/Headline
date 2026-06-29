@@ -30,6 +30,7 @@ interface FeatureToggleRowProps {
   feature: FeatureDefinition;
   checked: boolean;
   isSelected: boolean;
+  flags: Flags;
   onSelect: (feature: FeatureDefinition) => void;
   onToggle: (key: FlagKeys, value: boolean) => void;
 }
@@ -38,9 +39,11 @@ const FeatureToggleRow = memo(function FeatureToggleRow({
   feature,
   checked,
   isSelected,
+  flags,
   onSelect,
   onToggle,
 }: FeatureToggleRowProps) {
+  const missingDeps = feature.dependsOn?.filter((dep) => !flags[dep]) ?? [];
   const handleRowSelect = useCallback(() => {
     onSelect(feature);
   }, [feature, onSelect]);
@@ -87,6 +90,12 @@ const FeatureToggleRow = memo(function FeatureToggleRow({
         </h4>
         {feature.description && (
           <p className="text-[11px] text-muted-2 mt-0.5">{feature.description}</p>
+        )}
+        {missingDeps.length > 0 && (
+          <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1">
+            <AlertTriangle size={10} />
+            Requires: {missingDeps.join(", ")}
+          </p>
         )}
       </div>
       <label
@@ -141,6 +150,7 @@ const FeatureSection = memo(function FeatureSection({
           feature={feature}
           checked={Boolean(flags[feature.key])}
           isSelected={selectedKey === feature.key}
+          flags={flags}
           onSelect={onSelect}
           onToggle={onToggle}
         />
@@ -204,6 +214,7 @@ const FeatureList = memo(function FeatureList({ flags, onChange }: FeatureListPr
           feature={announcementBannerFeature}
           checked={Boolean(flags[announcementBannerFeature.key])}
           isSelected={selectedKey === announcementBannerFeature.key}
+          flags={flags}
           onSelect={handleSelectFeature}
           onToggle={handleToggle}
         />
