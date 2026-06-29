@@ -143,7 +143,7 @@ function main() {
 
     // Check if multiplexed to system.ts
     const rewrite = vercelRewrites.find((r) => r.source === route.path);
-    if (rewrite && rewrite.destination?.includes("system?fn=")) continue;
+    if (rewrite && rewrite.dest?.includes("system?fn=")) continue;
 
     const matchedFile = apiFiles.find((f) => normalizePath(f.path) === normalized && f.method === route.method);
     if (!matchedFile) {
@@ -194,7 +194,7 @@ function main() {
   // Check 3: Every vercel rewrite to system.ts has a system.ts case.
   console.log("✓ Checking vercel.json → system.ts coverage...");
   for (const rewrite of vercelRewrites) {
-    const dest = rewrite.destination || rewrite.dest;
+    const dest = rewrite.dest;
     if (dest && dest.includes("system?fn=")) {
       const fn = dest.split("fn=")[1]?.split("&")[0];
       if (fn && !systemFnCases.includes(fn)) {

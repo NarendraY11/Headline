@@ -33,6 +33,7 @@
     "claude-marketplace",
     "graphify-out",
     ".impeccable",
-    "dist"
+    "dist",
+    "tests"
   ]
 }
