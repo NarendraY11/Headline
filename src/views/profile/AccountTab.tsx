@@ -5,13 +5,13 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertCircle, AlertTriangle, KeyRound, LogOut, Mail } from "lucide-react";
+import { AlertCircle, AlertTriangle, KeyRound, LogOut, Mail, RotateCcw } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../components/ui/Toast";
 import { Button, Card } from "../../components/Atoms";
 
 export default function AccountTab() {
-  const { user, logout, logoutEverywhere, resetAccount } = useAuth();
+  const { user, logout, logoutEverywhere, resetAccount, updateUserData } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -19,6 +19,7 @@ export default function AccountTab() {
   const [isWiping, setIsWiping] = useState(false);
   const [confirmSignOutAll, setConfirmSignOutAll] = useState(false);
   const [confirmWipe, setConfirmWipe] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -30,6 +31,18 @@ export default function AccountTab() {
     setIsLoggingOut(true);
     try { await logoutEverywhere(); }
     catch { setIsLoggingOut(false); showToast({ type: "error", title: "Sign Out Failed", message: "Could not sign out of all devices. Please try again." }); }
+  };
+
+  const handleResetSetup = () => {
+    if (user) {
+      updateUserData({ onboardingCompleted: false }).finally(() => {
+        localStorage.removeItem("heading_onboarding_completed");
+        window.location.reload();
+      });
+    } else {
+      localStorage.removeItem("heading_onboarding_completed");
+      window.location.reload();
+    }
   };
 
   const handleWipe = async () => {
@@ -118,6 +131,27 @@ export default function AccountTab() {
             </div>
           ))}
         </div>
+      </Card>
+
+      {/* ── Setup ── */}
+      <Card className="bg-paper p-6">
+        <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-bold block mb-2">Setup</span>
+        <p className="font-sans text-sm text-ink-2 font-light leading-relaxed mb-4">Replay the onboarding flow to update your exam track, targets, and study goals.</p>
+        {confirmReset ? (
+          <div className="border border-amber/30 bg-amber-soft/40 rounded-lg p-3 flex flex-col gap-2">
+            <p className="font-sans text-xs text-ink-2 leading-relaxed">This will restart the setup wizard on next page load. Your progress and data are not deleted.</p>
+            <div className="flex gap-2">
+              <Button variant="ghost" className="flex-1 min-h-[44px] text-xs border border-amber/40 text-amber hover:bg-amber-soft" onClick={() => { setConfirmReset(false); handleResetSetup(); }}>
+                Restart setup
+              </Button>
+              <Button variant="ghost" className="min-h-[44px] text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmReset(false)}>Cancel</Button>
+            </div>
+          </div>
+        ) : (
+          <Button variant="ghost" className="gap-2 border border-rule text-ink hover:bg-bg-2" onClick={() => setConfirmReset(true)}>
+            <RotateCcw size={15} /> Reset Setup
+          </Button>
+        )}
       </Card>
 
       {/* ── Danger Zone — isolated below a clear divider, never adjacent to Sign out ── */}
