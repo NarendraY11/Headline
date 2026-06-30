@@ -14,6 +14,7 @@ import { defaultFlags } from "./hooks/useFeatureFlags";
 import HomeView from "./views/HomeView";
 const ModulesView = lazy(() => import("./views/ModulesView"));
 const MockExamsView = lazy(() => import("./views/MockExamsView"));
+const PracticeView = lazy(() => import("./views/PracticeView"));
 const AnalyticsView = lazy(() => import("./views/AnalyticsView"));
 const AboutView = lazy(() => import("./views/AboutView"));
 const QuizView = lazy(() => import("./views/QuizView"));
@@ -233,6 +234,10 @@ export default function App() {
             <Route path="/modules" element={<ModulesView />} />
             <Route path="/course" element={<CourseView />} />
             <Route path="/topic/:id" element={<TopicView />} />
+            {/* UX-Nav Phase 2: unified Practice hub. /mock-exams + /exam-centre
+                kept alive (deep links, mission/webmcp state nav) and surfaced as
+                tabs inside Practice. */}
+            <Route path="/practice" element={<PracticeView />} />
             <Route path="/mock-exams" element={<MockExamsView />} />
             <Route path="/analytics" element={<AnalyticsView />} />
             <Route path="/bookmarks" element={<BookmarksView />} />

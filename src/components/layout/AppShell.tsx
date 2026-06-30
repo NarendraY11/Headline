@@ -146,7 +146,9 @@ export function AppShell() {
       if (id === "a320-systems") return "A320 Systems";
       return id.split("-").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ");
     }
+    if (path === "/practice") return "Practice";
     if (path === "/mock-exams") return "Mock Exams";
+    if (path === "/exam-centre") return "Exam Centre";
     if (path.startsWith("/quiz/")) {
       const topicId = path.replace("/quiz/", "");
       if (topicId === "viva") return "VIVA Practice";
@@ -158,11 +160,11 @@ export function AppShell() {
       }
       return `Quiz: ${topicId.toUpperCase()}`;
     }
-    if (path === "/bookmarks") return "Flashcards";
+    if (path === "/bookmarks") return "Review";
     if (path === "/analytics") return "Progress";
     if (path === "/profile") return "Profile";
     if (path === "/about") return "About";
-    if (path === "/schedule") return "Flight Schedule";
+    if (path === "/schedule") return "Planner";
     if (path === "/referral") return "Refer & Earn";
     if (path === "/mock-exams") return "Mock Exams";
     if (path === "/a320-systems" || path.startsWith("/topic/a320")) return "A320 Systems";
@@ -222,7 +224,24 @@ export function AppShell() {
     
     // First, exact match for Today page
     if (to === "/today") return path === "/today";
-    
+
+    // UX-Nav Phase 2: Practice hub covers Mock exams, Exam Centre, VIVA, and the
+    // mock-exam quiz routes — all reachable as Practice tabs / launchers.
+    if (to === "/practice") {
+      if (
+        path.startsWith("/practice") ||
+        path.startsWith("/mock-exams") ||
+        path.startsWith("/exam-centre") ||
+        path.startsWith("/quiz/viva")
+      ) return true;
+      return path.startsWith("/quiz/") && (
+        path.includes("-cpl-") ||
+        path.includes("-atpl-") ||
+        path.includes("mini-mock") ||
+        ["nav-cpl-01", "met-atpl-01", "ops-cpl-02", "agk-atpl-03"].some(eid => path.endsWith(eid))
+      );
+    }
+
     // For VIVA practice, route is /quiz/viva
     if (to === "/quiz/viva") {
       return path.startsWith("/quiz/viva");
@@ -585,10 +604,13 @@ export function AppShell() {
                     {navItems.map((item) => {
                       const active = isItemActive(item.to);
                       return (
-                        <Link 
+                        <Link
                           key={item.label}
                           to={item.to}
-                          onClick={() => setMobileMenuOpen(false)}
+                          onClick={() => {
+                            trackEvent("nav_item_clicked", { metadata: { label: item.label, to: item.to, surface: "drawer" } });
+                            setMobileMenuOpen(false);
+                          }}
                           className={`flex items-center gap-2 p-2 px-3 rounded-xl text-xs font-sans font-medium tracking-tight border transition-all ${
                             active 
                               ? "bg-panel text-ink border-rule shadow-sm" 
@@ -664,6 +686,7 @@ export function AppShell() {
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    onClick={() => trackEvent("nav_item_clicked", { metadata: { label: item.label, to: item.to, surface: "bottom-nav" } })}
                     className={`relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${active ? 'text-ink' : 'text-muted hover:text-ink'}`}
                     aria-label={item.label}
                   >

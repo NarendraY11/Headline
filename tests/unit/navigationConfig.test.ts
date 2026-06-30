@@ -30,6 +30,13 @@ describe("buildNavItems — UX-Nav Phase 1", () => {
     expect(labels).not.toContain("Flight Schedule");
   });
 
+  it("folds the three testing surfaces into a single Practice item (Phase 2)", () => {
+    expect(labels).toContain("Practice");
+    expect(labels).not.toContain("Mock exams");
+    expect(labels).not.toContain("Exam Centre");
+    expect(labels).not.toContain("VIVA practice");
+  });
+
   it("keeps core destinations", () => {
     expect(labels).toContain("Today");
     expect(labels).toContain("Question bank");
@@ -38,11 +45,13 @@ describe("buildNavItems — UX-Nav Phase 1", () => {
   });
 });
 
-describe("buildBottomNavItems — UX-Nav Phase 1", () => {
+describe("buildBottomNavItems — UX-Nav Phase 2", () => {
   const items = buildBottomNavItems(opts);
 
-  it("caps at 5 unique tabs", () => {
-    expect(items.length).toBeLessThanOrEqual(5);
+  it("is the fixed recommended 5 (unique)", () => {
+    expect(items.map((i) => i.to)).toEqual([
+      "/today", "/modules", "/practice", "/bookmarks", "/analytics",
+    ]);
     expect(new Set(items.map((i) => i.to)).size).toBe(items.length);
   });
 
