@@ -14,6 +14,7 @@ import {
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Link, NavLink, useLocation, useOutlet } from "react-router-dom";
 import { buildNavItems, buildBottomNavItems } from "../../config/navigationConfig";
+import { trackEvent } from "../../lib/track";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFeatureFlags } from "../../hooks/useFeatureFlags";
 import { useIsAdmin } from "../../hooks/useIsAdmin";
@@ -370,6 +371,7 @@ export function AppShell() {
                     key={item.label}
                     to={item.to}
                     onClick={() => {
+                      trackEvent("nav_item_clicked", { metadata: { label: item.label, to: item.to, surface: "sidebar" } });
                       if (isTablet && isSidebarTappedForTablet) setIsSidebarTappedForTablet(false);
                     }}
                     title={!isSidebarExpanded ? item.label : undefined}

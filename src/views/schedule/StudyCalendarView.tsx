@@ -809,10 +809,10 @@ export default function StudyCalendarView() {
           <div className="flex items-end justify-between gap-3 flex-wrap">
             <div>
               <span className="block font-mono text-[10px] tracking-[0.2em] uppercase text-signal mb-1.5">
-                § FLIGHT SCHEDULE · STUDY CALENDAR
+                § PLANNER · STUDY CALENDAR
               </span>
               <h1 className="font-serif text-[34px] md:text-[42px] text-ink leading-tight tracking-tight">
-                Flight Schedule
+                Planner
               </h1>
               <p className="font-sans text-sm text-muted-2 mt-1">
                 Your study missions, visualised on a calendar.
