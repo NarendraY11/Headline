@@ -160,7 +160,7 @@ export function AppShell() {
       }
       return `Quiz: ${topicId.toUpperCase()}`;
     }
-    if (path === "/bookmarks") return "Review";
+    if (path === "/review" || path === "/bookmarks") return "Review";
     if (path === "/analytics") return "Progress";
     if (path === "/profile") return "Profile";
     if (path === "/about") return "About";
@@ -263,9 +263,9 @@ export function AppShell() {
       return path.startsWith("/mock-exams") || isQuizForMockExam;
     }
 
-    // For Flashcards, route is /bookmarks
-    if (to === "/bookmarks") {
-      return path.startsWith("/bookmarks") || path.startsWith("/quiz/bookmarks-review");
+    // For Review (Phase 2b: /review hub; /bookmarks redirects in)
+    if (to === "/review") {
+      return path.startsWith("/review") || path.startsWith("/bookmarks") || path.startsWith("/quiz/bookmarks-review");
     }
     
     // For Question Bank, route is /modules
@@ -431,7 +431,7 @@ export function AppShell() {
                   <span className="font-mono text-[10px] text-ink font-semibold">{bookmarkCount}</span>
                 </div>
                 <Link
-                  to="/bookmarks"
+                  to="/review"
                   className="flex items-center gap-1 text-[11px] font-sans text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 rounded"
                 >
                   View saved questions

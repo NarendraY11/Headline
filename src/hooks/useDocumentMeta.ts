@@ -43,8 +43,8 @@ export function useDocumentMeta() {
     // render the login/app shell to a crawler). Flip the meta per-route.
     const NONPUBLIC_PREFIXES = [
       "/login", "/reset-password", "/today", "/modules", "/topic",
-      "/mock-exams", "/analytics", "/bookmarks", "/profile", "/referral",
-      "/quiz", "/admin", "/dashboard",
+      "/mock-exams", "/practice", "/analytics", "/bookmarks", "/review",
+      "/profile", "/referral", "/quiz", "/admin", "/dashboard",
     ];
     const isNonPublic = NONPUBLIC_PREFIXES.some(
       (p) => path === p || path.startsWith(p + "/")

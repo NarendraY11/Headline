@@ -50,7 +50,7 @@ describe("buildBottomNavItems — UX-Nav Phase 2", () => {
 
   it("is the fixed recommended 5 (unique)", () => {
     expect(items.map((i) => i.to)).toEqual([
-      "/today", "/modules", "/practice", "/bookmarks", "/analytics",
+      "/today", "/modules", "/practice", "/review", "/analytics",
     ]);
     expect(new Set(items.map((i) => i.to)).size).toBe(items.length);
   });

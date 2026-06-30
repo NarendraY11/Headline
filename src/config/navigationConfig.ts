@@ -85,7 +85,7 @@ const TRACK_NAV: Record<string, NavItem[]> = {
 // content merge stay for Phase 2b.
 const UNIVERSAL_NAV: NavItem[] = [
   { label: "Practice",  to: "/practice",  icon: GraduationCap },
-  { label: "Review",    to: "/bookmarks", icon: Zap,     badgeKey: "bookmarks" },
+  { label: "Review",    to: "/review",    icon: Zap,     badgeKey: "bookmarks" },
   { label: "Progress",  to: "/analytics", icon: BarChart3 },
   { label: "Planner",   to: "/schedule",  icon: CalendarDays, featureFlag: "aiStudyScheduler" },
 ];
@@ -166,8 +166,8 @@ export function buildBottomNavItems(_opts: {
   return [
     CORE_NAV[0],                                            // Today
     CORE_NAV[1],                                            // Question bank
-    { label: "Practice", to: "/practice",  icon: GraduationCap },
-    { label: "Review",   to: "/bookmarks", icon: Zap },
+    { label: "Practice", to: "/practice", icon: GraduationCap },
+    { label: "Review",   to: "/review",   icon: Zap },
     { label: "Progress", to: "/analytics", icon: BarChart3 },
   ];
 }
