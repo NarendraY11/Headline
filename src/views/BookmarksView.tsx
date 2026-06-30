@@ -157,9 +157,9 @@ export default function BookmarksView() {
     <div className="max-w-5xl mx-auto py-12 md:py-24 px-4 w-full">
       <div className="mb-10 border-b border-rule pb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
-          <span className="eyebrow block mb-4">FLASHCARD DECK</span>
+          <span className="eyebrow block mb-4">REVIEW DECK</span>
           <h1 className="font-serif text-[50px] leading-none text-ink tracking-tight mb-4">
-            Flashcards
+            Review
           </h1>
           <p className="font-sans text-lg text-ink-2 font-light max-w-2xl">
             Review tricky questions from your practice runs or prepare for oral exams with your dedicated flashcard set.

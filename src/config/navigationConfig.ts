@@ -9,18 +9,20 @@ import {
   CalendarDays,
   Compass,
   GraduationCap,
-  Gift,
   Layers,
   LayoutGrid,
-  Map,
   Mic,
-  Plane,
   Settings,
   User,
   Zap,
   type LucideIcon,
 } from "lucide-react";
 import { getPrimaryTrackFamily } from "../data/trainingPaths";
+
+// UX-Nav Phase 1: Interview Prep stays routable (/interview-prep) but is hidden
+// from primary + bottom nav until real content ships — all 3 sections are
+// "Coming Soon" stubs today. Flip to true (or wire to a feature flag) when live.
+const INTERVIEW_PREP_LIVE = false;
 
 export interface NavItem {
   label: string;
@@ -48,11 +50,13 @@ const CORE_NAV: NavItem[] = [
 ];
 
 // ── Items gated by feature flag ───────────────────────────────────────────────
+// UX-Nav Phase 1: Learning Context removed from nav (read-only enrollment
+// metadata → belongs in Profile, not primary nav). Route /learning-context now
+// redirects to /profile.
 const FEATURE_GATED_NAV: NavItem[] = [
-  { label: "Course",           to: "/course",           icon: BookOpen,      featureFlag: "learningHierarchy" },
-  { label: "Learning Context", to: "/learning-context", icon: Map,           featureFlag: "learningContext"   },
-  { label: "Exam Centre",      to: "/exam-centre",      icon: GraduationCap, featureFlag: "advancedTesting"   },
-  { label: "Mock exams",       to: "/mock-exams",       icon: LayoutGrid,    featureFlag: "mockExams"         },
+  { label: "Course",      to: "/course",      icon: BookOpen,      featureFlag: "learningHierarchy" },
+  { label: "Exam Centre", to: "/exam-centre", icon: GraduationCap, featureFlag: "advancedTesting"   },
+  { label: "Mock exams",  to: "/mock-exams",  icon: LayoutGrid,    featureFlag: "mockExams"         },
 ];
 
 // ── Career objective items ────────────────────────────────────────────────────
@@ -65,26 +69,31 @@ const CAREER_NAV: Record<string, NavItem> = {
 };
 
 // ── Track-specific items ──────────────────────────────────────────────────────
+// UX-Nav Phase 1: A320 systems removed from primary nav — it was a single-topic
+// deep link (/topic/a320-systems) masquerading as a destination. Topic stays
+// reachable via Question Bank; the route is unchanged.
 const TRACK_NAV: Record<string, NavItem[]> = {
-  type_rating: [
-    { label: "A320 systems", to: "/topic/a320-systems", icon: Plane, featureFlag: "a320Systems" },
-  ],
+  type_rating: [],
   dgca: [],
   faa: [],
   easa: [],
 };
 
 // ── Items shown to all tracks ─────────────────────────────────────────────────
+// UX-Nav Phase 1: "Flashcards" → "Review" (route /bookmarks unchanged this
+// phase; Phase 2 merges saved + mistakes under /review). "Flight Schedule" →
+// "Planner" (the old name read as an airline roster, not a study calendar).
 const UNIVERSAL_NAV: NavItem[] = [
   { label: "VIVA practice", to: "/quiz/viva",    icon: Mic      },
-  { label: "Flashcards",    to: "/bookmarks",    icon: Zap,     badgeKey: "bookmarks" },
+  { label: "Review",        to: "/bookmarks",    icon: Zap,     badgeKey: "bookmarks" },
   { label: "Progress",      to: "/analytics",    icon: BarChart3 },
-  { label: "Flight Schedule", to: "/schedule",  icon: CalendarDays, featureFlag: "aiStudyScheduler" },
+  { label: "Planner",       to: "/schedule",     icon: CalendarDays, featureFlag: "aiStudyScheduler" },
 ];
 
 // ── Bottom items ──────────────────────────────────────────────────────────────
+// UX-Nav Phase 1: "Refer & earn" removed from nav — occasional/monetization
+// action, already surfaced inside Profile. Route /referral unchanged.
 const BOTTOM_NAV: NavItem[] = [
-  { label: "Refer & earn",        to: "/referral", icon: Gift     },
   { label: "Profile",             to: "/profile",  icon: User     },
   { label: "Administrative Deck", to: "/admin",    icon: Settings, adminOnly: true },
 ];
@@ -107,8 +116,8 @@ export function buildNavItems(opts: {
   // 1. Core (always)
   items.push(...CORE_NAV);
 
-  // 2. Career objective item — inserted after Question Bank
-  if (careerObjective && CAREER_NAV[careerObjective]) {
+  // 2. Career objective item — inserted after Question Bank (hidden until live)
+  if (INTERVIEW_PREP_LIVE && careerObjective && CAREER_NAV[careerObjective]) {
     items.push(CAREER_NAV[careerObjective]);
   }
 
@@ -153,15 +162,14 @@ export function buildBottomNavItems(opts: {
   careerObjective: string | null | undefined;
   enabledFlags: Record<string, boolean>;
 }): NavItem[] {
-  const { targetExam, careerObjective, enabledFlags } = opts;
-  const trackFamily = getPrimaryTrackFamily(targetExam);
+  // targetExam intentionally unused here — the track-specific bottom slot (A320)
+  // was removed in UX-Nav Phase 1; kept in the signature for caller symmetry.
+  const { careerObjective, enabledFlags } = opts;
 
-  // Slot 3: track/career-specific (most relevant to who the user is)
+  // Slot 3: career-specific (Interview Prep) when live, else falls back to VIVA.
   let slot3: NavItem | null = null;
-  if (careerObjective && CAREER_NAV[careerObjective]) {
-    slot3 = CAREER_NAV[careerObjective]; // Interview Prep for airline-recruitment
-  } else if (trackFamily === "type_rating" && enabledFlags["a320Systems"]) {
-    slot3 = TRACK_NAV["type_rating"][0]; // A320 systems for type rating users
+  if (INTERVIEW_PREP_LIVE && careerObjective && CAREER_NAV[careerObjective]) {
+    slot3 = CAREER_NAV[careerObjective];
   }
 
   // Slot 4: Mock Exams (if flag) → fallback VIVA (always valid)

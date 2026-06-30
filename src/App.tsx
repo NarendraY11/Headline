@@ -20,7 +20,6 @@ const QuizView = lazy(() => import("./views/QuizView"));
 const TopicView = lazy(() => import("./views/TopicView"));
 const BookmarksView = lazy(() => import("./views/BookmarksView"));
 const ProfileView = lazy(() => import("./views/ProfileView"));
-const LearningContextView = lazy(() => import("./views/LearningContextView"));
 const NotFoundView = lazy(() => import("./views/NotFoundView"));
 const TodayView = lazy(() => import("./views/TodayView"));
 const ResetPasswordView = lazy(() => import("./views/ResetPasswordView"));
@@ -238,8 +237,9 @@ export default function App() {
             <Route path="/analytics" element={<AnalyticsView />} />
             <Route path="/bookmarks" element={<BookmarksView />} />
             <Route path="/profile" element={<ProfileView />} />
-            {/* Phase 2: hidden Learning Context page (gated inside by learningContext flag; no nav link) */}
-            <Route path="/learning-context" element={<LearningContextView />} />
+            {/* UX-Nav Phase 1: Learning Context removed from nav (read-only enrollment
+                metadata). Redirect to Profile; component kept for Phase 2 re-home. */}
+            <Route path="/learning-context" element={<Navigate to="/profile" replace />} />
             <Route path="/referral" element={<ReferralView />} />
             {/* /study-plan is a dead route — redirect to /schedule (the live scheduler) */}
             <Route path="/study-plan" element={<Navigate to="/schedule" replace />} />
