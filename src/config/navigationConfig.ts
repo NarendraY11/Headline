@@ -10,8 +10,6 @@ import {
   Compass,
   GraduationCap,
   Layers,
-  LayoutGrid,
-  Mic,
   Settings,
   User,
   Zap,
@@ -53,10 +51,11 @@ const CORE_NAV: NavItem[] = [
 // UX-Nav Phase 1: Learning Context removed from nav (read-only enrollment
 // metadata → belongs in Profile, not primary nav). Route /learning-context now
 // redirects to /profile.
+// UX-Nav Phase 2: Mock exams + Exam Centre folded into the unified Practice hub
+// (/practice). Their routes stay alive for deep links; Practice shows them as
+// tabs (gated by the same flags inside PracticeView).
 const FEATURE_GATED_NAV: NavItem[] = [
-  { label: "Course",      to: "/course",      icon: BookOpen,      featureFlag: "learningHierarchy" },
-  { label: "Exam Centre", to: "/exam-centre", icon: GraduationCap, featureFlag: "advancedTesting"   },
-  { label: "Mock exams",  to: "/mock-exams",  icon: LayoutGrid,    featureFlag: "mockExams"         },
+  { label: "Course", to: "/course", icon: BookOpen, featureFlag: "learningHierarchy" },
 ];
 
 // ── Career objective items ────────────────────────────────────────────────────
@@ -80,14 +79,15 @@ const TRACK_NAV: Record<string, NavItem[]> = {
 };
 
 // ── Items shown to all tracks ─────────────────────────────────────────────────
-// UX-Nav Phase 1: "Flashcards" → "Review" (route /bookmarks unchanged this
-// phase; Phase 2 merges saved + mistakes under /review). "Flight Schedule" →
-// "Planner" (the old name read as an airline roster, not a study calendar).
+// UX-Nav Phase 1: "Flashcards" → "Review", "Flight Schedule" → "Planner".
+// UX-Nav Phase 2: "Practice" is the single door to Mock/Exam Centre/VIVA; the
+// three separate testing items were removed. Route /bookmarks (Review) and its
+// content merge stay for Phase 2b.
 const UNIVERSAL_NAV: NavItem[] = [
-  { label: "VIVA practice", to: "/quiz/viva",    icon: Mic      },
-  { label: "Review",        to: "/bookmarks",    icon: Zap,     badgeKey: "bookmarks" },
-  { label: "Progress",      to: "/analytics",    icon: BarChart3 },
-  { label: "Planner",       to: "/schedule",     icon: CalendarDays, featureFlag: "aiStudyScheduler" },
+  { label: "Practice",  to: "/practice",  icon: GraduationCap },
+  { label: "Review",    to: "/review",    icon: Zap,     badgeKey: "bookmarks" },
+  { label: "Progress",  to: "/analytics", icon: BarChart3 },
+  { label: "Planner",   to: "/schedule",  icon: CalendarDays, featureFlag: "aiStudyScheduler" },
 ];
 
 // ── Bottom items ──────────────────────────────────────────────────────────────
@@ -154,42 +154,20 @@ export function buildNavItems(opts: {
 
 /**
  * Builds exactly 5 bottom-tab items for the mobile bottom nav bar.
- * Always: Today | Question bank | [track/career slot] | [secondary slot] | Progress
- * Single source of truth — no hardcoded routes in AppShell.
+ * UX-Nav Phase 2: fixed set matching the recommended IA —
+ * Today | Question bank | Practice | Review | Progress.
+ * (Args kept for caller symmetry / future personalization.)
  */
-export function buildBottomNavItems(opts: {
+export function buildBottomNavItems(_opts: {
   targetExam: string | null | undefined;
   careerObjective: string | null | undefined;
   enabledFlags: Record<string, boolean>;
 }): NavItem[] {
-  // targetExam intentionally unused here — the track-specific bottom slot (A320)
-  // was removed in UX-Nav Phase 1; kept in the signature for caller symmetry.
-  const { careerObjective, enabledFlags } = opts;
-
-  // Slot 3: career-specific (Interview Prep) when live, else falls back to VIVA.
-  let slot3: NavItem | null = null;
-  if (INTERVIEW_PREP_LIVE && careerObjective && CAREER_NAV[careerObjective]) {
-    slot3 = CAREER_NAV[careerObjective];
-  }
-
-  // Slot 4: Mock Exams (if flag) → fallback VIVA (always valid)
-  const slot4: NavItem = enabledFlags["mockExams"]
-    ? { label: "Mock exams", to: "/mock-exams", icon: LayoutGrid }
-    : { label: "VIVA",       to: "/quiz/viva",  icon: Mic };
-
-  const items: NavItem[] = [
-    CORE_NAV[0],                                             // Today
-    CORE_NAV[1],                                             // Question bank
-    ...(slot3 ? [slot3] : [{ label: "VIVA", to: "/quiz/viva", icon: Mic }]),
-    slot4,
-    { label: "Progress", to: "/analytics", icon: BarChart3 }, // Stats
+  return [
+    CORE_NAV[0],                                            // Today
+    CORE_NAV[1],                                            // Question bank
+    { label: "Practice", to: "/practice", icon: GraduationCap },
+    { label: "Review",   to: "/review",   icon: Zap },
+    { label: "Progress", to: "/analytics", icon: BarChart3 },
   ];
-
-  // Dedup by `to` in case slot3 and slot4 collide (e.g. both resolve to VIVA)
-  const seen = new Set<string>();
-  return items.filter(item => {
-    if (seen.has(item.to)) return false;
-    seen.add(item.to);
-    return true;
-  }).slice(0, 5);
 }

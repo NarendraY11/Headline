@@ -14,11 +14,12 @@ import { defaultFlags } from "./hooks/useFeatureFlags";
 import HomeView from "./views/HomeView";
 const ModulesView = lazy(() => import("./views/ModulesView"));
 const MockExamsView = lazy(() => import("./views/MockExamsView"));
+const PracticeView = lazy(() => import("./views/PracticeView"));
 const AnalyticsView = lazy(() => import("./views/AnalyticsView"));
 const AboutView = lazy(() => import("./views/AboutView"));
 const QuizView = lazy(() => import("./views/QuizView"));
 const TopicView = lazy(() => import("./views/TopicView"));
-const BookmarksView = lazy(() => import("./views/BookmarksView"));
+const ReviewView = lazy(() => import("./views/ReviewView"));
 const ProfileView = lazy(() => import("./views/ProfileView"));
 const NotFoundView = lazy(() => import("./views/NotFoundView"));
 const TodayView = lazy(() => import("./views/TodayView"));
@@ -233,9 +234,16 @@ export default function App() {
             <Route path="/modules" element={<ModulesView />} />
             <Route path="/course" element={<CourseView />} />
             <Route path="/topic/:id" element={<TopicView />} />
+            {/* UX-Nav Phase 2: unified Practice hub. /mock-exams + /exam-centre
+                kept alive (deep links, mission/webmcp state nav) and surfaced as
+                tabs inside Practice. */}
+            <Route path="/practice" element={<PracticeView />} />
             <Route path="/mock-exams" element={<MockExamsView />} />
             <Route path="/analytics" element={<AnalyticsView />} />
-            <Route path="/bookmarks" element={<BookmarksView />} />
+            {/* UX-Nav Phase 2b: Review hub (Saved + Mistakes). /bookmarks
+                redirects in; deep links (quiz results, mission) still resolve. */}
+            <Route path="/review" element={<ReviewView />} />
+            <Route path="/bookmarks" element={<Navigate to="/review" replace />} />
             <Route path="/profile" element={<ProfileView />} />
             {/* UX-Nav Phase 1: Learning Context removed from nav (read-only enrollment
                 metadata). Redirect to Profile; component kept for Phase 2 re-home. */}
