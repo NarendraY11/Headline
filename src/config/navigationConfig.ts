@@ -11,7 +11,6 @@ import {
   GraduationCap,
   Layers,
   Settings,
-  User,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -93,8 +92,9 @@ const UNIVERSAL_NAV: NavItem[] = [
 // ── Bottom items ──────────────────────────────────────────────────────────────
 // UX-Nav Phase 1: "Refer & earn" removed from nav — occasional/monetization
 // action, already surfaced inside Profile. Route /referral unchanged.
+// UX-Nav Phase 2C: "Profile" nav item removed — SidebarAuth (avatar + name +
+// plan badge) is the sole profile entry in the sidebar; duplicate removed.
 const BOTTOM_NAV: NavItem[] = [
-  { label: "Profile",             to: "/profile",  icon: User     },
   { label: "Administrative Deck", to: "/admin",    icon: Settings, adminOnly: true },
 ];
 
