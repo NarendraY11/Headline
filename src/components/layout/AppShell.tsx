@@ -12,7 +12,7 @@ import {
     X,
 } from "lucide-react";
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { Link, NavLink, useLocation, useOutlet } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate, useOutlet } from "react-router-dom";
 import { buildNavItems, buildBottomNavItems } from "../../config/navigationConfig";
 import { trackEvent } from "../../lib/track";
 import { useAuth } from "../../contexts/AuthContext";
@@ -36,18 +36,17 @@ import { SidebarAuth } from './SidebarAuth';
 // Overlays render only on user action (search/settings/shortcuts); lazy-load
 // them so their code stays out of the initial shell/entry chunk.
 const SearchOverlay = lazy(() => import("../../views/SearchOverlay"));
-const SettingsOverlay = lazy(() => import('./SettingsOverlay').then((m) => ({ default: m.SettingsOverlay })));
 const ShortcutsOverlay = lazy(() => import('./ShortcutsOverlay').then((m) => ({ default: m.ShortcutsOverlay })));
 
 export function AppShell() {
   const { userData, user, openAuthModal } = useAuth();
   const { isAdmin } = useIsAdmin();
   const location = useLocation();
+  const navigate = useNavigate();
   const outlet = useOutlet();
   
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [bookmarkCount, setBookmarkCount] = useState(() => {
     try {
@@ -326,7 +325,6 @@ export function AppShell() {
           </a>
           <Suspense fallback={null}>
             {showShortcuts && <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />}
-            {showSettings && <SettingsOverlay onClose={() => setShowSettings(false)} />}
             {showSearch && <SearchOverlay onClose={() => setShowSearch(false)} />}
           </Suspense>
           <AuthOnboardingHandler />
@@ -467,9 +465,9 @@ export function AppShell() {
                 </span>
               </button>
 
-              <button 
+              <button
                 onClick={() => {
-                  setShowSettings(true);
+                  navigate("/profile?tab=preferences");
                   if (isTablet && isSidebarTappedForTablet) setIsSidebarTappedForTablet(false);
                 }}
                 className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-lg text-[13px] font-sans font-medium tracking-tight transition-all border outline-none focus-visible:ring-2 focus-visible:ring-sky/60 bg-transparent text-muted hover:text-ink hover:bg-panel/40 border-transparent w-full`}
@@ -524,7 +522,7 @@ export function AppShell() {
                 
                 {/* Settings button - mobile only */}
                 <button
-                  onClick={() => setShowSettings(true)}
+                  onClick={() => navigate("/profile?tab=preferences")}
                   className="p-3 -m-1.5 text-muted hover:text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center"
                   aria-label="Settings"
                   title="Settings"

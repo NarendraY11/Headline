@@ -32,7 +32,6 @@ const ExamsSeoView = lazy(() => import("./views/ExamsSeoView"));
 const BlogListView = lazy(() => import("./views/BlogListView"));
 const BlogPostView = lazy(() => import("./views/BlogPostView"));
 const QotdView = lazy(() => import("./views/QotdView"));
-const ReferralView = lazy(() => import("./views/ReferralView"));
 const A320SystemsView = lazy(() => import("./views/A320SystemsView"));
 // StudySchedulerView removed — /study-plan now redirects to /schedule
 const StudyCalendarView = lazy(() => import("./views/schedule/StudyCalendarView"));
@@ -245,10 +244,10 @@ export default function App() {
             <Route path="/review" element={<ReviewView />} />
             <Route path="/bookmarks" element={<Navigate to="/review" replace />} />
             <Route path="/profile" element={<ProfileView />} />
-            {/* UX-Nav Phase 1: Learning Context removed from nav (read-only enrollment
-                metadata). Redirect to Profile; component kept for Phase 2 re-home. */}
-            <Route path="/learning-context" element={<Navigate to="/profile" replace />} />
-            <Route path="/referral" element={<ReferralView />} />
+            {/* UX-Nav Phase 2C: Learning Context + Refer & Earn are now tabs inside
+                the Profile workspace. Legacy routes redirect to the matching tab. */}
+            <Route path="/learning-context" element={<Navigate to="/profile?tab=enrollment" replace />} />
+            <Route path="/referral" element={<Navigate to="/profile?tab=referral" replace />} />
             {/* /study-plan is a dead route — redirect to /schedule (the live scheduler) */}
             <Route path="/study-plan" element={<Navigate to="/schedule" replace />} />
             <Route path="/schedule" element={<StudyCalendarView />} />

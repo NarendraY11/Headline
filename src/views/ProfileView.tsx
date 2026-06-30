@@ -1,105 +1,76 @@
-import React, { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+// UX-Nav Phase 2C: Profile is now the single Account Workspace. This file is the
+// tab shell only — each tab owns its own bespoke layout. Deep-linkable via
+// ?tab=; Back/Forward walks tabs (we push, not replace). Overview is eager
+// (default landing); the rest lazy-load on first open.
+
+import { Suspense, lazy, useEffect, useRef } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { LogIn } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { useToast } from "../components/ui/Toast";
-import { Button, Card } from "../components/Atoms";
-import { AchievementGallery } from "./profile/AchievementGallery";
-import { useFeature } from "../hooks/useFeatureFlags";
-import { useXp } from "../hooks/useXp";
-import { AlertCircle, LogOut, LogIn, Camera, Upload, X, Check, RefreshCw, Mail, Gift, Edit2, Sparkles, ShieldCheck, CalendarClock, ArrowRight, AlertTriangle, Zap } from "lucide-react";
-import { supabase } from "../lib/supabase";
-import { isPaidActive, daysLeft, planLabel } from "../lib/plan";
-import { daysUntilExam } from "../hooks/useResolvedExamDate";
+import { Button } from "../components/Atoms";
+import { LoadingFallback } from "../components/layout/LoadingFallback";
+import { trackEvent } from "../lib/track";
+import { PROFILE_TABS, resolveTab, type ProfileTabKey } from "./profile/profileTabs";
+import OverviewTab from "./profile/OverviewTab";
+
+const EnrollmentTab = lazy(() => import("./profile/EnrollmentTab"));
+const ReferralTab = lazy(() => import("./profile/ReferralTab"));
+const PreferencesTab = lazy(() => import("./profile/PreferencesTab"));
+const MembershipTab = lazy(() => import("./profile/MembershipTab"));
+const AccountTab = lazy(() => import("./profile/AccountTab"));
 
 export default function ProfileView() {
-  const { user, userData, logout, logoutEverywhere, resetAccount, loading, openAuthModal, updateUserData } = useAuth();
-  const { showToast } = useToast();
+  const { user, loading, openAuthModal } = useAuth();
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const openedOnce = useRef(false);
 
-  const [isUploading, setIsUploading] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false);
-  const [uploadError, setUploadError] = useState("");
-  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const active: ProfileTabKey = resolveTab(params.get("tab"));
 
-  const [isEditingExamDate, setIsEditingExamDate] = useState(false);
-  const [tempExamDate, setTempExamDate] = useState("");
-  const [confirmWipe, setConfirmWipe] = useState(false);
-  const [confirmSignOutAll, setConfirmSignOutAll] = useState(false);
-  const [avatarError, setAvatarError] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isWiping, setIsWiping] = useState(false);
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logout();
-    } catch {
-      setIsLoggingOut(false);
-      showToast({ type: 'error', title: 'Sign Out Failed', message: 'Could not sign out. Please try again.' });
-    }
-  };
-
-  const handleLogoutEverywhere = async () => {
-    setIsLoggingOut(true);
-    try {
-      await logoutEverywhere();
-    } catch {
-      setIsLoggingOut(false);
-      showToast({ type: 'error', title: 'Sign Out Failed', message: 'Could not sign out of all devices. Please try again.' });
-    }
-  };
-
-  const handleWipe = async () => {
-    setIsWiping(true);
-    try {
-      await resetAccount();
-      showToast({ type: 'success', title: 'Logbook Wiped', message: 'All progress, attempts, and streaks have been cleared.' });
-    } catch (e: any) {
-      showToast({ type: 'error', title: 'Wipe Failed', message: e?.message || 'Could not clear progress. Please try again.' });
-    } finally {
-      setIsWiping(false);
-    }
-  };
-
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const savedDate = userData?.nextExam || "";
-
+  // Per-tab document title + analytics. profile_tab_opened fires once on first
+  // mount; profile_tab_changed on every subsequent switch.
   useEffect(() => {
-    return () => {
-      // Shutdown stream when component unmounts
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (savedDate) {
-      setTempExamDate(savedDate);
+    const meta = PROFILE_TABS.find((t) => t.key === active)!;
+    document.title = `${meta.title} — Heading`;
+    if (!openedOnce.current) {
+      openedOnce.current = true;
+      trackEvent("profile_tab_opened", { metadata: { tab: active } });
+    } else {
+      trackEvent("profile_tab_changed", { metadata: { tab: active } });
     }
-  }, [savedDate]);
+  }, [active]);
 
-  if (loading) return (
-    <div className="max-w-4xl mx-auto py-10 md:py-16 px-4 w-full animate-pulse space-y-8">
-      <div className="flex flex-col md:flex-row items-center md:items-start gap-8 border-b border-rule pb-8">
-        <div className="w-24 h-24 rounded-full bg-rule flex-shrink-0" />
-        <div className="flex-1 space-y-3 w-full">
-          <div className="h-3 bg-rule w-24 rounded" />
-          <div className="h-8 bg-rule w-48 rounded" />
-          <div className="h-3 bg-rule w-36 rounded" />
-          <div className="flex gap-2 mt-2">
-            <div className="h-9 bg-rule w-28 rounded-full" />
-            <div className="h-9 bg-rule w-28 rounded-full" />
-          </div>
+  const selectTab = (key: ProfileTabKey) => {
+    const next = new URLSearchParams(params);
+    if (key === "overview") next.delete("tab");
+    else next.set("tab", key);
+    // Push (no replace) so browser Back/Forward navigates between tabs.
+    setParams(next);
+  };
+
+  // Roving-tabindex arrow-key navigation across the tablist.
+  const onKeyDown = (e: React.KeyboardEvent, idx: number) => {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    e.preventDefault();
+    const dir = e.key === "ArrowRight" ? 1 : -1;
+    const nextIdx = (idx + dir + PROFILE_TABS.length) % PROFILE_TABS.length;
+    tabRefs.current[nextIdx]?.focus();
+    selectTab(PROFILE_TABS[nextIdx].key);
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-6xl mx-auto py-10 px-4 w-full animate-pulse space-y-6">
+        <div className="h-10 bg-rule/60 w-48 rounded" />
+        <div className="h-12 bg-rule/40 rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          <div className="h-40 bg-rule/40 rounded-2xl md:col-span-8" />
+          <div className="h-40 bg-rule/40 rounded-2xl md:col-span-4" />
         </div>
       </div>
-      <div className="h-32 bg-rule rounded-2xl" />
-      <div className="h-24 bg-rule rounded-xl" />
-    </div>
-  );
+    );
+  }
 
   if (!user) {
     return (
@@ -114,18 +85,10 @@ export default function ProfileView() {
             Sign in to access your logbook, progress, and exam history.
           </p>
           <div className="flex flex-col gap-3 w-full max-w-[280px] mx-auto">
-            <Button 
-              variant="primary" 
-              className="w-full h-12 rounded-full shadow-sm"
-              onClick={() => openAuthModal("signin")}
-            >
+            <Button variant="primary" className="w-full h-12 rounded-full shadow-sm" onClick={() => openAuthModal("signin")}>
               Sign In →
             </Button>
-            <Button 
-              variant="ghost" 
-              className="w-full h-12 rounded-full text-muted hover:text-ink hover:bg-paper/50"
-              onClick={() => navigate('/')}
-            >
+            <Button variant="ghost" className="w-full h-12 rounded-full text-muted hover:text-ink hover:bg-paper/50" onClick={() => navigate("/")}>
               ← Back to Home
             </Button>
           </div>
@@ -134,706 +97,60 @@ export default function ProfileView() {
     );
   }
 
-  // Maps canonical targetExam tokens (from trainingPaths.ts) to display labels.
-  // Phase 5.1: updated to match current token format (dgca-cpl, type-a320, etc.)
-  const TARGET_EXAM_LABELS: Record<string, string> = {
-    // DGCA tracks
-    "dgca-cpl":  "DGCA CPL",
-    "dgca-atpl": "DGCA ATPL",
-    "dgca-rtr":  "DGCA RTR",
-    "dgca-ppl":  "DGCA PPL",
-    // Type Rating tracks
-    "type-a320": "Airbus A320",
-    "type-a330": "Airbus A330",
-    "type-b737": "Boeing B737",
-    "type-b777": "Boeing B777",
-    "type-atr72": "ATR 72",
-    // FAA tracks
-    "faa-ppl":   "FAA PPL",
-    "faa-cpl":   "FAA CPL",
-    "faa-atpl":  "FAA ATPL",
-    // EASA
-    "easa-atpl": "EASA ATPL",
-    // Legacy tokens — kept for backward compat with old profiles
-    "dgca-cpl-mock":    "DGCA CPL",
-    "a320-type-rating": "Airbus A320",
-    "atr72-type-rating": "ATR 72",
-  };
-  const rawTargetExam: string = (userData as any)?.targetExam ?? (userData as any)?.target_exam ?? "";
-  const targetExam = TARGET_EXAM_LABELS[rawTargetExam] || rawTargetExam || "DGCA CPL";
-  const { streakCount = 0, photoURL: firestorePhotoURL } = userData || {};
-  // Phase 7.3: rank progression (gated on xpSystem; derived from XP balance).
-  const xpEnabled = useFeature("xpSystem");
-  const { balance: xpBalance, rank: xpRank } = useXp(1);
-  const currentPhotoURL = firestorePhotoURL || user.photoURL;
-
-  // Subscription / clearance details.
-  const isPro = isPaidActive(userData);
-  const subPlan: string = userData?.plan || "free";
-  const subDaysLeft = daysLeft(userData);
-  const fmtSubDate = (d?: string) =>
-    d ? new Date(d).toLocaleDateString("en-US", { day: "numeric", month: "short", year: "numeric" }) : "—";
-
-  const { daysDiff: rawDaysDiff, isPast } = daysUntilExam(savedDate || null);
-  const daysDiff = isPast && rawDaysDiff !== null ? Math.abs(rawDaysDiff) : rawDaysDiff;
-
-  const startCamera = async () => {
-    setUploadError("");
-    setUploadSuccess(false);
-    setCameraActive(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 400 }, height: { ideal: 400 } },
-        audio: false
-      });
-      // Small timeout to allow element mounting and reference validation
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      }, 50);
-    } catch (err: any) {
-      console.error("Camera access error", err);
-      setUploadError("Could not start live video feed. Use standard photo upload instead.");
-      setCameraActive(false);
-    }
-  };
-
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-    setCameraActive(false);
-  };
-
-  const convertBase64 = (file: Blob | File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const fileReader = new FileReader();
-      fileReader.readAsDataURL(file);
-      fileReader.onload = () => {
-        resolve(fileReader.result as string);
-      };
-      fileReader.onerror = (error) => {
-        reject(error);
-      };
-    });
-  };
-
-  const handleImageUpload = async (blobOrFile: Blob | File) => {
-    // Defense-in-depth: catch oversized blobs (e.g. camera captures) that
-    // bypass the file-input check.
-    if (blobOrFile.size > 5 * 1024 * 1024) {
-      setUploadError("Image is too large. Maximum size is 5 MB.");
-      return;
-    }
-    setIsUploading(true);
-    setUploadError("");
-    setUploadSuccess(false);
-    try {
-      let downloadURL = "";
-      try {
-        const path = `profile_${user.uid}_${Date.now()}.jpg`;
-        const { error } = await supabase.storage
-          .from("avatars")
-          .upload(path, blobOrFile, { upsert: true, contentType: 'image/jpeg' });
-        
-        if (error) {
-          throw error;
-        }
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from("avatars")
-          .getPublicUrl(path);
-        
-        downloadURL = publicUrl;
-      } catch (storageErr) {
-        console.warn("Supabase Storage bucket upload warning. Falling back to local Base64 Data URL.", storageErr);
-        downloadURL = await convertBase64(blobOrFile);
-      }
-
-      // Sync user profile photo inside Supabase Auth + Profiles settings
-      await updateUserData({ photoURL: downloadURL });
-      
-      setUploadSuccess(true);
-    } catch (err: any) {
-      console.error("Supabase user photo saving failed", err);
-      setUploadError(err.message || "Failed to save selected photo. Check your connection.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const captureSnapshot = () => {
-    if (videoRef.current) {
-      const video = videoRef.current;
-      const canvas = document.createElement("canvas");
-      // Create square dimensions matching layout
-      const size = Math.min(video.videoWidth || 400, video.videoHeight || 400);
-      canvas.width = size;
-      canvas.height = size;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        // Crop center of camera stream for neat circular look
-        const xOffset = (video.videoWidth - size) / 2;
-        const yOffset = (video.videoHeight - size) / 2;
-        ctx.drawImage(video, xOffset, yOffset, size, size, 0, 0, size, size);
-        canvas.toBlob(async (blob) => {
-          if (blob) {
-            await handleImageUpload(blob);
-          }
-        }, "image/jpeg", 0.9);
-      }
-      stopCamera();
-    }
-  };
-
-  // Avatar upload constraints. `accept="image/*"` is only a UI hint; validate
-  // the real MIME type and size here so non-images / oversized files are
-  // rejected before they reach storage or the profile photoURL.
-  const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-  const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5 MB
-
-  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setUploadError("Unsupported file type. Upload a JPEG, PNG, WebP, or GIF image.");
-      e.target.value = "";
-      return;
-    }
-    if (file.size > MAX_IMAGE_BYTES) {
-      setUploadError("Image is too large. Maximum size is 5 MB.");
-      e.target.value = "";
-      return;
-    }
-
-    setUploadError("");
-    handleImageUpload(file);
-    e.target.value = ""; // allow re-selecting the same file after an error
-  };
-
   return (
-    <div className="max-w-4xl mx-auto py-10 md:py-16 px-4 w-full">
-      <div className="mb-8 border-b border-rule pb-8">
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-          <div className="relative group">
-            <div className="w-24 h-24 rounded-full border-2 border-rule overflow-hidden bg-navy flex items-center justify-center relative shadow-sm">
-              {currentPhotoURL && !avatarError ? (
-                <img src={currentPhotoURL} alt={user.displayName ? `Profile photo of ${user.displayName}` : "Profile photo"} className="w-full h-full object-cover" onError={() => setAvatarError(true)} />
-              ) : (
-                <span className="font-serif text-3xl text-bg uppercase">
-                  {user.displayName?.charAt(0) || "P"}
-                </span>
-              )}
-              {isUploading && (
-                <div className="absolute inset-0 bg-ink/70 flex items-center justify-center">
-                  <RefreshCw className="text-bg animate-spin" size={24} />
-                </div>
-              )}
-            </div>
-            
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              title="Upload profile photo"
-              aria-label="Upload profile photo"
-              className="absolute -bottom-1 -right-1 bg-paper border border-rule text-ink p-2.5 min-w-[44px] min-h-[44px] rounded-full shadow-md hover:bg-bg transition-colors flex items-center justify-center"
-            >
-              <Upload size={14} />
-            </button>
-          </div>
-
-          <div className="text-center md:text-left flex-1">
-            <span className="eyebrow block mb-2 text-sky uppercase">Active Pilot</span>
-            <h1 className="font-serif text-4xl text-ink leading-none mb-2">{user.displayName || "Unknown Commander"}</h1>
-            <div className="font-mono text-[10px] text-muted-2 tracking-widest mb-4">{user.email}</div>
-            
-            <div className="flex flex-wrap items-center gap-3 justify-center md:justify-start">
-              {!cameraActive ? (
-                <Button 
-                  variant="ghost" 
-                  size="small"
-                  className="gap-1.5 text-xs text-ink-2 h-9 border border-rule hover:bg-paper/50"
-                  onClick={startCamera}
-                >
-                  <Camera size={14} /> Use Camera
-                </Button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
-                    size="small"
-                    className="text-xs text-signal hover:bg-signal-soft border border-signal-soft h-9"
-                    onClick={stopCamera}
-                  >
-                    <X size={14} /> Close Video
-                  </Button>
-                </div>
-              )}
-              
-              <Button 
-                variant="ghost" 
-                size="small"
-                className="gap-1.5 text-xs text-ink-2 h-9 border border-rule hover:bg-paper/50"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload size={14} /> Choose File
-              </Button>
-              
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={onFileInputChange} 
-                accept="image/*"
-                aria-label="Upload profile photo"
-                className="hidden"
-              />
-            </div>
-
-            {uploadError && (
-              <div className="mt-3 text-xs text-signal flex items-center gap-1">
-                <AlertCircle size={12} /> {uploadError}
-              </div>
-            )}
-            
-            {uploadSuccess && (
-              <div className="mt-3 text-xs text-mint flex items-center gap-1 font-mono uppercase tracking-wider">
-                <Check size={12} /> Photo Updated Successfully
-              </div>
-            )}
-          </div>
+    <div className="max-w-6xl mx-auto px-4 pt-6 pb-16 w-full">
+      {/* Sticky tab bar — stays in reach while scrolling a tall panel; scrolls
+          horizontally on mobile so 6 tabs never wrap or overflow the viewport. */}
+      <div className="sticky top-0 z-20 -mx-4 px-4 bg-bg/95 backdrop-blur-sm">
+        <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase mb-3 pt-1">
+          § ACCOUNT WORKSPACE
         </div>
-
-        {/* Live Camera Feed Segment */}
-        {cameraActive && (
-          <div className="mt-8 p-4 bg-bg rounded-xl border border-rule flex flex-col items-center max-w-sm mx-auto">
-            <div className="w-full aspect-square relative rounded-lg overflow-hidden border border-rule bg-ink mb-4 shadow-inner">
-              <video 
-                ref={videoRef} 
-                autoPlay 
-                playsInline 
-                muted
-                className="w-full h-full object-cover transform -scale-x-100" 
-              />
-            </div>
-            <div className="flex gap-3 w-full">
-              <Button 
-                variant="primary" 
-                className="flex-1 text-xs"
-                onClick={captureSnapshot}
-              >
-                Capture Snapshot
-              </Button>
-              <Button 
-                variant="ghost" 
-                className="border border-rule text-xs hover:bg-bg-2"
-                onClick={stopCamera}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Subscription / Clearance status */}
-      <Card
-        // Card hardcodes `bg-paper`, which wins the cascade over a passed
-        // `bg-navy` class (Tailwind picks the later-compiled utility, not the
-        // later class in the string) — so the premium card rendered white and
-        // its cream `text-bg` content was invisible. Force the surface via the
-        // token so it is correct in both themes (dark mode inverts --navy).
-        style={
-          isPro
-            ? { backgroundColor: "var(--color-navy)", borderColor: "var(--color-navy)" }
-            : undefined
-        }
-        className={`p-6 md:p-8 mb-8 rounded-2xl relative overflow-hidden ${
-          isPro
-            ? "bg-navy border-navy text-bg"
-            : subPlan === "trial"
-            ? "bg-amber-soft/40 border border-amber/30"
-            : "bg-panel border border-rule"
-        }`}
-      >
-        {isPro && (
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--pro-gold)]/10 blur-2xl rounded-full translate-x-1/3 -translate-y-1/3 pointer-events-none -z-[1]" />
-        )}
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <span
-              className={`inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.2em] font-bold ${
-                isPro ? "text-[var(--pro-gold)]" : "text-muted"
-              }`}
-            >
-              {isPro ? <Sparkles size={12} /> : <ShieldCheck size={12} />} Membership
-            </span>
-            {subPlan === "trial" && (
-              <span className="ml-2 inline-flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest font-bold text-ink bg-amber-soft border border-amber/30 px-2 py-0.5 rounded-full align-middle">
-                Trial{subDaysLeft !== null ? ` · ${subDaysLeft}d left` : ""}
-              </span>
-            )}
-            <h3 className={`font-serif text-2xl md:text-3xl ${isPro ? "text-bg" : "text-ink"}`}>
-              {subPlan === "lifetime"
-                ? "Captain (Pro) · Lifetime"
-                : subPlan === "pro"
-                ? "Captain (Pro)"
-                : subPlan === "trial"
-                ? "Pro Trial"
-                : "Cadet (Free)"}
-            </h3>
-            <div className={`font-mono text-[11px] tracking-wider ${isPro ? "text-bg/70" : "text-muted"}`}>
-              {planLabel(userData)}
-            </div>
-          </div>
-
-          {isPro ? (
-            <div className="flex flex-wrap gap-6 md:gap-8 shrink-0">
-              <div>
-                <div className="font-mono text-[9px] uppercase tracking-widest text-bg/75 mb-1">Started</div>
-                <div className="font-sans text-sm font-semibold text-bg">{fmtSubDate(userData?.planStartedAt)}</div>
-              </div>
-              <div>
-                <div className="font-mono text-[9px] uppercase tracking-widest text-bg/75 mb-1">Renews / Expires</div>
-                <div className="font-sans text-sm font-semibold text-bg">
-                  {userData?.planExpiresAt ? fmtSubDate(userData.planExpiresAt) : "Never"}
-                </div>
-              </div>
-              {subDaysLeft !== null && (
-                <div>
-                  <div className="font-mono text-[9px] uppercase tracking-widest text-bg/75 mb-1 flex items-center gap-1">
-                    <CalendarClock size={10} /> Days Left
-                  </div>
-                  <div className="font-sans text-sm font-semibold text-[var(--pro-gold)]">{subDaysLeft}</div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Button
-              variant="primary"
-              onClick={() => navigate("/pricing")}
-              className="h-11 rounded-full font-mono text-[10px] uppercase tracking-wider px-6 shrink-0 gap-1.5 bg-navy text-bg hover:bg-navy/90"
-            >
-              Upgrade to Pro <ArrowRight size={14} />
-            </Button>
-          )}
-        </div>
-      </Card>
-
-      {/* Account Overview — the three vitals unified into one divided strip so
-          they read as a connected snapshot, not three sparse islands. */}
-      <Card className="bg-paper p-0 mb-8 overflow-hidden">
-        <div className="px-6 pt-5 pb-3 border-b border-rule">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-bold">Account Overview</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-rule">
-          <div className="p-6">
-            <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Target Clearance</div>
-            <div className="font-serif text-3xl text-ink">{targetExam}</div>
-            {userData?.careerObjective && (
-              <div className="mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-navy/10 font-mono text-[9px] text-navy uppercase tracking-widest font-bold">
-                ✦ Airline Recruitment
-              </div>
-            )}
-          </div>
-          <div className="p-6">
-            <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Consecutive Days</div>
-            <div className="font-serif text-3xl text-ink flex items-end gap-2">
-              {streakCount} <span className="font-sans text-xs font-semibold text-muted pb-1">DAY STREAK</span>
-            </div>
-          </div>
-          <div className="p-6 relative group">
-            <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1 flex justify-between items-center">
-              <span>Time-to-Exam</span>
-              {savedDate && !isEditingExamDate && (
-                <button
-                  onClick={() => {
-                    setTempExamDate(savedDate);
-                    setIsEditingExamDate(true);
-                  }}
-                  className="text-muted-2 hover:text-sky transition-colors cursor-pointer p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2"
-                  title="Change Exam Date"
-                  aria-label="Change exam date"
-                >
-                  <Edit2 size={14} />
-                </button>
-              )}
-            </div>
-
-          {isEditingExamDate ? (
-            <div className="space-y-2 mt-2">
-              <input 
-                type="date" 
-                value={tempExamDate}
-                onChange={(e) => setTempExamDate(e.target.value)}
-                className="w-full bg-bg border border-rule-strong rounded-md text-xs px-2 py-1 outline-none focus:border-ink text-ink text-center transition-colors"
-              />
-              <div className="flex gap-2">
-                <Button
-                  variant="primary"
-                  size="small"
-                  className="flex-1 text-[11px] py-2 min-h-[44px] text-white"
-                  onClick={async () => {
-                    await updateUserData({ nextExam: tempExamDate });
-                    setIsEditingExamDate(false);
-                  }}
-                >
-                  Save
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="small"
-                  className="flex-1 text-[11px] py-2 min-h-[44px] border border-rule text-ink hover:bg-paper/50"
-                  onClick={() => setIsEditingExamDate(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : savedDate ? (
-            <div className="font-serif text-3xl text-ink flex items-end gap-2 mt-1">
-              {daysDiff !== null ? (
-                <>
-                  {daysDiff === 0 ? (
-                    <div className="text-[20px] font-bold text-mint tracking-tight">Exam Day!</div>
-                  ) : isPast ? (
-                    <div className="flex items-baseline gap-1">
-                      <span>{daysDiff}</span>
-                      <span className="font-sans text-xs font-semibold text-muted">DAYS AGO</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-baseline gap-1">
-                      <span>{daysDiff}</span>
-                      <span className="font-sans text-xs font-semibold text-muted">DAYS LEFT</span>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <span className="text-muted text-xs">Invalid date</span>
-              )}
-            </div>
-          ) : (
-            <div className="mt-2 text-center">
-              <span className="font-mono text-[9px] text-muted block mb-2">NO EXAM DATE SET</span>
-              <Button 
-                variant="ghost" 
-                size="small" 
-                className="text-xs h-7 border border-dashed border-rule w-full hover:border-sky hover:text-sky text-ink bg-transparent hover:bg-paper/30"
-                onClick={() => {
-                  const todayStr = new Date().toISOString().split("T")[0];
-                  setTempExamDate(todayStr);
-                  setIsEditingExamDate(true);
-                }}
-              >
-                Set Target Date
-              </Button>
-            </div>
-          )}
-          </div>
-        </div>
-      </Card>
-
-      {/* Phase 7.3: rank progression block (xpSystem-gated). */}
-      {xpEnabled && (
-        <Card className="bg-paper p-0 mb-8 overflow-hidden">
-          <div className="px-6 pt-5 pb-3 border-b border-rule flex items-center justify-between">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-bold">Flight Progression</span>
-            <span className="inline-flex items-center gap-1 font-mono text-[10px] text-amber tabular-nums">
-              <Zap size={12} /> {xpBalance} XP
-            </span>
-          </div>
-          <div className="px-6 py-5">
-            <div className="flex items-end justify-between gap-3 mb-3">
-              <div>
-                <div className="font-mono text-[10px] uppercase text-muted tracking-widest mb-1">Current Rank</div>
-                <div className="font-serif text-3xl text-ink">{xpRank.rank.name}</div>
-              </div>
-              <div className="text-right">
-                <div className="font-mono text-[9px] uppercase text-muted-2 tracking-widest mb-1">
-                  {xpRank.isMax ? "Top Rank" : "Next"}
-                </div>
-                <div className="font-sans text-sm text-ink">
-                  {xpRank.isMax ? "—" : xpRank.next!.name}
-                </div>
-              </div>
-            </div>
-            <div className="h-2 rounded-full bg-bg-2 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-amber transition-all duration-500"
-                style={{ width: `${Math.round(xpRank.progress * 100)}%` }}
-              />
-            </div>
-            <div className="mt-2 font-mono text-[9px] text-muted-2 tracking-wide tabular-nums text-right">
-              {xpRank.isMax
-                ? "All certificate stages cleared"
-                : `${xpRank.xpRemaining} XP to ${xpRank.next!.name}`}
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* Phase 7.2: full achievement gallery (always-on, flag-independent). */}
-      <AchievementGallery />
-
-      {/* Lower section uses two columns on desktop so the bottom half fills
-          horizontal space instead of stacking full-width. */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 items-stretch">
-        {/* Notification Preferences — both toggles grouped into one scannable
-            card: label · short desc · toggle per row. */}
-        <Card className="bg-paper p-0 overflow-hidden flex flex-col">
-          <div className="px-6 pt-5 pb-3 border-b border-rule">
-            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-bold">Notification Preferences</span>
-          </div>
-          <div className="divide-y divide-rule flex-1">
-            <div className="flex items-center justify-between gap-4 px-6 py-4">
-              <div className="min-w-0">
-                <h3 className="font-sans text-sm font-semibold text-ink">Spaced Review Reminders</h3>
-                <p className="font-mono text-[10px] tracking-wide text-muted-2 mt-1 uppercase">Gentle digests when recall is due</p>
-              </div>
-              <div className="shrink-0 flex items-center gap-2.5">
-                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-muted-2 hidden sm:block">
-                  {userData?.settings?.remindersEnabled ? "OPTED IN" : "MUTED"}
-                </span>
-                <button
-                  role="switch"
-                  aria-checked={!!userData?.settings?.remindersEnabled}
-                  aria-label="Toggle spaced review reminder emails"
-                  onClick={() => {
-                    const currentSettings = userData?.settings || {};
-                    const currentStatus = !!currentSettings.remindersEnabled;
-                    updateUserData({
-                      settings: {
-                        ...currentSettings,
-                        remindersEnabled: !currentStatus
-                      }
-                    });
-                  }}
-                  className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg cursor-pointer ${userData?.settings?.remindersEnabled ? 'bg-mint' : 'bg-rule-strong'}`}
-                >
-                  <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.settings?.remindersEnabled ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-4 px-6 py-4">
-              <div className="min-w-0">
-                <h3 className="font-sans text-sm font-semibold text-ink flex items-center gap-1.5">
-                  <Mail size={14} className="text-navy shrink-0" /> Weekly Tips & QOTD
-                </h3>
-                <p className="font-mono text-[10px] tracking-wide text-muted-2 mt-1 uppercase">Question of the day + hiring bulletins</p>
-              </div>
-              <div className="shrink-0 flex items-center gap-2.5">
-                <span className="font-mono text-[9px] uppercase font-bold tracking-widest text-muted-2 hidden sm:block">
-                  {userData?.newsletterOptIn ? "SUBSCRIBED" : "OPTED OUT"}
-                </span>
-                <button
-                  id="newsletterOptInToggleBtn"
-                  role="switch"
-                  aria-checked={!!userData?.newsletterOptIn}
-                  aria-label="Toggle weekly tips newsletter"
-                  onClick={() => {
-                    const currentStatus = !!userData?.newsletterOptIn;
-                    updateUserData({
-                      newsletterOptIn: !currentStatus
-                    });
-                  }}
-                  className={`w-11 h-6 rounded-full transition-colors relative flex items-center p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-2 focus-visible:ring-offset-bg cursor-pointer ${userData?.newsletterOptIn ? 'bg-mint' : 'bg-rule-strong'}`}
-                >
-                  <div className={`w-5 h-5 rounded-full bg-white shadow transform transition-transform ${userData?.newsletterOptIn ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Referral CTA */}
-        <Card className="bg-mint-soft/30 border border-mint/20 p-6 md:p-8 flex flex-col justify-between gap-4 rounded-2xl">
-          <div className="space-y-1">
-            <span className="block font-mono text-[9px] uppercase tracking-widest text-mint font-bold">PILOT COOP</span>
-            <h3 className="font-serif text-xl font-bold text-ink flex items-center gap-2">
-              <Gift size={18} className="text-mint" /> Refer a Cadet & Earn
-            </h3>
-            <p className="font-sans text-xs text-muted leading-relaxed font-light">
-              Share your dispatch URL. When your referred peer upgrades, you both get <strong className="text-mint">30 days of free Pro</strong> credited immediately.
-            </p>
-          </div>
-          <Button
-            id="profileReferEarnBtn"
-            variant="ghost"
-            onClick={() => navigate("/referral")}
-            className="h-10 rounded-full font-mono text-[10px] uppercase tracking-wider px-6 border-mint/20 hover:bg-mint-soft text-mint bg-transparent self-start"
-          >
-            Dispatch Invites
-          </Button>
-        </Card>
-      </div>
-
-      {/* Account actions + Danger Zone, paired on desktop. Sign-out is no
-          longer a bare button buried under Danger Zone. */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-        <div className="border border-rule-strong rounded-xl bg-paper p-6 flex flex-col gap-3">
-          <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2 font-bold">Account</span>
-          <p className="font-sans text-sm text-ink-2 font-light leading-relaxed">
-            Sign out of this device, or end every active session at once.
-          </p>
-          <div className="mt-auto flex flex-col gap-3 pt-2">
-            <Button variant="ghost" onClick={handleLogout} disabled={isLoggingOut} className="gap-2 justify-center border border-rule-strong text-ink hover:bg-bg-2 disabled:opacity-50 disabled:cursor-not-allowed">
-              <LogOut size={16} /> {isLoggingOut ? 'Signing out…' : 'Sign out'}
-            </Button>
-            {confirmSignOutAll ? (
-              <div className="border border-amber/30 bg-amber-soft/40 rounded-lg p-3 flex flex-col gap-2">
-                <p className="font-sans text-xs text-ink-2 leading-relaxed">This ends every active session, including this one. Continue?</p>
-                <div className="flex gap-2">
-                  <Button variant="ghost" className="flex-1 min-h-[44px] text-xs border border-amber/40 text-amber hover:bg-amber-soft disabled:opacity-50" disabled={isLoggingOut} onClick={() => { setConfirmSignOutAll(false); handleLogoutEverywhere(); }}>
-                    {isLoggingOut ? 'Signing out…' : 'Sign out everywhere'}
-                  </Button>
-                  <Button variant="ghost" className="min-h-[44px] text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmSignOutAll(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
+        <div
+          role="tablist"
+          aria-label="Account workspace sections"
+          className="flex gap-1 border-b border-rule overflow-x-auto no-scrollbar"
+        >
+          {PROFILE_TABS.map((t, idx) => {
+            const selected = t.key === active;
+            return (
               <button
-                type="button"
-                onClick={() => setConfirmSignOutAll(true)}
-                className="text-[11px] font-sans text-muted-2 hover:text-signal underline underline-offset-2 transition-colors self-center min-h-[44px] flex items-center px-2"
+                key={t.key}
+                ref={(el) => { tabRefs.current[idx] = el; }}
+                role="tab"
+                id={`profile-tab-${t.key}`}
+                aria-selected={selected}
+                aria-controls="profile-panel"
+                tabIndex={selected ? 0 : -1}
+                onClick={() => selectTab(t.key)}
+                onKeyDown={(e) => onKeyDown(e, idx)}
+                className={`px-4 py-2.5 min-h-[44px] whitespace-nowrap text-[13px] font-sans font-medium tracking-tight border-b-2 -mb-px transition-colors outline-none focus-visible:ring-2 focus-visible:ring-sky/60 rounded-t ${
+                  selected ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"
+                }`}
               >
-                Lost a device? Sign out of all devices
+                {t.label}
               </button>
-            )}
-          </div>
+            );
+          })}
         </div>
+      </div>
 
-        <div className="border border-signal-soft rounded-xl bg-bg p-6 flex flex-col items-start gap-3">
-          <div className="flex items-center gap-3">
-            <AlertCircle size={22} className="text-signal" />
-            <span className="font-sans font-semibold text-lg text-ink">Danger Zone</span>
-          </div>
-          <p className="font-sans text-sm text-ink-2 font-light leading-relaxed">
-            Wiping your logbook permanently erases all mock attempts, study history, and telemetry. This cannot be reversed.
-          </p>
-          {confirmWipe ? (
-            <div className="w-full border border-signal/30 bg-signal-soft/40 rounded-lg p-3 flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-signal">
-                <AlertTriangle size={14} />
-                <p className="font-sans text-xs font-semibold">This action is permanent and cannot be undone.</p>
-              </div>
-              <div className="flex gap-2 mt-1">
-                <Button variant="ghost" className="flex-1 min-h-[44px] text-xs border border-signal text-signal hover:bg-signal-soft disabled:opacity-50 disabled:cursor-not-allowed" disabled={isWiping} onClick={() => { setConfirmWipe(false); handleWipe(); }}>
-                  {isWiping ? 'Wiping…' : 'Yes, wipe everything'}
-                </Button>
-                <Button variant="ghost" className="min-h-[44px] text-xs border border-rule text-muted hover:bg-bg-2" onClick={() => setConfirmWipe(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button variant="ghost" className="mt-auto text-signal hover:bg-signal-soft border border-signal-soft disabled:opacity-50 disabled:cursor-not-allowed" disabled={isWiping} onClick={() => setConfirmWipe(true)}>
-              {isWiping ? 'Wiping…' : 'Wipe Logbook & Progress'}
-            </Button>
-          )}
-        </div>
+      <div
+        role="tabpanel"
+        id="profile-panel"
+        aria-labelledby={`profile-tab-${active}`}
+        className="pt-8"
+      >
+        {active === "overview" ? (
+          <OverviewTab onNavigateTab={selectTab} />
+        ) : (
+          <Suspense fallback={<LoadingFallback />}>
+            {active === "enrollment" && <EnrollmentTab />}
+            {active === "referral" && <ReferralTab />}
+            {active === "preferences" && <PreferencesTab />}
+            {active === "membership" && <MembershipTab />}
+            {active === "account" && <AccountTab />}
+          </Suspense>
+        )}
       </div>
     </div>
   );
