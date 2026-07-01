@@ -118,38 +118,86 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // (browser can't read its own IP). Either failing forces a logout.
     // Interval reduced from 30s to 2min: Realtime channel handles instant kicks,
     // so polling is fallback-only (disconnected WebSocket / sleep).
-    const interval = setInterval(async () => {
-      const clientValid = await checkSessionValidity(user.uid);
+    // Guard against overlapping runs: an immediate check triggered by the tab
+    // becoming visible must not race a coincident interval tick.
+    let inFlight = false;
 
-      let serverValid = true;
+    const runCheck = async () => {
+      if (inFlight) return;
+
+      // Skip the network poll when the tab is hidden or the device is offline.
+      // The Supabase Realtime channel below still delivers instant eviction
+      // while hidden, so this poll is fallback-only — pausing it avoids
+      // needless /api/session/check edge requests from backgrounded tabs.
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        if (import.meta.env.DEV) console.debug("[session-poll] skip — tab hidden");
+        return;
+      }
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        if (import.meta.env.DEV) console.debug("[session-poll] skip — offline");
+        return;
+      }
+
+      inFlight = true;
+      if (import.meta.env.DEV) {
+        console.debug("[session-poll] check fired", {
+          visibility: typeof document !== "undefined" ? document.visibilityState : "n/a",
+          online: typeof navigator !== "undefined" ? navigator.onLine : "n/a",
+        });
+      }
       try {
-        const sessionId = localStorage.getItem("client_session_id") || "";
-        const result = await apiFetch("/api/session/check", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ session_id: sessionId }),
-        });
-        // Any non-OK result (network/offline/timeout/http) -> fail open. Only a
-        // successful response that explicitly says valid:false forces a logout.
-        if (result.ok) {
-          const body = await result.response.json();
-          serverValid = body?.valid !== false;
+        const clientValid = await checkSessionValidity(user.uid);
+
+        let serverValid = true;
+        try {
+          const sessionId = localStorage.getItem("client_session_id") || "";
+          const result = await apiFetch("/api/session/check", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ session_id: sessionId }),
+          });
+          // Any non-OK result (network/offline/timeout/http) -> fail open. Only a
+          // successful response that explicitly says valid:false forces a logout.
+          if (result.ok) {
+            const body = await result.response.json();
+            serverValid = body?.valid !== false;
+          }
+        } catch {
+          serverValid = true; // fail open
         }
-      } catch {
-        serverValid = true; // fail open
+
+        if (!clientValid || !serverValid) {
+          clearInterval(interval);
+
+          const event = new CustomEvent('force-logout-toast', {
+            detail: { message: "You've been logged out for your security (session changed device or network)." }
+          });
+          window.dispatchEvent(event);
+
+          await logout();
+        }
+      } finally {
+        inFlight = false;
       }
+    };
 
-      if (!clientValid || !serverValid) {
-        clearInterval(interval);
+    const interval = setInterval(runCheck, 120000);
 
-        const event = new CustomEvent('force-logout-toast', {
-          detail: { message: "You've been logged out for your security (session changed device or network)." }
-        });
-        window.dispatchEvent(event);
-
-        await logout();
+    // Resume immediately when the user returns to the tab or the device
+    // reconnects, so a takeover that happened while hidden/offline is caught at
+    // once instead of waiting up to the next 120s tick.
+    const onVisible = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        if (import.meta.env.DEV) console.debug("[session-poll] tab visible -> immediate check");
+        void runCheck();
       }
-    }, 120000);
+    };
+    const onOnline = () => {
+      if (import.meta.env.DEV) console.debug("[session-poll] online -> immediate check");
+      void runCheck();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
 
     // Instant kick: when another device takes over this user's single active
     // session row, Postgres Realtime delivers the change here immediately, so
@@ -196,6 +244,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
       supabase.removeChannel(channel);
     };
   }, [user?.uid]);
