@@ -41,7 +41,9 @@ describe("buildNavItems — UX-Nav Phase 1", () => {
     expect(labels).toContain("Today");
     expect(labels).toContain("Question bank");
     expect(labels).toContain("Progress");
-    expect(labels).toContain("Profile");
+    // Profile removed from buildNavItems in UX-Nav Phase 2C:
+    // SidebarAuth (avatar + name + plan badge) is the sole profile entry.
+    expect(labels).not.toContain("Profile");
   });
 });
 

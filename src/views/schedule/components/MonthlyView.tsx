@@ -4,6 +4,7 @@ import {
   calendarGrid,
   completionPct,
   DAY_ABBREV,
+  formatMin,
   isoDate,
   MONTH_NAMES,
   todayISO,
@@ -42,11 +43,13 @@ export function MonthlyView({ year, month, byDate, selectedDate, onSelectDate }:
           const isSelected = iso === selectedDate;
           const missions = byDate.get(iso) ?? [];
           const overdueAny =
-            !isToday && iso < today && missions.some((m) => m.status === "pending" || m.status === "in_progress");
+            !isToday &&
+            iso < today &&
+            missions.some((m) => m.status === "pending" || m.status === "in_progress");
           const pct = completionPct(missions);
           const allDone = missions.length > 0 && pct === 100;
+          const totalMin = missions.reduce((s, m) => s + (m.estimated_min || 20), 0);
 
-          // Up to 3 unique mission type dots
           const dots = [...new Set(missions.map((m) => m.type))].slice(0, 3);
 
           return (
@@ -58,7 +61,7 @@ export function MonthlyView({ year, month, byDate, selectedDate, onSelectDate }:
               aria-pressed={isSelected}
               className={[
                 "relative rounded-xl flex flex-col items-center justify-start pt-2 pb-1.5 px-1",
-                "transition-colors text-center min-h-[52px] lg:min-h-[72px]",
+                "transition-colors text-center min-h-[52px] lg:min-h-[76px]",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:ring-offset-1 focus-visible:ring-offset-bg",
                 isSelected
                   ? "bg-ink text-paper"
@@ -77,6 +80,13 @@ export function MonthlyView({ year, month, byDate, selectedDate, onSelectDate }:
               {missions.length > 0 && (
                 <span className={`font-mono text-[9px] mt-0.5 ${isSelected ? "text-paper/70" : allDone ? "text-mint" : "text-muted-2"}`}>
                   {allDone ? "✓" : `${missions.length}`}
+                </span>
+              )}
+
+              {/* Desktop: show est. time when missions exist */}
+              {missions.length > 0 && !allDone && totalMin > 0 && (
+                <span className={`hidden lg:block font-mono text-[8px] mt-0.5 ${isSelected ? "text-paper/50" : "text-muted-2"}`}>
+                  {formatMin(totalMin)}
                 </span>
               )}
 
