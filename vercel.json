@@ -32,6 +32,18 @@
           "value": "</llms.txt>; rel=\"describedby\"; type=\"text/plain\""
         }
       ]
+    },
+    {
+      "source": "/:seg(admin|today|modules|course|topic|practice|mock-exams|analytics|review|bookmarks|profile|schedule|study-plan|learning-context|referral|mission|missions|exam-centre|interview-prep|quiz|dashboard|login|reset-password)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, follow" }
+      ]
+    },
+    {
+      "source": "/:seg(admin|today|modules|course|topic|practice|mock-exams|analytics|review|bookmarks|profile|schedule|study-plan|learning-context|referral|mission|missions|exam-centre|interview-prep|quiz|dashboard|login|reset-password)/:rest+",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, follow" }
+      ]
     }
   ],
   "rewrites": [
