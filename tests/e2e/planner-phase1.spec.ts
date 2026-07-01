@@ -86,15 +86,26 @@ test.describe("Planner Phase 1 — foundation", () => {
     expect(errors.filter(isAppError)).toEqual([]);
   });
 
-  test("empty state renders when no missions", async ({ page }) => {
+  test("empty state or calendar renders when planner loads", async ({ page }) => {
     const onPlanner = await gotoPlanner(page);
     if (!onPlanner) return;
-    // Check if the empty state is shown — depends on whether the test account has missions
+    // Wait for either the empty state OR an interactive calendar element to appear.
+    // The test account may or may not have missions — both paths are valid.
+    await page.waitForLoadState("networkidle");
     const emptyState = page.getByText("No study plan yet");
-    const calendar = page.locator(".grid.grid-cols-7").first();
-    // At least one of them must be visible (either empty state or calendar)
-    const eitherVisible = await emptyState.isVisible() || await calendar.isVisible();
-    expect(eitherVisible).toBe(true);
+    // Calendar day buttons have aria-label "N Month, N mission(s)"
+    const dayButton = page.getByRole("button", { name: /\d+ \w+,/ }).first();
+    // View toggle is always present when the planner renders (regardless of missions)
+    const viewToggle = page.getByRole("group", { name: /calendar view/i });
+    const plannerRendered = await viewToggle.isVisible();
+    expect(plannerRendered, "planner view toggle must be visible after load").toBe(true);
+    // Either empty state or day cells are present — both are correct outcomes
+    const hasEmptyState = await emptyState.isVisible();
+    const hasDayButtons = await dayButton.isVisible();
+    expect(
+      hasEmptyState || hasDayButtons,
+      "either empty state or calendar day buttons must be visible",
+    ).toBe(true);
   });
 
   test("no emoji icons visible in calendar sync panel", async ({ page }) => {
