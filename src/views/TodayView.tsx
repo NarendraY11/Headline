@@ -1,6 +1,7 @@
 import {
     Bell,
     CalendarRange,
+    ChevronDown,
     Clock,
     Compass,
     Flame,
@@ -209,6 +210,7 @@ export default function TodayView() {
   });
 
   const [isMobile, setIsMobile] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
   useEffect(() => {
     if (!("Notification" in window)) {
@@ -478,10 +480,44 @@ export default function TodayView() {
     <div className="relative min-h-screen pb-20">
       <PageBackground />
 
-      <div className="relative z-10 px-4 pt-16 pb-8 max-w-[820px] mx-auto">
-        {/* Phase 8.1: mb reduced on mobile (mb-4 md:mb-8) so mission CTA sits
-            higher. Greeting font also compressed on mobile for the same reason. */}
-        <div className="relative mb-4 md:mb-8 overflow-hidden">
+      <div className="relative z-10 px-4 pt-8 md:pt-16 pb-8 max-w-[820px] mx-auto">
+        {/* UX Ph1 — Mission FIRST on mobile: shown before greeting so primary CTA is in viewport */}
+        {missionEngineEnabled && (
+          <FlightAlerts
+            xpRank={xpRank}
+            xpSystemEnabled={xpSystemEnabled}
+            dueCount={dueCount}
+            nextExam={userData?.nextExam}
+            mission={hoistedMission}
+            completedToday={hoistedCompletedToday}
+            missionLoading={missionLoading}
+          />
+        )}
+        {missionEngineEnabled && (
+          <div className="space-y-3 mb-4">
+            <ActiveMissionCard
+              targetExam={userData?.targetExam}
+              mastery={progressStats.subjectMastery}
+              dailyGoal={userData?.dailyGoal}
+              readinessScore={examReadiness.score}
+              careerObjective={userData?.careerObjective}
+              xpSystemEnabled={xpSystemEnabled}
+              xpRankProgress={xpRank}
+              mission={hoistedMission}
+              completedToday={hoistedCompletedToday}
+              missionLoading={missionLoading}
+              missionError={missionError}
+              missionBusy={missionBusy}
+              onGenerate={missionGenerate}
+              onResume={missionResume}
+              onAbandon={missionAbandon}
+            />
+            <CareerObjectiveMissions careerObjective={userData?.careerObjective} />
+          </div>
+        )}
+
+        {/* Greeting — compact single-line on mobile, full display on desktop */}
+        <div className="relative mb-2 md:mb-8 overflow-hidden">
           {/* Mobile header */}
           <div className="flex md:hidden items-center gap-2 mb-2">
             <span className="w-1.5 h-1.5 rounded-sm bg-signal transform rotate-45" />
@@ -498,7 +534,7 @@ export default function TodayView() {
           <span className="font-mono text-[10px] tracking-[0.2em] uppercase text-signal hidden md:block mb-4">
             § BRIEFING · LIVE
           </span>
-          <h1 className="text-[28px] md:text-[42px] leading-[1.1] md:leading-[1.05] md:h-display text-ink font-serif tracking-tight mb-2">
+          <h1 className="text-[22px] md:text-[42px] leading-[1.15] md:leading-[1.05] md:h-display text-ink font-serif tracking-tight mb-1">
             {isLate ? (
               <>
                 Still flying,
@@ -516,7 +552,8 @@ export default function TodayView() {
           </h1>
         </div>
 
-        {dueCount > 0 && (
+        {/* UX Ph1: suppress raw dueCount banner when missionEngine ON — FlightAlerts handles it */}
+        {dueCount > 0 && !missionEngineEnabled && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
@@ -566,48 +603,6 @@ export default function TodayView() {
         )}
 
         <PwaInstallBanner />
-
-        {/* Phase 8.2A — Flight Alerts: single highest-priority engine reminder.
-            Renders above the mission card so urgency signals are seen first.
-            State-driven: appears whenever condition is true, not time-gated.
-            Returns null when no alert is active or user trained today. */}
-        {missionEngineEnabled && (
-          <FlightAlerts
-            xpRank={xpRank}
-            xpSystemEnabled={xpSystemEnabled}
-            dueCount={dueCount}
-            nextExam={userData?.nextExam}
-            mission={hoistedMission}
-            completedToday={hoistedCompletedToday}
-            missionLoading={missionLoading}
-          />
-        )}
-
-        {/* Phase 6 — Mission Engine: mission is the core unit, shown FIRST.
-            Phase 8.1 — Pass XP rank context so ActiveMissionCard can show
-            XP preview + rank proximity without a duplicate useXp call. */}
-        {missionEngineEnabled && (
-          <div className="space-y-3 mb-8">
-            <ActiveMissionCard
-              targetExam={userData?.targetExam}
-              mastery={progressStats.subjectMastery}
-              dailyGoal={userData?.dailyGoal}
-              readinessScore={examReadiness.score}
-              careerObjective={userData?.careerObjective}
-              xpSystemEnabled={xpSystemEnabled}
-              xpRankProgress={xpRank}
-              mission={hoistedMission}
-              completedToday={hoistedCompletedToday}
-              missionLoading={missionLoading}
-              missionError={missionError}
-              missionBusy={missionBusy}
-              onGenerate={missionGenerate}
-              onResume={missionResume}
-              onAbandon={missionAbandon}
-            />
-            <CareerObjectiveMissions careerObjective={userData?.careerObjective} />
-          </div>
-        )}
 
         {/* Phase 7.2: retention surfaces near the mission loop. Each self-gates
             (RecentXpActivity → xpSystem; TodayAchievements → has-unlocks). */}
@@ -769,18 +764,43 @@ export default function TodayView() {
             />
           </div>
         ) : null}
-        <ReferralWidget />
-
-        <div className="flex items-baseline justify-between gap-4 mb-4 mt-2">
-          <div>
-            <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase mb-1.5">
-              § TELEMETRY
-            </div>
-            <h2 className="font-serif text-[28px] text-ink leading-none tracking-tight">
-              Your analytics
-            </h2>
-          </div>
+        {/* ReferralWidget: accessible via Profile on mobile */}
+        <div className="hidden md:block">
+          <ReferralWidget />
         </div>
+
+        {/* ── ANALYTICS SECTION ─────────────────────────────────────────────── */}
+        {/* Mobile: collapsed behind toggle. Desktop: always visible. */}
+        <div className="mt-2">
+          {/* Mobile toggle */}
+          <button
+            className="md:hidden w-full flex items-center justify-between gap-2 py-3 border-t border-rule/40 mb-0"
+            onClick={() => setAnalyticsOpen(v => !v)}
+            aria-expanded={analyticsOpen}
+            aria-controls="analytics-content"
+          >
+            <div className="text-left">
+              <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase">§ TELEMETRY</div>
+              <div className="font-serif text-[20px] text-ink leading-tight tracking-tight">Your analytics</div>
+            </div>
+            <ChevronDown
+              size={18}
+              className={`text-muted flex-shrink-0 transition-transform duration-200 ${analyticsOpen ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          </button>
+
+          {/* Desktop header */}
+          <div className="hidden md:flex items-baseline justify-between gap-4 mb-4 mt-2">
+            <div>
+              <div className="font-mono text-[10px] text-signal tracking-[0.2em] uppercase mb-1.5">§ TELEMETRY</div>
+              <h2 className="font-serif text-[28px] text-ink leading-none tracking-tight">Your analytics</h2>
+            </div>
+          </div>
+
+          {/* Content: unmounted on mobile until toggled (conditional render removes from scrollHeight) */}
+          {(!isMobile || analyticsOpen) && (
+          <div id="analytics-content">
 
         {/* WEATHER & MASTERY HEATMAP ROW */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 w-full">
@@ -1040,6 +1060,11 @@ export default function TodayView() {
             </div>
           </div>
         )}
+
+          {/* ── END analytics-content ─────────────────────────────────────── */}
+          </div>
+          )}
+        </div>
       </div>
     </div>
   );

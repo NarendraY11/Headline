@@ -26,7 +26,6 @@ import TopSubscriptionBanner from "../TopSubscriptionBanner";
 
 import { AuthOnboardingHandler } from './AuthOnboardingHandler';
 import { DarkModeToggle } from './DarkModeToggle';
-import { HeaderAuth } from './HeaderAuth';
 import { LoadingFallback } from './LoadingFallback';
 import { NextCheckWidget } from './NextCheckWidget';
 import { PageTransition } from './PageTransition';
@@ -501,23 +500,7 @@ export function AppShell() {
                 {/* Notifications Dropdown */}
                 <NotificationCenter />
                 
-                {/* Settings button - mobile only */}
-                <button
-                  onClick={() => navigate("/profile?tab=preferences")}
-                  className="p-3 -m-1.5 text-muted hover:text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center"
-                  aria-label="Settings"
-                  title="Settings"
-                >
-                  <Settings size={18} />
-                </button>
-                
-                {/* Dark Mode toggle - mobile only */}
-                <div className="md:hidden">
-                  <DarkModeToggle />
-                </div>
-                
-                {/* Profile Avatar / Auth - mobile only */}
-                <HeaderAuth />
+                {/* Mobile UX Ph1: Settings/Dark/Avatar moved to drawer — header shows max 4 items */}
                 
                 {/* Start studying primary CTA (retained) */}
                 <Link to="/quiz/ata-27" className="hidden lg:inline-block">
@@ -623,15 +606,26 @@ export function AppShell() {
                       </button>
                     )}
                     {user && (
-                      <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="w-full py-2 px-4 rounded-xl border border-rule text-xs font-sans font-medium text-ink hover:bg-panel/40 transition-colors text-center">
-                        My Profile
-                      </Link>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Link to="/profile" onClick={() => setMobileMenuOpen(false)} className="py-2 px-3 rounded-xl border border-rule text-xs font-sans font-medium text-ink hover:bg-panel/40 transition-colors text-center flex items-center justify-center gap-1.5">
+                          My Profile
+                        </Link>
+                        <button
+                          onClick={() => { setMobileMenuOpen(false); navigate("/profile?tab=preferences"); }}
+                          className="py-2 px-3 rounded-xl border border-rule text-xs font-sans font-medium text-muted hover:text-ink hover:bg-panel/40 transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <Settings size={13} /> Settings
+                        </button>
+                      </div>
                     )}
-                    <Link to="/quiz/ata-27" className="w-full" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="primary" className="w-full justify-center h-9 text-xs">
-                        Start studying <ArrowUpRight size={13} />
-                      </Button>
-                    </Link>
+                    <div className="flex items-center justify-between gap-2">
+                      <Link to="/quiz/ata-27" className="flex-1" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="primary" className="w-full justify-center h-9 text-xs">
+                          Start studying <ArrowUpRight size={13} />
+                        </Button>
+                      </Link>
+                      <DarkModeToggle />
+                    </div>
                   </div>
                 </div>
                 </>
@@ -669,9 +663,9 @@ export function AppShell() {
                     className={`relative flex flex-col items-center justify-center flex-1 py-3 gap-1 transition-colors ${active ? 'text-ink' : 'text-muted hover:text-ink'}`}
                     aria-label={item.label}
                   >
-                    {active && <span className="absolute top-0 left-1/2 -translate-x-1/2 w-6 h-[2px] rounded-full bg-ink" aria-hidden="true" />}
-                    <item.icon size={22} className={active ? 'stroke-[2.5px]' : ''} />
-                    <span className="font-sans text-[10px] font-medium tracking-wide truncate max-w-[56px] text-center">
+                    {active && <span className="absolute top-0 inset-x-2 h-[3px] rounded-b-full bg-navy" aria-hidden="true" />}
+                    <item.icon size={22} className={active ? 'text-navy stroke-[2.5px]' : 'text-muted'} />
+                    <span className={`font-sans text-[10px] font-medium tracking-wide truncate max-w-[64px] text-center ${active ? "text-navy font-semibold" : "text-muted"}`}>
                       {item.label}
                     </span>
                   </NavLink>

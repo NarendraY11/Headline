@@ -165,7 +165,8 @@ export function buildBottomNavItems(_opts: {
 }): NavItem[] {
   return [
     CORE_NAV[0],                                            // Today
-    CORE_NAV[1],                                            // Question bank
+    // UX-Nav Mobile Ph1: "Question bank" → "Study" — 5-char label never truncates at 360px
+    { ...CORE_NAV[1], label: "Study" },
     { label: "Practice", to: "/practice", icon: GraduationCap },
     { label: "Review",   to: "/review",   icon: Zap },
     { label: "Progress", to: "/analytics", icon: BarChart3 },

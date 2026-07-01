@@ -48,9 +48,9 @@ export function CookieConsent() {
       {visible && (
         <div
           data-md-skip="true"
-          className="anim-pop fixed bottom-6 left-6 right-6 md:left-auto md:right-6 md:max-w-md z-9999 origin-bottom-right"
+          className="anim-slide-up fixed bottom-[calc(70px+var(--sab,0px))] left-0 right-0 md:bottom-6 md:left-auto md:right-6 md:max-w-md z-[9999] origin-bottom"
         >
-          <div className="bg-paper border border-rule-strong shadow-[0_12px_40px_rgba(0,0,0,0.12)] p-5 md:p-6 rounded-sm space-y-4 font-sans">
+          <div className="bg-paper border-t border-rule-strong shadow-[0_-4px_24px_rgba(0,0,0,0.1)] p-4 md:p-6 rounded-t-2xl md:rounded-sm space-y-3 font-sans">
             <div className="flex items-start gap-3">
               <div className="bg-signal/10 p-2 rounded-sm text-signal shrink-0">
                 <ShieldCheck size={20} />
