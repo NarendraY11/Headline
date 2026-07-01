@@ -1,6 +1,5 @@
 import {
     ArrowUpRight,
-    Bookmark,
     Flame,
     Menu,
     Moon,
@@ -418,25 +417,7 @@ export function AppShell() {
               })}
             </nav>
 
-            {/* Saved Bookmarks Quick-Access Panel */}
-            {isSidebarExpanded && bookmarkCount > 0 && (
-              <div className="mx-3 mb-2 p-3 rounded-lg border border-rule bg-bg-2/60">
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Bookmark size={12} className="text-muted-2" />
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-muted-2">Saved</span>
-                  </div>
-                  <span className="font-mono text-[10px] text-ink font-semibold">{bookmarkCount}</span>
-                </div>
-                <Link
-                  to="/review"
-                  className="flex items-center gap-1 text-[11px] font-sans text-muted hover:text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky/60 rounded"
-                >
-                  View saved questions
-                  <ArrowUpRight size={10} />
-                </Link>
-              </div>
-            )}
+            {/* Saved panel removed — count badge on Review nav item already surfaces this */}
 
             {/* Utility Nav (Settings, Dark Mode, Profile) */}
             <div className="px-3 pb-4 space-y-1 mt-auto">
