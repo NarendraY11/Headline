@@ -4,10 +4,15 @@ import dotenv from "dotenv";
 // Load test credentials from .env.test (kept out of git).
 dotenv.config({ path: ".env.test" });
 
-// E2E config. Target defaults to the live production site; override with
-// BASE_URL to point at a preview deploy or local server. Auth credentials
-// come from env (see .env.test.example) — never hardcode them.
-const BASE_URL = process.env.BASE_URL || "https://www.heading380.in";
+// E2E config. BASE_URL resolution order:
+//   1. BASE_URL env var (CI, preview, or explicit override)
+//   2. APP_URL from .env.test (set this for local dev)
+//   3. http://localhost:5173 (Vite default — requires `vite dev` running)
+// Production URL is NOT a fallback; tests must be explicitly pointed there.
+const BASE_URL =
+  process.env.BASE_URL ||
+  process.env.APP_URL ||
+  "http://localhost:5173";
 
 export default defineConfig({
   testDir: "./tests/e2e",

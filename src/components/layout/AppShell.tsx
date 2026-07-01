@@ -60,12 +60,13 @@ export function AppShell() {
   const [isSidebarHovered, setIsSidebarHovered] = useState(false);
   const [isSidebarTappedForTablet, setIsSidebarTappedForTablet] = useState(false);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== "undefined" ? window.innerWidth : 1200);
+  const [windowHeight, setWindowHeight] = useState(() => typeof window !== "undefined" ? window.innerHeight : 900);
   const [isScrolled, setIsScrolled] = useState(false);
 
   const { logbook } = useLogbook();
 
   useEffect(() => {
-    const handleResize = () => setWindowWidth(window.innerWidth);
+    const handleResize = () => { setWindowWidth(window.innerWidth); setWindowHeight(window.innerHeight); };
     const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("resize", handleResize);
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -210,8 +211,10 @@ export function AppShell() {
 
   const displayedStreakValue = (userData?.streakCount ?? parseInt(localStorage.getItem("heading_streak_count") || "0")) || computedStreak;
   
-  const isTablet = windowWidth >= 768 && windowWidth < 1024;
-  const isSidebarPinnedOpen = isSidebarPinned && windowWidth >= 1024;
+  // Landscape phone: wide but short (e.g. 844×390). Suppress desktop sidebar.
+  const isLandscapeMobile = windowWidth >= 768 && windowHeight < 500;
+  const isTablet = windowWidth >= 768 && windowWidth < 1024 && !isLandscapeMobile;
+  const isSidebarPinnedOpen = isSidebarPinned && windowWidth >= 1024 && !isLandscapeMobile;
   const isSidebarExpanded = isSidebarPinnedOpen || isSidebarHovered || (isTablet && isSidebarTappedForTablet);
   
   const reduceMotion = userData?.settings?.reduceMotion ? "always" : "user";
@@ -327,14 +330,14 @@ export function AppShell() {
           </Suspense>
           <AuthOnboardingHandler />
 
-          {/* PERSISTENT LEFT SIDEBAR (Desktop) */}
-          <div 
-            className={`hidden md:block flex-shrink-0 ${reduceMotion === 'always' ? 'transition-none' : 'transition-[width] duration-200 ease-in-out'} ${isSidebarPinnedOpen ? 'w-[240px]' : 'w-[64px]'}`} 
+          {/* PERSISTENT LEFT SIDEBAR (Desktop only — hidden on landscape mobile) */}
+          <div
+            className={`${isLandscapeMobile ? 'hidden' : 'hidden md:block'} flex-shrink-0 ${reduceMotion === 'always' ? 'transition-none' : 'transition-[width] duration-200 ease-in-out'} ${isSidebarPinnedOpen ? 'w-[240px]' : 'w-[64px]'}`}
           />
           <aside
             id="desktop-sidebar"
             aria-label="Main navigation"
-            className={`hidden md:flex flex-col h-screen fixed left-0 top-0 border-r border-rule bg-bg select-none z-40 overflow-hidden ${reduceMotion === 'always' ? 'transition-none' : 'transition-[width] duration-200 ease-in-out'} ${isSidebarExpanded ? 'w-[240px] shadow-[8px_0_24px_rgba(0,0,0,0.02)]' : 'w-[64px]'}`}
+            className={`${isLandscapeMobile ? 'hidden' : 'hidden md:flex'} flex-col h-screen fixed left-0 top-0 border-r border-rule bg-bg select-none z-40 overflow-hidden ${reduceMotion === 'always' ? 'transition-none' : 'transition-[width] duration-200 ease-in-out'} ${isSidebarExpanded ? 'w-[240px] shadow-[8px_0_24px_rgba(0,0,0,0.02)]' : 'w-[64px]'}`}
             onMouseEnter={() => !isSidebarPinnedOpen && setIsSidebarHovered(true)}
             onMouseLeave={() => !isSidebarPinnedOpen && setIsSidebarHovered(false)}
           >
@@ -513,7 +516,7 @@ export function AppShell() {
                 <button
                   id="mobile-menu-toggle"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                  className="p-3 -m-1.5 md:hidden text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none"
+                  className={`p-3 -m-1.5 ${isLandscapeMobile ? 'flex' : 'md:hidden flex'} items-center justify-center text-ink hover:bg-panel rounded-full border border-transparent hover:border-rule transition-colors focus-visible:ring-2 focus-visible:ring-sky/60 focus-visible:outline-none`}
                   aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
                   aria-expanded={mobileMenuOpen}
                   aria-controls="mobile-nav-drawer"
@@ -652,7 +655,7 @@ export function AppShell() {
             </main>
 
             {/* MOBILE BOTTOM TAB BAR — adaptive via buildBottomNavItems(), same source as sidebar */}
-            <nav aria-label="Bottom navigation" className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-bg border-t border-rule pb-[var(--sab)] flex items-stretch justify-around px-2">
+            <nav aria-label="Bottom navigation" className={`${isLandscapeMobile ? 'flex' : 'md:hidden flex'} fixed bottom-0 left-0 right-0 z-50 bg-bg border-t border-rule pb-[var(--sab)] items-stretch justify-around px-2`}>
               {bottomNavItems.map(item => {
                 const active = isItemActive(item.to);
                 return (

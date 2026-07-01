@@ -69,9 +69,9 @@ export function CookieConsent() {
             </div>
 
             <p className="text-xs text-muted leading-relaxed font-light">
-              We employ cookie identifiers to personalize Google AdSense advertisements, deliver secure Google OAuth sessions, 
-              and analyze our ground school study traffic. By clicking <strong>"Accept Calibrated Cookies"</strong>, you consent to our cooperative 
-              networks in alignment with our <Link to="/privacy" className="text-ink hover:underline font-normal">Privacy Policy</Link> and <Link to="/terms" className="text-ink hover:underline font-normal">Terms of Conditions</Link>.
+              We use cookies for ads, authentication, and analytics. By accepting, you agree to our{" "}
+              <Link to="/privacy" className="text-ink hover:underline font-normal">Privacy Policy</Link>{" "}
+              and <Link to="/terms" className="text-ink hover:underline font-normal">Terms</Link>.
             </p>
 
             <div className="flex items-center gap-3 pt-1">
